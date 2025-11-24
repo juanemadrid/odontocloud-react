@@ -1,11 +1,12 @@
+// src/main.jsx
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
-import './global.css'
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    {/* IMPORTANTÍSIMO para GitHub Pages */}
     <BrowserRouter basename="/odontocloud-react">
       <App />
     </BrowserRouter>
