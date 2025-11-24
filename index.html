@@ -1,32 +1,20 @@
 <!doctype html>
-<html lang="es">
+<html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="company-name" content="Mi Empresa S.A.S" />
-    <meta name="company-logo" content="/assets/logo-empresa.png" />
-
-    <title>OdontoCloud</title>
-
-    <!-- Importante: corrige las rutas base para Vite y GitHub Pages -->
+    <title>Redirecting…</title>
+    <meta http-equiv="refresh" content="0; url=/odontocloud-react/" />
     <script>
-      // Esto ayuda a que los recursos carguen bien en GitHub Pages
-      (function () {
-        const base = '/odontocloud-react/';
-        if (
-          !window.location.pathname.startsWith(base) &&
-          !window.location.hostname.includes('localhost')
-        ) {
-          const newUrl = base + window.location.pathname.replace(/^\//, '');
-          window.location.replace(newUrl);
-        }
+      // Redirección SPA que conserva la ruta original dentro de ?path=
+      (function() {
+        var base = '/odontocloud-react/';
+        var path = location.pathname.replace(base, '');
+        var search = location.search;
+        var hash = location.hash;
+        var target = base + (path ? '' : '') + (search || '') + (hash || '');
+        location.replace(target);
       })();
     </script>
-    <script type="module" crossorigin src="/odontocloud-react/assets/index-Dn2dWWwb.js"></script>
-    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-DQ2Rxcr1.css">
   </head>
-  <body>
-    <div id="root"></div>
-    <!-- Ruta relativa, para que funcione tanto en dev como en Pages -->
-  </body>
+  <body>Redirigiendo…</body>
 </html>
