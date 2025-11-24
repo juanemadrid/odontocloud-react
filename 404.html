@@ -1,18 +1,24 @@
+<!-- public/404.html -->
 <!doctype html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <title>Redirecting…</title>
-    <meta http-equiv="refresh" content="0; url=/odontocloud-react/" />
+    <meta charset="utf-8">
+    <title>Redirigiendo…</title>
+    <meta http-equiv="refresh" content="0; url=/odontocloud-react/">
     <script>
-      // Redirección SPA que conserva la ruta original dentro de ?path=
-      (function() {
-        var base = '/odontocloud-react/';
-        var path = location.pathname.replace(base, '');
-        var search = location.search;
-        var hash = location.hash;
-        var target = base + (path ? '' : '') + (search || '') + (hash || '');
-        location.replace(target);
+      // SPA redirect para GitHub Pages (adaptado de rafrex/spa-github-pages)
+      (function () {
+        var l = window.location;
+        var repoBase = '/odontocloud-react';
+        if (l.pathname.startsWith(repoBase)) {
+          // reconstruye la ruta interna y redirige a index dentro de la base del repo
+          var newUrl = repoBase + '/index.html#' + l.pathname.substring(repoBase.length) + l.search + l.hash;
+          // Si prefieres mantener BrowserRouter sin hash, usa:
+          // var newUrl = repoBase + '/';
+          l.replace(newUrl);
+        } else {
+          l.replace(repoBase + '/');
+        }
       })();
     </script>
   </head>

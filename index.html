@@ -1,20 +1,15 @@
 <!doctype html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Redirecting…</title>
-    <meta http-equiv="refresh" content="0; url=/odontocloud-react/" />
-    <script>
-      // Redirección SPA que conserva la ruta original dentro de ?path=
-      (function() {
-        var base = '/odontocloud-react/';
-        var path = location.pathname.replace(base, '');
-        var search = location.search;
-        var hash = location.hash;
-        var target = base + (path ? '' : '') + (search || '') + (hash || '');
-        location.replace(target);
-      })();
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="company-name" content="Mi Empresa S.A.S" />
+    <meta name="company-logo" content="/assets/logo-empresa.png" />
+    <title>OdontoCloud</title>
+    <script type="module" crossorigin src="/odontocloud-react/assets/index-1n7Axoh4.js"></script>
+    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-CwnTssEo.css">
   </head>
-  <body>Redirigiendo…</body>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
