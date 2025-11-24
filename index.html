@@ -7,9 +7,25 @@
     <meta name="company-logo" content="/assets/logo-empresa.png" />
 
     <title>OdontoCloud</title>
+
+    <!-- Importante: corrige las rutas base para Vite y GitHub Pages -->
+    <script>
+      // Esto ayuda a que los recursos carguen bien en GitHub Pages
+      (function () {
+        const base = '/odontocloud-react/';
+        if (
+          !window.location.pathname.startsWith(base) &&
+          !window.location.hostname.includes('localhost')
+        ) {
+          const newUrl = base + window.location.pathname.replace(/^\//, '');
+          window.location.replace(newUrl);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- Ruta relativa, para que funcione tanto en dev como en Pages -->
+    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
