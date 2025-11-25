@@ -2,13 +2,13 @@ name: Publicar con GitHub Pages (Vite)
 
 on:
   push:
-    branches: [ main ]   # Cada vez que subas algo a la rama principal
+    branches: [ main ] # Cada vez que subas algo a la rama principal
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # Permiso para crear la rama gh-pages
+      contents: write # Permiso para crear la rama gh-pages
 
     steps:
       - name: Obtener código
