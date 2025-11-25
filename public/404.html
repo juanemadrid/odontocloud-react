@@ -1,19 +1,21 @@
+<!-- public/404.html -->
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8">
     <title>Redirigiendo…</title>
-    <meta http-equiv="refresh" content="0; url=/odontocloud-react/">
+    <meta http-equiv="refresh" content="0; url=/odontocloud-react/?/%2Findex.html">
     <script>
-      (function () {
+      // Script de rafgraph/spa-github-pages (modificado para subcarpeta)
+      (function(l) {
         var repoBase = '/odontocloud-react';
-        var path = location.pathname.replace(repoBase, '');
-        var target = repoBase + '/index.html';
-        if (path && path !== '/') {
-          target = repoBase + '/index.html#' + path + location.search + location.hash;
-        }
-        location.replace(target);
-      })();
+        if (!l.pathname.startsWith(repoBase)) repoBase = '';
+        var path = l.pathname.replace(repoBase, '');
+        var search = l.search ? l.search.slice(1).replace(/&/g, '~and~') : '';
+        var hash = l.hash || '';
+        var url = repoBase + '/?/' + path + (search ? ('?' + search) : '') + hash;
+        l.replace(url);
+      })(window.location);
     </script>
   </head>
   <body>Redirigiendo…</body>
