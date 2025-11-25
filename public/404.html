@@ -1,26 +1,19 @@
-<!-- public/404.html -->
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Redirigiendo…</title>
-    <meta http-equiv="refresh" content="0; url=/odontocloud-react/">
-    <script>
-      // SPA redirect para GitHub Pages (adaptado de rafrex/spa-github-pages)
-      (function () {
-        var l = window.location;
-        var repoBase = '/odontocloud-react';
-        if (l.pathname.startsWith(repoBase)) {
-          // reconstruye la ruta interna y redirige a index dentro de la base del repo
-          var newUrl = repoBase + '/index.html#' + l.pathname.substring(repoBase.length) + l.search + l.hash;
-          // Si prefieres mantener BrowserRouter sin hash, usa:
-          // var newUrl = repoBase + '/';
-          l.replace(newUrl);
-        } else {
-          l.replace(repoBase + '/');
-        }
-      })();
-    </script>
-  </head>
-  <body>Redirigiendo…</body>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>404</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;display:grid;place-items:center;height:100vh;margin:0;color:#334155}
+    a{color:#0b63c4;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div>
+    <h1>404</h1>
+    <p>Página no encontrada.</p>
+    <p><a href="https://juanemadrid.github.io/odontocloud-react/#/">Ir al inicio</a></p>
+  </div>
+</body>
 </html>
