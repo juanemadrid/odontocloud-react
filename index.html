@@ -3,9 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="company-name" content="Mi Empresa S.A.S" />
+    <meta name="company-logo" content="/assets/logo-empresa.png" />
     <title>OdontoCloud</title>
-    <script type="module" crossorigin src="/odontocloud-react/assets/index-tjW01l0-.js"></script>
-    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-DQ2Rxcr1.css">
+
+    <!-- 👇 Paso 2 del fallback SPA (rafgraph): reescribe URLs "fantasma" -->
+    <script>
+      (function(l) {
+        if (l.search[1] === '/') {
+          const decoded = l.search.slice(1).split('&').map(s => s.replace(/~and~/g, '&')).join('?');
+          const url = l.pathname.slice(0, -1) + decoded + l.hash;
+          window.history.replaceState(null, null, url);
+        }
+      })(window.location);
+    </script>
+    <script type="module" crossorigin src="/odontocloud-react/assets/index-CQ0qrxRL.js"></script>
+    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-CwnTssEo.css">
   </head>
   <body>
     <div id="root"></div>
