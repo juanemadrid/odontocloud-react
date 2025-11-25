@@ -7,10 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "vite build",
-    "postdeploy": "echo Deploy OK",
-    "deploy": "gh-pages -d dist -b gh-pages",
-    "postbuild": "node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"" 
-    
+    "deploy": "gh-pages -d dist -b gh-pages"
   },
   "dependencies": {
     "firebase": "^12.5.0",
