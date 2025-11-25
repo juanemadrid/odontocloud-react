@@ -1,24 +1,17 @@
 // src/main.jsx
-import React from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, HashRouter } from 'react-router-dom'
-import App from './App.jsx'
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { HashRouter } from "react-router-dom";
+import App from "./App.jsx";
+import "./styles/global.css";
 
-// En dev usamos BrowserRouter; en Pages (build) usamos HashRouter
-const isDev = import.meta.env.DEV
-const DevRouter = ({ children }) => <BrowserRouter basename="/">{children}</BrowserRouter>
-const ProdRouter = ({ children }) => <HashRouter>{children}</HashRouter>
+const BASENAME =
+  import.meta.env.BASE_URL?.replace(/\/+$/, "") || "/odontocloud-react";
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {isDev ? (
-      <DevRouter>
-        <App />
-      </DevRouter>
-    ) : (
-      <ProdRouter>
-        <App />
-      </ProdRouter>
-    )}
+    <HashRouter basename={BASENAME}>
+      <App />
+    </HashRouter>
   </React.StrictMode>
-)
+);

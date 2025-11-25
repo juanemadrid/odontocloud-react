@@ -1,7 +1,8 @@
 // ===============================
-// 📄 Login.jsx - Acceso híbrido OdontoCloud
+// 📄 Login.jsx - Acceso híbrido OdontoCloud (FIX GH Pages)
 // ===============================
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";              // 👈 usa React Router
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -29,6 +30,7 @@ const getOfflineSession = () => {
 };
 
 const Login = () => {
+  const navigate = useNavigate();                             // 👈 hook para navegar
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,19 +48,17 @@ const Login = () => {
     };
   }, []);
 
+  // ✅ Redirección con React Router (funciona en GH Pages con HashRouter)
   const redirectByRole = (rol) => {
-    switch (rol.toLowerCase()) {
-      case "administrador":
-        window.location.href = "/dashboard_admin";
-        break;
-      case "doctor":
-        window.location.href = "/dashboard_doctor";
-        break;
-      case "recepcionista":
-        window.location.href = "/dashboard_recepcion";
-        break;
-      default:
-        setError("Rol no reconocido. Contacte al administrador.");
+    const r = (rol || "").toLowerCase();
+    if (r === "administrador") {
+      navigate("/dashboard_admin", { replace: true });
+    } else if (r === "doctor") {
+      navigate("/dashboard_doctor", { replace: true });
+    } else if (r === "recepcionista") {
+      navigate("/dashboard_recepcion", { replace: true });
+    } else {
+      setError("Rol no reconocido. Contacte al administrador.");
     }
   };
 
@@ -69,7 +69,7 @@ const Login = () => {
     if (!isOnline) {
       // Modo offline: usar sesión guardada
       const session = getOfflineSession();
-      if (session) {
+      if (session?.rol) {
         redirectByRole(session.rol);
       } else {
         setError("Sin conexión y no hay sesión guardada.");
