@@ -1,0 +1,36 @@
+name: Publicar con GitHub Pages (Vite)
+
+on:
+  push:
+    branches: [ main ] # Cada vez que subas algo a la rama principal
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Permiso para crear la rama gh-pages
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci || npm i
+
+      - name: Construir sitio
+        run: npm run build
+
+      - name: Crear 404.html (para apps SPA)
+        run: cp dist/index.html dist/404.html
+
+      - name: Publicar en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
