@@ -1,310 +1,288 @@
 /* ============================================================
-   OdontoCloud - Dashboard.css (barra superior igual a Agenda)
-   ============================================================ */
+OdontoCloud – Dashboard.css (Versión 100% Responsiva)
+============================================================ */
 
 :root {
-  --oc-blue: #06a3ff;
-  --oc-blue-dark: #0076d6;
-  --oc-green: #27c667;
-  --oc-bg: #f4f7fb;
+--oc-blue: #06a3ff;
+--oc-blue-dark: #0076d6;
+--oc-green: #27c667;
+--oc-bg: #f4f7fb;
 
-  --oc-text: #1d2433;
-  --oc-muted: #7c8597;
-  --oc-border: #e4e8ef;
+--oc-text: #1d2433;
+--oc-muted: #7c8597;
+--oc-border: #e4e8ef;
 
-  --oc-card-bg: #ffffff;
+--oc-card-bg: #ffffff;
 
-  --radius: 14px;
-  --shadow-soft: 0 4px 12px rgba(15, 35, 52, 0.06);
-  --shadow-medium: 0 8px 22px rgba(15, 35, 52, 0.12);
+--radius: 14px;
+--shadow-soft: 0 4px 12px rgba(15, 35, 52, 0.06);
+--shadow-medium: 0 8px 22px rgba(15, 35, 52, 0.12);
 }
 
-html, body{
-  margin:0; padding:0;
-  font-family:"Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background:var(--oc-bg); color:var(--oc-text);
+html, body {
+margin: 0;
+padding: 0;
+font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+background: var(--oc-bg);
+color: var(--oc-text);
 }
 
-.oc-shell{ min-height:100vh; }
-
-/* ==================== HEADER: igual a Agenda ==================== */
-.oc-header{
-  width:100%;
-  padding:12px 24px;                 /* mismo “peso” que Agenda */
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  background:linear-gradient(90deg,#1976d2 0%,#0d47a1 100%);
-  color:#fff;
-  box-shadow:var(--shadow-medium);
-  position:sticky; top:0; z-index:100;
-  min-height:60px;
+.oc-shell {
+min-height: 100dvh;
+padding-left: env(safe-area-inset-left);
+padding-right: env(safe-area-inset-right);
+padding-top: env(safe-area-inset-top);
 }
 
-/* Logo + nombre: misma separación que ves en Agenda */
-.oc-header-left{
-  display:flex; align-items:center;
-  gap:12px;                           /* ↑ aire entre logo y nombre */
-  margin-right:140px;                  /* ↑ separa del primer botón */
-}
-.oc-logo{ height:36px; }              /* encaja con alto de controles */
-.oc-brand-text{ display:flex; flex-direction:column; line-height:1.1; }
-.oc-brand-main{ font-size:1.05rem; font-weight:700; }
-.oc-brand-sub{ font-size:.75rem; opacity:.9; }
-
-/* Menú de pestañas: píldoras, centrado vertical y gaps iguales */
-.oc-nav{
-  display:flex; align-items:center;
-  gap:8px;                             /* igual a Agenda */
-  margin-left:8px;                     /* despega del nombre */
-}
-.oc-nav-btn{
-  background:rgba(255,255,255,.12);
-  color:#fff; border:0;
-  height:36px;                         /* alto exacto como Agenda */
-  padding:0 14px;                      /* grosor de la píldora */
-  border-radius:999px;
-  font-size:.82rem; font-weight:600;
-  display:flex; align-items:center; justify-content:center; /* centra texto */
-  line-height:1;
-  cursor:pointer;
-  transition:background .15s ease, transform .1s ease;
-}
-.oc-nav-btn:hover{ background:rgba(255,255,255,.25); transform:translateY(-1px); }
-.oc-nav-btn.active{ background:var(--oc-green); box-shadow:0 4px 10px rgba(39,198,103,.4); }
-
-/* Lado derecho: buscador + botones con el MISMO alto */
-.oc-header-right{ display:flex; align-items:center; gap:8px; }
-.oc-search{
-  width:220px;                         /* puedes subir a 260 si quieres */
-  height:36px;                         /* igual que nav */
-  padding:0 12px;
-  border:0; border-radius:999px; outline:none;
-  background:rgba(255,255,255,.14); color:#fff;
-  position:relative; top:8px;          /* ↓ baja un pelín para alinear */
-  margin-left: 12px;
-
-  font-size:.82rem;
-}
-.oc-search::placeholder{ color:#eef5ff; opacity:.95; }
-.oc-icon-btn{
-  height:36px; padding:0 12px;
-  background:rgba(255,255,255,.14);
-  border:0; border-radius:999px; color:#fff;
-  display:inline-flex; align-items:center; justify-content:center; gap:4px;
-  font-size:.82rem; cursor:pointer;
-}
-.oc-icon-btn:hover{ background:rgba(255,255,255,.3); }
-
-/* ==================== CONTENIDO (igual que tenías) ==================== */
-.oc-main-wrapper{
-  min-height:calc(100vh - 70px);
-  width:100%; max-width:1400px; margin:0 auto;
-  padding:24px 32px 40px; box-sizing:border-box;
+/* ==================== HEADER ==================== */
+.oc-header {
+width: 100%;
+padding: 12px 24px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+flex-wrap: wrap;
+gap: 10px;
+background: linear-gradient(90deg, #1976d2 0%, #0d47a1 100%);
+color: #fff;
+box-shadow: var(--shadow-medium);
+position: sticky;
+top: 0;
+z-index: 100;
+min-height: 60px;
 }
 
-.oc-module-card{
-  background:var(--oc-card-bg);
-  border-radius:var(--radius);
-  border:1px solid var(--oc-border);
-  box-shadow:var(--shadow-soft);
-  padding:18px 20px; margin-bottom:18px;
+.oc-header-left {
+display: flex;
+align-items: center;
+gap: 12px;
+margin-right: clamp(0px, 6vw, 140px);
+min-width: 0;
+}
+
+.oc-logo { height: 36px; }
+.oc-brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.oc-brand-main { font-size: 1.05rem; font-weight: 700; }
+.oc-brand-sub { font-size: .75rem; opacity: .9; }
+
+/* NAVIGATION */
+.oc-nav {
+display: flex;
+align-items: center;
+gap: 8px;
+margin-left: 8px;
+overflow-x: auto;
+-webkit-overflow-scrolling: touch;
+scrollbar-width: none;
+justify-content: center;
+max-width: 100%;
+}
+.oc-nav::-webkit-scrollbar { display: none; }
+
+.oc-nav-btn {
+background: rgba(255,255,255,.12);
+color: #fff;
+border: 0;
+height: 36px;
+padding: 0 14px;
+border-radius: 999px;
+font-size: .82rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+justify-content: center;
+line-height: 1;
+cursor: pointer;
+flex: 0 0 auto;
+transition: background .15s ease, transform .1s ease;
+}
+.oc-nav-btn:hover { background: rgba(255,255,255,.25); transform: translateY(-1px); }
+.oc-nav-btn.active { background: var(--oc-green); box-shadow: 0 4px 10px rgba(39,198,103,.4); }
+
+/* RIGHT HEADER */
+.oc-header-right {
+display: flex;
+align-items: center;
+gap: 8px;
+width: 100%;
+justify-content: center;
+flex-wrap: wrap;
+}
+
+.oc-search {
+width: min(260px, 90%);
+height: 36px;
+padding: 0 12px;
+border: 0;
+border-radius: 999px;
+outline: none;
+background: rgba(255,255,255,.14);
+color: #fff;
+font-size: .82rem;
+}
+.oc-search::placeholder { color: #eef5ff; opacity: .95; }
+
+.oc-icon-btn {
+height: 36px;
+padding: 0 12px;
+background: rgba(255,255,255,.14);
+border: 0;
+border-radius: 999px;
+color: #fff;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 4px;
+font-size: .82rem;
+cursor: pointer;
+}
+.oc-icon-btn:hover { background: rgba(255,255,255,.3); }
+
+/* ==================== MAIN ==================== */
+.oc-main-wrapper {
+min-height: calc(100vh - 70px);
+width: 100%;
+max-width: 1400px;
+margin: 0 auto;
+padding: 24px 32px 40px;
+box-sizing: border-box;
+}
+
+.oc-module-card {
+background: var(--oc-card-bg);
+border-radius: var(--radius);
+border: 1px solid var(--oc-border);
+box-shadow: var(--shadow-soft);
+padding: 18px 20px;
+margin-bottom: 18px;
 }
 
 /* HERO */
-.oc-main-content{ animation:fadeInUp .3s ease-out; }
-.oc-hero{
-  display:flex; justify-content:space-between; gap:16px;
-  padding:20px 24px; border-radius:var(--radius);
-  border:1px solid var(--oc-border);
-  background:linear-gradient(135deg,#fff,#e4f3ff);
-  box-shadow:var(--shadow-soft);
-  margin-bottom:20px;
+.oc-main-content { animation: fadeInUp .3s ease-out; }
+.oc-hero {
+display: flex;
+justify-content: space-between;
+gap: 16px;
+padding: 20px 24px;
+border-radius: var(--radius);
+border: 1px solid var(--oc-border);
+background: linear-gradient(135deg,#fff,#e4f3ff);
+box-shadow: var(--shadow-soft);
+margin-bottom: 20px;
+flex-wrap: wrap;
 }
-.oc-hero-text h1{ margin:0 0 4px; font-size:1.55rem; }
-.oc-hero-text p{ margin:0; font-size:.9rem; color:var(--oc-muted); }
-.oc-hero-meta{ margin-top:4px; font-size:.8rem; color:var(--oc-muted); }
-.oc-hero-badge{
-  min-width:170px; text-align:right; background:#fff;
-  border-radius:12px; border:1px solid var(--oc-border);
-  padding:10px 14px; box-shadow:0 6px 18px rgba(0,0,0,.05);
+.oc-hero-text h1 { margin: 0 0 4px; font-size: 1.55rem; }
+.oc-hero-text p { margin: 0; font-size: .9rem; color: var(--oc-muted); }
+.oc-hero-meta { margin-top: 4px; font-size: .8rem; color: var(--oc-muted); }
+.oc-hero-badge {
+min-width: 170px;
+text-align: right;
+background: #fff;
+border-radius: 12px;
+border: 1px solid var(--oc-border);
+padding: 10px 14px;
+box-shadow: 0 6px 18px rgba(0,0,0,.05);
+align-self: stretch;
 }
-.oc-hero-badge-title{ display:block; font-size:.8rem; color:var(--oc-muted); }
-.oc-hero-badge-value{ display:block; font-size:1.7rem; font-weight:700; color:var(--oc-blue-dark); margin:2px 0; }
-.oc-hero-badge-sub{ display:block; font-size:.78rem; color:var(--oc-muted); }
+.oc-hero-badge-title { display: block; font-size: .8rem; color: var(--oc-muted); }
+.oc-hero-badge-value { display: block; font-size: 1.7rem; font-weight: 700; color: var(--oc-blue-dark); margin: 2px 0; }
+.oc-hero-badge-sub { display: block; font-size: .78rem; color: var(--oc-muted); }
 
 /* STATS */
-.oc-stats-row{
-  display:grid; grid-template-columns:repeat(4, minmax(0,1fr));
-  gap:14px; margin-bottom:20px;
+.oc-stats-row {
+display: grid;
+grid-template-columns: repeat(4, minmax(0,1fr));
+gap: 14px;
+margin-bottom: 20px;
 }
-.stat-card{
-  background:var(--oc-card-bg); border-radius:999px;
-  border:1px solid var(--oc-border); box-shadow:var(--shadow-soft);
-  padding:10px 18px; display:flex; flex-direction:column; text-align:center;
+.stat-card {
+background: var(--oc-card-bg);
+border-radius: 999px;
+border: 1px solid var(--oc-border);
+box-shadow: var(--shadow-soft);
+padding: 10px 18px;
+display: flex;
+flex-direction: column;
+text-align: center;
+min-width: 0;
 }
-.stat-label{ font-size:.8rem; color:var(--oc-muted); }
-.stat-value{ font-size:1.2rem; font-weight:600; color:var(--oc-blue-dark); }
-.stat-currency{ font-size:.7rem; color:var(--oc-muted); }
+.stat-label { font-size: .8rem; color: var(--oc-muted); }
+.stat-value { font-size: 1.2rem; font-weight: 600; color: var(--oc-blue-dark); }
+.stat-currency { font-size: .7rem; color: var(--oc-muted); }
 
-/* GRID principal */
-.oc-grid{
-  display:grid; grid-template-columns:minmax(0,1.8fr) minmax(280px,1fr);
-  gap:18px; align-items:start;
+/* GRID */
+.oc-grid {
+display: grid;
+grid-template-columns: minmax(0,1.8fr) minmax(280px,1fr);
+gap: 18px;
+align-items: start;
+container-type: inline-size;
 }
-.oc-grid-main, .oc-grid-side{ display:flex; flex-direction:column; gap:12px; }
-.card{
-  background:var(--oc-card-bg); border-radius:var(--radius);
-  border:1px solid var(--oc-border); box-shadow:var(--shadow-soft);
-  padding:16px 18px;
+.oc-grid-main, .oc-grid-side { display: flex; flex-direction: column; gap: 12px; }
+
+.card {
+background: var(--oc-card-bg);
+border-radius: var(--radius);
+border: 1px solid var(--oc-border);
+box-shadow: var(--shadow-soft);
+padding: 16px 18px;
+min-width: 0;
 }
-.card h3{ margin-top:0; font-size:.95rem; }
-.card-quickcharts{ min-height:230px; position:relative; }
-.oc-weekly-empty{ font-size:.85rem; color:var(--oc-muted); margin-top:6px; }
-.card-quickcharts canvas, .card-quickcharts svg{ width:100%; height:170px; display:block; }
-
-/* Footer */
-.oc-muted{ color:var(--oc-muted); font-size:.8rem; }
-.oc-footer{ text-align:center; margin-top:26px; font-size:.8rem; color:var(--oc-muted); }
-
-/* Animación */
-@keyframes fadeInUp{
-  from{ opacity:0; transform:translateY(8px); }
-  to{ opacity:1; transform:translateY(0); }
-}
-
-/* ==================== Responsive ==================== */
-@media (max-width:1100px){ .oc-grid{ grid-template-columns:1fr; } }
-
-@media (max-width:900px){
-  .oc-header{ flex-wrap:wrap; row-gap:8px; justify-content:center; }
-  .oc-header-left, .oc-header-right{ width:100%; justify-content:center; }
-  .oc-nav{ flex-wrap:wrap; justify-content:center; }
-  .oc-hero{ flex-direction:column; }
-  .oc-hero-badge{ text-align:left; min-width:0; align-self:stretch; }
-}
-
-@media (max-width:700px){
-  .oc-main-wrapper{ padding:18px 14px 30px; }
-  .oc-stats-row{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-}
-
-@media (max-width:520px){
-  .oc-stats-row{ grid-template-columns:1fr; }
-  .oc-search{ width:160px; }
-  .oc-logo{ height:32px; }
-  .oc-brand-main{ font-size:.95rem; }
-}
-
-/* ==================== Modo oscuro ==================== */
-.oc-dark{ background:#020617; }
-.oc-dark .oc-main-wrapper{ color:#e5e7eb; }
-.oc-dark .oc-hero{ background:linear-gradient(135deg,#020617,#020c1b); border-color:#111827; }
-.oc-dark .oc-hero-badge{ background:#020617; border-color:#111827; }
-.oc-dark .stat-card, .oc-dark .card, .oc-dark .oc-module-card{
-  background:#020617; border-color:#111827; box-shadow:0 10px 30px rgba(0,0,0,.7);
-}
-.oc-dark .oc-muted, .oc-dark .oc-hero-meta{ color:#9ca3af; }
-/* ============================================================
-   OdontoCloud – Responsivo 100% (ADD-ON, pegar al final)
-   Sin cambios visuales de escritorio: solo adaptación
-   ============================================================ */
-
-/* 0) Ajustes base seguros para móviles modernos */
-html { -webkit-text-size-adjust: 100%; }
-.oc-shell { 
-  min-height: 100dvh; /* evita saltos en móviles con barras dinámicas */
-  padding-left: max(0px, env(safe-area-inset-left));
-  padding-right: max(0px, env(safe-area-inset-right));
-}
-.oc-footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-
-/* 1) Header flexible sin romper el layout existente */
-.oc-header {
-  gap: 12px;        /* pequeño respiro cuando envuelve */
-  flex-wrap: wrap;  /* permite dos filas si no entra todo */
-}
-
-/* En pantallas grandes se mantiene tu separación; en chicas se reduce sola */
-.oc-header-left {
-  margin-right: clamp(0px, 6vw, 140px);
-  min-width: 0;
-}
-.oc-brand-text, .oc-brand-main, .oc-brand-sub {
-  min-width: 0; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
-}
-
-/* 2) Navegación: scroll horizontal discreto en móvil (no cambia desktop) */
-.oc-nav {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.oc-nav::-webkit-scrollbar { display: none; }
-.oc-nav-btn { flex: 0 0 auto; } /* que no se encojan al hacer scroll */
-
-/* 3) Búsqueda: ancho fluido sin perder el “look” */
-.oc-search {
-  width: min(260px, 38vw); /* 220–260px en desktop; fluido en tablets/móvil */
-  min-width: 140px;
-}
-
-/* 4) Contenedor principal: respiración en móviles */
-.oc-main-wrapper {
-  padding-left: clamp(14px, 4vw, 32px);
-  padding-right: clamp(14px, 4vw, 32px);
-}
-
-/* 5) Tarjetas y listas: evitan desbordes de texto/etiquetas */
-.card, .stat-card, .oc-module-card { min-width: 0; }
-.oc-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.oc-small-link { white-space: nowrap; }
-.oc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.oc-list-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.oc-list-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* 6) Gráfica: evitar overflow en contenedores angostos */
-.card-quickcharts { overflow: hidden; }
+.card h3 { margin-top: 0; font-size: .95rem; }
+.card-quickcharts { min-height: 230px; overflow: hidden; position: relative; }
 .card-quickcharts canvas, .card-quickcharts svg { width: 100%; height: 170px; display: block; }
 
-/* 7) Grid principal: mismas proporciones en desktop; apila limpio en pantallas menores */
+/* FOOTER */
+.oc-footer { text-align: center; margin-top: 26px; font-size: .8rem; color: var(--oc-muted); padding-bottom: env(safe-area-inset-bottom); }
+
+/* ANIMACIONES */
+@keyframes fadeInUp {
+from { opacity: 0; transform: translateY(8px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 1100px) {
-  .oc-grid { grid-template-columns: 1fr; }
+.oc-grid { grid-template-columns: 1fr; }
 }
 
-/* 8) Header en tablet/móvil: centra sin romper alturas ni estilos */
 @media (max-width: 900px) {
-  .oc-header      { justify-content: center; }
-  .oc-header-left { width: 100%; justify-content: center; margin-right: 0; }
-  .oc-header-right{ width: 100%; justify-content: center; flex-wrap: wrap; }
-  .oc-nav         { justify-content: center; } /* mantiene tus “píldoras” */
-  .oc-hero        { flex-direction: column; }
-  .oc-hero-badge  { text-align: left; min-width: 0; align-self: stretch; }
+.oc-header { justify-content: center; }
+.oc-header-left, .oc-header-right { width: 100%; justify-content: center; margin-right: 0; }
+.oc-nav { justify-content: center; }
+.oc-hero { flex-direction: column; }
+.oc-hero-badge { text-align: left; min-width: 0; align-self: stretch; }
 }
 
-/* 9) Stats: 4→2→1 columnas sin cambiar sus estilos */
 @media (max-width: 700px) {
-  .oc-main-wrapper { padding: 18px 14px 30px; }
-  .oc-stats-row    { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 520px) {
-  .oc-stats-row { grid-template-columns: 1fr; }
-  .oc-search    { width: 160px; }
-  .oc-logo      { height: 32px; }
-  .oc-brand-main{ font-size: .95rem; }
+.oc-main-wrapper { padding: 18px 14px 30px; }
+.oc-stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 
-/* 10) Container queries (opcional, no afectan browsers sin soporte)
-   – afinan el apilado cuando un panel queda angosto dentro de layouts embebidos */
-.oc-grid { container-type: inline-size; }
+@media (max-width: 520px) {
+.oc-stats-row { grid-template-columns: 1fr; }
+.oc-search { width: 160px; }
+.oc-logo { height: 32px; }
+.oc-brand-main { font-size: .95rem; }
+}
+
 @container (max-width: 780px) {
-  .oc-grid { grid-template-columns: 1fr; }
+.oc-grid { grid-template-columns: 1fr; }
 }
 @container (max-width: 480px) {
-  .oc-card-head { flex-direction: column; align-items: flex-start; }
+.oc-card-head { flex-direction: column; align-items: flex-start; }
 }
 
-/* 11) Accesibilidad/Performance en móviles con “reduce motion” */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+*, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ==================== MODO OSCURO ==================== */
+.oc-dark { background: #020617; }
+.oc-dark .oc-main-wrapper { color: #e5e7eb; }
+.oc-dark .oc-hero { background: linear-gradient(135deg,#020617,#020c1b); border-color: #111827; }
+.oc-dark .oc-hero-badge { background: #020617; border-color: #111827; }
+.oc-dark .stat-card, .oc-dark .card, .oc-dark .oc-module-card {
+background: #020617; border-color: #111827; box-shadow: 0 10px 30px rgba(0,0,0,.7);
+}
+.oc-dark .oc-muted, .oc-dark .oc-hero-meta { color: #9ca3af; }
