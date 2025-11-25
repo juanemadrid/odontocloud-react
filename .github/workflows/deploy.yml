@@ -1,36 +1,34 @@
-name: Deploy to GitHub Pages (Vite)
+name: Publicar con GitHub Pages (Vite)
 
 on:
   push:
-    branches: [ main ]  # cada push a main dispara el deploy
+    branches: [ main ]   # Cada vez que subas algo a la rama principal
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     permissions:
-      contents: write  # necesario para publicar a gh-pages
+      contents: write     # Permiso para crear la rama gh-pages
 
     steps:
-      - name: Checkout
+      - name: Obtener código
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install deps
+      - name: Instalar dependencias
         run: npm ci || npm i
 
-      - name: Build
+      - name: Construir sitio
         run: npm run build
 
-      # Copiamos index.html como 404.html para SPA (React Router)
-      - name: Create 404.html for SPA
+      - name: Crear 404.html (para apps SPA)
         run: cp dist/index.html dist/404.html
 
-      - name: Deploy to gh-pages
+      - name: Publicar en GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
