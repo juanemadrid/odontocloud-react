@@ -1,10 +1,13 @@
-// vite.config.mjs
+// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// En desarrollo: base = '/' (localhost)
-// En producción (GitHub Pages del repo): base = '/odontocloud-react/'
-export default defineConfig(({ mode }) => ({
+// IMPORTANTE: tu repo se publica bajo /odontocloud-react/
+// Esto arregla rutas de assets en GitHub Pages.
+export default defineConfig({
   plugins: [react()],
-  base: mode === 'development' ? '/' : '/odontocloud-react/',
-}))
+  base: '/odontocloud-react/',
+  build: {
+    outDir: 'dist'
+  }
+})
