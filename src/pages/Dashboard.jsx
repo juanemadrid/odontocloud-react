@@ -1,7 +1,7 @@
 // ===============================
-// 🦷 Dashboard.jsx - Panel principal OdontoCloud
+// 🦷 Dashboard.jsx - Panel principal OdontoCloud (Responsive + A11y + CommandSearch)
 // ===============================
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/dashboard.css";
 
 // MÓDULOS PRINCIPALES
@@ -12,7 +12,7 @@ import Odontograma from "../modules/odontograma/Odontograma";
 import Pacientes from "../modules/pacientes/Pacientes";
 import Reportes from "../modules/reportes/Reportes";
 
-// ⛔️ Ya no usamos QuickCharts externo; la gráfica va inline (WeeklyBars)
+// ⛔️ Gráfica inline (WeeklyBars)
 import RecentActivity from "../components/RecentActivity";
 import N8nStatus from "../components/N8nStatus";
 
@@ -52,7 +52,7 @@ const MESSAGES = {
     clinicLabel: "Clínica",
     userLabel: "Usuario",
     roleLabel: "Rol",
-    searchPlaceholder: "Buscar...",
+    searchPlaceholder: "Buscar acciones o ir a…",
     stats_patientsToday: "Pacientes totales",
     stats_appointmentsToday: "Citas hoy",
     stats_revenueToday: "Facturación hoy",
@@ -83,7 +83,7 @@ const MESSAGES = {
     clinicLabel: "Clinic",
     userLabel: "User",
     roleLabel: "Role",
-    searchPlaceholder: "Search...",
+    searchPlaceholder: "Search actions or go to…",
     stats_patientsToday: "Total patients",
     stats_appointmentsToday: "Appointments today",
     stats_revenueToday: "Revenue today",
@@ -175,11 +175,8 @@ const buildDateFromParts = (isoDate, hhmm) => {
 
 /* ==========================================================
    Mini componente local: WeeklyBars (gráfica de barras)
-   - Profesional, sin dependencias
-   - Usa data: [{label, shortLabel, value}]
    ========================================================== */
 function WeeklyBars({ data = [] }) {
-  // Alto del área de plot y paddings
   const height = 200;
   const padTop = 18;
   const padBottom = 22;
@@ -188,7 +185,6 @@ function WeeklyBars({ data = [] }) {
   const n = data.length || 7;
   const gap = 10; // separación entre barras
 
-  // Ancho de cada barra según cantidad de días (responsivo horizontal)
   const barWidth = Math.max(16, Math.min(44, (640 - gap * (n + 1)) / n));
   const chartWidth = (barWidth + gap) * n + gap;
 
@@ -200,7 +196,6 @@ function WeeklyBars({ data = [] }) {
         role="img"
         aria-label="Pacientes registrados por día en la última semana"
       >
-        {/* Líneas de guía 25/50/75/100% */}
         {[0.25, 0.5, 0.75, 1].map((p, i) => {
           const y = padTop + (1 - p) * (height - padTop);
           return (
@@ -216,7 +211,6 @@ function WeeklyBars({ data = [] }) {
           );
         })}
 
-        {/* Barras */}
         {data.map((d, i) => {
           const v = Number(d.value) || 0;
           const h = Math.round((v / max) * (height - padTop));
@@ -237,7 +231,6 @@ function WeeklyBars({ data = [] }) {
                 <title>{`${d.label || d.shortLabel || ""} · ${v} paciente${v !== 1 ? "s" : ""}`}</title>
               </rect>
 
-              {/* Valor encima (si hay altura) */}
               {v > 0 && h > 14 && (
                 <text
                   x={x + barWidth / 2}
@@ -250,7 +243,6 @@ function WeeklyBars({ data = [] }) {
                 </text>
               )}
 
-              {/* Etiqueta corta bajo la barra */}
               <text
                 x={x + barWidth / 2}
                 y={height + 14}
@@ -264,6 +256,127 @@ function WeeklyBars({ data = [] }) {
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+/* ==========================================================
+   🔎 CommandSearch (barra de comandos) — inline
+   - Navega entre módulos y ejecuta acciones rápidas
+   ========================================================== */
+function CommandSearch({ onNavigate, onAction, placeholder }) {
+  const [term, setTerm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const boxRef = useRef(null);
+
+  // Comandos disponibles
+  const commands = useMemo(
+    () => [
+      // Navegación
+      { group: "Navegación", label: "Ir a Inicio", keywords: "inicio home overview", run: () => onNavigate?.("Inicio") },
+      { group: "Navegación", label: "Ir a Agenda", keywords: "agenda calendario schedule", run: () => onNavigate?.("Agenda") },
+      { group: "Navegación", label: "Ir a Pacientes", keywords: "pacientes", run: () => onNavigate?.("Pacientes") },
+      { group: "Navegación", label: "Ir a Facturación", keywords: "facturacion facturas billing", run: () => onNavigate?.("Facturación") },
+      { group: "Navegación", label: "Ir a Inventario", keywords: "inventario stock", run: () => onNavigate?.("Inventario") },
+      { group: "Navegación", label: "Ir a Odontograma", keywords: "odontograma", run: () => onNavigate?.("Odontograma") },
+      { group: "Navegación", label: "Ir a Reportes", keywords: "reportes informes", run: () => onNavigate?.("Reportes") },
+
+      // Acciones rápidas (ajústalas a tus flujos)
+      { group: "Acciones", label: "Nueva cita", keywords: "nueva cita agendar", run: () => onAction?.("new_appointment") },
+      { group: "Acciones", label: "Nuevo paciente", keywords: "nuevo paciente alta", run: () => onAction?.("new_patient") },
+      { group: "Acciones", label: "Nueva factura", keywords: "nueva factura", run: () => onAction?.("new_invoice") },
+      { group: "Acciones", label: "Exportar agenda", keywords: "exportar agenda", run: () => onAction?.("export_agenda") },
+      { group: "Acciones", label: "Ir a hoy (Agenda)", keywords: "hoy today", run: () => onAction?.("agenda_today") },
+      { group: "Acciones", label: "Cambiar modo oscuro", keywords: "oscuro dark mode", run: () => onAction?.("toggle_dark") },
+      { group: "Acciones", label: "Cerrar sesión", keywords: "logout salir cerrar", run: () => onAction?.("logout") },
+
+      // Ayuda
+      { group: "Ayuda", label: "Ver atajos de teclado", keywords: "atajos ayuda", run: () => onAction?.("show_shortcuts") },
+      { group: "Ayuda", label: "Soporte / Contacto", keywords: "soporte ayuda contacto", run: () => onAction?.("support") },
+    ],
+    [onNavigate, onAction]
+  );
+
+  const filtered = useMemo(() => {
+    const q = term.toLowerCase().trim();
+    if (!q) return [];
+    return commands.filter(
+      (c) => c.label.toLowerCase().includes(q) || c.keywords.includes(q)
+    );
+  }, [term, commands]);
+
+  // Cerrar si clic fuera
+  useEffect(() => {
+    const h = (e) => {
+      if (!boxRef.current) return;
+      if (!boxRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const run = (cmd) => {
+    cmd.run?.();
+    setTerm("");
+    setOpen(false);
+  };
+
+  const onKeyDown = (e) => {
+    if (!open || filtered.length === 0) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => (i + 1) % filtered.length); }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setActive((i) => (i - 1 + filtered.length) % filtered.length); }
+    if (e.key === "Enter")     { e.preventDefault(); filtered[active] && run(filtered[active]); }
+    if (e.key === "Escape")    { setOpen(false); }
+  };
+
+  // Agrupar por categoría
+  const grouped = useMemo(() => {
+    const m = new Map();
+    filtered.forEach((c) => { if (!m.has(c.group)) m.set(c.group, []); m.get(c.group).push(c); });
+    return Array.from(m.entries());
+  }, [filtered]);
+
+  return (
+    <div className="oc-search-wrap" ref={boxRef}>
+      <input
+        className="oc-search"
+        type="search"
+        inputMode="search"
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={term}
+        onChange={(e) => { setTerm(e.target.value); setOpen(!!e.target.value); setActive(0); }}
+        onFocus={() => setOpen(!!term)}
+        onKeyDown={onKeyDown}
+      />
+      {open && (
+        <div className="oc-search-dropdown" role="listbox" aria-label="Resultados de comandos">
+          {grouped.length === 0 ? (
+            <div className="oc-search-item empty">Escribe para ver opciones…</div>
+          ) : (
+            grouped.map(([group, items]) => (
+              <div key={group}>
+                <div className="oc-search-group">{group}</div>
+                {items.map((c) => {
+                  const idxFlat = filtered.indexOf(c);
+                  return (
+                    <button
+                      key={c.label}
+                      className={`oc-search-item ${idxFlat === active ? "active" : ""}`}
+                      onMouseEnter={() => setActive(idxFlat)}
+                      onClick={() => run(c)}
+                      role="option"
+                    >
+                      <span className="oc-search-title">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -292,6 +405,7 @@ export default function Dashboard() {
     try {
       localStorage.setItem("odontocloud:dark", darkMode ? "1" : "0");
     } catch {}
+    // Conservamos por compatibilidad, aunque el CSS usa .oc-dark en la raíz
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
@@ -352,7 +466,7 @@ export default function Dashboard() {
   const { startToday, endToday, startTodayJS } = useTodayRange();
   const todayIso = useMemo(() => toIsoDate(startTodayJS), [startTodayJS]);
 
-  // Rango de la “última semana” para mostrar debajo del título (solo texto)
+  // Rango de la “última semana” (texto)
   const weekRangeLabel = useMemo(() => {
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
@@ -366,7 +480,7 @@ export default function Dashboard() {
     return `${fmt(start)} – ${fmt(end)}`;
   }, [locale]);
 
-  // Normalizador de documentos "citas"
+  // Normalizador "citas"
   const normalizeCita = (docSnap) => {
     const data = docSnap.data() || {};
     let fechaDate;
@@ -397,9 +511,8 @@ export default function Dashboard() {
     };
   };
 
-  // Suscripción en tiempo real a "citas" de HOY (Timestamp y String)
+  // Suscripción citas HOY
   useEffect(() => {
-    // A) Timestamp en rango del día
     const qTodayTs = query(
       collection(db, "citas"),
       where("fecha", ">=", startToday),
@@ -407,10 +520,9 @@ export default function Dashboard() {
       orderBy("fecha", "asc")
     );
 
-    // B) String exacto "YYYY-MM-DD"
     const qTodayStr = query(collection(db, "citas"), where("fecha", "==", todayIso));
 
-    let cacheMap = new Map(); // id -> cita
+    let cacheMap = new Map();
     let gotTs = false;
     let gotStr = false;
 
@@ -427,7 +539,7 @@ export default function Dashboard() {
       setMetrics((m) => ({
         ...m,
         citasHoy: rows.length,
-        enEspera: enEsperaCount, // <- tiempo real
+        enEspera: enEsperaCount,
       }));
       if (gotTs && gotStr) setTodaysLoading(false);
     };
@@ -476,11 +588,9 @@ export default function Dashboard() {
   useEffect(() => {
     const loadMetricsBase = async () => {
       try {
-        // Pacientes totales
         const pacientesCountSnap = await getCountFromServer(collection(db, "pacientes"));
         const pacientesTotal = pacientesCountSnap.data().count || 0;
 
-        // Facturación de hoy (asumiendo 'fecha' Timestamp en 'facturas')
         let facturacionHoy = 0;
         try {
           const qFact = query(
@@ -498,7 +608,7 @@ export default function Dashboard() {
         }
 
         setMetrics((m) => ({
-          ...m, // mantenemos citasHoy y enEspera en tiempo real
+          ...m,
           pacientesHoy: pacientesTotal,
           facturacionHoy,
         }));
@@ -512,13 +622,12 @@ export default function Dashboard() {
     loadMetricsBase();
   }, [startToday, endToday]);
 
-  // === Serie semanal en TIEMPO REAL (pacientes creados) ===
+  // === Serie semanal pacientes (realtime) ===
   useEffect(() => {
     const today = new Date();
     const startWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
     const endWeekJs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    // Base de 7 días (siempre aparecen todas las barras)
     const base = new Map();
     for (let i = 0; i < 7; i++) {
       const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i));
@@ -542,7 +651,7 @@ export default function Dashboard() {
     const unsub = onSnapshot(
       qWeekPatients,
       (snap) => {
-        const counts = new Map(base); // clonar base
+        const counts = new Map(base);
         snap.docs.forEach((d) => {
           const data = d.data() || {};
           const date = data.createdAt?.toDate ? data.createdAt.toDate()
@@ -656,8 +765,11 @@ export default function Dashboard() {
 
   return (
     <div className={`oc-shell ${darkMode ? "oc-dark" : ""}`}>
+      {/* Enlace de 'saltar al contenido' para accesibilidad */}
+      <a href="#oc-main" className="oc-skip-link">Saltar al contenido</a>
+
       {/* HEADER */}
-      <header className="oc-header">
+      <header className="oc-header" role="banner">
         <div className="oc-header-left">
           <img src={logo} alt="OdontoCloud" className="oc-logo" />
           <div className="oc-brand-text">
@@ -666,70 +778,140 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <nav className="oc-nav">
+        <nav className="oc-nav" role="navigation" aria-label="Navegación principal">
           <button
+            type="button"
             className={activeModule === "Inicio" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Inicio" ? "page" : undefined}
             onClick={() => setActiveModule("Inicio")}
+            title={t("nav_home")}
           >
             {t("nav_home")}
           </button>
           <button
+            type="button"
             className={activeModule === "Agenda" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Agenda" ? "page" : undefined}
             onClick={() => setActiveModule("Agenda")}
+            title={t("nav_agenda")}
           >
             {t("nav_agenda")}
           </button>
           <button
+            type="button"
             className={activeModule === "Pacientes" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Pacientes" ? "page" : undefined}
             onClick={() => setActiveModule("Pacientes")}
+            title={t("nav_patients")}
           >
             {t("nav_patients")}
           </button>
           <button
+            type="button"
             className={activeModule === "Facturación" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Facturación" ? "page" : undefined}
             onClick={() => setActiveModule("Facturación")}
+            title={t("nav_billing")}
           >
             {t("nav_billing")}
           </button>
           <button
+            type="button"
             className={activeModule === "Inventario" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Inventario" ? "page" : undefined}
             onClick={() => setActiveModule("Inventario")}
+            title={t("nav_inventory")}
           >
             {t("nav_inventory")}
           </button>
           <button
+            type="button"
             className={activeModule === "Odontograma" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Odontograma" ? "page" : undefined}
             onClick={() => setActiveModule("Odontograma")}
+            title={t("nav_odontogram")}
           >
             {t("nav_odontogram")}
           </button>
           <button
+            type="button"
             className={activeModule === "Reportes" ? "oc-nav-btn active" : "oc-nav-btn"}
+            aria-current={activeModule === "Reportes" ? "page" : undefined}
             onClick={() => setActiveModule("Reportes")}
+            title={t("nav_reports")}
           >
             {t("nav_reports")}
           </button>
         </nav>
 
         <div className="oc-header-right">
-          <input className="oc-search" placeholder={t("searchPlaceholder")} />
-          <button className="oc-icon-btn" type="button" onClick={() => setDarkMode((v) => !v)}>
+          {/* ⬇️ Barra de comandos en el header */}
+          <CommandSearch
+            placeholder={t("searchPlaceholder")}
+            onNavigate={(module) => setActiveModule(module)}
+            onAction={(key) => {
+              switch (key) {
+                case "new_appointment":
+                  setActiveModule("Agenda");
+                  break;
+                case "new_patient":
+                  setActiveModule("Pacientes");
+                  break;
+                case "new_invoice":
+                  setActiveModule("Facturación");
+                  break;
+                case "export_agenda":
+                  setActiveModule("Agenda");
+                  break;
+                case "agenda_today":
+                  setActiveModule("Agenda");
+                  break;
+                case "toggle_dark":
+                  setDarkMode((v) => !v);
+                  break;
+                case "logout":
+                  handleLogout();
+                  break;
+                case "show_shortcuts":
+                  alert("Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar.");
+                  break;
+                case "support":
+                  window.open("https://tu-soporte.odc", "_blank");
+                  break;
+                default:
+                  break;
+              }
+            }}
+          />
+
+          <button
+            className="oc-icon-btn"
+            type="button"
+            onClick={() => setDarkMode((v) => !v)}
+            aria-pressed={darkMode}
+            title={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
+          >
             {darkMode ? "🌙" : "☀️"}
           </button>
-          <button className="oc-icon-btn" type="button" onClick={handleLogout}>
+          <button
+            className="oc-icon-btn"
+            type="button"
+            onClick={handleLogout}
+            title={t("logout")}
+          >
             {t("logout")}
           </button>
         </div>
       </header>
 
       {/* MAIN */}
-      <main className="oc-main-wrapper">
+      <main id="oc-main" className="oc-main-wrapper" role="main">
         {activeModule !== "Inicio" && renderModuleContent()}
 
         {activeModule === "Inicio" && (
           <div className="oc-main-content">
             {/* HERO */}
-            <section className="oc-hero">
+            <section className="oc-hero" aria-label="Resumen general">
               <div className="oc-hero-text">
                 <h1>{t("welcomeTitle")}</h1>
                 <p>{t("welcomeSubtitle")}</p>
@@ -738,7 +920,7 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <div className="oc-hero-badge">
+              <div className="oc-hero-badge" aria-live="polite">
                 <span className="oc-hero-badge-title">{t("stats_appointmentsToday")}</span>
                 <span className="oc-hero-badge-value">
                   {metricsLoading && todaysLoading ? "…" : metrics.citasHoy}
@@ -750,7 +932,7 @@ export default function Dashboard() {
             </section>
 
             {/* STATS */}
-            <section className="oc-stats-row">
+            <section className="oc-stats-row" aria-label="Indicadores del día">
               <div className="stat-card">
                 <span className="stat-label">{t("stats_patientsToday")}</span>
                 <span className="stat-value">{metrics.pacientesHoy}</span>
@@ -773,12 +955,12 @@ export default function Dashboard() {
             </section>
 
             {/* GRID principal */}
-            <section className="oc-grid">
+            <section className="oc-grid" aria-label="Contenido principal del dashboard">
               <div className="oc-grid-main">
                 <div className="card card-quickcharts">
-                  <div className="oc-card-head" style={{ alignItems: "baseline" }}>
+                  <div className="oc-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                     <h3>Pacientes registrados · Últimos 7 días</h3>
-                    <span className="oc-muted" style={{ marginLeft: "8px", fontSize: 12 }}>
+                    <span className="oc-muted" style={{ marginLeft: 8, fontSize: 12 }}>
                       {weekRangeLabel}
                     </span>
                   </div>
@@ -792,7 +974,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="oc-grid-side">
+              <aside className="oc-grid-side" aria-label="Panel lateral">
                 <div className="card">
                   <h3>{t("n8n_title")}</h3>
                   {n8nLoading ? <span className="oc-muted">{t("loading")}</span> : <N8nStatus status={n8nState} />}
@@ -800,9 +982,9 @@ export default function Dashboard() {
 
                 {/* Citas de hoy */}
                 <div className="card">
-                  <div className="oc-card-head">
+                  <div className="oc-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                     <h3>{t("todays_appts")}</h3>
-                    <button className="oc-small-link" onClick={() => setActiveModule("Agenda")}>
+                    <button className="oc-small-link" type="button" onClick={() => setActiveModule("Agenda")}>
                       {t("see_schedule")}
                     </button>
                   </div>
@@ -844,7 +1026,7 @@ export default function Dashboard() {
                     <RecentActivity items={recent} />
                   )}
                 </div>
-              </div>
+              </aside>
             </section>
 
             <footer className="oc-footer">
@@ -856,3 +1038,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
