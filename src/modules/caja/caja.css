@@ -1,0 +1,184 @@
+/* =========================
+   Caja (estilos sólidos)
+   ========================= */
+
+/* ---------- tokens por si no existen variables ---------- */
+:root {
+  --oc-bg: #eef2f7;
+  --oc-surface: #ffffff;
+  --oc-surface-2: #f6f8fc;
+  --oc-border: #e5e7eb;
+  --oc-muted: #64748b;
+  --oc-text: #0f172a;
+  --oc-primary: #2563eb;
+  --oc-danger: #b91c1c;
+  --oc-success: #16a34a;
+  --oc-skeleton: #e5e7eb;
+  --oc-shadow: 0 10px 30px rgba(2, 6, 23, .06);
+}
+
+/* ---------- layout base caja ---------- */
+.oc-main-content {
+  background: var(--oc-bg);
+}
+
+.card {
+  background: var(--oc-surface) !important;
+  border: 1px solid var(--oc-border);
+  border-radius: 14px;
+  box-shadow: var(--oc-shadow);
+  padding: 12px;
+}
+
+/* ---------- encabezados / breadcrumbs ---------- */
+.oc-card-head {
+  background: transparent; /* pero la card es sólida */
+  color: var(--oc-text);
+}
+
+.oc-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--oc-muted);
+}
+
+/* ---------- inputs / botones ---------- */
+.oc-input {
+  background: #fff;
+  border: 1px solid var(--oc-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.oc-input:focus {
+  border-color: var(--oc-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+
+.oc-btn {
+  background: var(--oc-primary);
+  color: #fff;
+  border: 1px solid var(--oc-primary);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.oc-small-btn {
+  background: #fff;
+  color: var(--oc-text);
+  border: 1px solid var(--oc-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.oc-small-btn.oc-danger {
+  color: #fff;
+  background: var(--oc-danger);
+  border-color: var(--oc-danger);
+}
+
+/* ---------- tags ---------- */
+.oc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--oc-border);
+  background: var(--oc-surface-2);
+  color: var(--oc-text);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.oc-tag-danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: var(--oc-danger);
+}
+.oc-tag-success {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: var(--oc-success);
+}
+
+/* ---------- menú izquierdo ---------- */
+.oc-menu-item {
+  background: #fff;
+  border: 1px solid var(--oc-border);
+  color: var(--oc-text);
+  border-radius: 10px;
+}
+.oc-menu-item.active {
+  background: var(--oc-surface-2);
+  border-color: var(--oc-border);
+}
+
+/* ---------- tablas (sólidas, sin transparencia) ---------- */
+.oc-table-wrap {
+  overflow: auto;
+  background: var(--oc-surface); /* solida debajo de la tabla */
+  border-radius: 12px;
+}
+
+.oc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--oc-surface); /* solida */
+  color: var(--oc-text);
+}
+
+.oc-thead .oc-tr .oc-th,
+.oc-th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--oc-surface) !important; /* cabecera sólida */
+  color: var(--oc-muted);
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 1px solid var(--oc-border);
+  padding: 12px;
+}
+
+.oc-tr .oc-td {
+  background: var(--oc-surface); /* filas sólidas */
+  border-bottom: 1px solid var(--oc-border);
+  padding: 12px;
+}
+
+.oc-tr:last-child .oc-td {
+  border-bottom: none;
+}
+
+/* ---------- vacíos / skeleton ---------- */
+.oc-empty {
+  background: var(--oc-surface);
+  border: 1px dashed var(--oc-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.oc-muted { color: var(--oc-muted); }
+
+.stat-card {
+  background: var(--oc-surface);
+  border: 1px solid var(--oc-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.stat-label { color: var(--oc-muted); font-size: 12px; }
+.stat-value { font-weight: 700; font-size: 18px; }
+
+/* ---------- accesibilidad: foco en botones ---------- */
+.oc-btn:focus,
+.oc-small-btn:focus,
+.oc-menu-item:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
+}

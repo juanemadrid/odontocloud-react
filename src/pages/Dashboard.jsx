@@ -1,10 +1,10 @@
 // ===============================
-// 🦷 Dashboard.jsx - Panel principal OdontoCloud (Responsive + A11y + CommandSearch)
+// 🦷 Dashboard.jsx - Panel principal OdontoCloud
+// (Caja ya conectada; MegaMenu Administración estable + sub-vistas de Facturación)
 // ===============================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/dashboard.css";
 
-// MÓDULOS PRINCIPALES
 import Agenda from "../modules/agenda/Agenda";
 import Facturacion from "../modules/facturacion/Facturacion";
 import Inventario from "../modules/inventario/Inventario";
@@ -12,7 +12,9 @@ import Odontograma from "../modules/odontograma/Odontograma";
 import Pacientes from "../modules/pacientes/Pacientes";
 import Reportes from "../modules/reportes/Reportes";
 
-// ⛔️ Gráfica inline (WeeklyBars)
+// 👉 NUEVO: importa tu componente Caja (ajusta la ruta si tu archivo está en otra carpeta)
+import Caja from "../modules/caja/Caja";
+
 import RecentActivity from "../components/RecentActivity";
 import N8nStatus from "../components/N8nStatus";
 
@@ -34,9 +36,7 @@ import {
 
 import logo from "/assets/logo.png";
 
-/* ===============================
-   i18n sencillo (es/en)
-   =============================== */
+/* =============================== i18n =============================== */
 const MESSAGES = {
   es: {
     nav_home: "Inicio",
@@ -46,6 +46,8 @@ const MESSAGES = {
     nav_inventory: "Inventario",
     nav_odontogram: "Odontograma",
     nav_reports: "Reportes",
+    nav_cash: "Caja",
+    nav_admin: "Administración",
     welcomeTitle: "Bienvenido a OdontoCloud",
     welcomeSubtitle:
       "Administra tus pacientes, agenda, inventario y facturación de manera inteligente y moderna.",
@@ -77,6 +79,8 @@ const MESSAGES = {
     nav_inventory: "Inventory",
     nav_odontogram: "Odontogram",
     nav_reports: "Reports",
+    nav_cash: "Cash",
+    nav_admin: "Administration",
     welcomeTitle: "Welcome to OdontoCloud",
     welcomeSubtitle:
       "Manage your patients, schedule, inventory and billing in a smart and modern way.",
@@ -101,41 +105,42 @@ const MESSAGES = {
     at: "at",
   },
 };
-
 const detectLocale = () => {
   if (typeof navigator === "undefined") return "es";
   const lang = navigator.language || navigator.userLanguage || "es";
   return lang.toLowerCase().startsWith("es") ? "es" : "en";
 };
 
-// Sesión offline (Login.jsx)
+/* ================== sesión offline + fechas ================== */
 const getOfflineSession = () => {
   try {
     const data = JSON.parse(localStorage.getItem("odc_session"));
-    if (data && Date.now() - data.timestamp < 1000 * 60 * 60 * 24) {
-      return data; // { email, rol, timestamp }
-    }
+    if (data && Date.now() - data.timestamp < 1000 * 60 * 60 * 24) return data;
     return null;
   } catch {
     return null;
   }
 };
-
-// Helpers fecha de hoy (inicio/fin)
-const useTodayRange = () => {
-  return useMemo(() => {
+const useTodayRange = () =>
+  useMemo(() => {
     const now = new Date();
     const startToday = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
-      0, 0, 0, 0
+      0,
+      0,
+      0,
+      0
     );
     const endToday = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate() + 1,
-      0, 0, 0, 0
+      0,
+      0,
+      0,
+      0
     );
     return {
       startToday: Timestamp.fromDate(startToday),
@@ -143,27 +148,18 @@ const useTodayRange = () => {
       startTodayJS: startToday,
     };
   }, []);
-};
-
-// ISO yyyy-mm-dd
-const toIsoDate = (d) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-// Formato hora corta a partir de Date
+const toIsoDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
 const fmtTime = (d, locale) =>
   d.toLocaleTimeString(locale === "es" ? "es-CO" : "en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
-
-// Construye Date a partir de fecha string + hora string
-const buildDateFromParts = (isoDate, hhmm) => {
+const buildDateFromParts = (iso, hhmm) => {
   try {
-    const [y, m, d] = (isoDate || "").split("-").map((x) => parseInt(x, 10));
+    const [y, m, d] = (iso || "").split("-").map((x) => parseInt(x, 10));
     const [hh = 0, mm = 0] = (hhmm || "00:00")
       .split(":")
       .map((x) => parseInt(x, 10));
@@ -173,21 +169,16 @@ const buildDateFromParts = (isoDate, hhmm) => {
   }
 };
 
-/* ==========================================================
-   Mini componente local: WeeklyBars (gráfica de barras)
-   ========================================================== */
+/* ================== Mini chart ================== */
 function WeeklyBars({ data = [] }) {
-  const height = 200;
-  const padTop = 18;
-  const padBottom = 22;
-
+  const height = 200,
+    padTop = 18,
+    padBottom = 22;
   const max = Math.max(1, ...data.map((d) => Number(d.value) || 0));
-  const n = data.length || 7;
-  const gap = 10; // separación entre barras
-
+  const n = data.length || 7,
+    gap = 10;
   const barWidth = Math.max(16, Math.min(44, (640 - gap * (n + 1)) / n));
   const chartWidth = (barWidth + gap) * n + gap;
-
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
       <svg
@@ -210,13 +201,11 @@ function WeeklyBars({ data = [] }) {
             />
           );
         })}
-
         {data.map((d, i) => {
           const v = Number(d.value) || 0;
           const h = Math.round((v / max) * (height - padTop));
           const x = gap + i * (barWidth + gap);
           const y = height - h;
-
           return (
             <g key={i}>
               <rect
@@ -228,9 +217,10 @@ function WeeklyBars({ data = [] }) {
                 ry="6"
                 fill={v > 0 ? "#0ea5e9" : "#cbd5e1"}
               >
-                <title>{`${d.label || d.shortLabel || ""} · ${v} paciente${v !== 1 ? "s" : ""}`}</title>
+                <title>{`${d.label || d.shortLabel || ""} · ${v} paciente${
+                  v !== 1 ? "s" : ""
+                }`}</title>
               </rect>
-
               {v > 0 && h > 14 && (
                 <text
                   x={x + barWidth / 2}
@@ -242,7 +232,6 @@ function WeeklyBars({ data = [] }) {
                   {v}
                 </text>
               )}
-
               <text
                 x={x + barWidth / 2}
                 y={height + 14}
@@ -260,20 +249,14 @@ function WeeklyBars({ data = [] }) {
   );
 }
 
-/* ==========================================================
-   🔎 CommandSearch (barra de comandos) — inline
-   - Navega entre módulos y ejecuta acciones rápidas
-   ========================================================== */
+/* ================== CommandSearch ================== */
 function CommandSearch({ onNavigate, onAction, placeholder }) {
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const boxRef = useRef(null);
-
-  // Comandos disponibles
   const commands = useMemo(
     () => [
-      // Navegación
       { group: "Navegación", label: "Ir a Inicio", keywords: "inicio home overview", run: () => onNavigate?.("Inicio") },
       { group: "Navegación", label: "Ir a Agenda", keywords: "agenda calendario schedule", run: () => onNavigate?.("Agenda") },
       { group: "Navegación", label: "Ir a Pacientes", keywords: "pacientes", run: () => onNavigate?.("Pacientes") },
@@ -282,7 +265,6 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
       { group: "Navegación", label: "Ir a Odontograma", keywords: "odontograma", run: () => onNavigate?.("Odontograma") },
       { group: "Navegación", label: "Ir a Reportes", keywords: "reportes informes", run: () => onNavigate?.("Reportes") },
 
-      // Acciones rápidas (ajústalas a tus flujos)
       { group: "Acciones", label: "Nueva cita", keywords: "nueva cita agendar", run: () => onAction?.("new_appointment") },
       { group: "Acciones", label: "Nuevo paciente", keywords: "nuevo paciente alta", run: () => onAction?.("new_patient") },
       { group: "Acciones", label: "Nueva factura", keywords: "nueva factura", run: () => onAction?.("new_invoice") },
@@ -291,13 +273,11 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
       { group: "Acciones", label: "Cambiar modo oscuro", keywords: "oscuro dark mode", run: () => onAction?.("toggle_dark") },
       { group: "Acciones", label: "Cerrar sesión", keywords: "logout salir cerrar", run: () => onAction?.("logout") },
 
-      // Ayuda
       { group: "Ayuda", label: "Ver atajos de teclado", keywords: "atajos ayuda", run: () => onAction?.("show_shortcuts") },
       { group: "Ayuda", label: "Soporte / Contacto", keywords: "soporte ayuda contacto", run: () => onAction?.("support") },
     ],
     [onNavigate, onAction]
   );
-
   const filtered = useMemo(() => {
     const q = term.toLowerCase().trim();
     if (!q) return [];
@@ -305,8 +285,6 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
       (c) => c.label.toLowerCase().includes(q) || c.keywords.includes(q)
     );
   }, [term, commands]);
-
-  // Cerrar si clic fuera
   useEffect(() => {
     const h = (e) => {
       if (!boxRef.current) return;
@@ -315,28 +293,37 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-
   const run = (cmd) => {
     cmd.run?.();
     setTerm("");
     setOpen(false);
   };
-
   const onKeyDown = (e) => {
     if (!open || filtered.length === 0) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => (i + 1) % filtered.length); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setActive((i) => (i - 1 + filtered.length) % filtered.length); }
-    if (e.key === "Enter")     { e.preventDefault(); filtered[active] && run(filtered[active]); }
-    if (e.key === "Escape")    { setOpen(false); }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => (i + 1) % filtered.length);
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (i - 1 + filtered.length) % filtered.length);
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      filtered[active] && run(filtered[active]);
+    }
+    if (e.key === "Escape") {
+      setOpen(false);
+    }
   };
-
-  // Agrupar por categoría
   const grouped = useMemo(() => {
     const m = new Map();
-    filtered.forEach((c) => { if (!m.has(c.group)) m.set(c.group, []); m.get(c.group).push(c); });
+    filtered.forEach((c) => {
+      if (!m.has(c.group)) m.set(c.group, []);
+      m.get(c.group).push(c);
+    });
     return Array.from(m.entries());
   }, [filtered]);
-
   return (
     <div className="oc-search-wrap" ref={boxRef}>
       <input
@@ -346,7 +333,11 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
         placeholder={placeholder}
         aria-label={placeholder}
         value={term}
-        onChange={(e) => { setTerm(e.target.value); setOpen(!!e.target.value); setActive(0); }}
+        onChange={(e) => {
+          setTerm(e.target.value);
+          setOpen(!!e.target.value);
+          setActive(0);
+        }}
         onFocus={() => setOpen(!!term)}
         onKeyDown={onKeyDown}
       />
@@ -382,17 +373,290 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
 }
 
 /* ==========================================================
-   Dashboard
+   ✅ AdminMegaMenu
+   - Mantiene tu look&feel; solo añade callback onFact(viewKey)
    ========================================================== */
+function AdminMegaMenu({
+  open,
+  anchorRect,
+  onClose,
+  onGo,
+  onSoon,
+  onFact, // <-- NUEVO: seleccionar vista de facturación
+  dark,
+}) {
+  const [sub, setSub] = useState(null); // 'facturacion' | 'rips' | null
+  const closeTimer = useRef(null);
+
+  // Cierre global (Esc / scroll / click fuera)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && onClose?.();
+    const onScroll = () => onClose?.();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  // Posiciones
+  const top = (anchorRect?.bottom || 60) + 8;
+  const left = Math.max(
+    12,
+    Math.min((anchorRect?.left || 300) - 160, window.innerWidth - 920)
+  );
+  const gap = 10; // separación visual entre columna y subpanel
+  const leftSub = left + 360 + gap;
+
+  // Tema
+  const baseBg = dark ? "#0b1220" : "#ffffff";
+  const baseTx = dark ? "#e5e7eb" : "#0f172a";
+  const hoverBg = dark ? "#0f1a32" : "#f3f6ff";
+  const hoverBd = dark ? "#1f2a44" : "#e2e8f0";
+  const hintTx = dark ? "#b6c1d1" : "#475569";
+
+  // Estilos base
+  const card = {
+    position: "fixed",
+    top,
+    left,
+    width: 880,
+    maxWidth: "calc(100vw - 24px)",
+    background: baseBg,
+    color: baseTx,
+    borderRadius: 14,
+    boxShadow: "0 18px 40px rgba(2,6,23,.18)",
+    border: `1px solid ${hoverBd}`,
+    zIndex: 400,
+    padding: 12,
+  };
+  const subCard = {
+    position: "fixed",
+    top,
+    left: leftSub,
+    width: 420,
+    maxWidth: "calc(100vw - 24px)",
+    background: baseBg,
+    color: baseTx,
+    borderRadius: 14,
+    boxShadow: "0 18px 40px rgba(2,6,23,.18)",
+    border: `1px solid ${hoverBd}`,
+    zIndex: 410,
+    padding: 12,
+  };
+  const col = { display: "flex", flexDirection: "column", gap: 6, padding: "8px 10px" };
+  const item = {
+    height: 38,
+    borderRadius: 10,
+    padding: "0 12px",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: ".92rem",
+    cursor: "pointer",
+    border: "1px solid transparent",
+    background: "transparent",
+    color: baseTx,
+    fontWeight: 500,
+    textAlign: "left",
+  };
+  const hoverize = (e, on = true) =>
+    Object.assign(
+      e.currentTarget.style,
+      on
+        ? { background: hoverBg, borderColor: hoverBd }
+        : { background: "transparent", borderColor: "transparent" }
+    );
+
+  // Mantener abierto mientras el cursor esté en cualquiera de las áreas
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => onClose?.(), 180);
+  };
+
+  // “Puente” invisible entre columna y subpanel para no perder hover
+  const bridge = {
+    position: "fixed",
+    top,
+    left: left + 360,
+    width: gap,
+    height: 520, // suficientemente alto para cubrir ambos
+    zIndex: 405,
+  };
+
+  // Submenú: etiqueta → clave de vista
+  const FACT_ITEMS = [
+    { label: "Recibo de caja", key: "recibo" },
+    { label: "Saldo a favor", key: "saldo" },
+    { label: "Nota crédito", key: "nc" },
+    { label: "Nota débito", key: "nd" },
+    { label: "Liquidaciones", key: "liq" },
+    { label: "Traslados", key: "tras" },
+    { label: "Pagos", key: "pagos" },
+    { label: "Órdenes de compra", key: "oc" },
+    { label: "Factura de venta", key: "fv" },
+    { label: "Facturas de compra", key: "fc" },
+  ];
+
+  const RIPS_ITEMS = [
+    { label: "RIPS anteriores (RS-3374)", key: "rips3374" },
+    { label: "RIPS nuevo (RS-2275)", key: "rips2275" },
+  ];
+
+  // Helper click en una acción de facturación
+  const handleFactClick = (viewKey) => {
+    onFact?.(viewKey);     // setea la vista específica
+    onGo?.("Facturación"); // navega a Facturación
+  };
+
+  return (
+    <>
+      {/* backdrop para cerrar con clic fuera */}
+      <div
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, background: "transparent", zIndex: 399 }}
+      />
+
+      {/* Columna principal */}
+      <div style={card} onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "360px 1fr",
+            gap: 8,
+            alignItems: "start",
+          }}
+        >
+          <div style={col}>
+            {/* Facturación (abre submenú) */}
+            <button
+              type="button"
+              style={item}
+              onMouseEnter={() => {
+                cancelClose();
+                setSub("facturacion");
+              }}
+              onFocus={() => {
+                cancelClose();
+                setSub("facturacion");
+              }}
+              onClick={() => setSub((s) => (s === "facturacion" ? null : "facturacion"))}
+              onMouseOver={(e) => hoverize(e, true)}
+              onMouseOut={(e) => hoverize(e, false)}
+            >
+              💳 Facturación ▸
+            </button>
+
+            {/* RIPS (abre submenú con 2 opciones) */}
+            <button
+              type="button"
+              style={item}
+              onMouseEnter={() => {
+                cancelClose();
+                setSub("rips");
+              }}
+              onFocus={() => {
+                cancelClose();
+                setSub("rips");
+              }}
+              onClick={() => setSub((s) => (s === "rips" ? null : "rips"))}
+              onMouseOver={(e) => hoverize(e, true)}
+              onMouseOut={(e) => hoverize(e, false)}
+            >
+              📄 RIPS ▸
+            </button>
+
+            {/* Resto (enlazar cuando estén listos) */}
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🤝 Convenios
+            </button>
+
+            <button type="button" style={item} onClick={() => onGo?.("Agenda")} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🗓️ Gestión de agenda
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              👥 Terceros
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              📣 Campañas
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🌡️ Temperatura y humedad
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              ♻️ Residuos
+            </button>
+
+            <button type="button" style={item} onClick={() => onGo?.("Inventario")} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              📦 Inventario
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              💊 Medicamentos y planes
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🧪 Esterilización
+            </button>
+          </div>
+
+          <div style={col}>
+            <div style={{ fontSize: ".85rem", color: hintTx }}>
+              Accesos rápidos a módulos de administración. Pasa el mouse por <b>Facturación</b> o <b>RIPS</b> para ver sus acciones.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Puente invisible (evita el “cierre” al cruzar) */}
+      <div style={bridge} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} />
+
+      {/* Subpanel derecho */}
+      {sub && (
+        <div style={subCard} onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+          <div style={{ ...col, display: "grid", gridTemplateColumns: "1fr" }}>
+            {(sub === "facturacion" ? FACT_ITEMS : RIPS_ITEMS).map((it) => (
+              <button
+                key={it.label}
+                type="button"
+                style={item}
+                onClick={() =>
+                  sub === "facturacion" ? handleFactClick(it.key) : onSoon?.()
+                }
+                onMouseOver={(e) => hoverize(e, true)}
+                onMouseOut={(e) => hoverize(e, false)}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* =============================== Dashboard =============================== */
 export default function Dashboard() {
-  // ===== idioma =====
   const [locale] = useState(detectLocale());
   const t = (key) => MESSAGES[locale][key] || key;
 
-  // ===== navegación de módulos =====
   const [activeModule, setActiveModule] = useState("Inicio");
 
-  // ===== dark mode =====
+  // NUEVO: vista de Facturación que se abre desde el mega-menú
+  const [factView, setFactView] = useState("recibo");
+
   const [darkMode, setDarkMode] = useState(() => {
     try {
       return localStorage.getItem("odontocloud:dark") === "1";
@@ -400,20 +664,16 @@ export default function Dashboard() {
       return false;
     }
   });
-
   useEffect(() => {
     try {
       localStorage.setItem("odontocloud:dark", darkMode ? "1" : "0");
     } catch {}
-    // Conservamos por compatibilidad, aunque el CSS usa .oc-dark en la raíz
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // ===== sesión / rol / usuario =====
   const [session] = useState(() => getOfflineSession());
   const [role] = useState(session?.rol || "");
   const [sessionEmail] = useState(session?.email || "");
-
   const [companyName, setCompanyName] = useState("OdontoCloud");
   const [userName, setUserName] = useState(sessionEmail || "Usuario");
   const [loadingUser, setLoadingUser] = useState(true);
@@ -427,60 +687,47 @@ export default function Dashboard() {
           setLoadingUser(false);
           return;
         }
-
         setUserName(user.displayName || user.email || sessionEmail || "Usuario");
-
         const ref = doc(db, "empresas", user.uid);
         const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setCompanyName(snap.data().nombre || "OdontoCloud");
-        } else {
-          setCompanyName("OdontoCloud");
-        }
+        setCompanyName(snap.exists() ? snap.data().nombre || "OdontoCloud" : "OdontoCloud");
       } catch (e) {
         console.error("Error cargando empresa/usuario:", e);
       } finally {
         setLoadingUser(false);
       }
     });
-
     return () => unsubscribe();
   }, [sessionEmail]);
 
-  // ===== métricas generales =====
   const [metrics, setMetrics] = useState({
     pacientesHoy: 0,
     citasHoy: 0,
     facturacionHoy: 0,
-    enEspera: 0, // <- en tiempo real, según citas de hoy con estado "En espera"
+    enEspera: 0,
   });
   const [metricsLoading, setMetricsLoading] = useState(true);
-
-  // ===== serie semanal para el gráfico =====
   const [weeklySeries, setWeeklySeries] = useState([]);
-
-  // ===== citas hoy (lista para la tarjeta) en tiempo real =====
   const [todaysAppointments, setTodaysAppointments] = useState([]);
   const [todaysLoading, setTodaysLoading] = useState(true);
 
   const { startToday, endToday, startTodayJS } = useTodayRange();
   const todayIso = useMemo(() => toIsoDate(startTodayJS), [startTodayJS]);
-
-  // Rango de la “última semana” (texto)
   const weekRangeLabel = useMemo(() => {
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
     const end = today;
     const fmt = (d) =>
-      d.toLocaleDateString(locale === "es" ? "es-ES" : "en-US", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).replace(".", "");
+      d
+        .toLocaleDateString(locale === "es" ? "es-ES" : "en-US", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        })
+        .replace(".", "");
     return `${fmt(start)} – ${fmt(end)}`;
   }, [locale]);
 
-  // Normalizador "citas"
   const normalizeCita = (docSnap) => {
     const data = docSnap.data() || {};
     let fechaDate;
@@ -497,10 +744,8 @@ export default function Dashboard() {
     } else {
       fechaDate = new Date();
     }
-
     const pacienteNombre = data.pacienteNombre || data.paciente || "Paciente";
     const estado = (data.estado && String(data.estado)) || "programada";
-
     return {
       id: docSnap.id,
       fecha: fechaDate,
@@ -511,7 +756,6 @@ export default function Dashboard() {
     };
   };
 
-  // Suscripción citas HOY
   useEffect(() => {
     const qTodayTs = query(
       collection(db, "citas"),
@@ -519,31 +763,21 @@ export default function Dashboard() {
       where("fecha", "<", endToday),
       orderBy("fecha", "asc")
     );
-
     const qTodayStr = query(collection(db, "citas"), where("fecha", "==", todayIso));
-
     let cacheMap = new Map();
     let gotTs = false;
     let gotStr = false;
-
     const commit = () => {
       const rows = Array.from(cacheMap.values()).sort(
         (a, b) => a.fecha.getTime() - b.fecha.getTime()
       );
-
       const enEsperaCount = rows.filter(
         (r) => String(r.estado).toLowerCase().trim() === "en espera"
       ).length;
-
       setTodaysAppointments(rows);
-      setMetrics((m) => ({
-        ...m,
-        citasHoy: rows.length,
-        enEspera: enEsperaCount,
-      }));
+      setMetrics((m) => ({ ...m, citasHoy: rows.length, enEspera: enEsperaCount }));
       if (gotTs && gotStr) setTodaysLoading(false);
     };
-
     const unsubTs = onSnapshot(
       qTodayTs,
       (snap) => {
@@ -559,7 +793,6 @@ export default function Dashboard() {
         commit();
       }
     );
-
     const unsubStr = onSnapshot(
       qTodayStr,
       (snap) => {
@@ -575,16 +808,8 @@ export default function Dashboard() {
         commit();
       }
     );
-
-    return () => {
-      try { unsubTs(); } catch {}
-      try { unsubStr(); } catch {}
-    };
   }, [startToday, endToday, todayIso]);
 
-  /* ==========================================================
-     MÉTRICAS base (totales / facturación)
-     ========================================================== */
   useEffect(() => {
     const loadMetricsBase = async () => {
       try {
@@ -600,18 +825,14 @@ export default function Dashboard() {
           );
           const factSnap = await getDocs(qFact);
           factSnap.forEach((docu) => {
-            const data = docu.data();
-            if (typeof data.monto === "number") facturacionHoy += data.monto;
+            const d = docu.data();
+            if (typeof d.monto === "number") facturacionHoy += d.monto;
           });
         } catch {
           facturacionHoy = 0;
         }
 
-        setMetrics((m) => ({
-          ...m,
-          pacientesHoy: pacientesTotal,
-          facturacionHoy,
-        }));
+        setMetrics((m) => ({ ...m, pacientesHoy: pacientesTotal, facturacionHoy }));
       } catch (e) {
         console.error("Error cargando métricas:", e);
         setMetrics((m) => ({ ...m, pacientesHoy: 0, facturacionHoy: 0 }));
@@ -622,7 +843,6 @@ export default function Dashboard() {
     loadMetricsBase();
   }, [startToday, endToday]);
 
-  // === Serie semanal pacientes (realtime) ===
   useEffect(() => {
     const today = new Date();
     const startWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
@@ -630,7 +850,11 @@ export default function Dashboard() {
 
     const base = new Map();
     for (let i = 0; i < 7; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i));
+      const d = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - (6 - i)
+      );
       const key = d.toISOString().slice(0, 10);
       const label = d.toLocaleDateString(locale === "es" ? "es-ES" : "en-US");
       const shortLabel = d
@@ -654,8 +878,11 @@ export default function Dashboard() {
         const counts = new Map(base);
         snap.docs.forEach((d) => {
           const data = d.data() || {};
-          const date = data.createdAt?.toDate ? data.createdAt.toDate()
-                    : (data.createdAt ? new Date(data.createdAt) : null);
+          const date = d.data().createdAt?.toDate
+            ? d.data().createdAt.toDate()
+            : data.createdAt
+            ? new Date(data.createdAt)
+            : null;
           if (!date || isNaN(date)) return;
           const key = date.toISOString().slice(0, 10);
           if (!counts.has(key)) return;
@@ -671,27 +898,27 @@ export default function Dashboard() {
       }
     );
 
-    return () => { try { unsub(); } catch {} };
+    return () => {
+      try {
+        unsub();
+      } catch {}
+    };
   }, [locale]);
 
-  // ===== actividad reciente =====
   const [recent, setRecent] = useState([]);
   const [recentLoading, setRecentLoading] = useState(true);
-
   useEffect(() => {
     const loadRecent = async () => {
       try {
         const qAct = query(collection(db, "actividad"), orderBy("fecha", "desc"), limit(5));
         const snap = await getDocs(qAct);
-        const items = snap.docs.map((d) => {
-          const data = d.data();
-          return {
+        setRecent(
+          snap.docs.map((d) => ({
             id: d.id,
-            title: data.descripcion || data.titulo || "Actividad",
-            time: data.resumenTiempo || "",
-          };
-        });
-        setRecent(items);
+            title: d.data().descripcion || d.data().titulo || "Actividad",
+            time: d.data().resumenTiempo || "",
+          }))
+        );
       } catch (e) {
         console.error("Error cargando actividad:", e);
         setRecent([]);
@@ -702,25 +929,22 @@ export default function Dashboard() {
     loadRecent();
   }, []);
 
-  // ===== estado n8n =====
   const [n8nState, setN8nState] = useState(null);
   const [n8nLoading, setN8nLoading] = useState(true);
-
   useEffect(() => {
     const loadN8n = async () => {
       try {
         const ref = doc(db, "integraciones", "n8n");
         const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          setN8nState({
-            connected: !!data.connected,
-            flowsRunning: data.flowsRunning || 0,
-            lastError: data.lastError || null,
-          });
-        } else {
-          setN8nState({ connected: false, flowsRunning: 0, lastError: null });
-        }
+        setN8nState(
+          snap.exists()
+            ? {
+                connected: !!snap.data().connected,
+                flowsRunning: snap.data().flowsRunning || 0,
+                lastError: snap.data().lastError || null,
+              }
+            : { connected: false, flowsRunning: 0, lastError: null }
+        );
       } catch (e) {
         console.error("Error cargando estado n8n:", e);
         setN8nState({
@@ -735,14 +959,49 @@ export default function Dashboard() {
     loadN8n();
   }, []);
 
-  // ===== logout =====
   const handleLogout = async () => {
-    try { localStorage.removeItem("odc_session"); } catch {}
-    try { await signOut(auth); } catch (e) { console.error("Error al cerrar sesión:", e); }
+    try {
+      localStorage.removeItem("odc_session");
+    } catch {}
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
     window.location.href = "/";
   };
 
-  // ===== contenido para módulos <> Inicio =====
+  /* ===== MegaMenú: estado y helpers ===== */
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminAnchor, setAdminAnchor] = useState(null);
+  const adminBtnRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+
+  const openAdmin = () => {
+    const rect = adminBtnRef.current?.getBoundingClientRect?.();
+    setAdminAnchor(rect);
+    setAdminOpen(true);
+  };
+  const closeAdmin = () => {
+    setAdminOpen(false);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  const scheduleClose = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setAdminOpen(false), 180);
+  };
+  const cancelClose = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  /* ===== Contenido por módulo ===== */
   const renderModuleContent = () => {
     switch (activeModule) {
       case "Agenda":
@@ -750,13 +1009,16 @@ export default function Dashboard() {
       case "Pacientes":
         return <Pacientes />;
       case "Facturación":
-        return <Facturacion />;
+        return <Facturacion view={factView} />;
       case "Inventario":
         return <Inventario />;
       case "Odontograma":
         return <Odontograma />;
       case "Reportes":
         return <Reportes />;
+      case "Caja":
+        // 👉 AHORA SÍ: renderiza la vista real de Caja (ya no el “Próximamente”)
+        return <Caja />;
       case "Inicio":
       default:
         return null;
@@ -765,10 +1027,10 @@ export default function Dashboard() {
 
   return (
     <div className={`oc-shell ${darkMode ? "oc-dark" : ""}`}>
-      {/* Enlace de 'saltar al contenido' para accesibilidad */}
-      <a href="#oc-main" className="oc-skip-link">Saltar al contenido</a>
+      <a href="#oc-main" className="oc-skip-link">
+        Saltar al contenido
+      </a>
 
-      {/* HEADER */}
       <header className="oc-header" role="banner">
         <div className="oc-header-left">
           <img src={logo} alt="OdontoCloud" className="oc-logo" />
@@ -806,33 +1068,38 @@ export default function Dashboard() {
           >
             {t("nav_patients")}
           </button>
+
+          {/* Caja */}
           <button
             type="button"
-            className={activeModule === "Facturación" ? "oc-nav-btn active" : "oc-nav-btn"}
-            aria-current={activeModule === "Facturación" ? "page" : undefined}
-            onClick={() => setActiveModule("Facturación")}
-            title={t("nav_billing")}
+            className={activeModule === "Caja" ? "oc-nav-btn active" : "oc-nav-btn"}
+            onClick={() => setActiveModule("Caja")}
+            title={t("nav_cash")}
           >
-            {t("nav_billing")}
+            {t("nav_cash")}
           </button>
+
+          {/* Administración: abre con click o hover */}
           <button
             type="button"
-            className={activeModule === "Inventario" ? "oc-nav-btn active" : "oc-nav-btn"}
-            aria-current={activeModule === "Inventario" ? "page" : undefined}
-            onClick={() => setActiveModule("Inventario")}
-            title={t("nav_inventory")}
+            ref={adminBtnRef}
+            className="oc-nav-btn"
+            title={t("nav_admin")}
+            aria-haspopup="true"
+            aria-expanded={adminOpen}
+            onClick={() => (adminOpen ? closeAdmin() : openAdmin())}
+            onMouseEnter={() => {
+              cancelClose();
+              openAdmin();
+            }}
+            onFocus={() => {
+              cancelClose();
+              openAdmin();
+            }}
           >
-            {t("nav_inventory")}
+            {t("nav_admin")}
           </button>
-          <button
-            type="button"
-            className={activeModule === "Odontograma" ? "oc-nav-btn active" : "oc-nav-btn"}
-            aria-current={activeModule === "Odontograma" ? "page" : undefined}
-            onClick={() => setActiveModule("Odontograma")}
-            title={t("nav_odontogram")}
-          >
-            {t("nav_odontogram")}
-          </button>
+
           <button
             type="button"
             className={activeModule === "Reportes" ? "oc-nav-btn active" : "oc-nav-btn"}
@@ -845,7 +1112,6 @@ export default function Dashboard() {
         </nav>
 
         <div className="oc-header-right">
-          {/* ⬇️ Barra de comandos en el header */}
           <CommandSearch
             placeholder={t("searchPlaceholder")}
             onNavigate={(module) => setActiveModule(module)}
@@ -859,6 +1125,7 @@ export default function Dashboard() {
                   break;
                 case "new_invoice":
                   setActiveModule("Facturación");
+                  setFactView("fv");
                   break;
                 case "export_agenda":
                   setActiveModule("Agenda");
@@ -873,7 +1140,9 @@ export default function Dashboard() {
                   handleLogout();
                   break;
                 case "show_shortcuts":
-                  alert("Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar.");
+                  alert(
+                    "Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar."
+                  );
                   break;
                 case "support":
                   window.open("https://tu-soporte.odc", "_blank");
@@ -883,7 +1152,6 @@ export default function Dashboard() {
               }
             }}
           />
-
           <button
             className="oc-icon-btn"
             type="button"
@@ -897,14 +1165,32 @@ export default function Dashboard() {
             className="oc-icon-btn"
             type="button"
             onClick={handleLogout}
-            title={t("logout")}
+            title={MESSAGES[locale].logout}
           >
-            {t("logout")}
+            {MESSAGES[locale].logout}
           </button>
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* Mega menú flotante */}
+      <AdminMegaMenu
+        open={adminOpen}
+        anchorRect={adminAnchor}
+        dark={darkMode}
+        onClose={closeAdmin}
+        onGo={(dest) => {
+          setActiveModule(dest);
+          closeAdmin();
+        }}
+        onSoon={() => {
+          alert("Próximamente");
+          closeAdmin();
+        }}
+        onFact={(viewKey) => {
+          setFactView(viewKey); // <-- setea la vista de facturación
+        }}
+      />
+
       <main id="oc-main" className="oc-main-wrapper" role="main">
         {activeModule !== "Inicio" && renderModuleContent()}
 
@@ -913,20 +1199,23 @@ export default function Dashboard() {
             {/* HERO */}
             <section className="oc-hero" aria-label="Resumen general">
               <div className="oc-hero-text">
-                <h1>{t("welcomeTitle")}</h1>
-                <p>{t("welcomeSubtitle")}</p>
+                <h1>{MESSAGES[locale].welcomeTitle}</h1>
+                <p>{MESSAGES[locale].welcomeSubtitle}</p>
                 <p className="oc-hero-meta">
-                  {t("clinicLabel")}: {companyName} · {t("userLabel")}: {userName} · {t("roleLabel")}: {role || "—"}
+                  {MESSAGES[locale].clinicLabel}: {companyName} · {MESSAGES[locale].userLabel}:{" "}
+                  {userName} · {MESSAGES[locale].roleLabel}: {role || "—"}
                 </p>
               </div>
 
               <div className="oc-hero-badge" aria-live="polite">
-                <span className="oc-hero-badge-title">{t("stats_appointmentsToday")}</span>
+                <span className="oc-hero-badge-title">
+                  {MESSAGES[locale].stats_appointmentsToday}
+                </span>
                 <span className="oc-hero-badge-value">
                   {metricsLoading && todaysLoading ? "…" : metrics.citasHoy}
                 </span>
                 <span className="oc-hero-badge-sub">
-                  {t("stats_patientsToday")}: {metricsLoading ? "…" : metrics.pacientesHoy}
+                  {MESSAGES[locale].stats_patientsToday}: {metricsLoading ? "…" : metrics.pacientesHoy}
                 </span>
               </div>
             </section>
@@ -934,22 +1223,22 @@ export default function Dashboard() {
             {/* STATS */}
             <section className="oc-stats-row" aria-label="Indicadores del día">
               <div className="stat-card">
-                <span className="stat-label">{t("stats_patientsToday")}</span>
+                <span className="stat-label">{MESSAGES[locale].stats_patientsToday}</span>
                 <span className="stat-value">{metrics.pacientesHoy}</span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">{t("stats_appointmentsToday")}</span>
+                <span className="stat-label">{MESSAGES[locale].stats_appointmentsToday}</span>
                 <span className="stat-value">{metrics.citasHoy}</span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">{t("stats_revenueToday")}</span>
+                <span className="stat-label">{MESSAGES[locale].stats_revenueToday}</span>
                 <span className="stat-value">
                   {metrics.facturacionHoy.toLocaleString("es-CO")}{" "}
-                  <span className="stat-currency">{t("stats_currency")}</span>
+                  <span className="stat-currency">{MESSAGES[locale].stats_currency}</span>
                 </span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">{t("stats_waiting")}</span>
+                <span className="stat-label">{MESSAGES[locale].stats_waiting}</span>
                 <span className="stat-value">{metrics.enEspera}</span>
               </div>
             </section>
@@ -958,7 +1247,15 @@ export default function Dashboard() {
             <section className="oc-grid" aria-label="Contenido principal del dashboard">
               <div className="oc-grid-main">
                 <div className="card card-quickcharts">
-                  <div className="oc-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <div
+                    className="oc-card-head"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <h3>Pacientes registrados · Últimos 7 días</h3>
                     <span className="oc-muted" style={{ marginLeft: 8, fontSize: 12 }}>
                       {weekRangeLabel}
@@ -967,7 +1264,9 @@ export default function Dashboard() {
 
                   {weeklySeries.length === 0 ||
                   weeklySeries.every((d) => (d?.value || 0) === 0) ? (
-                    <p className="oc-weekly-empty">Sin pacientes registrados en la última semana.</p>
+                    <p className="oc-weekly-empty">
+                      Sin pacientes registrados en la última semana.
+                    </p>
                   ) : (
                     <WeeklyBars data={weeklySeries} />
                   )}
@@ -976,23 +1275,39 @@ export default function Dashboard() {
 
               <aside className="oc-grid-side" aria-label="Panel lateral">
                 <div className="card">
-                  <h3>{t("n8n_title")}</h3>
-                  {n8nLoading ? <span className="oc-muted">{t("loading")}</span> : <N8nStatus status={n8nState} />}
+                  <h3>{MESSAGES[locale].n8n_title}</h3>
+                  {n8nLoading ? (
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
+                  ) : (
+                    <N8nStatus status={n8nState} />
+                  )}
                 </div>
 
                 {/* Citas de hoy */}
                 <div className="card">
-                  <div className="oc-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                    <h3>{t("todays_appts")}</h3>
-                    <button className="oc-small-link" type="button" onClick={() => setActiveModule("Agenda")}>
-                      {t("see_schedule")}
+                  <div
+                    className="oc-card-head"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <h3>{MESSAGES[locale].todays_appts}</h3>
+                    <button
+                      className="oc-small-link"
+                      type="button"
+                      onClick={() => setActiveModule("Agenda")}
+                    >
+                      {MESSAGES[locale].see_schedule}
                     </button>
                   </div>
 
                   {todaysLoading ? (
-                    <span className="oc-muted">{t("loading")}</span>
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
                   ) : todaysAppointments.length === 0 ? (
-                    <p className="oc-muted">{t("no_appts_today")}</p>
+                    <p className="oc-muted">{MESSAGES[locale].no_appts_today}</p>
                   ) : (
                     <ul className="oc-list">
                       {todaysAppointments.slice(0, 5).map((c) => (
@@ -1000,7 +1315,7 @@ export default function Dashboard() {
                           <div className="oc-list-main">
                             <b>{c.pacienteNombre || "Paciente"}</b>{" "}
                             <span className="oc-muted">
-                              {t("at")} {fmtTime(c.fecha, locale)}
+                              {MESSAGES[locale].at} {fmtTime(c.fecha, locale)}
                             </span>
                           </div>
                           <div
@@ -1017,11 +1332,11 @@ export default function Dashboard() {
                 </div>
 
                 <div className="card">
-                  <h3>{t("recent_title")}</h3>
+                  <h3>{MESSAGES[locale].recent_title}</h3>
                   {recentLoading ? (
-                    <span className="oc-muted">{t("loading")}</span>
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
                   ) : recent.length === 0 ? (
-                    <p className="oc-muted">{t("recent_empty")}</p>
+                    <p className="oc-muted">{MESSAGES[locale].recent_empty}</p>
                   ) : (
                     <RecentActivity items={recent} />
                   )}
@@ -1038,4 +1353,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
