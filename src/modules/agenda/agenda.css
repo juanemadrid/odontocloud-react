@@ -742,6 +742,7 @@ body.modal-open .modal-backdrop,
 #acResultados .ac-doc  { color: #64748b; font-size: 12px; }
 #acResultados .ac-tel  { margin-left: auto; font-size: 12px; color: #0f172a; }
 #acResultados .ac-empty { padding: 10px; color: #9aa4b2; font-size: 13px; }
+
 /* ==================== PATCH FINAL – AGENDA 1:1 CON DASHBOARD ==================== */
 
 /* Ancho/centrado igual al Dashboard */
@@ -760,7 +761,7 @@ body.modal-open .modal-backdrop,
 .odc-right{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
 .odc-right::before{ display:none !important; }
 
-/* Layout móvil coherente: una columna (sin 42%/58%) */
+/* Layout móvil coherente: una columna (sin 42/58%) */
 @media (max-width: 768px){
   .odc-agenda-inner{
     display:grid !important;
@@ -807,3 +808,46 @@ button, input, select{ font:inherit; }
 @media (prefers-reduced-motion: reduce){
   .btn, .odc-right, .modal-dialog, .fade-in-row{ transition:none !important; animation:none !important; }
 }
+
+/* ================== FIX FINAL: evitar que se ensanche cuando hay citas ================== */
+/* El scroll se maneja dentro de la tabla, no en el body, y la tabla nunca empuja el ancho */
+.table-wrap{
+  overflow: auto;                 /* x + y */
+  max-width: 100%;
+  scrollbar-gutter: stable both-edges;
+  -webkit-overflow-scrolling: touch;
+}
+
+.appointments-table{
+  width: 100%;
+  min-width: 0 !important;       /* neutraliza min-width previos (720/640/560) */
+  table-layout: fixed;            /* columnas fijas: evita reflows por contenido */
+}
+
+/* Anchos sugeridos (coherentes con tu UI) */
+.appointments-table thead th:nth-child(1){ width: 180px; } /* Fecha/Hora */
+.appointments-table thead th:nth-child(6){ width: 120px; } /* Estado */
+.appointments-table thead th:nth-child(7){ width: 140px; } /* Acciones */
+
+/* Evitar que el contenido empuje horizontalmente */
+.appointments-table th,
+.appointments-table td{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* El comentario sí puede partir en varias líneas sin agrandar la tabla */
+.appointments-table td:nth-child(5){
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* El select de estado no rompe en móvil */
+.estado-select{ max-width: 100%; }
+@media (max-width: 768px){
+  .estado-select{ min-width: 0; }
+}
+
+/* Por si algún SVG/imagen inline empuja el ancho */
+img, svg{ max-width: 100%; height: auto; }
