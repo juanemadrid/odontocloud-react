@@ -812,3 +812,58 @@ button, input, select{ font:inherit; }
 @media (prefers-reduced-motion: reduce){
   .btn, .odc-right, .modal-dialog, .fade-in-row{ transition:none !important; animation:none !important; }
 }
+/* ==== Agenda: fijar tabla y evitar texto vertical en móvil ==== */
+
+/* Contenedor con scroll horizontal si hace falta */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* La tabla necesita un mínimo de ancho para que no colapsen las columnas */
+.appointments-table {
+  width: 100%;
+  min-width: 720px;           /* ajusta si quieres */
+  border-collapse: collapse;
+  table-layout: fixed;        /* columnas con ancho fijo (usa los widths de los <th>) */
+}
+
+/* Cabecera y celdas: no romper palabras en cualquier sitio */
+.appointments-table th,
+.appointments-table td {
+  white-space: nowrap;        /* no saltar línea dentro de palabras */
+  overflow: hidden;           /* recorta si no cabe */
+  text-overflow: ellipsis;    /* … al final */
+  word-break: normal;         /* IMPORTANT: desactiva break-all */
+  overflow-wrap: normal;      /* evita cortes raros */
+  writing-mode: horizontal-tb;/* por si alguna regla heredada lo cambió */
+  text-orientation: mixed;
+}
+
+/* Permite que SOLO el comentario pueda usar varias líneas si hace falta */
+.appointments-table th:nth-child(5),
+.appointments-table td:nth-child(5) {
+  white-space: normal;        /* deja envolver */
+  overflow-wrap: anywhere;    /* pero que envuelva por palabra, no por letra */
+}
+
+/* Anchos sugeridos por columna (coherentes con tu UI) */
+.appointments-table thead th:nth-child(1) { width: 180px; } /* Fecha / Hora */
+.appointments-table thead th:nth-child(2) { width: 160px; } /* Paciente */
+.appointments-table thead th:nth-child(3) { width: 140px; } /* Doctor */
+.appointments-table thead th:nth-child(4) { width: 140px; } /* Espacio físico */
+.appointments-table thead th:nth-child(5) { width: 100%;  } /* Comentario (se expande) */
+.appointments-table thead th:nth-child(6) { width: 120px; } /* Estado */
+.appointments-table thead th:nth-child(7) { width: 140px; } /* Acciones */
+
+/* En pantallas muy pequeñas, deja algo más de respiro */
+@media (max-width: 420px) {
+  .appointments-table { min-width: 660px; }
+}
+
+/* (Opcional) Centrar el texto de los <th> y estilizar */
+.appointments-table th {
+  text-align: left;
+  background: #f3f6ff;
+  color: #0a3a7a;
+}
