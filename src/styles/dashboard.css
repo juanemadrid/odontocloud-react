@@ -373,3 +373,115 @@ html, body {
 @media (hover: none) and (pointer: coarse) {
   body, .oc-shell, .oc-main-wrapper { overflow-y: auto !important; }
 }
+/* ====== MODO OSCURO – COBERTURA TOTAL DE TARJETAS/SECCIONES ====== */
+/* Fondo y textos base */
+.oc-dark { background:#0b1220; }
+.oc-dark .oc-main-wrapper { color:#e5e7eb; }
+
+/* Header oscuro refinado (ya lo tenías, lo dejo para consistencia) */
+.oc-dark .oc-header{
+  background: linear-gradient(90deg,#0f1a32 0%, #0b1428 100%);
+  box-shadow: 0 8px 22px rgba(0,0,0,.45);
+}
+
+/* Tarjetas y módulos (cubre .card, .stat-card, .oc-module-card y variaciones
+   que vengan de otros módulos: section/panel/tile/kpi/metric-card/box) */
+.oc-dark .card,
+.oc-dark .stat-card,
+.oc-dark .oc-module-card,
+.oc-dark .oc-table-wrap,
+.oc-dark .oc-hero-badge,
+.oc-dark .oc-section,
+.oc-dark .oc-panel,
+.oc-dark .tile,
+.oc-dark .kpi,
+.oc-dark .metric-card,
+.oc-dark [class*="card"],
+.oc-dark [class*="panel"],
+.oc-dark [class*="section"],
+.oc-dark [class*="box"] {
+  background:#0f172a !important;
+  border-color:#1f2937 !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55);
+  color:#e5e7eb;
+}
+
+/* Hero */
+.oc-dark .oc-hero{
+  background:linear-gradient(135deg,#0b1220,#0e1a2c);
+  border-color:#1f2937;
+  box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+
+/* Texto secundario/links */
+.oc-dark .oc-muted, .oc-dark .oc-hero-meta { color:#9ca3af; }
+.oc-dark a, .oc-dark .oc-small-link { color:#60a5fa; }
+
+/* Pills del menú y buscador en oscuro */
+.oc-dark .oc-nav-btn{
+  background: rgba(255,255,255,.10);
+  color:#e5e7eb;
+}
+.oc-dark .oc-nav-btn:hover{ background: rgba(255,255,255,.20); }
+.oc-dark .oc-nav-btn.active{
+  background:#22c55e;
+  box-shadow: 0 6px 14px rgba(34,197,94,.35);
+}
+.oc-dark .oc-search{
+  background: rgba(255,255,255,.12);
+  color:#f1f5f9;
+}
+
+/* Inputs y tablas */
+.oc-dark .oc-input{ background:#0b1220; border-color:#1f2937; color:#e5e7eb; }
+.oc-dark .oc-table{ background:#0f172a; color:#e5e7eb; }
+.oc-dark .oc-table thead th{ background:#0b1220; border-bottom-color:#1f2937; }
+.oc-dark .oc-table tbody td{ border-bottom-color:#1f2937; }
+
+/* Contenedores de gráficos (evita “bloques” blancos) */
+.oc-dark .card-quickcharts,
+.oc-dark .chart,
+.oc-dark [class*="chart"] {
+  background:#0f172a !important;
+}
+
+/* Tags/estados */
+.oc-dark .oc-tag{ border-color:#1f2937; }
+.oc-dark .oc-tag-en-espera{ background:#3b2a1b; border-color:#9a6b3a; }
+.oc-dark .oc-tag-programada{ background:#0f2544; border-color:#1e3a8a; }
+.oc-dark .oc-tag-cancelada{ background:#2c1a1a; border-color:#7f1d1d; }
+.oc-dark .oc-tag-completada{ background:#0f2a22; border-color:#166534; }
+
+/* Footer */
+.oc-dark .oc-footer{
+  color:#94a3b8;
+  border-top:1px solid #1f2937;
+}
+
+/* Accesibilidad (focus) */
+.oc-dark .oc-nav-btn:focus-visible,
+.oc-dark .oc-search:focus-visible{ outline-color:#60a5fa; }
+
+/* —— Móvil: botón de modo oscuro compacto (no ocupa toda la fila) —— */
+@media (max-width: 768px){
+  .oc-header-right{
+    grid-column:1;
+    display:grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "search search"
+      "dark   logout";
+    align-items:center;
+    column-gap:8px; row-gap:8px;
+    width:100%; max-width:560px; justify-self:center;
+  }
+  .oc-header-right .oc-search-wrap{ grid-area:search; width:100%; }
+  .oc-header-right .oc-search{ width:100%; max-width:100%; transform:none; }
+  .oc-header-right .oc-icon-btn:first-of-type{
+    grid-area: dark;
+    justify-self: start;
+    width:auto; min-width:42px; padding:0 10px;
+  }
+  .oc-header-right .oc-icon-btn:last-of-type{ grid-area: logout; }
+}
