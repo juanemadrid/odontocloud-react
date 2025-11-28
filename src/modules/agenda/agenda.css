@@ -851,3 +851,37 @@ button, input, select{ font:inherit; }
 
 /* Por si algún SVG/imagen inline empuja el ancho */
 img, svg{ max-width: 100%; height: auto; }
+/* === Fix anti-ensanchamiento cuando hay citas === */
+
+/* La tabla ya está en table-layout: fixed; esto refuerza el clipping */
+.appointments-table { table-layout: fixed; }
+
+/* Permitir que Acciones y (opcional) Doctor/Paciente puedan partir en pantallas pequeñas */
+@media (max-width: 768px) {
+  /* Acciones (col 7): que NO sea nowrap */
+  .appointments-table td:nth-child(7),
+  .appointments-table th:nth-child(7) {
+    white-space: normal !important;
+  }
+  /* Estado (col 6): deja romper si hace falta */
+  .appointments-table td:nth-child(6),
+  .appointments-table th:nth-child(6) {
+    white-space: normal !important;
+  }
+  /* Opcional: si Doctor (3) o Paciente (2) te empujan ancho, habilita wrap */
+  /* .appointments-table td:nth-child(2),
+     .appointments-table td:nth-child(3) { white-space: normal !important; } */
+
+  /* Que el contenedor flex de Acciones no imponga ancho mínimo */
+  .acciones-cell { min-width: 0; flex-wrap: wrap; }
+  .estado-select { min-width: 0 !important; max-width: 100% !important; }
+}
+
+/* Asegura que lo que desborde quede recortado dentro de la celda */
+.appointments-table td { overflow: hidden; }
+
+/* El comentario ya lo tienes en wrap: mantenlo */
+.appointments-table td:nth-child(5) { white-space: normal; word-break: break-word; }
+
+/* Refuerzo: el wrapper nunca crece más que el viewport */
+.table-wrap { max-width: 100%; overflow-x: auto; }
