@@ -313,3 +313,74 @@ html, body {
   text-align:left; padding:10px; cursor:pointer; white-space:nowrap;
 }
 .oc-table tbody td{ padding:10px; border-bottom:1px solid var(--oc-border); white-space:nowrap; }
+
+
+/* ============================================================
+   ✅ FIXES MÓVIL – SIN CAMBIAR ESCRITORIO
+   (solo se aplican en iOS y pantallas pequeñas)
+============================================================ */
+
+/* iOS Safari: evita overflow de 100vw en el header */
+@supports (-webkit-touch-callout: none) {
+  .oc-header { width: 100%; box-sizing: border-box; }
+}
+
+/* Tablet y móvil: apilar header y hacer buscador fluido */
+@media (max-width: 768px) {
+  .oc-header {
+    /* mismo look, pero la grilla se convierte en una columna */
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+    padding: 12px 14px;
+  }
+  .oc-header-left { grid-column: 1; }
+  .oc-nav {
+    grid-column: 1;
+    justify-self: start;
+    margin-right: 0;          /* evita empujar al buscador */
+    flex-wrap: wrap;          /* permite dos filas de pills */
+    gap: 6px;
+    row-gap: 8px;
+    width: 100%;
+  }
+  .oc-header-right {
+    grid-column: 1;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .oc-search {
+    width: 100%;              /* a todo el ancho en móvil */
+    transform: none;          /* quita el “bajoncito” de 7px */
+    margin-top: 6px;
+  }
+  .oc-nav-btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: .78rem;
+  }
+
+  /* Hero en columna y badge a todo el ancho (misma estética) */
+  .oc-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .oc-hero-badge {
+    align-self: stretch;
+    width: 100%;
+    text-align: center;
+  }
+
+  .oc-main-wrapper { padding: 18px 14px 28px; }
+}
+
+/* Teléfonos angostos: una sola columna y compactación suave */
+@media (max-width: 520px) {
+  .oc-stats-row { grid-template-columns: 1fr; }
+  .oc-logo { height: 26px; }
+  .oc-brand-main { font-size: .9rem; }
+  .oc-nav { justify-content: center; }
+  .card { padding: 12px; }
+  .oc-hero-text h1 { font-size: 1.22rem; }
+}
