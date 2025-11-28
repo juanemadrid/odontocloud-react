@@ -4,10 +4,14 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 
-// Base para GitHub Pages (coincide con base en vite.config.mjs)
+// Base del proyecto (coincide con vite.config.mjs)
 const BASE_PATH = '/odontocloud-react/'
 
-// Registro del Service Worker (PWA)
+// 🧩 Inicializa Firebase con sesión persistente + modo offline
+import { initFirebase } from './firebaseClient.js'
+initFirebase()
+
+// 🧠 Registro del Service Worker (PWA)
 import { registerSW } from 'virtual:pwa-register'
 registerSW({ immediate: true })
 
