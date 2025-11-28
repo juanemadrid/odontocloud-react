@@ -338,7 +338,9 @@
   border-collapse: collapse;
   font-size: 14px;
   text-align: left;
-  min-width: 720px;
+  /* ⛳️ FIX: no imponemos min-width en móvil; se aplica abajo solo en desktop */
+  min-width: 0;
+  table-layout: fixed;            /* evita que el contenido empuje el ancho */
 }
 .appointments-table thead th {
   background: var(--primary-light);
@@ -354,6 +356,13 @@
   vertical-align: middle;
 }
 .appointments-table tr:hover td { background: var(--primary-light); }
+
+/* ⛳️ FIX: texto/celdas no rompen el layout */
+.appointments-table th,
+.appointments-table td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 
 .estado {
   display: inline-block;
@@ -406,7 +415,6 @@
     align-items: flex-start;
   }
   .odc-filters-card, .odc-mini-calendar-card { flex: 1; }
-  .appointments-table { min-width: 100%; }
 }
 
 @media (max-width: 700px) {
@@ -446,16 +454,9 @@
   .search-input { width: 100%; min-width: 0; }
   #btnNuevaCita { width: 100%; margin: 6px 0 0 0; }
 
-  .appointments-table { min-width: 100%; font-size: 13px; }
-  .table-wrap { max-height: none; overflow-x: auto; }
-
-  .mini-month-table { font-size: 12px; }
-  .odc-mini-calendar-card, .odc-filters-card { padding: 12px; }
-
-  .tools-right { flex-wrap: wrap; justify-content: center; }
-  .tools-right .btn { width: 100%; justify-content: center; }
-
-  .current-date { font-size: 13px; text-align: center; }
+  /* ⛳️ FIX: en móvil la tabla nunca empuja el ancho */
+  .table-wrap { max-height: none; overflow-y: auto; overflow-x: hidden; }
+  .appointments-table { min-width: 0; font-size: 13px; }
 }
 
 /* ----------------------------- 520px y menos ----------------------------- */
@@ -515,6 +516,9 @@
     max-width: 220px;
     flex: 0 1 180px;
   }
+
+  /* ⛳️ FIX: en desktop sí permitimos min-width amplio sin afectar móvil */
+  .appointments-table { min-width: 720px; }
 }
 
 /* Select de estado dentro de la tabla */
@@ -543,6 +547,7 @@
   align-items: center;
   gap: 4px;
   transition: background 0.15s ease, transform 0.1s ease;
+  max-width: 100%;              /* ⛳️ FIX: nunca empuja celdas */
 }
 .btn-whatsapp:hover { background: #1ebe5d; transform: translateY(-1px); }
 
@@ -572,6 +577,7 @@
   line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
+  max-width: 100%;              /* ⛳️ FIX */
 }
 .btn-delete:hover { background: #ffcdd2; border-color: #c62828; }
 
@@ -745,9 +751,9 @@ body.modal-open .modal-backdrop,
 
 /* ==================== PATCH FINAL – AGENDA 1:1 CON DASHBOARD ==================== */
 
-/* Ancho/centrado igual al Dashboard */
+/* Ancho/centrado igual al Dashboard (contenidos) */
 .odc-agenda-root{
-  max-width: 1080px;        /* si tu dashboard usa otro, cámbialo aquí */
+  max-width: 1080px;
   margin: 0 auto;
   padding-inline: 16px;
 }
@@ -761,7 +767,7 @@ body.modal-open .modal-backdrop,
 .odc-right{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
 .odc-right::before{ display:none !important; }
 
-/* Layout móvil coherente: una columna (sin 42/58%) */
+/* Layout móvil coherente: una columna (sin 42%/58%) */
 @media (max-width: 768px){
   .odc-agenda-inner{
     display:grid !important;
@@ -775,7 +781,7 @@ body.modal-open .modal-backdrop,
 .odc-mini-calendar-card,
 .odc-filters-card,
 .odc-content-card{
-  border-radius:16px;     /* mismo radio visual de tus tarjetas del dashboard */
+  border-radius:16px;
   min-height:0;
 }
 
@@ -795,10 +801,8 @@ body.modal-open .modal-backdrop,
 }
 
 /* Tabla: flexible en desktop y scroll limpio en móvil */
-.appointments-table{ min-width:640px; }
 @media (max-width: 768px){
-  .table-wrap{ overflow-x:auto; }
-  .appointments-table{ min-width:560px; font-size:13px; }
+  .table-wrap{ overflow-x:hidden; } /* ⛳️ FIX: solo vertical */
 }
 
 /* Micro anti-shift */
@@ -808,46 +812,3 @@ button, input, select{ font:inherit; }
 @media (prefers-reduced-motion: reduce){
   .btn, .odc-right, .modal-dialog, .fade-in-row{ transition:none !important; animation:none !important; }
 }
-
-/* ================== FIX FINAL: evitar que se ensanche cuando hay citas ================== */
-/* El scroll se maneja dentro de la tabla, no en el body, y la tabla nunca empuja el ancho */
-.table-wrap{
-  overflow: auto;                 /* x + y */
-  max-width: 100%;
-  scrollbar-gutter: stable both-edges;
-  -webkit-overflow-scrolling: touch;
-}
-
-.appointments-table{
-  width: 100%;
-  min-width: 0 !important;       /* neutraliza min-width previos (720/640/560) */
-  table-layout: fixed;            /* columnas fijas: evita reflows por contenido */
-}
-
-/* Anchos sugeridos (coherentes con tu UI) */
-.appointments-table thead th:nth-child(1){ width: 180px; } /* Fecha/Hora */
-.appointments-table thead th:nth-child(6){ width: 120px; } /* Estado */
-.appointments-table thead th:nth-child(7){ width: 140px; } /* Acciones */
-
-/* Evitar que el contenido empuje horizontalmente */
-.appointments-table th,
-.appointments-table td{
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* El comentario sí puede partir en varias líneas sin agrandar la tabla */
-.appointments-table td:nth-child(5){
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* El select de estado no rompe en móvil */
-.estado-select{ max-width: 100%; }
-@media (max-width: 768px){
-  .estado-select{ min-width: 0; }
-}
-
-/* Por si algún SVG/imagen inline empuja el ancho */
-img, svg{ max-width: 100%; height: auto; }
