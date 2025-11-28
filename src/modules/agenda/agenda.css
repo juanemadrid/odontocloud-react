@@ -867,3 +867,54 @@ button, input, select{ font:inherit; }
   background: #f3f6ff;
   color: #0a3a7a;
 }
+/* ==== FIX FINAL AGENDA (iOS) ==== */
+/* Si hay alguna regla vieja con break-all/anywhere, la pisamos aquí */
+
+.odc-content-card .table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+.odc-content-card .appointments-table{
+  width:100%;
+  min-width:720px;           /* muestra scroll horizontal en móviles angostos */
+  border-collapse:collapse;
+  table-layout:fixed;        /* respeta los widths de los <th> */
+}
+
+.odc-content-card .appointments-table th,
+.odc-content-card .appointments-table td{
+  white-space:nowrap;        /* NO partir palabras */
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  writing-mode:horizontal-tb !important; /* anti texto vertical */
+  text-orientation:mixed;
+}
+
+/* Sólo “Comentario” puede envolver a varias líneas */
+.odc-content-card .appointments-table th:nth-child(5),
+.odc-content-card .appointments-table td:nth-child(5){
+  white-space:normal;
+  overflow-wrap:anywhere;    /* envuelve por palabra, no por letra */
+}
+
+/* Anchos sugeridos (ajústalos si quieres) */
+.odc-content-card .appointments-table thead th:nth-child(1){ width:180px; } /* Fecha/Hora */
+.odc-content-card .appointments-table thead th:nth-child(2){ width:160px; } /* Paciente   */
+.odc-content-card .appointments-table thead th:nth-child(3){ width:140px; } /* Doctor     */
+.odc-content-card .appointments-table thead th:nth-child(4){ width:140px; } /* Espacio    */
+.odc-content-card .appointments-table thead th:nth-child(5){ width:100%;  } /* Comentario */
+.odc-content-card .appointments-table thead th:nth-child(6){ width:120px; } /* Estado     */
+.odc-content-card .appointments-table thead th:nth-child(7){ width:140px; } /* Acciones   */
+
+@media (max-width:420px){
+  .odc-content-card .appointments-table{ min-width:660px; }
+}
+
+/* Por si en algún sitio quedó un reset agresivo: */
+.appointments-table *{
+  transform:none !important;
+  letter-spacing:normal !important;
+}
