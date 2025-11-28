@@ -248,37 +248,64 @@ html, body {
   *,*::before,*::after{ animation:none !important; transition:none !important; }
 }
 
-/* ==================== MODO OSCURO ==================== */
-.oc-dark{ background:#020617; }
+/* ==================== MODO OSCURO – refinado ==================== */
+.oc-dark{ background:#0b1220; }
+.oc-dark .oc-header{
+  background: linear-gradient(90deg, #0f1a32 0%, #0b1428 100%);
+  box-shadow: 0 8px 22px rgba(0,0,0,.45);
+}
 .oc-dark .oc-main-wrapper{ color:#e5e7eb; }
-.oc-dark .oc-hero{ background:linear-gradient(135deg,#020617,#020c1b); border-color:#111827; }
-.oc-dark .oc-hero-badge{ background:#020617; border-color:#111827; }
-.oc-dark .stat-card,.oc-dark .card,.oc-dark .oc-module-card{ background:#020617; border-color:#111827; box-shadow:0 10px 30px rgba(0,0,0,.7); }
+.oc-dark .oc-hero{
+  background:linear-gradient(135deg,#0b1220,#0e1a2c);
+  border-color:#1f2937;
+  box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+.oc-dark .oc-hero-badge{
+  background:#0b1220; border-color:#1f2937;
+}
+.oc-dark .card,
+.oc-dark .stat-card,
+.oc-dark .oc-module-card{
+  background:#0f172a;
+  border-color:#1f2937;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55);
+}
 .oc-dark .oc-muted,.oc-dark .oc-hero-meta{ color:#9ca3af; }
 .oc-dark .oc-small-link{ color:#60a5fa; }
+.oc-dark .oc-nav-btn{
+  background: rgba(255,255,255,.10);
+  color: #e5e7eb;
+}
+.oc-dark .oc-nav-btn:hover{ background: rgba(255,255,255,.20); }
+.oc-dark .oc-nav-btn.active{
+  background:#22c55e; /* verde cercano al tuyo, mejor contraste en oscuro */
+  box-shadow: 0 6px 14px rgba(34,197,94,.35);
+}
+.oc-dark .oc-search{
+  background: rgba(255,255,255,.12);
+  color:#f1f5f9;
+}
 .oc-dark .oc-nav-btn:focus-visible,
 .oc-dark .oc-search:focus-visible{ outline-color:#60a5fa; }
 
-/* Inputs / selects */
-.oc-input{ width:100%; height:36px; padding:0 10px; border-radius:10px; border:1px solid var(--oc-border); background:#fff; box-sizing:border-box; }
-.oc-col-span-2{ grid-column: span 2; }
+/* Inputs/tabla en oscuro */
+.oc-dark .oc-input{ background:#0b1220; border-color:#1f2937; color:#e5e7eb; }
+.oc-dark .oc-table{ background:#0f172a; color:#e5e7eb; }
+.oc-dark .oc-table thead th{ background:#0b1220; border-bottom-color:#1f2937; }
+.oc-dark .oc-table tbody td{ border-bottom-color:#1f2937; }
 
-/* Tabla */
-.oc-table-wrap{ width:100%; overflow:auto; border:1px solid var(--oc-border); border-radius:12px; }
-.oc-table{ width:100%; border-collapse:collapse; font-size:.9rem; background:var(--oc-card-bg); }
-.oc-table thead th{ position:sticky; top:0; background:#f8fafc; border-bottom:1px solid var(--oc-border); text-align:left; padding:10px; cursor:pointer; white-space:nowrap; }
-.oc-table tbody td{ padding:10px; border-bottom:1px solid var(--oc-border); white-space:nowrap; }
+/* Tags en oscuro */
+.oc-dark .oc-tag{ border-color:#1f2937; }
+.oc-dark .oc-tag-en-espera{ background:#3b2a1b; border-color:#9a6b3a; }
+.oc-dark .oc-tag-programada{ background:#0f2544; border-color:#1e3a8a; }
+.oc-dark .oc-tag-cancelada{ background:#2c1a1a; border-color:#7f1d1d; }
+.oc-dark .oc-tag-completada{ background:#0f2a22; border-color:#166534; }
 
-/* ============================================================
-   ✅ FIXES MÓVIL – SIN CAMBIAR ESCRITORIO
-============================================================ */
-
-/* iOS Safari: evita overflow de 100vw en el header */
+/* ==================== FIXES MÓVIL – SIN CAMBIAR ESCRITORIO ==================== */
 @supports (-webkit-touch-callout: none) {
   .oc-header { width: 100%; box-sizing: border-box; }
 }
 
-/* Tablet y móvil: header ordenado en rejilla */
 @media (max-width: 768px) {
   .oc-header {
     grid-template-columns: 1fr;
@@ -286,58 +313,54 @@ html, body {
     padding: 12px 14px;
   }
 
-  /* Menú: rejilla centrada 2–3 columnas según ancho */
+  /* Menú en rejilla */
   .oc-nav {
     grid-column: 1;
     justify-self: center;
     margin-right: 0;
-    display: grid;                         /* ← antes era flex */
+    display: grid;
     grid-template-columns: repeat( auto-fit, minmax(120px, 1fr) );
     gap: 8px 10px;
     width: 100%;
-    max-width: 560px;                      /* ancho cómodo para que no “salte” */
+    max-width: 560px;
   }
-  .oc-nav-btn {
-    height: 34px;
-    padding: 0 12px;
-    font-size: .78rem;
-    justify-content: center;
-    width: 100%;                           /* todos iguales en la rejilla */
-    max-width: 170px;
+  .oc-nav-btn{
+    height:34px; padding:0 12px; font-size:.78rem;
+    justify-content:center; width:100%; max-width:170px;
   }
 
-  /* Derecha: 2 filas → buscador arriba (full), botones abajo */
+  /* Derecha en 2 filas */
   .oc-header-right{
-    grid-column: 1;
-    display: grid;
-    grid-template-columns: 1fr auto;       /* fila 2: [☀️/🌙][Cerrar sesión] */
+    grid-column:1;
+    display:grid;
+    grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
     grid-template-areas:
       "search search"
       "dark   logout";
-    align-items: center;
-    column-gap: 8px;
-    row-gap: 8px;
-    width: 100%;
-    max-width: 560px;
-    justify-self: center;
+    align-items:center;
+    column-gap:8px; row-gap:8px;
+    width:100%; max-width:560px; justify-self:center;
   }
-  .oc-header-right .oc-search-wrap { grid-area: search; width: 100%; }
-  .oc-header-right .oc-search { width: 100%; max-width: 100%; transform: none; }
+  .oc-header-right .oc-search-wrap{ grid-area:search; width:100%; }
+  .oc-header-right .oc-search{ width:100%; max-width:100%; transform:none; }
 
-  /* primer botón (modo claro/oscuro) y último (cerrar sesión) */
-  .oc-header-right .oc-icon-btn:first-of-type { grid-area: dark; }
-  .oc-header-right .oc-icon-btn:last-of-type  { grid-area: logout; }
+  /* 🌙/☀️ compacto (no se estira) */
+  .oc-header-right .oc-icon-btn:first-of-type{
+    grid-area: dark;
+    justify-self: start;
+    width: auto;
+    min-width: 42px;
+    padding: 0 10px;
+  }
+  /* Cerrar sesión a la derecha */
+  .oc-header-right .oc-icon-btn:last-of-type{ grid-area: logout; }
 
-  /* separa contenido del header */
-  .oc-main-wrapper { padding: 18px 14px 28px; }
-
-  /* Hero en columna */
-  .oc-hero { flex-direction: column; align-items: flex-start; padding: 16px; }
-  .oc-hero-badge { align-self: stretch; width: 100%; text-align: center; }
+  .oc-main-wrapper{ padding:18px 14px 28px; }
+  .oc-hero{ flex-direction:column; align-items:flex-start; padding:16px; }
+  .oc-hero-badge{ align-self:stretch; width:100%; text-align:center; }
 }
 
-/* Teléfonos angostos: una sola columna y compactación suave */
 @media (max-width: 520px) {
   .oc-stats-row { grid-template-columns: 1fr; }
   .oc-logo { height: 26px; }
@@ -346,7 +369,7 @@ html, body {
   .oc-hero-text h1 { font-size: 1.22rem; }
 }
 
-/* Evita cualquier “bloqueo” de scroll por contenedores en táctiles */
+/* Evita bloqueos de scroll en táctiles */
 @media (hover: none) and (pointer: coarse) {
   body, .oc-shell, .oc-main-wrapper { overflow-y: auto !important; }
 }
