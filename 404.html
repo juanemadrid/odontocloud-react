@@ -1,22 +1,26 @@
-<!-- public/404.html -->
 <!doctype html>
-<html>
+<html lang="es">
   <head>
-    <meta charset="utf-8">
-    <title>Redirigiendo…</title>
-    <meta http-equiv="refresh" content="0; url=/odontocloud-react/?/%2Findex.html">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="company-name" content="Mi Empresa S.A.S" />
+    <meta name="company-logo" content="/assets/logo-empresa.png" />
+    <title>OdontoCloud</title>
+
+    <!-- 👇 Paso 2 del fallback SPA (rafgraph): reescribe URLs "fantasma" -->
     <script>
-      // Script de rafgraph/spa-github-pages (modificado para subcarpeta)
       (function(l) {
-        var repoBase = '/odontocloud-react';
-        if (!l.pathname.startsWith(repoBase)) repoBase = '';
-        var path = l.pathname.replace(repoBase, '');
-        var search = l.search ? l.search.slice(1).replace(/&/g, '~and~') : '';
-        var hash = l.hash || '';
-        var url = repoBase + '/?/' + path + (search ? ('?' + search) : '') + hash;
-        l.replace(url);
+        if (l.search[1] === '/') {
+          const decoded = l.search.slice(1).split('&').map(s => s.replace(/~and~/g, '&')).join('?');
+          const url = l.pathname.slice(0, -1) + decoded + l.hash;
+          window.history.replaceState(null, null, url);
+        }
       })(window.location);
     </script>
-  </head>
-  <body>Redirigiendo…</body>
+    <script type="module" crossorigin src="/odontocloud-react/assets/index-D9FOXCFX.js"></script>
+    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-BV8UiplI.css">
+  <link rel="manifest" href="/odontocloud-react/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
