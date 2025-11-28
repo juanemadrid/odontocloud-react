@@ -33,6 +33,7 @@
   padding: 20px;
   gap: 20px;
   box-sizing: border-box;
+  min-height: 0; /* ← evita “scroll trap” dentro de flex */
 }
 
 /* ----------- LEFT PANEL ----------- */
@@ -42,6 +43,7 @@
   flex-direction: column;
   gap: 16px;
   box-sizing: border-box;
+  min-height: 0; /* ← importante para scroll correcto */
 }
 
 .odc-mini-calendar-card,
@@ -161,6 +163,7 @@
   border: 1px solid var(--border);
   transition: all 0.3s ease;
   position: relative;
+  min-height: 0; /* ← para scroll correcto de hijos */
 }
 
 .odc-right::before {
@@ -356,6 +359,7 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  min-height: 0; /* ← evita que corte el scroll interno */
 }
 
 .tools-row {
@@ -423,7 +427,6 @@
   max-height: calc(100vh - 280px);
   padding: 12px;
   box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
 }
 
 .appointments-table {
@@ -530,39 +533,29 @@
 
 /* ----------------------------- 768px (principal) ----------------------------- */
 @media (max-width: 768px) {
-  /* Acomodo por header del Dashboard y quito transparencias en móvil */
+  /* Acomodo por header del Dashboard y QUIETO el blur en móvil */
   .odc-agenda-root {
     margin-top: 135px !important;
-    height: auto;                 /* ✅ permite que la página crezca */
-    overflow: visible;            /* ✅ evita “bloqueo” de scroll */
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-inline: 12px;          /* ← respiración como Dashboard */
   }
-
-  /* Topbars con aire lateral como Dashboard */
-  .odc-topbar-green,
-  .odc-topbar-blue { margin: 0 14px; }  /* ✅ ya no quedan pegadas a los bordes */
-
-  .odc-right::before { display: none !important; } /* 🚫 sin blur/trasparencia en móvil */
-  .odc-right {
-    background: #fff;             /* fondo sólido */
-    overflow: visible;            /* ✅ que nada corte el scroll */
-  }
-  .odc-content-card { overflow: visible; }
-
-  /* Layout móvil: dos columnas */
   .odc-agenda-inner {
     flex-direction: row !important;
     flex-wrap: wrap;
     gap: 10px;
     padding: 12px;
-    min-height: auto;             /* ✅ sin alturas forzadas */
+    min-height: 0;                 /* ← importante para scroll */
   }
+
+  .odc-right::before { display: none !important; } /* 🚫 sin blur/transparencia en móvil */
+  .odc-right { background: #fff; padding: 14px; box-shadow: none; min-height: 0; }
+
   .odc-left {
     width: 42% !important;
     flex-direction: column;
     gap: 10px;
+    min-height: 0;
   }
-  .odc-right { width: 58% !important; padding: 14px; box-shadow: none; }
+  .odc-right { width: 58% !important; }
 
   .odc-header-bar { flex-direction: column; align-items: stretch; gap: 12px; }
   .odc-header-left, .odc-header-right { flex-direction: column; align-items: stretch; width: 100%; }
@@ -573,11 +566,17 @@
   #btnNuevaCita { width: 100%; margin: 6px 0 0 0; }
 
   .appointments-table { min-width: 100%; font-size: 13px; }
+
+  /* ✅ Scroll libre y suave en iOS */
   .table-wrap {
-    max-height: none !important;  /* ✅ libera el contenedor para que la página pueda desplazarse */
-    overflow-y: visible;          /* ✅ deja el scroll al documento */
+    max-height: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: 12px;
   }
+
+  .table-wrap * { touch-action: manipulation; }
 
   .mini-month-table { font-size: 12px; }
   .odc-mini-calendar-card, .odc-filters-card { padding: 12px; }
@@ -631,7 +630,6 @@
 }
 
 /* ======================= ✅ FIX ESPECÍFICO DESKTOP: alinear Día/Buscar/Nueva Cita ======================= */
-/* Mantiene todo en UNA SOLA FILA en escritorio, sin cambiar tu diseño */
 @media (min-width: 769px) {
   .odc-header-bar { flex-wrap: nowrap; gap: 12px; }
   .odc-header-left { flex: 0 0 auto; }
@@ -645,7 +643,7 @@
   }
   .right-actions { flex: 0 0 auto; }
   .search-input {
-    margin-top: 5px;   /* ← corregido: unidad px */
+    margin-top: 5px;   /* ← corregido con unidad */
     min-width: 140px;
     max-width: 220px;
     flex: 0 1 180px;
@@ -784,23 +782,6 @@ body.modal-open .modal-backdrop,
   box-shadow: 0 0 0 3px rgba(43,108,176,0.15) !important;
   outline: none !important;
 }
-
-.modal-content .btn-primary,
-.modal-content .btn.blue {
-  background: linear-gradient(90deg, #1976d2, #0d47a1) !important;
-  border: none !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-  border-radius: 8px !important;
-  transition: transform 0.15s ease, background 0.25s ease;
-}
-.modal-content .btn-primary:hover,
-.modal-content .btn.blue:hover {
-  background: linear-gradient(90deg, #1565c0, #0b3c91) !important;
-  transform: translateY(-1px);
-}
-.modal-content .btn-secondary,
-.modal-content .btn { border-radius: 8px !important; }
 
 /* =================== FICHA PACIENTE – PANEL COMPLETO =================== */
 .ficha-card { border-radius: 14px; box-shadow: 0 22px 60px rgba(0,0,0,.28); overflow: hidden; }
