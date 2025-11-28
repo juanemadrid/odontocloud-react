@@ -25,6 +25,8 @@
   margin-top: 25px;
   position: relative;
   z-index: 1;
+  max-width: 100vw;         /* evita desplazamientos laterales en móvil */
+  overflow-x: hidden;       /* evita desbordes */
 }
 
 .odc-agenda-inner {
@@ -103,28 +105,12 @@
   vertical-align: middle;
 }
 
-.mini-month-table td.empty {
-  background: transparent;
-  cursor: default;
-}
-
-.mini-month-table td.today {
-  box-shadow: inset 0 0 0 1px rgba(43, 108, 176, 0.12);
-  font-weight: 600;
-}
-
-.mini-month-table td.selected {
-  background: var(--primary);
-  color: #fff;
-  font-weight: 700;
-}
+.mini-month-table td.empty { background: transparent; cursor: default; }
+.mini-month-table td.today { box-shadow: inset 0 0 0 1px rgba(43, 108, 176, 0.12); font-weight: 600; }
+.mini-month-table td.selected { background: var(--primary); color: #fff; font-weight: 700; }
 
 /* ----------- FILTROS ----------- */
-.odc-filters-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.odc-filters-card { display: flex; flex-direction: column; gap: 10px; }
 
 .odc-filters-card label {
   font-size: 13px;
@@ -166,18 +152,13 @@
 .odc-right::before {
   content: "";
   position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
   background: rgba(255, 255, 255, 0.4);
   filter: blur(10px);
   z-index: -1;
 }
 
-.odc-right:hover {
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
-}
+.odc-right:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25); }
 
 /* ----------- HEADER BAR ----------- */
 .odc-header-bar {
@@ -188,16 +169,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap; /* ← se sobrescribe en desktop para evitar saltos */
+  flex-wrap: wrap; /* se fuerza en desktop más abajo */
   gap: 10px;
   box-sizing: border-box;
 }
 
-.odc-header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
+.odc-header-left { display: flex; align-items: center; gap: 16px; }
 
 .odc-title {
   font-size: 20px;
@@ -206,10 +183,7 @@
   margin: 0;
 }
 
-.view-buttons {
-  display: flex;
-  gap: 6px;
-}
+.view-buttons { display: flex; gap: 6px; }
 
 .view-buttons .btn.view {
   background: var(--primary-light);
@@ -223,31 +197,12 @@
   box-shadow: none;
   white-space: nowrap;
 }
-
-.view-buttons .btn.view.active {
-  background: var(--primary-dark);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(30, 78, 140, 0.08);
-}
-
-.view-buttons .btn.view:hover:not(.active) {
-  background: var(--primary);
-  color: #fff;
-}
+.view-buttons .btn.view.active { background: var(--primary-dark); color: #fff; box-shadow: 0 2px 8px rgba(30, 78, 140, 0.08); }
+.view-buttons .btn.view:hover:not(.active) { background: var(--primary); color: #fff; }
 
 /* ----------- HEADER RIGHT ----------- */
-.odc-header-right {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.date-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+.odc-header-right { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.date-nav { display: flex; align-items: center; gap: 6px; }
 
 .current-date {
   font-weight: 600;
@@ -267,11 +222,7 @@
   font-size: 16px;
   transition: background 0.12s ease;
 }
-
-.btn.icon:hover {
-  background: var(--primary);
-  color: #fff;
-}
+.btn.icon:hover { background: var(--primary); color: #fff; }
 
 #btnHoy {
   background: var(--primary);
@@ -283,10 +234,7 @@
   cursor: pointer;
   transition: background 0.12s ease;
 }
-
-#btnHoy:hover {
-  background: var(--primary-dark);
-}
+#btnHoy:hover { background: var(--primary-dark); }
 
 /* ----------- BUSCAR Y NUEVA CITA (ALINEADO) ----------- */
 .right-actions {
@@ -295,7 +243,7 @@
   gap: 10px;
   margin-left: auto;
   justify-content: flex-end;
-  position: static; /* sin desplazamientos raros */
+  position: static;
 }
 
 .search-input {
@@ -306,19 +254,11 @@
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
   min-width: 200px;
   position: static;
-  margin-top: 16px;   /* ⬅️ SOLO BAJA EL INPUT (se anula en desktop más abajo) */
+  margin-top: 16px;   /* en desktop se corrige más abajo */
 }
+.search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(43,108,176,0.06); }
 
-.search-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.06);
-}
-
-#btnNuevaCita {
-  margin-left: 6px;
-  align-self: center;
-  position: static;
-}
+#btnNuevaCita { margin-left: 6px; align-self: center; position: static; }
 
 /* ----------- BOTONES ----------- */
 .btn {
@@ -329,22 +269,12 @@
   cursor: pointer;
   transition: all 0.12s ease;
   font-size: 14px;
-  white-space: nowrap; /* evita que "Nueva cita" se parta en dos líneas */
+  white-space: nowrap;
 }
+.btn:hover { background: var(--primary-light); }
 
-.btn:hover {
-  background: var(--primary-light);
-}
-
-.btn.green {
-  background: var(--accent-green);
-  color: #fff;
-  border: none;
-}
-
-.btn.green:hover {
-  background: #2f855a;
-}
+.btn.green { background: var(--accent-green); color: #fff; border: none; }
+.btn.green:hover { background: #2f855a; }
 
 /* ----------- CONTENT CARD ----------- */
 .odc-content-card {
@@ -366,18 +296,9 @@
   border-bottom: 1px solid var(--border);
 }
 
-.ocupacion-info {
-  font-size: 13px;
-  color: var(--muted);
-}
+.ocupacion-info { font-size: 13px; color: var(--muted); }
 
-.tools-right {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
-}
-
+.tools-right { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
 .tools-right .btn {
   background-color: var(--primary, #3b82f6);
   color: white;
@@ -391,23 +312,10 @@
   gap: 6px;
   transition: background-color 0.2s ease, transform 0.1s ease;
 }
-
-.tools-right .btn:hover {
-  background-color: #2563eb;
-  transform: translateY(-1px);
-}
-
-.tools-right .btn:active {
-  transform: scale(0.98);
-}
-
-.tools-right .btn.blue {
-  background-color: #007bff;
-}
-
-.tools-right .btn.blue:hover {
-  background-color: #0062cc;
-}
+.tools-right .btn:hover { background-color: #2563eb; transform: translateY(-1px); }
+.tools-right .btn:active { transform: scale(0.98); }
+.tools-right .btn.blue { background-color: #007bff; }
+.tools-right .btn.blue:hover { background-color: #0062cc; }
 
 #btnPrint:hover {
   background: #38a169;
@@ -432,7 +340,6 @@
   text-align: left;
   min-width: 720px;
 }
-
 .appointments-table thead th {
   background: var(--primary-light);
   color: var(--primary-dark);
@@ -441,16 +348,12 @@
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
-
 .appointments-table tbody td {
   padding: 12px 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-
-.appointments-table tr:hover td {
-  background: var(--primary-light);
-}
+.appointments-table tr:hover td { background: var(--primary-light); }
 
 .estado {
   display: inline-block;
@@ -461,32 +364,14 @@
   background: rgba(56, 161, 105, 0.12);
   color: var(--accent-green);
 }
+.estado.sin-deuda { background: rgba(255, 229, 100, 0.12); color: #b7791f; }
 
-.estado.sin-deuda {
-  background: rgba(255, 229, 100, 0.12);
-  color: #b7791f;
-}
-
-.no-data {
-  text-align: center;
-  color: var(--muted);
-  padding: 20px;
-  font-style: italic;
-}
-
-.fade-in-row {
-  animation: fadeIn 240ms ease;
-}
+.no-data { text-align: center; color: var(--muted); padding: 20px; font-style: italic; }
+.fade-in-row { animation: fadeIn 240ms ease; }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ----------- TOPBARS ----------- */
@@ -520,8 +405,7 @@
     gap: 12px;
     align-items: flex-start;
   }
-  .odc-filters-card,
-  .odc-mini-calendar-card { flex: 1; }
+  .odc-filters-card, .odc-mini-calendar-card { flex: 1; }
   .appointments-table { min-width: 100%; }
 }
 
@@ -535,10 +419,10 @@
 
 /* ----------------------------- 768px (principal) ----------------------------- */
 @media (max-width: 768px) {
-  /* Acomodo por header del Dashboard y quito transparencias en móvil */
+  /* Debajo del header del Dashboard y sin transparencias */
   .odc-agenda-root { margin-top: 135px !important; }
-  .odc-right::before { display: none !important; } /* 🚫 sin blur/trasparencia en móvil */
-  .odc-right { background: #fff; }                 /* fondo sólido en móvil */
+  .odc-right::before { display: none !important; } /* sin blur en móvil */
+  .odc-right { background: #fff; }                 /* fondo sólido */
 
   /* Layout móvil: dos columnas */
   .odc-agenda-inner {
@@ -585,12 +469,8 @@
 
 /* ✅ Ajuste extra para pantallas muy pequeñas */
 @media (max-width: 450px) {
-  .odc-left {
-    width: 100% !important;
-    flex-direction: row;
-  }
-  .odc-mini-calendar-card,
-  .odc-filters-card { flex: 1; }
+  .odc-left { width: 100% !important; flex-direction: row; }
+  .odc-mini-calendar-card, .odc-filters-card { flex: 1; }
   .odc-right { width: 100% !important; }
 }
 
@@ -617,7 +497,6 @@
 }
 
 /* ======================= ✅ FIX ESPECÍFICO DESKTOP: alinear Día/Buscar/Nueva Cita ======================= */
-/* Mantiene todo en UNA SOLA FILA en escritorio, sin cambiar tu diseño */
 @media (min-width: 769px) {
   .odc-header-bar { flex-wrap: nowrap; gap: 12px; }
   .odc-header-left { flex: 0 0 auto; }
@@ -631,7 +510,7 @@
   }
   .right-actions { flex: 0 0 auto; }
   .search-input {
-    margin-top: 5px;   /* ← corregido: unidad px */
+    margin-top: 5px;  /* unidad corregida */
     min-width: 140px;
     max-width: 220px;
     flex: 0 1 180px;
@@ -728,9 +607,7 @@ body.modal-open .modal-backdrop,
   margin: 2rem auto !important;
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
-@media (max-width: 920px) {
-  .modal-dialog { max-width: 92% !important; }
-}
+@media (max-width: 920px) { .modal-dialog { max-width: 92% !important; } }
 .modal.fade .modal-dialog { transform: translateY(12px) scale(0.97); opacity: 0.98; }
 .modal.show .modal-dialog { transform: translateY(0) scale(1); opacity: 1; }
 
@@ -827,7 +704,7 @@ body.modal-open .modal-backdrop,
 .ficha-section { background:#fff; border:1px solid #e9eef4; border-radius:12px; padding:14px; }
 .ficha-section-title { margin:0 0 10px; font-size:16px; color:#114b79; border-left:4px solid #0a86d8; padding-left:8px; font-weight:700; }
 .ficha-grid { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:10px 12px; }
-.field label { display:block; font-weight:700; font-size:12px; color:#5b7189; margin-bottom:4px; }
+.field label { display:block; font-weight:700; font-size:12px; color:#5b7189; }
 
 .ficha-footer { display:flex; justify-content:flex-end; gap:8px; padding:12px 0; }
 
