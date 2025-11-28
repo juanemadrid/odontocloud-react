@@ -38,8 +38,6 @@ html, body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-top: env(safe-area-inset-top);
-
-  /* ✅ que nada bloquee el scroll */
   overflow: visible;
 }
 
@@ -58,11 +56,10 @@ html, body {
 .oc-skip-link:focus { left: 12px; top: 12px; }
 
 /* ==================== HEADER ==================== */
-/* Barra azul a TODO el ancho, logo fijo a la izquierda, resto a la derecha en una sola línea */
 .oc-header {
   position: sticky;
   top: 0;
-  z-index: 200;                 /* dropdown por encima del contenido */
+  z-index: 200;
   width: 100vw;
   left: 0;
   right: 0;
@@ -76,10 +73,10 @@ html, body {
   color: #fff;
   box-shadow: var(--shadow-medium);
   min-height: 60px;
-  overflow: visible;            /* permite que el dropdown se superponga */
+  overflow: visible;
 }
 
-/* Izquierda (NO mover) */
+/* Izquierda */
 .oc-header-left{
   display:inline-flex; align-items:center; gap:10px; min-width:0;
 }
@@ -88,18 +85,18 @@ html, body {
 .oc-brand-main{ font-size:1rem; font-weight:700; }
 .oc-brand-sub{ font-size:.72rem; opacity:.9; }
 
-/* Centro: usamos esta columna solo como “separador” para empujar todo a la derecha */
+/* Centro (menú) */
 .oc-nav{
   grid-column: 2;
   justify-self: end;
   display:flex; align-items:center; gap:8px;
   min-width:0;
   overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-  margin-right: 20px; /* separa "Reportes" del buscador */
+  margin-right: 20px;
 }
 .oc-nav::-webkit-scrollbar{ display:none; }
 
-/* Pills del menú */
+/* Pills */
 .oc-nav-btn{
   background: rgba(255,255,255,.12);
   color:#fff; border:0;
@@ -114,20 +111,15 @@ html, body {
 .oc-nav-btn.active{ background:var(--oc-green); box-shadow:0 4px 10px rgba(39,198,103,.4); }
 .oc-nav-btn:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
 
-/* Derecha: buscador + iconos + cerrar sesión */
+/* Derecha (buscador + iconos) */
 .oc-header-right{
   grid-column: 3;
   display:inline-flex; align-items:center; justify-content:flex-end;
   gap:8px; min-width:0; flex-wrap:nowrap;
 }
 
-/* === Contenedor y dropdown del buscador (superpuesto) === */
-.oc-search-wrap{
-  position: relative;           /* referencia para posicionar el dropdown */
-  display: inline-block;
-  max-width: 100%;
-}
-
+/* Buscador */
+.oc-search-wrap{ position: relative; display: inline-block; max-width: 100%; }
 .oc-search-dropdown{
   position: absolute;
   top: calc(100% + 8px);
@@ -143,46 +135,23 @@ html, body {
   padding: 8px;
   z-index: 9999;
 }
+.oc-search-group{ font-size: .75rem; font-weight: 700; color: #64748b; padding: 6px 8px 4px; text-transform: uppercase; }
+.oc-search-item{ width:100%; text-align:left; border:0; background:transparent; padding:10px 12px; border-radius:10px; font-size:.9rem; color:#0f172a; cursor:pointer; }
+.oc-search-item:hover, .oc-search-item.active{ background:#eff6ff; }
+.oc-search-item.empty{ color:#94a3b8; cursor:default; }
+.oc-search-title{ font-weight:600; }
 
-.oc-search-group{
-  font-size: .75rem;
-  font-weight: 700;
-  color: #64748b;
-  padding: 6px 8px 4px;
-  text-transform: uppercase;
-}
-
-.oc-search-item{
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: transparent;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: .9rem;
-  color: #0f172a;
-  cursor: pointer;
-}
-.oc-search-item:hover,
-.oc-search-item.active{ background: #eff6ff; }
-.oc-search-item.empty{ color: #94a3b8; cursor: default; }
-.oc-search-title{ font-weight: 600; }
-
-/* === Input: más pequeño y con ajuste óptico hacia abajo === */
 .oc-search{
   display:inline-flex; align-items:center; vertical-align:middle;
-  height:36px;
-  padding:0 12px;
-  width: 220px;
+  height:36px; padding:0 12px; width: 220px;
   border:0; border-radius:999px; outline:none;
   background: rgba(255,255,255,.14); color:#fff; font-size:.82rem;
-  transform: translateY(7px);
-  max-width: 100%;
+  transform: translateY(7px); max-width: 100%;
 }
 .oc-search::placeholder{ color:#eef5ff; opacity:.95; }
 .oc-search:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
 
-/* Iconos / botones derechos */
+/* Iconos */
 .oc-icon-btn{
   height:36px; padding:0 12px; background:rgba(255,255,255,.14); border:0;
   border-radius:999px; color:#fff; display:inline-flex; align-items:center; justify-content:center;
@@ -201,14 +170,7 @@ html, body {
   padding: 24px 32px 40px;
   box-sizing: border-box;
 }
-
-.oc-module-card{
-  background:var(--oc-card-bg);
-  border-radius:var(--radius);
-  border:1px solid var(--oc-border);
-  box-shadow:var(--shadow-soft);
-  padding:18px 20px; margin-bottom:18px;
-}
+.oc-module-card{ background:var(--oc-card-bg); border-radius:var(--radius); border:1px solid var(--oc-border); box-shadow:var(--shadow-soft); padding:18px 20px; margin-bottom:18px; }
 
 /* HERO */
 .oc-main-content{ animation: fadeInUp .3s ease-out; }
@@ -222,24 +184,14 @@ html, body {
 .oc-hero-text h1{ margin:0 0 4px; font-size:1.55rem; }
 .oc-hero-text p{ margin:0; font-size:.9rem; color:var(--oc-muted); }
 .oc-hero-meta{ margin-top:4px; font-size:.8rem; color:var(--oc-muted); }
-.oc-hero-badge{
-  min-width:170px; text-align:right; background:#fff; border-radius:12px;
-  border:1px solid var(--oc-border); padding:10px 14px; box-shadow:0 6px 18px rgba(0,0,0,.05);
-  align-self:stretch;
-}
+.oc-hero-badge{ min-width:170px; text-align:right; background:#fff; border-radius:12px; border:1px solid var(--oc-border); padding:10px 14px; box-shadow:0 6px 18px rgba(0,0,0,.05); align-self:stretch; }
 .oc-hero-badge-title{ display:block; font-size:.8rem; color:var(--oc-muted); }
 .oc-hero-badge-value{ display:block; font-size:1.7rem; font-weight:700; color:var(--oc-blue-dark); margin:2px 0; }
 .oc-hero-badge-sub{ display:block; font-size:.78rem; color:var(--oc-muted); }
 
 /* STATS */
-.oc-stats-row{
-  display:grid; grid-template-columns:repeat(4, minmax(0,1fr));
-  gap:14px; margin-bottom:20px;
-}
-.stat-card{
-  background:var(--oc-card-bg); border-radius:999px; border:1px solid var(--oc-border);
-  box-shadow:var(--shadow-soft); padding:10px 18px; display:flex; flex-direction:column; text-align:center; min-width:0;
-}
+.oc-stats-row{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+.stat-card{ background:var(--oc-card-bg); border-radius:999px; border:1px solid var(--oc-border); box-shadow:var(--shadow-soft); padding:10px 18px; display:flex; flex-direction:column; text-align:center; min-width:0; }
 .stat-label{ font-size:.8rem; color:var(--oc-muted); }
 .stat-value{ font-size:1.2rem; font-weight:600; color:var(--oc-blue-dark); }
 .stat-currency{ font-size:.7rem; color:var(--oc-muted); }
@@ -248,10 +200,7 @@ html, body {
 .oc-grid{ display:grid; grid-template-columns:minmax(0,1.8fr) minmax(280px,1fr); gap:18px; align-items:start; container-type:inline-size; }
 .oc-grid-main,.oc-grid-side{ display:flex; flex-direction:column; gap:12px; }
 
-.card{
-  background:var(--oc-card-bg); border-radius:var(--radius); border:1px solid var(--oc-border);
-  box-shadow:var(--shadow-soft); padding:16px 18px; min-width:0;
-}
+.card{ background:var(--oc-card-bg); border-radius:var(--radius); border:1px solid var(--oc-border); box-shadow:var(--shadow-soft); padding:16px 18px; min-width:0; }
 .card h3{ margin-top:0; font-size:.95rem; }
 .card-quickcharts{ min-height:230px; overflow:hidden; position:relative; }
 .card-quickcharts canvas,.card-quickcharts svg{ width:100%; height:170px; display:block; }
@@ -310,26 +259,18 @@ html, body {
 .oc-dark .oc-nav-btn:focus-visible,
 .oc-dark .oc-search:focus-visible{ outline-color:#60a5fa; }
 
-/* Inputs / selects rápidos */
-.oc-input{
-  width:100%; height:36px; padding:0 10px; border-radius:10px;
-  border:1px solid var(--oc-border); background:#fff; box-sizing:border-box;
-}
+/* Inputs / selects */
+.oc-input{ width:100%; height:36px; padding:0 10px; border-radius:10px; border:1px solid var(--oc-border); background:#fff; box-sizing:border-box; }
 .oc-col-span-2{ grid-column: span 2; }
 
-/* Tabla responsive */
+/* Tabla */
 .oc-table-wrap{ width:100%; overflow:auto; border:1px solid var(--oc-border); border-radius:12px; }
 .oc-table{ width:100%; border-collapse:collapse; font-size:.9rem; background:var(--oc-card-bg); }
-.oc-table thead th{
-  position:sticky; top:0; background:#f8fafc; border-bottom:1px solid var(--oc-border);
-  text-align:left; padding:10px; cursor:pointer; white-space:nowrap;
-}
+.oc-table thead th{ position:sticky; top:0; background:#f8fafc; border-bottom:1px solid var(--oc-border); text-align:left; padding:10px; cursor:pointer; white-space:nowrap; }
 .oc-table tbody td{ padding:10px; border-bottom:1px solid var(--oc-border); white-space:nowrap; }
-
 
 /* ============================================================
    ✅ FIXES MÓVIL – SIN CAMBIAR ESCRITORIO
-   (solo se aplican en iOS/Android y pantallas pequeñas)
 ============================================================ */
 
 /* iOS Safari: evita overflow de 100vw en el header */
@@ -337,53 +278,62 @@ html, body {
   .oc-header { width: 100%; box-sizing: border-box; }
 }
 
-/* Tablet y móvil: apilar header, compactar pills y dar flujo al buscador */
+/* Tablet y móvil: header ordenado en rejilla */
 @media (max-width: 768px) {
   .oc-header {
     grid-template-columns: 1fr;
-    row-gap: 8px;
+    row-gap: 10px;
     padding: 12px 14px;
   }
-  .oc-header-left { grid-column: 1; }
 
+  /* Menú: rejilla centrada 2–3 columnas según ancho */
   .oc-nav {
     grid-column: 1;
-    justify-self: start;
+    justify-self: center;
     margin-right: 0;
-    flex-wrap: wrap;      /* ✅ varias filas */
-    gap: 6px;
-    row-gap: 8px;
+    display: grid;                         /* ← antes era flex */
+    grid-template-columns: repeat( auto-fit, minmax(120px, 1fr) );
+    gap: 8px 10px;
     width: 100%;
+    max-width: 560px;                      /* ancho cómodo para que no “salte” */
   }
-
   .oc-nav-btn {
     height: 34px;
-    padding: 0 10px;
-    font-size: .78rem;    /* ✅ un poco más compacto */
+    padding: 0 12px;
+    font-size: .78rem;
+    justify-content: center;
+    width: 100%;                           /* todos iguales en la rejilla */
+    max-width: 170px;
   }
 
-  .oc-header-right {
+  /* Derecha: 2 filas → buscador arriba (full), botones abajo */
+  .oc-header-right{
     grid-column: 1;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;       /* fila 2: [☀️/🌙][Cerrar sesión] */
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "search search"
+      "dark   logout";
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
     width: 100%;
+    max-width: 560px;
+    justify-self: center;
   }
+  .oc-header-right .oc-search-wrap { grid-area: search; width: 100%; }
+  .oc-header-right .oc-search { width: 100%; max-width: 100%; transform: none; }
 
-  .oc-search {
-    width: 100%;          /* ✅ buscador fluido */
-    max-width: 100%;
-    transform: none;      /* sin “bajoncito” */
-    margin-top: 6px;
-  }
+  /* primer botón (modo claro/oscuro) y último (cerrar sesión) */
+  .oc-header-right .oc-icon-btn:first-of-type { grid-area: dark; }
+  .oc-header-right .oc-icon-btn:last-of-type  { grid-area: logout; }
 
-  /* separa contenido del header para que nada quede “debajo” */
+  /* separa contenido del header */
   .oc-main-wrapper { padding: 18px 14px 28px; }
-  .oc-hero {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 16px;
-  }
+
+  /* Hero en columna */
+  .oc-hero { flex-direction: column; align-items: flex-start; padding: 16px; }
   .oc-hero-badge { align-self: stretch; width: 100%; text-align: center; }
 }
 
@@ -392,14 +342,11 @@ html, body {
   .oc-stats-row { grid-template-columns: 1fr; }
   .oc-logo { height: 26px; }
   .oc-brand-main { font-size: .9rem; }
-  .oc-nav { justify-content: center; }
   .card { padding: 12px; }
   .oc-hero-text h1 { font-size: 1.22rem; }
 }
 
-/* ✅ Evita cualquier “bloqueo” de scroll por contenedores */
+/* Evita cualquier “bloqueo” de scroll por contenedores en táctiles */
 @media (hover: none) and (pointer: coarse) {
-  body, .oc-shell, .oc-main-wrapper {
-    overflow-y: auto !important;
-  }
+  body, .oc-shell, .oc-main-wrapper { overflow-y: auto !important; }
 }
