@@ -25,6 +25,12 @@ html, body {
   font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--oc-bg);
   color: var(--oc-text);
+
+  /* ✅ asegura desplazamiento en móvil */
+  height: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 .oc-shell {
@@ -32,6 +38,9 @@ html, body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-top: env(safe-area-inset-top);
+
+  /* ✅ que nada bloquee el scroll */
+  overflow: visible;
 }
 
 /* Skip link */
@@ -53,8 +62,8 @@ html, body {
 .oc-header {
   position: sticky;
   top: 0;
-  z-index: 200;                 /* subimos para que el dropdown quede por encima del contenido */
-  width: 100vw;                 /* ocupa todo el viewport */
+  z-index: 200;                 /* dropdown por encima del contenido */
+  width: 100vw;
   left: 0;
   right: 0;
 
@@ -62,12 +71,12 @@ html, body {
   display: grid;
   grid-template-columns: auto 1fr auto; /* [logo] | [espacio flexible] | [grupo derecha] */
   align-items: center;
-  gap: 0;                       /* sin hueco entre nav y grupo derecho */
+  gap: 0;
   background: linear-gradient(90deg, #1976d2 0%, #0d47a1 100%);
   color: #fff;
   box-shadow: var(--shadow-medium);
   min-height: 60px;
-  overflow: visible;            /* IMPORTANTE: permite que el dropdown se superponga */
+  overflow: visible;            /* permite que el dropdown se superponga */
 }
 
 /* Izquierda (NO mover) */
@@ -81,8 +90,8 @@ html, body {
 
 /* Centro: usamos esta columna solo como “separador” para empujar todo a la derecha */
 .oc-nav{
-  grid-column: 2;               /* columna flexible */
-  justify-self: end;            /* pegada hacia la derecha */
+  grid-column: 2;
+  justify-self: end;
   display:flex; align-items:center; gap:8px;
   min-width:0;
   overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
@@ -107,7 +116,7 @@ html, body {
 
 /* Derecha: buscador + iconos + cerrar sesión */
 .oc-header-right{
-  grid-column: 3;               /* misma fila, a la derecha del nav */
+  grid-column: 3;
   display:inline-flex; align-items:center; justify-content:flex-end;
   gap:8px; min-width:0; flex-wrap:nowrap;
 }
@@ -116,12 +125,13 @@ html, body {
 .oc-search-wrap{
   position: relative;           /* referencia para posicionar el dropdown */
   display: inline-block;
+  max-width: 100%;
 }
 
 .oc-search-dropdown{
   position: absolute;
-  top: calc(100% + 8px);        /* aparece debajo del input */
-  right: 0;                     /* alineado al borde derecho del input */
+  top: calc(100% + 8px);
+  right: 0;
   min-width: 260px;
   max-width: 360px;
   max-height: 320px;
@@ -131,7 +141,7 @@ html, body {
   border-radius: 12px;
   box-shadow: 0 16px 40px rgba(2, 8, 23, .20);
   padding: 8px;
-  z-index: 9999;                /* por encima de todo */
+  z-index: 9999;
 }
 
 .oc-search-group{
@@ -161,12 +171,13 @@ html, body {
 /* === Input: más pequeño y con ajuste óptico hacia abajo === */
 .oc-search{
   display:inline-flex; align-items:center; vertical-align:middle;
-  height:36px;                              /* igual que los pills */
+  height:36px;
   padding:0 12px;
-  width: 220px;                             /* tamaño del input */
+  width: 220px;
   border:0; border-radius:999px; outline:none;
   background: rgba(255,255,255,.14); color:#fff; font-size:.82rem;
-  transform: translateY(7px);               /* “baja” visualmente el input para alinearlo */
+  transform: translateY(7px);
+  max-width: 100%;
 }
 .oc-search::placeholder{ color:#eef5ff; opacity:.95; }
 .oc-search:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
@@ -277,7 +288,7 @@ html, body {
 @media (max-width:520px){
   .oc-stats-row{ grid-template-columns:1fr; }
   .oc-logo{ height:28px; }
-  .oc-search{ width: 180px; }        /* buscador un poco más corto en móviles */
+  .oc-search{ width: 180px; }
   .oc-brand-main{ font-size:.95rem; }
 }
 
@@ -298,6 +309,7 @@ html, body {
 .oc-dark .oc-small-link{ color:#60a5fa; }
 .oc-dark .oc-nav-btn:focus-visible,
 .oc-dark .oc-search:focus-visible{ outline-color:#60a5fa; }
+
 /* Inputs / selects rápidos */
 .oc-input{
   width:100%; height:36px; padding:0 10px; border-radius:10px;
@@ -317,7 +329,7 @@ html, body {
 
 /* ============================================================
    ✅ FIXES MÓVIL – SIN CAMBIAR ESCRITORIO
-   (solo se aplican en iOS y pantallas pequeñas)
+   (solo se aplican en iOS/Android y pantallas pequeñas)
 ============================================================ */
 
 /* iOS Safari: evita overflow de 100vw en el header */
@@ -325,54 +337,54 @@ html, body {
   .oc-header { width: 100%; box-sizing: border-box; }
 }
 
-/* Tablet y móvil: apilar header y hacer buscador fluido */
+/* Tablet y móvil: apilar header, compactar pills y dar flujo al buscador */
 @media (max-width: 768px) {
   .oc-header {
-    /* mismo look, pero la grilla se convierte en una columna */
     grid-template-columns: 1fr;
     row-gap: 8px;
     padding: 12px 14px;
   }
   .oc-header-left { grid-column: 1; }
+
   .oc-nav {
     grid-column: 1;
     justify-self: start;
-    margin-right: 0;          /* evita empujar al buscador */
-    flex-wrap: wrap;          /* permite dos filas de pills */
+    margin-right: 0;
+    flex-wrap: wrap;      /* ✅ varias filas */
     gap: 6px;
     row-gap: 8px;
     width: 100%;
   }
+
+  .oc-nav-btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: .78rem;    /* ✅ un poco más compacto */
+  }
+
   .oc-header-right {
     grid-column: 1;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-  }
-  .oc-search {
-    width: 100%;              /* a todo el ancho en móvil */
-    transform: none;          /* quita el “bajoncito” de 7px */
-    margin-top: 6px;
-  }
-  .oc-nav-btn {
-    height: 34px;
-    padding: 0 10px;
-    font-size: .78rem;
+    width: 100%;
   }
 
-  /* Hero en columna y badge a todo el ancho (misma estética) */
+  .oc-search {
+    width: 100%;          /* ✅ buscador fluido */
+    max-width: 100%;
+    transform: none;      /* sin “bajoncito” */
+    margin-top: 6px;
+  }
+
+  /* separa contenido del header para que nada quede “debajo” */
+  .oc-main-wrapper { padding: 18px 14px 28px; }
   .oc-hero {
     flex-direction: column;
     align-items: flex-start;
     padding: 16px;
   }
-  .oc-hero-badge {
-    align-self: stretch;
-    width: 100%;
-    text-align: center;
-  }
-
-  .oc-main-wrapper { padding: 18px 14px 28px; }
+  .oc-hero-badge { align-self: stretch; width: 100%; text-align: center; }
 }
 
 /* Teléfonos angostos: una sola columna y compactación suave */
@@ -383,4 +395,11 @@ html, body {
   .oc-nav { justify-content: center; }
   .card { padding: 12px; }
   .oc-hero-text h1 { font-size: 1.22rem; }
+}
+
+/* ✅ Evita cualquier “bloqueo” de scroll por contenedores */
+@media (hover: none) and (pointer: coarse) {
+  body, .oc-shell, .oc-main-wrapper {
+    overflow-y: auto !important;
+  }
 }
