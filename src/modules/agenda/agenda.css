@@ -511,11 +511,9 @@
   z-index: 5;
 }
 
-/* ====================================================== 🔧 BLOQUE FINAL RESPONSIVE AVANZADO (TUYO ORIGINAL) ====================================================== */
-@media (max-width: 1000px) {
-  .odc-agenda-inner {
-    flex-direction: column;
-  }
+/* ====================================================== 🔧 BLOQUE RESPONSIVE – coherente con Dashboard ====================================================== */
+@media (max-width: 1100px) {
+  .odc-agenda-inner { flex-direction: column; }
   .odc-left {
     width: 100%;
     flex-direction: row;
@@ -523,164 +521,66 @@
     align-items: flex-start;
   }
   .odc-filters-card,
-  .odc-mini-calendar-card {
-    flex: 1;
-  }
-  .appointments-table {
-    min-width: 100%;
-  }
+  .odc-mini-calendar-card { flex: 1; }
+  .appointments-table { min-width: 100%; }
 }
 
 @media (max-width: 700px) {
-  .odc-header-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .odc-header-right {
-    justify-content: center;
-  }
-  .odc-left {
-    flex-direction: column;
-    width: 100%;
-  }
-  .current-date {
-    min-width: auto;
-    text-align: left;
-  }
-  .search-input {
-    min-width: 120px;
-  }
+  .odc-header-bar { flex-direction: column; align-items: stretch; }
+  .odc-header-right { justify-content: center; }
+  .odc-left { flex-direction: column; width: 100%; }
+  .current-date { min-width: auto; text-align: left; }
+  .search-input { min-width: 120px; }
 }
 
+/* ----------------------------- 768px (principal) ----------------------------- */
 @media (max-width: 768px) {
-  .odc-agenda-inner {
-    flex-direction: column;
-    padding: 12px;
-    gap: 12px;
-  }
-  .odc-left {
-    width: 100%;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .odc-right {
-    width: 100%;
-    padding: 14px;
-    box-shadow: none;
-  }
-  .odc-header-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .odc-header-left,
-  .odc-header-right {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-  .odc-title {
-    font-size: 18px;
-    text-align: center;
-  }
-  .right-actions {
-    justify-content: center;
-    margin-top: 6px;
-  }
-  .search-input {
-    width: 100%;
-    min-width: 0;
-  }
-  #btnNuevaCita {
-    width: 100%;
-    margin: 6px 0 0 0;
-  }
-  .appointments-table {
-    min-width: 100%;
-    font-size: 13px;
-  }
-  .table-wrap {
-    max-height: none;
-    overflow-x: auto;
-  }
-  .mini-month-table {
-    font-size: 12px;
-  }
-  .odc-mini-calendar-card,
-  .odc-filters-card {
-    padding: 12px;
-  }
-  .tools-right {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .tools-right .btn {
-    width: 100%;
-    justify-content: center;
-  }
-  .current-date {
-    font-size: 13px;
-    text-align: center;
-  }
-  .odc-agenda-root {
-    margin-top: 120px;
-  }
-}
-
-@media (max-width: 480px) {
-  .odc-title {
-    font-size: 16px;
-  }
-  .btn,
-  .search-input {
-    font-size: 12px;
-    padding: 6px 8px;
-  }
-  .odc-header-bar {
-    padding: 10px;
-  }
-  .odc-filters-card label {
-    font-size: 12px;
-  }
-  .appointments-table th,
-  .appointments-table td {
-    padding: 8px 6px;
-  }
-}
-
-/* ====================================================== ✅ MOBILE FIX REAL — NO TOQUES PC, SOLO MÓVIL ====================================================== */
-@media (max-width: 768px) {
-  /* Mostrar completamente barra azul + verde */
-  .odc-agenda-root {
-    margin-top: 135px !important;
-  }
+  /* Acomodo por header del Dashboard y quito transparencias en móvil */
+  .odc-agenda-root { margin-top: 135px !important; }
+  .odc-right::before { display: none !important; } /* 🚫 sin blur/trasparencia en móvil */
+  .odc-right { background: #fff; }                 /* fondo sólido en móvil */
 
   /* Layout móvil: dos columnas */
   .odc-agenda-inner {
     flex-direction: row !important;
     flex-wrap: wrap;
     gap: 10px;
+    padding: 12px;
   }
-
   .odc-left {
     width: 42% !important;
     flex-direction: column;
     gap: 10px;
   }
+  .odc-right { width: 58% !important; padding: 14px; box-shadow: none; }
 
-  .odc-right {
-    width: 58% !important;
-  }
+  .odc-header-bar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .odc-header-left, .odc-header-right { flex-direction: column; align-items: stretch; width: 100%; }
+  .odc-title { font-size: 18px; text-align: center; }
 
-  /* Mini calendario compactado */
-  .odc-mini-calendar-card {
-    padding: 2px !important;
-  }
+  .right-actions { justify-content: center; margin-top: 6px; }
+  .search-input { width: 100%; min-width: 0; }
+  #btnNuevaCita { width: 100%; margin: 6px 0 0 0; }
 
-  /* Filtros compactados */
-  .odc-filters-card {
-    padding: 2px !important;
-  }
+  .appointments-table { min-width: 100%; font-size: 13px; }
+  .table-wrap { max-height: none; overflow-x: auto; }
+
+  .mini-month-table { font-size: 12px; }
+  .odc-mini-calendar-card, .odc-filters-card { padding: 12px; }
+
+  .tools-right { flex-wrap: wrap; justify-content: center; }
+  .tools-right .btn { width: 100%; justify-content: center; }
+
+  .current-date { font-size: 13px; text-align: center; }
+}
+
+/* ----------------------------- 520px y menos ----------------------------- */
+@media (max-width: 520px) {
+  .odc-title { font-size: 16px; }
+  .btn, .search-input { font-size: 12px; padding: 6px 8px; }
+  .odc-header-bar { padding: 10px; }
+  .odc-filters-card label { font-size: 12px; }
+  .appointments-table th, .appointments-table td { padding: 8px 6px; }
 }
 
 /* ✅ Ajuste extra para pantallas muy pequeñas */
@@ -690,11 +590,51 @@
     flex-direction: row;
   }
   .odc-mini-calendar-card,
-  .odc-filters-card {
-    flex: 1;
+  .odc-filters-card { flex: 1; }
+  .odc-right { width: 100% !important; }
+}
+
+/* ----------------------------- Impresión ----------------------------- */
+@media print {
+  .odc-topbar-green,
+  .odc-topbar-blue,
+  .odc-left,
+  .tools-right,
+  .view-buttons,
+  #btnHoy,
+  .right-actions { display: none !important; }
+
+  .odc-agenda-root { margin-top: 0 !important; background: #fff !important; }
+  .odc-agenda-inner { padding: 0 !important; }
+  .odc-right { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  .odc-header-bar { box-shadow: none !important; border: none !important; padding: 0 0 8px 0 !important; }
+  .current-date { text-align: left !important; }
+
+  .table-wrap { max-height: none !important; padding: 0 !important; }
+  .appointments-table { min-width: 100% !important; font-size: 12px !important; }
+  .appointments-table thead th,
+  .appointments-table tbody td { border-color: #ddd !important; }
+}
+
+/* ======================= ✅ FIX ESPECÍFICO DESKTOP: alinear Día/Buscar/Nueva Cita ======================= */
+/* Mantiene todo en UNA SOLA FILA en escritorio, sin cambiar tu diseño */
+@media (min-width: 769px) {
+  .odc-header-bar { flex-wrap: nowrap; gap: 12px; }
+  .odc-header-left { flex: 0 0 auto; }
+  .odc-header-right { flex-wrap: nowrap; gap: 12px; min-width: 0; }
+  .date-nav { flex: 1 1 auto; min-width: 0; }
+  .current-date {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
   }
-  .odc-right {
-    width: 100% !important;
+  .right-actions { flex: 0 0 auto; }
+  .search-input {
+    margin-top: 5px;   /* ← corregido: unidad px */
+    min-width: 140px;
+    max-width: 220px;
+    flex: 0 1 180px;
   }
 }
 
@@ -707,7 +647,6 @@
   font-size: 13px;
   background: #fff;
 }
-/* NUEVO (opcional, solo desktop): ancho cómodo del select */
 @media (min-width: 769px) {
   .appointments-table td .estado-select { min-width: 140px; }
 }
@@ -726,28 +665,22 @@
   gap: 4px;
   transition: background 0.15s ease, transform 0.1s ease;
 }
-.btn-whatsapp:hover {
-  background: #1ebe5d;
-  transform: translateY(-1px);
-}
+.btn-whatsapp:hover { background: #1ebe5d; transform: translateY(-1px); }
 
-/* Celda de acciones (WhatsApp + Eliminar) — AHORA A LA DERECHA EN DESKTOP */
+/* Celda de acciones (WhatsApp + Eliminar) — derecha en desktop, izquierda en móvil */
 .acciones-cell {
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;   /* ⬅️ alinea a la derecha */
-  flex-wrap: wrap;             /* evita cortes cuando hay recordatorio */
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 @media (max-width: 768px) {
-  .acciones-cell { justify-content: flex-start; } /* móvil: más natural a la izquierda */
+  .acciones-cell { justify-content: flex-start; }
 }
 
-/* Texto pequeño dentro de acciones (Sin celular / recordatorio) */
-.acciones-texto {
-  font-size: 12px;
-  color: #777;
-}
+/* Texto pequeño dentro de acciones */
+.acciones-texto { font-size: 12px; color: #777; }
 
 /* Botón Eliminar compacto y rojo */
 .btn-delete {
@@ -761,19 +694,11 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.btn-delete:hover {
-  background: #ffcdd2;
-  border-color: #c62828;
-}
+.btn-delete:hover { background: #ffcdd2; border-color: #c62828; }
 
 /* ======================================================================
-   ⭐ MODAL “NUEVA CITA” UNIFICADO CON PACIENTES – FORZADO
-   ----------------------------------------------------------------------
-   1) Capa pseudo-elemento sobre toda la página (garantiza blur + color)
-   2) Overrides de Bootstrap con !important y alta especificidad
-   3) Ancho, sombras y animación del modal
+   ⭐ MODAL “NUEVA CITA” UNIFICADO CON PACIENTES – Overrides solo visuales
    ====================================================================== */
-
 body.modal-open::before {
   content: "";
   position: fixed;
@@ -806,16 +731,9 @@ body.modal-open .modal-backdrop,
 @media (max-width: 920px) {
   .modal-dialog { max-width: 92% !important; }
 }
-.modal.fade .modal-dialog {
-  transform: translateY(12px) scale(0.97);
-  opacity: 0.98;
-}
-.modal.show .modal-dialog {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
+.modal.fade .modal-dialog { transform: translateY(12px) scale(0.97); opacity: 0.98; }
+.modal.show .modal-dialog { transform: translateY(0) scale(1); opacity: 1; }
 
-/* Tarjeta del modal – con sombra y bordes suaves */
 .modal-content {
   border-radius: 18px !important;
   border: 1px solid rgba(13,71,161,0.12) !important;
@@ -824,7 +742,6 @@ body.modal-open .modal-backdrop,
   overflow: hidden;
 }
 
-/* Encabezado con degradado azul (armoniza con Pacientes) */
 .modal-header {
   border-bottom: 0 !important;
   padding: 20px 26px 10px !important;
@@ -832,21 +749,11 @@ body.modal-open .modal-backdrop,
   color: #fff !important;
   font-weight: 600 !important;
 }
-.modal-title {
-  font-weight: 700 !important;
-  font-size: 18px !important;
-  letter-spacing: 0.3px !important;
-}
+.modal-title { font-weight: 700 !important; font-size: 18px !important; letter-spacing: 0.3px !important; }
 
-/* Cuerpo y pie */
 .modal-body { padding: 16px 26px 20px !important; }
-.modal-footer {
-  border-top: 0 !important;
-  padding: 14px 26px 22px !important;
-  background: #f9fafb !important;
-}
+.modal-footer { border-top: 0 !important; padding: 14px 26px 22px !important; background: #f9fafb !important; }
 
-/* Campos dentro del modal (solo afecta al modal) */
 .modal-content input,
 .modal-content select,
 .modal-content textarea {
@@ -864,7 +771,6 @@ body.modal-open .modal-backdrop,
   outline: none !important;
 }
 
-/* Botones del modal */
 .modal-content .btn-primary,
 .modal-content .btn.blue {
   background: linear-gradient(90deg, #1976d2, #0d47a1) !important;
@@ -880,9 +786,7 @@ body.modal-open .modal-backdrop,
   transform: translateY(-1px);
 }
 .modal-content .btn-secondary,
-.modal-content .btn {
-  border-radius: 8px !important;
-}
+.modal-content .btn { border-radius: 8px !important; }
 
 /* =================== FICHA PACIENTE – PANEL COMPLETO =================== */
 .ficha-card { border-radius: 14px; box-shadow: 0 22px 60px rgba(0,0,0,.28); overflow: hidden; }
@@ -902,9 +806,7 @@ body.modal-open .modal-backdrop,
 .ficha-actions { display:flex; gap:8px; }
 
 .ficha-body { display:grid; grid-template-columns: 230px 1fr; height: calc(94vh - 64px); background:#f6f9fc; }
-.ficha-sidebar {
-  background:#fff; border-right:1px solid #e9eef4; padding:14px; overflow:auto;
-}
+.ficha-sidebar { background:#fff; border-right:1px solid #e9eef4; padding:14px; overflow:auto; }
 .ficha-sidebar-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#6b7a8c; margin:12px 0 8px; }
 .ficha-sidebar-title.mt { margin-top:18px; }
 .ficha-link {
@@ -929,9 +831,7 @@ body.modal-open .modal-backdrop,
 
 .ficha-footer { display:flex; justify-content:flex-end; gap:8px; padding:12px 0; }
 
-@media (max-width: 1100px){
-  .ficha-content{ grid-template-columns:1fr; }
-}
+@media (max-width: 1100px){ .ficha-content{ grid-template-columns:1fr; } }
 @media (max-width: 720px){
   .ficha-body{ grid-template-columns: 1fr; }
   .ficha-sidebar{ display:flex; flex-wrap:wrap; gap:6px; }
@@ -965,61 +865,3 @@ body.modal-open .modal-backdrop,
 #acResultados .ac-doc  { color: #64748b; font-size: 12px; }
 #acResultados .ac-tel  { margin-left: auto; font-size: 12px; color: #0f172a; }
 #acResultados .ac-empty { padding: 10px; color: #9aa4b2; font-size: 13px; }
-
-/* ========= NUEVO: Estilos de impresión para la agenda ========= */
-@media print {
-  .odc-topbar-green,
-  .odc-topbar-blue,
-  .odc-left,
-  .tools-right,
-  .view-buttons,
-  #btnHoy,
-  .right-actions { display: none !important; }
-
-  .odc-agenda-root { margin-top: 0 !important; background: #fff !important; }
-  .odc-agenda-inner { padding: 0 !important; }
-  .odc-right { box-shadow: none !important; border: none !important; padding: 0 !important; }
-  .odc-header-bar { box-shadow: none !important; border: none !important; padding: 0 0 8px 0 !important; }
-  .current-date { text-align: left !important; }
-
-  .table-wrap { max-height: none !important; padding: 0 !important; }
-  .appointments-table { min-width: 100% !important; font-size: 12px !important; }
-  .appointments-table thead th,
-  .appointments-table tbody td { border-color: #ddd !important; }
-}
-
-/* ======================= ✅ FIX ESPECÍFICO DESKTOP: alinear Día/Buscar/Nueva Cita ======================= */
-/* Mantiene todo en UNA SOLA FILA en escritorio, sin cambiar tu diseño */
-@media (min-width: 769px) {
-  .odc-header-bar { 
-    flex-wrap: nowrap;              /* no permite salto de línea */
-    gap: 12px;
-  }
-  .odc-header-left { 
-    flex: 0 0 auto;                 /* tamaño natural (botones Día/Semana/Detalle) */
-  }
-  .odc-header-right {
-    flex-wrap: nowrap; 
-    gap: 12px; 
-    min-width: 0;                   /* permite que el centro se recorte si es necesario */
-  }
-  .date-nav { 
-    flex: 1 1 auto;                 /* la fecha ocupa el centro flexible */
-    min-width: 0;
-  }
-  .current-date {
-    white-space: nowrap;            /* no parte “miércoles, …” a 2 líneas */
-    overflow: hidden;
-    text-overflow: ellipsis;        /* si es muy largo, muestra … */
-    text-align: center;
-  }
-  .right-actions { 
-    flex: 0 0 auto;                 /* buscador + nueva cita no se encogen demasiado */
-  }
-  .search-input {
-    margin-top: 5;                  /* quita el bajón solo en desktop */
-    min-width: 140px;               /* permite un poco de encogimiento */
-    max-width: 220px;
-    flex: 0 1 180px;                /* puede reducirse si la fecha es muy larga */
-  }
-}
