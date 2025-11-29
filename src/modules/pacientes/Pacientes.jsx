@@ -294,45 +294,76 @@ function useFinancials(patientId) {
   return result;
 }
 
-// Citas: tolerante a patientId y pacienteId
+/* ==================== Citas en tiempo real (compatible con Agenda) ==================== */
+/* Lee desde `citas` por patientId o pacienteId y construye fechaISO = Date(fecha + horaInicio).
+   Ordena en memoria: más nuevas arriba. */
 function useAppointments(patientId) {
   const [loading, setLoading] = useState(false);
   const [citas, setCitas] = useState([]);
 
   useEffect(() => {
-    let alive = true;
-    const fetchCitas = async () => {
-      if (!patientId) { setCitas([]); return; }
-      setLoading(true);
-      try {
-        // 1) intenta con patientId
-        const q1 = query(
-          collection(db, "citas"),
-          where("patientId", "==", patientId),
-          orderBy("fechaISO", "desc")
-        );
-        const s1 = await getDocs(q1);
-        let rows = s1.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // 2) si nada, intenta con pacienteId
-        if (rows.length === 0) {
-          const q2 = query(
-            collection(db, "citas"),
-            where("pacienteId", "==", patientId),
-            orderBy("fechaISO", "desc")
-          );
-          const s2 = await getDocs(q2);
-          rows = s2.docs.map((d) => ({ id: d.id, ...d.data() }));
-        }
-        if (alive) setCitas(rows);
-      } catch (e) {
-        console.warn("No se pudieron leer citas:", e);
-        alive && setCitas([]);
-      } finally {
-        alive && setLoading(false);
+    if (!patientId) { setCitas([]); return; }
+    setLoading(true);
+
+    const col = collection(db, "citas");
+
+    const mapCita = (d) => {
+      const x = d.data() || {};
+      const fechaStr = typeof x.fecha === "string" ? x.fecha : "";           // "YYYY-MM-DD"
+      const horaStr = (x.horaInicio || x.hora || "00:00").slice(0, 5);       // "HH:mm"
+      let fechaISO = null;
+      if (fechaStr) {
+        const [y, m, day] = fechaStr.split("-").map((n) => parseInt(n, 10));
+        const [hh, mm] = horaStr.split(":").map((n) => parseInt(n, 10) || 0);
+        const dt = new Date(y, (m || 1) - 1, day || 1, hh, mm, 0, 0);
+        fechaISO = dt.toISOString();
       }
+      return {
+        id: d.id,
+        ...x,
+        fechaISO,
+        motivo: x.motivo || x.comentario || "",
+        profesional: x.doctor || x.doctorNombre || "—",
+      };
     };
-    fetchCitas();
-    return () => { alive = false; };
+
+    let cache = new Map();
+
+    const apply = () => {
+      const rows = Array.from(cache.values());
+      rows.sort((a, b) => {
+        const aa = a.fechaISO || "";
+        const bb = b.fechaISO || "";
+        if (aa < bb) return 1;
+        if (aa > bb) return -1;
+        const ca = a.creado || "";
+        const cb = b.creado || "";
+        return ca < cb ? 1 : ca > cb ? -1 : 0;
+      });
+      setCitas(rows);
+      setLoading(false);
+    };
+
+    const qA = query(col, where("pacienteId", "==", patientId));
+    const qB = query(col, where("patientId", "==", patientId));
+
+    const unsubA = onSnapshot(qA, (snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") cache.delete(ch.doc.id);
+        else cache.set(ch.doc.id, mapCita(ch.doc));
+      });
+      apply();
+    }, () => setLoading(false));
+
+    const unsubB = onSnapshot(qB, (snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") cache.delete(ch.doc.id);
+        else cache.set(ch.doc.id, mapCita(ch.doc));
+      });
+      apply();
+    }, () => setLoading(false));
+
+    return () => { try { unsubA(); } catch {} try { unsubB(); } catch {}; };
   }, [patientId]);
 
   return { loading, citas };
