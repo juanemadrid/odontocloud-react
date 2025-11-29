@@ -192,7 +192,7 @@ const INITIAL_FORM = {
   notas: "",
 
   // Multimedia / Clínico / CRM / Facturación
-  rxImagenes: [],                    // [{url, name, size, type, created}]
+  rxImagenes: [],                    // [{url, name, size, type, created, path}]
   historiaClinica: {                 // editable
     antecedentes: "",
     alergias: "",
@@ -392,6 +392,10 @@ export default function Pacientes() {
   const [fotoPreview, setFotoPreview] = useState("");
 
   const [epsList, setEpsList] = useState([]);
+
+  // RX upload state + input ref
+  const [rxUploading, setRxUploading] = useState(false);
+  const rxInputRef = useRef(null);
 
   const ciudadesDisponibles = useMemo(
     () => CITIES_BY_COUNTRY[form.paisNacimiento] || [],
@@ -714,19 +718,52 @@ export default function Pacientes() {
   const handleRxUpload = async (files) => {
     if (!viewing?.id || !files?.length) return;
     const storage = getStorage();
-    const uploads = [];
-    for (const file of files) {
-      const safe = (file.name || "archivo").replace(/\s+/g, "_");
-      const path = `pacientes/${viewing.id}/rx/${Date.now()}_${safe}`;
-      const sref = ref(storage, path);
-      await uploadBytes(sref, file, { contentType: file.type });
-      const url = await getDownloadURL(sref);
-      uploads.push({
-        url, name: file.name, type: file.type, size: file.size || 0,
-        created: Date.now(), path
-      });
+
+    try {
+      setRxUploading(true);
+      const uploads = [];
+
+      for (const file of files) {
+        // Intento de compresión si es imagen (opcional)
+        let fileToSend = file;
+        if (file.type?.startsWith("image/")) {
+          try {
+            fileToSend = await compressImage(file, { maxW: 1600, maxH: 1600, quality: 0.85 });
+          } catch {
+            fileToSend = file;
+          }
+        }
+
+        const safe = (fileToSend.name || "archivo").replace(/\s+/g, "_");
+        const path = `pacientes/${viewing.id}/rx/${Date.now()}_${safe}`;
+        const sref = ref(storage, path);
+
+        await uploadBytes(sref, fileToSend, {
+          contentType: fileToSend.type || "application/octet-stream",
+          cacheControl: "public, max-age=31536000",
+        });
+
+        const url = await getDownloadURL(sref);
+        uploads.push({
+          url,
+          name: file.name,
+          type: file.type,
+          size: file.size || 0,
+          created: Date.now(),
+          path,
+        });
+      }
+
+      await updatePatientField({ rxImagenes: [...(viewing.rxImagenes || []), ...uploads] });
+    } catch (e) {
+      console.error("RX upload error:", e);
+      alert("No se pudo subir el/los archivo(s). Revisa las reglas de Storage/Firestore o la conexión.\n\n" + (e?.message || e));
+    } finally {
+      setRxUploading(false);
+      try {
+        if (rxInputRef.current) rxInputRef.current.value = "";
+      } catch {}
     }
-    await updatePatientField({ rxImagenes: [...(viewing.rxImagenes || []), ...uploads] });
   };
 
   const removeRxItem = async (idx) => {
@@ -779,6 +816,32 @@ export default function Pacientes() {
     if (exists) next = arr.filter((p) => p.pieza !== pieza);
     else next = [...arr, { pieza, estado: "marcada" }];
     updatePatientField({ [campo]: next });
+  };
+
+  /* =================== Crear cita desde Pacientes =================== */
+  const createAppointmentFromPatient = async ({ dateISO, timeHHMM = "09:00", motivo = "", profesional = "" }) => {
+    if (!viewing?.id) return alert("Primero selecciona un paciente.");
+    try {
+      const when = new Date(`${dateISO}T${timeHHMM}:00`);
+      const payload = {
+        patientId: viewing.id,
+        pacienteId: viewing.id, // compat
+        pacienteNombre: viewing.nombreCompleto || "",
+        fechaISO: when.toISOString(),
+        fecha: dateISO, // útil para consultas por string (día)
+        horaInicio: timeHHMM,
+        estado: "programada",
+        motivo: motivo || "Consulta",
+        profesional: profesional || (viewing.doctor || ""),
+        creado: serverTimestamp(),
+        actualizado: serverTimestamp(),
+      };
+      await setDoc(doc(collection(db, "citas")), payload);
+      alert("✅ Cita creada.");
+    } catch (e) {
+      console.error("Create cita error:", e);
+      alert("No se pudo crear la cita: " + (e?.message || e));
+    }
   };
 
   /* =================== Hooks: Finanzas & Citas =================== */
@@ -1373,9 +1436,16 @@ export default function Pacientes() {
                     <div className="rx-actions">
                       <label className="btn blue">
                         Subir archivos
-                        <input type="file" multiple style={{ display: "none" }}
-                          onChange={(e) => handleRxUpload([...e.target.files])} />
+                        <input
+                          ref={rxInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                          style={{ display: "none" }}
+                          onChange={(e) => handleRxUpload([...(e.target.files || [])])}
+                        />
                       </label>
+                      {rxUploading && <span className="hint" style={{ marginLeft: 10 }}>Subiendo…</span>}
                     </div>
                     <div className="rx-grid">
                       {(viewing.rxImagenes || []).map((it, i) => (
@@ -1631,6 +1701,32 @@ export default function Pacientes() {
                 {activeTab === "citas" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Citas</h4>
+
+                    {/* Nueva cita rápida */}
+                    <div className="mini-card" style={{ marginBottom: 12 }}>
+                      <div className="mini-card-title">Nueva cita rápida</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "150px 120px 1fr 1fr auto", gap: 8 }}>
+                        <input id="citaDate" type="date" className="form-input" defaultValue={new Date().toISOString().slice(0,10)} />
+                        <input id="citaTime" type="time" className="form-input" defaultValue="09:00" />
+                        <input id="citaMotivo" className="form-input" placeholder="Motivo (opcional)" />
+                        <input id="citaProf" className="form-input" placeholder="Profesional (opcional)" defaultValue={viewing?.doctor || ""} />
+                        <button
+                          type="button"
+                          className="btn blue"
+                          onClick={() => {
+                            const dateISO = document.getElementById("citaDate").value;
+                            const timeHHMM = document.getElementById("citaTime").value || "09:00";
+                            const motivo = document.getElementById("citaMotivo").value || "";
+                            const profesional = document.getElementById("citaProf").value || "";
+                            if (!dateISO) return alert("Selecciona la fecha de la cita.");
+                            createAppointmentFromPatient({ dateISO, timeHHMM, motivo, profesional });
+                          }}
+                        >
+                          Guardar cita
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="table-wrap">
                       <table className="appointments-table">
                         <thead>
@@ -1638,7 +1734,7 @@ export default function Pacientes() {
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th>Motivo</th>
-                            <th>Profesional</th>
+                            <th>Profesional / Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1652,7 +1748,23 @@ export default function Pacientes() {
                                 <td>{c.fechaISO ? new Date(c.fechaISO).toLocaleString() : "—"}</td>
                                 <td>{(c.estado || "—")}</td>
                                 <td>{c.motivo || "—"}</td>
-                                <td>{c.profesional || "—"}</td>
+                                <td>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span>{c.profesional || "—"}</span>
+                                    <button
+                                      type="button"
+                                      className="btn small"
+                                      onClick={() => {
+                                        const d = c.fechaISO ? new Date(c.fechaISO) : null;
+                                        const isoDay = d ? d.toISOString().slice(0,10) : "";
+                                        navAbs(`agenda?date=${encodeURIComponent(isoDay)}&patientId=${encodeURIComponent(viewing.id)}`);
+                                      }}
+                                      title="Abrir en Agenda"
+                                    >
+                                      Ver en Agenda
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))
                           )}
