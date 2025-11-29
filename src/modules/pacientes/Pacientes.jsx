@@ -190,7 +190,7 @@ const INITIAL_FORM = {
     motivoConsulta: "",
     notas: "",
   },
-  odontograma: [],                   // placeholder: array de {pieza:number, estado:string}
+  odontograma: [],                   // placeholder
   periodontograma: [],               // placeholder
   presupuestos: [],                  // [{id, titulo, costo, estado}]
   evoluciones: [],                   // [{id, fechaISO, nota}]
@@ -209,6 +209,9 @@ const PAGE_SIZE = 20;
    ===================================================================== */
 export default function Pacientes() {
   const nav = useNavigate();
+
+  // ✅ Navegación relativa que respeta tu base path
+  const navRel = (to) => nav(String(to).replace(/^\//, ""), { relative: "path" });
 
   const [loading, setLoading] = useState(true);
   const [pacientes, setPacientes] = useState([]);
@@ -1032,7 +1035,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn green"
-                    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
+                    onClick={() => navRel(`caja?cobro=1&patientId=${viewing.id}`)}
                     title="Ir a Caja para cobrar a este paciente"
                   >
                     Cobrar
@@ -1070,34 +1073,33 @@ export default function Pacientes() {
                   Resumen
                 </button>
 
-                {/* Acciones rápidas de Facturación (por fuera del sub-tab) */}
+                {/* Acciones rápidas de Facturación */}
                 <div className="ficha-sidebar-actions" style={{ display: "grid", gap: 8, marginTop: 8 }}>
-  <button
-    type="button"
-    className="btn pay"        // 👈 antes era "btn blue"
-    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
-    title="Cobrar a este paciente"
-  >
-    Realizar pago
-  </button>
-  <button
-    type="button"
-    className="btn history"    // 👈 color celeste
-    onClick={() => nav("/facturacion/pagos")}
-    title="Ver histórico de pagos"
-  >
-    Histórico de pagos
-  </button>
-  <button
-    type="button"
-    className="btn history"    // 👈 color celeste
-    onClick={() => nav("/facturacion/facturas")}
-    title="Ver histórico de facturación"
-  >
-    Histórico de facturación
-  </button>
-</div>
-
+                  <button
+                    type="button"
+                    className="btn pay"
+                    onClick={() => navRel(`caja?cobro=1&patientId=${viewing.id}`)}
+                    title="Cobrar a este paciente"
+                  >
+                    Realizar pago
+                  </button>
+                  <button
+                    type="button"
+                    className="btn history"
+                    onClick={() => navRel("facturacion/pagos")}
+                    title="Ver histórico de pagos"
+                  >
+                    Histórico de pagos
+                  </button>
+                  <button
+                    type="button"
+                    className="btn history"
+                    onClick={() => navRel("facturacion/facturas")}
+                    title="Ver histórico de facturación"
+                  >
+                    Histórico de facturación
+                  </button>
+                </div>
               </aside>
 
               {/* Content */}
@@ -1386,7 +1388,7 @@ export default function Pacientes() {
                         />
                       </div>
                     </div>
-                    {/* Botones de acción se movieron al sidebar: nada más aquí */}
+                    {/* Acciones están en el sidebar */}
                   </section>
                 )}
 
