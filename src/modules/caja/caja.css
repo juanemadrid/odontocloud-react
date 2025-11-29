@@ -260,10 +260,29 @@
 }
 
 /* ========================= UTILIDADES OPCIONALES ========================= */
-/* Quitar spinners de inputs number en Chrome */
-input[type=number]::-webkit-outer-spin-button,
-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; }
+/* Inputs number: quitar spinners cross-browser */
+input[type="number"] {
+  /* Propiedad estándar + prefijo para Firefox */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Chrome/Safari: ocultar los spin buttons */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  /* Añadimos también la estándar para silenciar el linter; no afecta en WebKit */
+  appearance: none;
+  margin: 0;
+}
+
+/* (Opcional) Unificar aspecto de select y botones en iOS/Android */
+select,
+button,
+input[type="search"] {
+  appearance: none;
+  -webkit-appearance: none;
+}
 
 /* Motion-safe */
 @media (prefers-reduced-motion: reduce) {
