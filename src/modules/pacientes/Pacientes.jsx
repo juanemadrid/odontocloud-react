@@ -1653,56 +1653,70 @@ export default function Pacientes() {
                 )}
 
                 {/* Citas (solo lectura + abrir en Agenda) */}
-                {activeTab === "citas" && (
-                  <section className="ficha-section">
-                    <h4 className="ficha-section-title">Citas</h4>
+                /* =================== Citas (solo lectura + abrir en Agenda) =================== */
+{activeTab === "citas" && (
+  <section className="ficha-section">
+    <h4 className="ficha-section-title">Citas</h4>
 
-                    <div className="table-wrap">
-                      <table className="appointments-table">
-                        <thead>
-                          <tr>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Motivo</th>
-                            <th>Profesional / Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {loadingCitas ? (
-                            <tr><td className="no-data" colSpan={4}>Cargando…</td></tr>
-                          ) : citas.length === 0 ? (
-                            <tr><td className="no-data" colSpan={4}>Sin citas registradas.</td></tr>
-                          ) : (
-                            citas.map((c) => (
-                              <tr key={c.id}>
-                                <td>{c.fechaISO ? new Date(c.fechaISO).toLocaleString() : "—"}</td>
-                                <td>{(c.estado || "—")}</td>
-                                <td>{c.motivo || "—"}</td>
-                                <td>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span>{c.profesional || "—"}</span>
-                                    <button
-                                      type="button"
-                                      className="btn small"
-                                      onClick={() => {
-                                        const d = c.fechaISO ? new Date(c.fechaISO) : null;
-                                        const isoDay = d ? d.toISOString().slice(0,10) : "";
-                                        navAbs(`agenda?date=${encodeURIComponent(isoDay)}&patientId=${encodeURIComponent(viewing.id)}`);
-                                      }}
-                                      title="Abrir en Agenda"
-                                    >
-                                      Ver en Agenda
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+    <div className="table-wrap">
+      <table className="appointments-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Motivo</th>
+            <th>Profesional / Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loadingCitas ? (
+            <tr><td className="no-data" colSpan={4}>Cargando…</td></tr>
+          ) : citas.length === 0 ? (
+            <tr><td className="no-data" colSpan={4}>Sin citas registradas.</td></tr>
+          ) : (
+            citas.map((c) => {
+              // ✅ CORRECCIÓN: calcula la fecha real de la cita
+              let fecha = null;
+              try {
+                fecha = c.fechaISO ? new Date(c.fechaISO) : null;
+              } catch {
+                fecha = null;
+              }
+              const isoDay = fecha ? fecha.toISOString().slice(0, 10) : "";
+              return (
+                <tr key={c.id}>
+                  <td>{fecha ? fecha.toLocaleString() : "—"}</td>
+                  <td>{c.estado || "—"}</td>
+                  <td>{c.motivo || "—"}</td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{c.profesional || "—"}</span>
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() => {
+                          if (!isoDay) return alert("La cita no tiene fecha válida.");
+                          // ✅ lleva al día real, no al actual
+                          navAbs(
+                            `agenda?date=${encodeURIComponent(isoDay)}&patientId=${encodeURIComponent(viewing.id)}`
+                          );
+                        }}
+                        title="Abrir en Agenda"
+                      >
+                        Ver en Agenda
+                      </button>
                     </div>
-                  </section>
-                )}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
+
 
                 {activeTab === "crm" && (
                   <section className="ficha-section">
