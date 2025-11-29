@@ -17,6 +17,7 @@ import {
   startAfter,
   onSnapshot,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 import {
@@ -203,6 +204,120 @@ const INITIAL_FORM = {
 };
 
 const PAGE_SIZE = 20;
+
+/* =====================================================================
+   Hooks auxiliares (finanzas y citas)
+   ===================================================================== */
+
+// Suma números seguros
+const s = (n) => Number(n || 0);
+
+// Devuelve { facturas[], pagos[], totales }
+function useFinancials(patientId) {
+  const [loading, setLoading] = useState(false);
+  const [facturas, setFacturas] = useState([]);
+  const [pagos, setPagos] = useState([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      if (!patientId) { setFacturas([]); setPagos([]); return; }
+      setLoading(true); setError("");
+      try {
+        // FACTURAS
+        let qF = query(
+          collection(db, "facturas"),
+          where("patientId", "==", patientId),
+          orderBy("fechaISO", "desc")
+        );
+        const snapF = await getDocs(qF);
+        const rowsF = snapF.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Tolerancia de campos: total|valor|montoTotal
+        const normF = rowsF.map((f) => ({
+          ...f,
+          total: s(f.total ?? f.valor ?? f.montoTotal),
+          estado: (f.estado || "pendiente").toLowerCase(),
+          fechaISO: f.fechaISO || f.fecha || null,
+        }));
+        // PAGOS
+        let qP = query(
+          collection(db, "pagos"),
+          where("patientId", "==", patientId),
+          orderBy("fechaISO", "desc")
+        );
+        const snapP = await getDocs(qP);
+        const rowsP = snapP.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const normP = rowsP.map((p) => ({
+          ...p,
+          monto: s(p.monto ?? p.valor ?? p.total),
+          fechaISO: p.fechaISO || p.fecha || null,
+          medio: p.medio || p.metodo || "—",
+        }));
+
+        if (!alive) return;
+        setFacturas(normF);
+        setPagos(normP);
+      } catch (e) {
+        console.warn("Finanzas: no se pudo leer colecciones. Continúo solo con saldos del paciente.", e);
+        if (alive) setError("No se pudieron leer facturas/pagos.");
+      } finally {
+        alive && setLoading(false);
+      }
+    };
+    run();
+    return () => { alive = false; };
+  }, [patientId]);
+
+  // Totales
+  const totalFacturado = facturas.reduce((acc, f) => acc + s(f.total), 0);
+  const totalPagado = pagos.reduce((acc, p) => acc + s(p.monto), 0);
+
+  const facturasPagadas = facturas.filter((f) => ["pagada","pagado","paid"].includes((f.estado||"").toLowerCase()));
+  const facturasPendientes = facturas.filter((f) => ["pendiente","abierta","open","deuda"].includes((f.estado||"").toLowerCase()));
+
+  const totalFacturasPagadas = facturasPagadas.reduce((acc, f) => acc + s(f.total), 0);
+  const totalFacturasPendientes = facturasPendientes.reduce((acc, f) => acc + s(f.total), 0);
+
+  const result = {
+    loading, error,
+    facturas, pagos,
+    totalFacturado, totalPagado, totalFacturasPagadas, totalFacturasPendientes
+  };
+  return result;
+}
+
+function useAppointments(patientId) {
+  const [loading, setLoading] = useState(false);
+  const [citas, setCitas] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    const fetchCitas = async () => {
+      if (!patientId) { setCitas([]); return; }
+      setLoading(true);
+      try {
+        const qC = query(
+          collection(db, "citas"),
+          where("patientId", "==", patientId),
+          orderBy("fechaISO", "desc")
+        );
+        const snap = await getDocs(qC);
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (alive) setCitas(rows);
+      } catch (e) {
+        console.warn("No se pudieron leer citas:", e);
+        alive && setCitas([]);
+      } finally {
+        alive && setLoading(false);
+      }
+    };
+    fetchCitas();
+    return () => { alive = false; };
+  }, [patientId]);
+
+  return { loading, citas };
+}
 
 /* =====================================================================
    Componente principal
@@ -622,6 +737,11 @@ export default function Pacientes() {
     else next = [...arr, { pieza, estado: "marcada" }];
     updatePatientField({ [campo]: next });
   };
+
+  /* =================== Hooks: Finanzas & Citas =================== */
+  const patientId = viewing?.id || null;
+  const fin = useFinancials(patientId);
+  const { loading: loadingCitas, citas } = useAppointments(patientId);
 
   /* =================== UI =================== */
   return (
@@ -1364,7 +1484,21 @@ export default function Pacientes() {
                 {activeTab === "fact" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Facturación</h4>
-                    <div className="ficha-grid">
+
+                    {/* Tarjetas resumen */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 12 }}>
+                      <Kpi title="Total facturado" value={`$ ${fin.totalFacturado.toLocaleString()}`} />
+                      <Kpi title="Total pagado" value={`$ ${fin.totalPagado.toLocaleString()}`} />
+                      <Kpi title="Facturas pendientes" value={`$ ${fin.totalFacturasPendientes.toLocaleString()}`} />
+                      <Kpi title="Saldo pendiente (facturas - pagos)" value={`$ ${(fin.totalFacturado - fin.totalPagado).toLocaleString()}`} />
+                      <Kpi title="Saldo a favor" value={`$ ${(viewing.facturacion?.saldoFavor ?? 0).toLocaleString()}`} />
+                      <Kpi title="Saldo crédito" value={`$ ${(viewing.facturacion?.saldoCredito ?? 0).toLocaleString()}`} />
+                    </div>
+
+                    {fin.error && <div className="hint" style={{ marginTop: 6 }}>⚠️ {fin.error}</div>}
+
+                    {/* Editables de saldos rápidos */}
+                    <div className="ficha-grid" style={{ marginTop: 12 }}>
                       <div className="field">
                         <label>Saldo a favor</label>
                         <input
@@ -1388,17 +1522,103 @@ export default function Pacientes() {
                         />
                       </div>
                     </div>
-                    {/* Acciones están en el sidebar */}
+
+                    {/* Listados */}
+                    <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div className="mini-card">
+                        <div className="mini-card-title">Últimas facturas</div>
+                        <div className="table-wrap">
+                          <table className="appointments-table">
+                            <thead>
+                              <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fin.facturas.slice(0,8).map((f) => (
+                                <tr key={f.id}>
+                                  <td>{f.fechaISO ? new Date(f.fechaISO).toLocaleString() : "—"}</td>
+                                  <td>{String(f.estado || "").toUpperCase()}</td>
+                                  <td>${(f.total||0).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                              {fin.facturas.length===0 && (
+                                <tr><td className="no-data" colSpan={3}>Sin facturas.</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div className="mini-card">
+                        <div className="mini-card-title">Últimos pagos</div>
+                        <div className="table-wrap">
+                          <table className="appointments-table">
+                            <thead>
+                              <tr>
+                                <th>Fecha</th>
+                                <th>Medio</th>
+                                <th>Monto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fin.pagos.slice(0,8).map((p) => (
+                                <tr key={p.id}>
+                                  <td>{p.fechaISO ? new Date(p.fechaISO).toLocaleString() : "—"}</td>
+                                  <td>{p.medio}</td>
+                                  <td>${(p.monto||0).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                              {fin.pagos.length===0 && (
+                                <tr><td className="no-data" colSpan={3}>Sin pagos.</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acciones en el sidebar */}
                   </section>
                 )}
 
-                {/* Placeholder tabs simples */}
+                {/* Citas */}
                 {activeTab === "citas" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Citas</h4>
-                    <div className="no-data">Integra aquí la tabla de citas del paciente.</div>
+                    <div className="table-wrap">
+                      <table className="appointments-table">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Motivo</th>
+                            <th>Profesional</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loadingCitas ? (
+                            <tr><td className="no-data" colSpan={4}>Cargando…</td></tr>
+                          ) : citas.length === 0 ? (
+                            <tr><td className="no-data" colSpan={4}>Sin citas registradas.</td></tr>
+                          ) : (
+                            citas.map((c) => (
+                              <tr key={c.id}>
+                                <td>{c.fechaISO ? new Date(c.fechaISO).toLocaleString() : "—"}</td>
+                                <td>{(c.estado || "—")}</td>
+                                <td>{c.motivo || "—"}</td>
+                                <td>{c.profesional || "—"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </section>
                 )}
+
                 {activeTab === "crm" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">CRM</h4>
@@ -1418,6 +1638,15 @@ export default function Pacientes() {
 }
 
 /* ========================== Subcomponentes simples ========================== */
+function Kpi({ title, value }) {
+  return (
+    <div className="mini-card">
+      <div className="mini-card-title">{title}</div>
+      <div style={{ fontWeight: 700, fontSize: 20, marginTop: 6 }}>{value}</div>
+    </div>
+  );
+}
+
 function PresupuestoForm({ onAdd }) {
   const [titulo, setTitulo] = useState("");
   const [costo, setCosto] = useState("");
