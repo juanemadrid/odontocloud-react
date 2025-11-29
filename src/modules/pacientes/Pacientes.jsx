@@ -33,9 +33,9 @@ import {
    Config de rutas (ajústalas si en tu app son diferentes)
    ===================================================================== */
 const ROUTES = {
-  caja: "caja",                      // p.ej. "caja" o "finance/caja"
-  pagos: "facturacion/pagos",        // p.ej. "caja/pagos" o "finance/pagos"
-  facturas: "facturacion/facturas",  // p.ej. "caja/facturas" o "finance/facturas"
+  caja: "caja",
+  pagos: "facturacion/pagos",
+  facturas: "facturacion/facturas",
 };
 
 /* =====================================================================
@@ -345,7 +345,7 @@ export default function Pacientes() {
   const nav = useNavigate();
   const location = useLocation();
 
-  // === Base de la app (respeta prefijos como /software, /app, etc.)
+  // === Base de la app
   const appBase = React.useMemo(() => {
     const segs = location.pathname.split("/").filter(Boolean);
     const cutAt = segs.findIndex((s) =>
@@ -564,7 +564,7 @@ export default function Pacientes() {
         }
       }
 
-      // Índices de búsqueda y timestamps (preserva creado si edita)
+      // Índices y timestamps
       const creadoPrev = form.creado || null;
       const createdStamp = editingId ? (creadoPrev || serverTimestamp()) : serverTimestamp();
 
@@ -738,11 +738,13 @@ export default function Pacientes() {
         const path = `pacientes/${viewing.id}/rx/${Date.now()}_${safe}`;
         const sref = ref(storage, path);
 
-        await uploadBytes(sref, fileToSend, {
+        // Nota: algunos navegadores no envían contentType en PDF/doc.
+        const meta = {
           contentType: fileToSend.type || "application/octet-stream",
           cacheControl: "public, max-age=31536000",
-        });
+        };
 
+        await uploadBytes(sref, fileToSend, meta);
         const url = await getDownloadURL(sref);
         uploads.push({
           url,
@@ -757,7 +759,14 @@ export default function Pacientes() {
       await updatePatientField({ rxImagenes: [...(viewing.rxImagenes || []), ...uploads] });
     } catch (e) {
       console.error("RX upload error:", e);
-      alert("No se pudo subir el/los archivo(s). Revisa las reglas de Storage/Firestore o la conexión.\n\n" + (e?.message || e));
+      // Mensaje con pistas de reglas típicas
+      const msg =
+        "No se pudo subir el/los archivo(s).\n" +
+        "• Verifica que el usuario esté autenticado.\n" +
+        "• Revisa reglas de Storage para permitir escribir en 'pacientes/{id}/**'.\n" +
+        "• Si usas Emulador, confirma que el bucket coincida.\n\n" +
+        (e?.message || "");
+      alert(msg);
     } finally {
       setRxUploading(false);
       try {
@@ -816,32 +825,6 @@ export default function Pacientes() {
     if (exists) next = arr.filter((p) => p.pieza !== pieza);
     else next = [...arr, { pieza, estado: "marcada" }];
     updatePatientField({ [campo]: next });
-  };
-
-  /* =================== Crear cita desde Pacientes =================== */
-  const createAppointmentFromPatient = async ({ dateISO, timeHHMM = "09:00", motivo = "", profesional = "" }) => {
-    if (!viewing?.id) return alert("Primero selecciona un paciente.");
-    try {
-      const when = new Date(`${dateISO}T${timeHHMM}:00`);
-      const payload = {
-        patientId: viewing.id,
-        pacienteId: viewing.id, // compat
-        pacienteNombre: viewing.nombreCompleto || "",
-        fechaISO: when.toISOString(),
-        fecha: dateISO, // útil para consultas por string (día)
-        horaInicio: timeHHMM,
-        estado: "programada",
-        motivo: motivo || "Consulta",
-        profesional: profesional || (viewing.doctor || ""),
-        creado: serverTimestamp(),
-        actualizado: serverTimestamp(),
-      };
-      await setDoc(doc(collection(db, "citas")), payload);
-      alert("✅ Cita creada.");
-    } catch (e) {
-      console.error("Create cita error:", e);
-      alert("No se pudo crear la cita: " + (e?.message || e));
-    }
   };
 
   /* =================== Hooks: Finanzas & Citas =================== */
@@ -1635,97 +1618,13 @@ export default function Pacientes() {
                         />
                       </div>
                     </div>
-
-                    {/* Listados */}
-                    <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div className="mini-card">
-                        <div className="mini-card-title">Últimas facturas</div>
-                        <div className="table-wrap">
-                          <table className="appointments-table">
-                            <thead>
-                              <tr>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                                <th>Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {fin.facturas.slice(0,8).map((f) => (
-                                <tr key={f.id}>
-                                  <td>{f.fechaISO ? new Date(f.fechaISO).toLocaleString() : "—"}</td>
-                                  <td>{String(f.estado || "").toUpperCase()}</td>
-                                  <td>${(f.total||0).toLocaleString()}</td>
-                                </tr>
-                              ))}
-                              {fin.facturas.length===0 && (
-                                <tr><td className="no-data" colSpan={3}>Sin facturas.</td></tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      <div className="mini-card">
-                        <div className="mini-card-title">Últimos pagos</div>
-                        <div className="table-wrap">
-                          <table className="appointments-table">
-                            <thead>
-                              <tr>
-                                <th>Fecha</th>
-                                <th>Medio</th>
-                                <th>Monto</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {fin.pagos.slice(0,8).map((p) => (
-                                <tr key={p.id}>
-                                  <td>{p.fechaISO ? new Date(p.fechaISO).toLocaleString() : "—"}</td>
-                                  <td>{p.medio}</td>
-                                  <td>${(p.monto||0).toLocaleString()}</td>
-                                </tr>
-                              ))}
-                              {fin.pagos.length===0 && (
-                                <tr><td className="no-data" colSpan={3}>Sin pagos.</td></tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Acciones en el sidebar */}
                   </section>
                 )}
 
-                {/* Citas */}
+                {/* Citas (solo lectura + abrir en Agenda) */}
                 {activeTab === "citas" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Citas</h4>
-
-                    {/* Nueva cita rápida */}
-                    <div className="mini-card" style={{ marginBottom: 12 }}>
-                      <div className="mini-card-title">Nueva cita rápida</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "150px 120px 1fr 1fr auto", gap: 8 }}>
-                        <input id="citaDate" type="date" className="form-input" defaultValue={new Date().toISOString().slice(0,10)} />
-                        <input id="citaTime" type="time" className="form-input" defaultValue="09:00" />
-                        <input id="citaMotivo" className="form-input" placeholder="Motivo (opcional)" />
-                        <input id="citaProf" className="form-input" placeholder="Profesional (opcional)" defaultValue={viewing?.doctor || ""} />
-                        <button
-                          type="button"
-                          className="btn blue"
-                          onClick={() => {
-                            const dateISO = document.getElementById("citaDate").value;
-                            const timeHHMM = document.getElementById("citaTime").value || "09:00";
-                            const motivo = document.getElementById("citaMotivo").value || "";
-                            const profesional = document.getElementById("citaProf").value || "";
-                            if (!dateISO) return alert("Selecciona la fecha de la cita.");
-                            createAppointmentFromPatient({ dateISO, timeHHMM, motivo, profesional });
-                          }}
-                        >
-                          Guardar cita
-                        </button>
-                      </div>
-                    </div>
 
                     <div className="table-wrap">
                       <table className="appointments-table">
