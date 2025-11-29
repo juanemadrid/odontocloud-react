@@ -128,19 +128,13 @@ const useTodayRange = () =>
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
-      0,
-      0,
-      0,
-      0
+      0, 0, 0, 0
     );
     const endToday = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate() + 1,
-      0,
-      0,
-      0,
-      0
+      0, 0, 0, 0
     );
     return {
       startToday: Timestamp.fromDate(startToday),
@@ -381,8 +375,8 @@ function AdminMegaMenu({
   anchorRect,
   onClose,
   onSoon,
-  onNavigatePath, // <--- NUEVO: navegar por path
-  onSetFactView,  // <--- NUEVO: setear vista de facturación
+  onNavigatePath,
+  onSetFactView,
   dark,
 }) {
   const [sub, setSub] = useState(null);
@@ -504,7 +498,7 @@ function AdminMegaMenu({
 
   const handleFactClick = (it) => {
     onSetFactView?.(it.key);
-    onNavigatePath?.(it.path); // navega a /dashboard_*/facturacion/<vista>
+    onNavigatePath?.(it.path);
     onClose?.();
   };
 
@@ -1096,8 +1090,6 @@ export default function Dashboard() {
 
   /* =================== 🔁 Sincroniza URL → vista =================== */
   useEffect(() => {
-    // Detecta el módulo según la ruta actual
-    // Rutas esperadas relative al dashboard: "", "agenda", "pacientes", "caja", "facturacion/*", "inventario", "odontograma", "reportes"
     const path = location.pathname.toLowerCase();
 
     const isPac = path.includes("/pacientes");
@@ -1116,7 +1108,6 @@ export default function Dashboard() {
     else if (isRep) setActiveModule("Reportes");
     else setActiveModule("Inicio");
 
-    // Sub-vistas de Facturación
     if (isFact) {
       setActiveModule("Facturación");
       if (path.includes("/pagos")) setFactView("pagos");
@@ -1133,15 +1124,18 @@ export default function Dashboard() {
     }
   }, [location.pathname]);
 
-  /* =================== Helpers navegación (clicks UI) =================== */
-  const go = (segment = "") => {
-    // navegar relativo al dashboard actual (admin/doctor/recepcion)
-    // Detecta prefijo /dashboard_*
+  /* =================== ✅ Rutas absolutas y helper go =================== */
+  const basePath = useMemo(() => {
     const segs = location.pathname.split("/").filter(Boolean);
     const dashIdx = segs.findIndex((s) => s.startsWith("dashboard_"));
-    const base = dashIdx >= 0 ? `/${segs.slice(0, dashIdx + 1).join("/")}` : "";
-    const clean = String(segment).replace(/^\//, "");
-    navigate(`${base}/${clean}`);
+    return dashIdx >= 0 ? `/${segs.slice(0, dashIdx + 1).join("/")}` : "";
+  }, [location.pathname]);
+
+  const go = (segment = "") => {
+    const clean = String(segment).replace(/^\/+|\/+$/g, "");
+    const target = clean ? `${basePath}/${clean}` : basePath || "/";
+    const same = location.pathname.toLowerCase() === target.toLowerCase();
+    navigate(target, { replace: same });
   };
 
   /* ===== Contenido por módulo (controlado por activeModule) ===== */
@@ -1186,7 +1180,7 @@ export default function Dashboard() {
 
         <nav className="oc-nav" role="navigation" aria-label="Navegación principal">
           <NavLink
-            to="" // index del dashboard
+            to={basePath}
             end
             className={({ isActive }) => (isActive && activeModule==="Inicio") ? "oc-nav-btn active" : "oc-nav-btn"}
             title={t("nav_home")}
@@ -1195,7 +1189,7 @@ export default function Dashboard() {
           </NavLink>
 
           <NavLink
-            to="agenda"
+            to={`${basePath}/agenda`}
             className={({ isActive }) => (isActive || activeModule==="Agenda") ? "oc-nav-btn active" : "oc-nav-btn"}
             title={t("nav_agenda")}
           >
@@ -1203,7 +1197,7 @@ export default function Dashboard() {
           </NavLink>
 
           <NavLink
-            to="pacientes"
+            to={`${basePath}/pacientes`}
             className={({ isActive }) => (isActive || activeModule==="Pacientes") ? "oc-nav-btn active" : "oc-nav-btn"}
             title={t("nav_patients")}
           >
@@ -1211,7 +1205,7 @@ export default function Dashboard() {
           </NavLink>
 
           <NavLink
-            to="caja"
+            to={`${basePath}/caja`}
             className={({ isActive }) => (isActive || activeModule==="Caja") ? "oc-nav-btn active" : "oc-nav-btn"}
             title={t("nav_cash")}
           >
@@ -1234,7 +1228,7 @@ export default function Dashboard() {
           </button>
 
           <NavLink
-            to="reportes"
+            to={`${basePath}/reportes`}
             className={({ isActive }) => (isActive || activeModule==="Reportes") ? "oc-nav-btn active" : "oc-nav-btn"}
             title={t("nav_reports")}
           >
@@ -1246,12 +1240,12 @@ export default function Dashboard() {
           <CommandSearch
             placeholder={t("searchPlaceholder")}
             onNavigate={(module) => {
-              // transformar nombres a rutas
               if (module === "Inicio") go("");
-              else go(module.toLowerCase()); // agenda, pacientes, facturación (luego ajustamos)
-              if (module === "Facturación") {
+              else if (module === "Facturación") {
                 setFactView("recibo");
                 go("facturacion/recibo");
+              } else {
+                go(module.toLowerCase());
               }
             }}
             onAction={(key) => {
