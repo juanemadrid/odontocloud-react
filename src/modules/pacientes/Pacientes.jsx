@@ -326,7 +326,7 @@ function useAppointments(patientId) {
         fechaISO,
         motivo: x.motivo || x.comentario || "",
         profesional: x.doctor || x.doctorNombre || "—",
-        fechaYYYYMMDD: fechaStr, // ✅ FIX: guardamos la fecha local tal cual para navegación
+        fechaYYYYMMDD: fechaStr, // ✅ para navegar a Agenda sin UTC
       };
     };
 
@@ -403,6 +403,28 @@ export default function Pacientes() {
     const qs = params ? new URLSearchParams(params).toString() : "";
     const prefix = appBase ? `${appBase}/` : "/";
     return `${prefix}${clean}${qs ? `?${qs}` : ""}`;
+  };
+
+  /** ✅ Helper robusto para abrir Agenda posicionada en un día */
+  const goAgendaForDay = (yyyyMmDd, pid) => {
+    const day = String(yyyyMmDd || "").slice(0, 10); // "YYYY-MM-DD"
+    if (!day) return navAbs("agenda");
+
+    // Fallback: por si Agenda no lee query, puede leer esto al montar
+    try { sessionStorage.setItem("agenda.targetDate", day); } catch {}
+
+    // Varias claves por compatibilidad + timestamp
+    const params = new URLSearchParams({
+      date: day,
+      day: day,
+      d: day,
+      fecha: day,
+      selectedDate: day,
+      ts: String(new Date(day + "T00:00:00").getTime()),
+      patientId: pid || "",
+    }).toString();
+
+    navAbs(`agenda?${params}`);
   };
 
   const [loading, setLoading] = useState(true);
@@ -1688,9 +1710,11 @@ export default function Pacientes() {
                                       type="button"
                                       className="btn small"
                                       onClick={() => {
-                                        // ✅ FIX: usar la fecha local de la cita (YYYY-MM-DD) sin pasar por UTC
-                                        const day = c.fechaYYYYMMDD || c.fecha || (c.fechaISO ? new Date(c.fechaISO).toISOString().slice(0,10) : "");
-                                        navAbs(`agenda?date=${encodeURIComponent(day)}&patientId=${encodeURIComponent(viewing.id)}`);
+                                        const day =
+                                          c.fechaYYYYMMDD ||
+                                          c.fecha ||
+                                          (c.fechaISO ? new Date(c.fechaISO).toISOString().slice(0,10) : "");
+                                        goAgendaForDay(day, viewing.id);
                                       }}
                                       title="Abrir en Agenda"
                                     >
