@@ -1072,31 +1072,32 @@ export default function Pacientes() {
 
                 {/* Acciones rápidas de Facturación (por fuera del sub-tab) */}
                 <div className="ficha-sidebar-actions" style={{ display: "grid", gap: 8, marginTop: 8 }}>
-                  <button
-                    type="button"
-                    className="btn blue"
-                    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
-                    title="Cobrar a este paciente"
-                  >
-                    Realizar pago
-                  </button>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => nav("/facturacion/pagos")}
-                    title="Ver histórico de pagos"
-                  >
-                    Histórico de pagos
-                  </button>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => nav("/facturacion/facturas")}
-                    title="Ver histórico de facturación"
-                  >
-                    Histórico de facturación
-                  </button>
-                </div>
+  <button
+    type="button"
+    className="btn pay"        // 👈 antes era "btn blue"
+    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
+    title="Cobrar a este paciente"
+  >
+    Realizar pago
+  </button>
+  <button
+    type="button"
+    className="btn history"    // 👈 color celeste
+    onClick={() => nav("/facturacion/pagos")}
+    title="Ver histórico de pagos"
+  >
+    Histórico de pagos
+  </button>
+  <button
+    type="button"
+    className="btn history"    // 👈 color celeste
+    onClick={() => nav("/facturacion/facturas")}
+    title="Ver histórico de facturación"
+  >
+    Histórico de facturación
+  </button>
+</div>
+
               </aside>
 
               {/* Content */}

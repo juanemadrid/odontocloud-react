@@ -333,3 +333,59 @@
     grid-template-columns: 1fr;
   }
 }
+/* ====== Facturación (sidebar) – estilos de botones ====== */
+.ficha-sidebar-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Todos iguales: ancho completo y alto cómodo */
+.ficha-sidebar-actions .btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* Variante Pagar (azul principal) */
+.ficha-sidebar-actions .btn.pay {
+  background: var(--odc-primary);
+  color: #fff;
+  border-color: transparent;
+}
+.ficha-sidebar-actions .btn.pay:hover {
+  background: var(--odc-primary-600);
+}
+
+/* Variantes de Histórico (celeste) */
+.ficha-sidebar-actions .btn.history {
+  background: #0ea5e9;           /* sky-500 */
+  color: #fff;
+  border-color: transparent;
+}
+.ficha-sidebar-actions .btn.history:hover {
+  background: #0284c7;           /* sky-600 */
+}
+
+/* Estado deshabilitado coherente (por si en algún momento bloqueas) */
+.ficha-sidebar-actions .btn:disabled {
+  background: #e5e7eb;
+  color: #94a3b8;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* Asegura que los inputs/links de la ficha no rompan borde/box-shadow */
+.ficha-content .ficha-section input.form-input[readonly] {
+  background: #fff;
+}
+
+/* (Opcional) Quitar zoom iOS en inputs del modal */
+@supports (-webkit-touch-callout: none) {
+  .ficha-sidebar-actions .btn,
+  .form-input,
+  .search-input { font-size: 16px; }
+}
