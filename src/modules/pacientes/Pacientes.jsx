@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./pacientes.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { db } from "../../firebase/firebaseConfig";
 import {
@@ -233,7 +233,6 @@ function useFinancials(patientId) {
         );
         const snapF = await getDocs(qF);
         const rowsF = snapF.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // Tolerancia de campos: total|valor|montoTotal
         const normF = rowsF.map((f) => ({
           ...f,
           total: s(f.total ?? f.valor ?? f.montoTotal),
@@ -269,7 +268,6 @@ function useFinancials(patientId) {
     return () => { alive = false; };
   }, [patientId]);
 
-  // Totales
   const totalFacturado = facturas.reduce((acc, f) => acc + s(f.total), 0);
   const totalPagado = pagos.reduce((acc, p) => acc + s(p.monto), 0);
 
@@ -287,6 +285,7 @@ function useFinancials(patientId) {
   return result;
 }
 
+// Citas: tolerante a patientId y pacienteId
 function useAppointments(patientId) {
   const [loading, setLoading] = useState(false);
   const [citas, setCitas] = useState([]);
@@ -297,13 +296,24 @@ function useAppointments(patientId) {
       if (!patientId) { setCitas([]); return; }
       setLoading(true);
       try {
-        const qC = query(
+        // 1) intenta con patientId
+        const q1 = query(
           collection(db, "citas"),
           where("patientId", "==", patientId),
           orderBy("fechaISO", "desc")
         );
-        const snap = await getDocs(qC);
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const s1 = await getDocs(q1);
+        let rows = s1.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // 2) si nada, intenta con pacienteId
+        if (rows.length === 0) {
+          const q2 = query(
+            collection(db, "citas"),
+            where("pacienteId", "==", patientId),
+            orderBy("fechaISO", "desc")
+          );
+          const s2 = await getDocs(q2);
+          rows = s2.docs.map((d) => ({ id: d.id, ...d.data() }));
+        }
         if (alive) setCitas(rows);
       } catch (e) {
         console.warn("No se pudieron leer citas:", e);
@@ -324,9 +334,23 @@ function useAppointments(patientId) {
    ===================================================================== */
 export default function Pacientes() {
   const nav = useNavigate();
+  const location = useLocation();
 
-  // ✅ Navegación relativa que respeta tu base path
-  const navRel = (to) => nav(String(to).replace(/^\//, ""), { relative: "path" });
+  // === Navegación ABSOLUTA que respeta el base actual de la app ===
+  const appBase = React.useMemo(() => {
+    const segs = location.pathname.split("/").filter(Boolean);
+    const cutAt = segs.findIndex((s) =>
+      ["pacientes", "agenda", "caja", "facturacion", "config", "reportes", "software"].includes(s)
+    );
+    const baseSegs = segs.slice(0, cutAt >= 0 ? cutAt : segs.length);
+    const base = "/" + baseSegs.join("/");
+    return base === "/" ? "" : base;
+  }, [location.pathname]);
+
+  const navAbs = (subpath) => {
+    const clean = String(subpath).replace(/^\//, "");
+    nav(`${appBase}/${clean}`);
+  };
 
   const [loading, setLoading] = useState(true);
   const [pacientes, setPacientes] = useState([]);
@@ -1155,7 +1179,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn green"
-                    onClick={() => navRel(`caja?cobro=1&patientId=${viewing.id}`)}
+                    onClick={() => navAbs(`caja?cobro=1&patientId=${viewing.id}`)}
                     title="Ir a Caja para cobrar a este paciente"
                   >
                     Cobrar
@@ -1198,7 +1222,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn pay"
-                    onClick={() => navRel(`caja?cobro=1&patientId=${viewing.id}`)}
+                    onClick={() => navAbs(`caja?cobro=1&patientId=${viewing.id}`)}
                     title="Cobrar a este paciente"
                   >
                     Realizar pago
@@ -1206,7 +1230,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn history"
-                    onClick={() => navRel("facturacion/pagos")}
+                    onClick={() => navAbs("facturacion/pagos")}
                     title="Ver histórico de pagos"
                   >
                     Histórico de pagos
@@ -1214,7 +1238,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn history"
-                    onClick={() => navRel("facturacion/facturas")}
+                    onClick={() => navAbs("facturacion/facturas")}
                     title="Ver histórico de facturación"
                   >
                     Histórico de facturación
