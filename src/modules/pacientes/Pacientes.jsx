@@ -30,6 +30,15 @@ import {
 } from "firebase/storage";
 
 /* =====================================================================
+   Config de rutas (ajústalas si en tu app son diferentes)
+   ===================================================================== */
+const ROUTES = {
+  caja: "caja",                      // p.ej. "caja" o "finance/caja"
+  pagos: "facturacion/pagos",        // p.ej. "caja/pagos" o "finance/pagos"
+  facturas: "facturacion/facturas",  // p.ej. "caja/facturas" o "finance/facturas"
+};
+
+/* =====================================================================
    Utilidades
    ===================================================================== */
 const browserLocale =
@@ -336,7 +345,7 @@ export default function Pacientes() {
   const nav = useNavigate();
   const location = useLocation();
 
-  // === Navegación ABSOLUTA que respeta el base actual de la app ===
+  // === Base de la app (respeta prefijos como /software, /app, etc.)
   const appBase = React.useMemo(() => {
     const segs = location.pathname.split("/").filter(Boolean);
     const cutAt = segs.findIndex((s) =>
@@ -347,9 +356,19 @@ export default function Pacientes() {
     return base === "/" ? "" : base;
   }, [location.pathname]);
 
+  /** Navegación ABSOLUTA segura */
   const navAbs = (subpath) => {
-    const clean = String(subpath).replace(/^\//, "");
-    nav(`${appBase}/${clean}`);
+    const clean = String(subpath || "").replace(/^\//, "");
+    const prefix = appBase ? `${appBase}/` : "/";
+    nav(`${prefix}${clean}`);
+  };
+
+  /** Construye ruta + querystring */
+  const buildUrl = (path, params) => {
+    const clean = String(path || "").replace(/^\//, "");
+    const qs = params ? new URLSearchParams(params).toString() : "";
+    const prefix = appBase ? `${appBase}/` : "/";
+    return `${prefix}${clean}${qs ? `?${qs}` : ""}`;
   };
 
   const [loading, setLoading] = useState(true);
@@ -1179,7 +1198,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn green"
-                    onClick={() => navAbs(`caja?cobro=1&patientId=${viewing.id}`)}
+                    onClick={() => nav(buildUrl(ROUTES.caja, { cobro: 1, patientId: viewing.id }))}
                     title="Ir a Caja para cobrar a este paciente"
                   >
                     Cobrar
@@ -1222,7 +1241,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn pay"
-                    onClick={() => navAbs(`caja?cobro=1&patientId=${viewing.id}`)}
+                    onClick={() => nav(buildUrl(ROUTES.caja, { cobro: 1, patientId: viewing.id }))}
                     title="Cobrar a este paciente"
                   >
                     Realizar pago
@@ -1230,7 +1249,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn history"
-                    onClick={() => navAbs("facturacion/pagos")}
+                    onClick={() => navAbs(`${ROUTES.pagos}?patientId=${encodeURIComponent(viewing.id)}`)}
                     title="Ver histórico de pagos"
                   >
                     Histórico de pagos
@@ -1238,7 +1257,7 @@ export default function Pacientes() {
                   <button
                     type="button"
                     className="btn history"
-                    onClick={() => navAbs("facturacion/facturas")}
+                    onClick={() => navAbs(`${ROUTES.facturas}?patientId=${encodeURIComponent(viewing.id)}`)}
                     title="Ver histórico de facturación"
                   >
                     Histórico de facturación
@@ -1360,7 +1379,7 @@ export default function Pacientes() {
                     </div>
                     <div className="rx-grid">
                       {(viewing.rxImagenes || []).map((it, i) => (
-                        <div className="rx-item" key={i}>
+                        <div className="rx-item" key={`${it.url}-${i}`}>
                           {it.type?.startsWith("image/") ? (
                             <a href={it.url} target="_blank" rel="noreferrer">
                               <img src={it.url} alt={it.name} />
