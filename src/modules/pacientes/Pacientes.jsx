@@ -414,13 +414,13 @@ export default function Pacientes() {
         documentoLower: normalize(form.nroDocumento),
         emailLower: normalize(form.email),
 
-        // timestamps (mantengo tus campos y agrego alias comunes)
+        // timestamps
         creado: createdStamp,
         createdAt: createdStamp,
         actualizado: serverTimestamp(),
         updatedAt: serverTimestamp(),
 
-        // alias/compatibilidad que ya usas en otros lados
+        // alias/compatibilidad
         activo: form.activo ?? true,
         celularPaciente: form.celular,
         telefonoPaciente: form.telDomicilio || "",
@@ -526,7 +526,6 @@ export default function Pacientes() {
   };
 
   const mergeWithDefaults = (data) => {
-    // Garantiza que existan las ramas nuevas sin romper tus datos anteriores
     return {
       ...INITIAL_FORM,
       ...data,
@@ -611,7 +610,7 @@ export default function Pacientes() {
     updatePatientField({ evoluciones: (viewing.evoluciones || []).filter((x) => x.id !== id) });
   };
 
-  // Odontograma/Periodontograma placeholders simples (marca/borra estado por pieza)
+  // Odontograma/Periodontograma placeholders simples
   const togglePieza = (campo, pieza) => {
     const arr = Array.isArray(viewing[campo]) ? viewing[campo] : [];
     const exists = arr.find((p) => p.pieza === pieza);
@@ -643,7 +642,7 @@ export default function Pacientes() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
-            <button className="btn green" onClick={openNew}>+ Nuevo paciente</button>
+            <button type="button" className="btn green" onClick={openNew}>+ Nuevo paciente</button>
           </div>
         </div>
 
@@ -687,7 +686,7 @@ export default function Pacientes() {
         </div>
 
         <div className="footer-actions">
-          <button className="btn" disabled={loading || !hasMore} onClick={() => fetchPage(false)}>
+          <button type="button" className="btn" disabled={loading || !hasMore} onClick={() => fetchPage(false)}>
             {hasMore ? "Cargar más" : "No hay más"}
           </button>
           <div className="hint">{pacientes.length} registros cargados</div>
@@ -701,7 +700,7 @@ export default function Pacientes() {
           <div className="odc-card" style={{ width: 1000, maxWidth: "95%", maxHeight: "92vh", overflowY: "auto" }}>
             <div className="odc-card-header">
               <h3 className="odc-title">{editingId ? "Editar paciente" : "Nuevo paciente"}</h3>
-              <button className="btn" onClick={() => setOpen(false)}>✕</button>
+              <button type="button" className="btn" onClick={() => setOpen(false)}>✕</button>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -1028,9 +1027,10 @@ export default function Pacientes() {
               </div>
               <div className="ficha-header-right">
                 <div className="ficha-actions">
-                  <button className="btn" onClick={stopViewing}>Cerrar</button>
-                  <button className="btn blue" onClick={openEditFromViewing}>Editar</button>
+                  <button type="button" className="btn" onClick={stopViewing}>Cerrar</button>
+                  <button type="button" className="btn blue" onClick={openEditFromViewing}>Editar</button>
                   <button
+                    type="button"
                     className="btn green"
                     onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
                     title="Ir a Caja para cobrar a este paciente"
@@ -1046,23 +1046,57 @@ export default function Pacientes() {
               {/* Sidebar */}
               <aside className="ficha-sidebar">
                 <div className="ficha-sidebar-title">Información general</div>
-                <button className={`ficha-link ${activeTab==="datos"?"active":""}`} onClick={() => setActiveTab("datos")}>Datos personales</button>
-                <button className={`ficha-link ${activeTab==="marketing"?"active":""}`} onClick={() => setActiveTab("marketing")}>Marketing</button>
-                <button className={`ficha-link ${activeTab==="eps"?"active":""}`} onClick={() => setActiveTab("eps")}>EPS</button>
-                <button className={`ficha-link ${activeTab==="prof"?"active":""}`} onClick={() => setActiveTab("prof")}>Profesionales</button>
-                <button className={`ficha-link ${activeTab==="rx"?"active":""}`} onClick={() => setActiveTab("rx")}>Rx/Imágenes/Doc</button>
-                <button className={`ficha-link ${activeTab==="citas"?"active":""}`} onClick={() => setActiveTab("citas")}>Citas</button>
-                <button className={`ficha-link ${activeTab==="crm"?"active":""}`} onClick={() => setActiveTab("crm")}>CRM</button>
+                <button type="button" className={`ficha-link ${activeTab==="datos"?"active":""}`} onClick={() => setActiveTab("datos")}>Datos personales</button>
+                <button type="button" className={`ficha-link ${activeTab==="marketing"?"active":""}`} onClick={() => setActiveTab("marketing")}>Marketing</button>
+                <button type="button" className={`ficha-link ${activeTab==="eps"?"active":""}`} onClick={() => setActiveTab("eps")}>EPS</button>
+                <button type="button" className={`ficha-link ${activeTab==="prof"?"active":""}`} onClick={() => setActiveTab("prof")}>Profesionales</button>
+                <button type="button" className={`ficha-link ${activeTab==="rx"?"active":""}`} onClick={() => setActiveTab("rx")}>Rx/Imágenes/Doc</button>
+                <button type="button" className={`ficha-link ${activeTab==="citas"?"active":""}`} onClick={() => setActiveTab("citas")}>Citas</button>
+                <button type="button" className={`ficha-link ${activeTab==="crm"?"active":""}`} onClick={() => setActiveTab("crm")}>CRM</button>
 
                 <div className="ficha-sidebar-title mt">Historia clínica</div>
-                <button className={`ficha-link ${activeTab==="doc"?"active":""}`} onClick={() => setActiveTab("doc")}>Doc. Clínicos</button>
-                <button className={`ficha-link ${activeTab==="odonto"?"active":""}`} onClick={() => setActiveTab("odonto")}>Odontogramas</button>
-                <button className={`ficha-link ${activeTab==="perio"?"active":""}`} onClick={() => setActiveTab("perio")}>Periodontogramas</button>
-                <button className={`ficha-link ${activeTab==="presu"?"active":""}`} onClick={() => setActiveTab("presu")}>Presupuestos</button>
-                <button className={`ficha-link ${activeTab==="evo"?"active":""}`} onClick={() => setActiveTab("evo")}>Evoluciones</button>
+                <button type="button" className={`ficha-link ${activeTab==="doc"?"active":""}`} onClick={() => setActiveTab("doc")}>Doc. Clínicos</button>
+                <button type="button" className={`ficha-link ${activeTab==="odonto"?"active":""}`} onClick={() => setActiveTab("odonto")}>Odontogramas</button>
+                <button type="button" className={`ficha-link ${activeTab==="perio"?"active":""}`} onClick={() => setActiveTab("perio")}>Periodontogramas</button>
+                <button type="button" className={`ficha-link ${activeTab==="presu"?"active":""}`} onClick={() => setActiveTab("presu")}>Presupuestos</button>
+                <button type="button" className={`ficha-link ${activeTab==="evo"?"active":""}`} onClick={() => setActiveTab("evo")}>Evoluciones</button>
 
                 <div className="ficha-sidebar-title mt">Facturación</div>
-                <button className={`ficha-link ${activeTab==="fact"?"active":""}`} onClick={() => setActiveTab("fact")}>Resumen</button>
+                <button
+                  type="button"
+                  className={`ficha-link ${activeTab==="fact"?"active":""}`}
+                  onClick={() => setActiveTab("fact")}
+                >
+                  Resumen
+                </button>
+
+                {/* Acciones rápidas de Facturación (por fuera del sub-tab) */}
+                <div className="ficha-sidebar-actions" style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn blue"
+                    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
+                    title="Cobrar a este paciente"
+                  >
+                    Realizar pago
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => nav("/facturacion/pagos")}
+                    title="Ver histórico de pagos"
+                  >
+                    Histórico de pagos
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => nav("/facturacion/facturas")}
+                    title="Ver histórico de facturación"
+                  >
+                    Histórico de facturación
+                  </button>
+                </div>
               </aside>
 
               {/* Content */}
@@ -1191,7 +1225,7 @@ export default function Pacientes() {
                           )}
                           <div className="rx-meta">
                             <span>{it.name}</span>
-                            <button className="btn small" onClick={() => removeRxItem(i)}>Eliminar</button>
+                            <button type="button" className="btn small" onClick={() => removeRxItem(i)}>Eliminar</button>
                           </div>
                         </div>
                       ))}
@@ -1248,6 +1282,7 @@ export default function Pacientes() {
                         const marcada = (viewing.odontograma || []).some((p) => p.pieza === pieza);
                         return (
                           <button
+                            type="button"
                             key={pieza}
                             className={`tooth ${marcada ? "on" : ""}`}
                             onClick={() => togglePieza("odontograma", pieza)}
@@ -1269,6 +1304,7 @@ export default function Pacientes() {
                         const marcada = (viewing.periodontograma || []).some((p) => p.pieza === pieza);
                         return (
                           <button
+                            type="button"
                             key={pieza}
                             className={`tooth ${marcada ? "on" : ""}`}
                             onClick={() => togglePieza("periodontograma", pieza)}
@@ -1293,7 +1329,7 @@ export default function Pacientes() {
                             <div className="presu-title">{it.titulo}</div>
                             <div className="presu-meta">Costo: ${it.costo || 0} · Estado: {it.estado || "Pendiente"}</div>
                           </div>
-                          <button className="btn small" onClick={() => removePresupuesto(it.id)}>Eliminar</button>
+                          <button type="button" className="btn small" onClick={() => removePresupuesto(it.id)}>Eliminar</button>
                         </div>
                       ))}
                       {(!viewing.presupuestos || viewing.presupuestos.length === 0) && (
@@ -1312,7 +1348,7 @@ export default function Pacientes() {
                         <div className="evo-item" key={ev.id}>
                           <div className="evo-date">{new Date(ev.fechaISO).toLocaleString()}</div>
                           <div className="evo-note">{ev.nota}</div>
-                          <button className="btn small" onClick={() => removeEvolucion(ev.id)}>Eliminar</button>
+                          <button type="button" className="btn small" onClick={() => removeEvolucion(ev.id)}>Eliminar</button>
                         </div>
                       ))}
                       {(!viewing.evoluciones || viewing.evoluciones.length === 0) && (
@@ -1349,20 +1385,7 @@ export default function Pacientes() {
                         />
                       </div>
                     </div>
-                    <div className="tools-right" style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        className="btn blue"
-                        onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
-                      >
-                        Realizar pago
-                      </button>
-                      <button className="btn" onClick={() => nav("/facturacion/pagos")}>
-                        Histórico de pagos
-                      </button>
-                      <button className="btn" onClick={() => nav("/facturacion/facturas")}>
-                        Histórico de facturación
-                      </button>
-                    </div>
+                    {/* Botones de acción se movieron al sidebar: nada más aquí */}
                   </section>
                 )}
 
@@ -1406,6 +1429,7 @@ function PresupuestoForm({ onAdd }) {
         <option>Rechazado</option>
       </select>
       <button
+        type="button"
         className="btn blue"
         onClick={() => {
           if (!titulo) return alert("Título requerido");
@@ -1424,7 +1448,7 @@ function EvolucionForm({ onAdd }) {
   return (
     <div className="evo-form">
       <textarea className="form-input" rows={2} placeholder="Escribe la evolución / remisión…" value={nota} onChange={(e) => setNota(e.target.value)} />
-      <button className="btn blue" onClick={() => { if (!nota.trim()) return; onAdd(nota.trim()); setNota(""); }}>
+      <button type="button" className="btn blue" onClick={() => { if (!nota.trim()) return; onAdd(nota.trim()); setNota(""); }}>
         Guardar evolución
       </button>
     </div>
