@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./pacientes.css";
+import { useNavigate } from "react-router-dom";
 
 import { db } from "../../firebase/firebaseConfig";
 import {
@@ -207,6 +208,8 @@ const PAGE_SIZE = 20;
    Componente principal
    ===================================================================== */
 export default function Pacientes() {
+  const nav = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [pacientes, setPacientes] = useState([]);
   const [term, setTerm] = useState("");
@@ -1027,6 +1030,13 @@ export default function Pacientes() {
                 <div className="ficha-actions">
                   <button className="btn" onClick={stopViewing}>Cerrar</button>
                   <button className="btn blue" onClick={openEditFromViewing}>Editar</button>
+                  <button
+                    className="btn green"
+                    onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
+                    title="Ir a Caja para cobrar a este paciente"
+                  >
+                    Cobrar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1339,10 +1349,19 @@ export default function Pacientes() {
                         />
                       </div>
                     </div>
-                    <div className="tools-right" style={{ marginTop: 8 }}>
-                      <button className="btn blue" onClick={() => alert("Conecta aquí tu flujo de pago")}>Realizar pago</button>
-                      <button className="btn" onClick={() => alert("Histórico de pagos (pendiente de tu backend)")}>Histórico de pagos</button>
-                      <button className="btn" onClick={() => alert("Histórico de facturas (pendiente de tu backend)")}>Histórico de facturas</button>
+                    <div className="tools-right" style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        className="btn blue"
+                        onClick={() => nav(`/caja?cobro=1&patientId=${viewing.id}`)}
+                      >
+                        Realizar pago
+                      </button>
+                      <button className="btn" onClick={() => nav("/facturacion/pagos")}>
+                        Histórico de pagos
+                      </button>
+                      <button className="btn" onClick={() => nav("/facturacion/facturas")}>
+                        Histórico de facturación
+                      </button>
                     </div>
                   </section>
                 )}
