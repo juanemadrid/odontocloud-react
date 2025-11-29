@@ -1,7 +1,12 @@
 // ===============================
-// 🦷 Dashboard.jsx - Panel principal OdontoCloud (enrutado interno por URL)
+// 🦷 Dashboard.jsx - Panel principal OdontoCloud (FIX rutas absolutas)
+// - Navegación sin apilar segmentos
+// - MegaMenú enlaza a rutas absolutas
+// - CommandSearch navega por URL
+// - activeModule se sincroniza con location
 // ===============================
-import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import "../styles/dashboard.css";
 
 import Agenda from "../modules/agenda/Agenda";
@@ -33,7 +38,6 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo from "/assets/logo.png";
 
 /* =============================== i18n =============================== */
@@ -374,20 +378,22 @@ function CommandSearch({ onNavigate, onAction, placeholder }) {
 
 /* ==========================================================
    ✅ AdminMegaMenu
-   - Ahora navega por rutas reales mediante navigate()
+   - Usa onNavigatePath(relPath) para rutas absolutas desde el Dashboard
+   - Usa onSetFactView(key) para elegir subvista
    ========================================================== */
 function AdminMegaMenu({
   open,
   anchorRect,
   onClose,
+  onNavigatePath, // <-- NUEVO: navegar por path relativo al dashboard
   onSoon,
-  onNavigatePath, // <--- NUEVO: navegar por path
-  onSetFactView,  // <--- NUEVO: setear vista de facturación
+  onSetFactView,  // <-- NUEVO: seleccionar vista de facturación
   dark,
 }) {
-  const [sub, setSub] = useState(null);
+  const [sub, setSub] = useState(null); // 'facturacion' | 'rips' | null
   const closeTimer = useRef(null);
 
+  // Cierre global (Esc / scroll / click fuera)
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose?.();
@@ -402,20 +408,23 @@ function AdminMegaMenu({
 
   if (!open) return null;
 
+  // Posiciones
   const top = (anchorRect?.bottom || 60) + 8;
   const left = Math.max(
     12,
     Math.min((anchorRect?.left || 300) - 160, window.innerWidth - 920)
   );
-  const gap = 10;
+  const gap = 10; // separación visual entre columna y subpanel
   const leftSub = left + 360 + gap;
 
+  // Tema
   const baseBg = dark ? "#0b1220" : "#ffffff";
   const baseTx = dark ? "#e5e7eb" : "#0f172a";
   const hoverBg = dark ? "#0f1a32" : "#f3f6ff";
   const hoverBd = dark ? "#1f2a44" : "#e2e8f0";
   const hintTx = dark ? "#b6c1d1" : "#475569";
 
+  // Estilos base
   const card = {
     position: "fixed",
     top,
@@ -468,6 +477,7 @@ function AdminMegaMenu({
         : { background: "transparent", borderColor: "transparent" }
     );
 
+  // Mantener abierto mientras el cursor esté en cualquiera de las áreas
   const cancelClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
   };
@@ -476,45 +486,50 @@ function AdminMegaMenu({
     closeTimer.current = setTimeout(() => onClose?.(), 180);
   };
 
+  // “Puente” invisible entre columna y subpanel para no perder hover
   const bridge = {
     position: "fixed",
     top,
     left: left + 360,
     width: gap,
-    height: 520,
+    height: 520, // suficientemente alto para cubrir ambos
     zIndex: 405,
   };
 
+  // Submenú: etiqueta → clave de vista
   const FACT_ITEMS = [
-    { label: "Recibo de caja", key: "recibo", path: "facturacion/recibo" },
-    { label: "Saldo a favor", key: "saldo", path: "facturacion/saldo" },
-    { label: "Nota crédito", key: "nc", path: "facturacion/nc" },
-    { label: "Nota débito", key: "nd", path: "facturacion/nd" },
-    { label: "Liquidaciones", key: "liq", path: "facturacion/liq" },
-    { label: "Traslados", key: "tras", path: "facturacion/tras" },
-    { label: "Pagos", key: "pagos", path: "facturacion/pagos" },
-    { label: "Órdenes de compra", key: "oc", path: "facturacion/oc" },
-    { label: "Factura de venta", key: "fv", path: "facturacion/facturas" },
-    { label: "Facturas de compra", key: "fc", path: "facturacion/fc" },
+    { label: "Recibo de caja", key: "recibo" },
+    { label: "Saldo a favor", key: "saldo" },
+    { label: "Nota crédito", key: "nc" },
+    { label: "Nota débito", key: "nd" },
+    { label: "Liquidaciones", key: "liq" },
+    { label: "Traslados", key: "tras" },
+    { label: "Pagos", key: "pagos" },
+    { label: "Órdenes de compra", key: "oc" },
+    { label: "Factura de venta", key: "fv" },
+    { label: "Facturas de compra", key: "fc" },
   ];
+
   const RIPS_ITEMS = [
     { label: "RIPS anteriores (RS-3374)", key: "rips3374" },
     { label: "RIPS nuevo (RS-2275)", key: "rips2275" },
   ];
 
-  const handleFactClick = (it) => {
-    onSetFactView?.(it.key);
-    onNavigatePath?.(it.path); // navega a /dashboard_*/facturacion/<vista>
-    onClose?.();
+  // Helper click en una acción de facturación
+  const handleFactClick = (viewKey) => {
+    onSetFactView?.(viewKey);
+    onNavigatePath?.(`facturacion/${viewKey}`);
   };
 
   return (
     <>
+      {/* backdrop para cerrar con clic fuera */}
       <div
         onClick={onClose}
         style={{ position: "fixed", inset: 0, background: "transparent", zIndex: 399 }}
       />
 
+      {/* Columna principal */}
       <div style={card} onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
         <div
           style={{
@@ -525,11 +540,18 @@ function AdminMegaMenu({
           }}
         >
           <div style={col}>
+            {/* Facturación (abre submenú) */}
             <button
               type="button"
               style={item}
-              onMouseEnter={() => { cancelClose(); setSub("facturacion"); }}
-              onFocus={() => { cancelClose(); setSub("facturacion"); }}
+              onMouseEnter={() => {
+                cancelClose();
+                setSub("facturacion");
+              }}
+              onFocus={() => {
+                cancelClose();
+                setSub("facturacion");
+              }}
               onClick={() => setSub((s) => (s === "facturacion" ? null : "facturacion"))}
               onMouseOver={(e) => hoverize(e, true)}
               onMouseOut={(e) => hoverize(e, false)}
@@ -537,11 +559,18 @@ function AdminMegaMenu({
               💳 Facturación ▸
             </button>
 
+            {/* RIPS (abre submenú con 2 opciones) */}
             <button
               type="button"
               style={item}
-              onMouseEnter={() => { cancelClose(); setSub("rips"); }}
-              onFocus={() => { cancelClose(); setSub("rips"); }}
+              onMouseEnter={() => {
+                cancelClose();
+                setSub("rips");
+              }}
+              onFocus={() => {
+                cancelClose();
+                setSub("rips");
+              }}
               onClick={() => setSub((s) => (s === "rips" ? null : "rips"))}
               onMouseOver={(e) => hoverize(e, true)}
               onMouseOut={(e) => hoverize(e, false)}
@@ -549,33 +578,39 @@ function AdminMegaMenu({
               📄 RIPS ▸
             </button>
 
+            {/* Resto (enlazar cuando estén listos) */}
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🤝 Convenios
+            </button>
+
             <button type="button" style={item} onClick={() => onNavigatePath?.("agenda")} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
               🗓️ Gestión de agenda
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              👥 Terceros
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              📣 Campañas
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              🌡️ Temperatura y humedad
+            </button>
+
+            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
+              ♻️ Residuos
             </button>
 
             <button type="button" style={item} onClick={() => onNavigatePath?.("inventario")} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
               📦 Inventario
             </button>
 
-            {/* Placeholders */}
-            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
-              🤝 Convenios
-            </button>
-            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
-              👥 Terceros
-            </button>
-            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
-              📣 Campañas
-            </button>
-            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
-              🌡️ Temperatura y humedad
-            </button>
-            <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
-              ♻️ Residuos
-            </button>
             <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
               💊 Medicamentos y planes
             </button>
+
             <button type="button" style={item} onClick={() => onSoon?.()} onMouseOver={(e) => hoverize(e, true)} onMouseOut={(e) => hoverize(e, false)}>
               🧪 Esterilización
             </button>
@@ -589,8 +624,10 @@ function AdminMegaMenu({
         </div>
       </div>
 
+      {/* Puente invisible (evita el “cierre” al cruzar) */}
       <div style={bridge} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} />
 
+      {/* Subpanel derecho */}
       {sub && (
         <div style={subCard} onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
           <div style={{ ...col, display: "grid", gridTemplateColumns: "1fr" }}>
@@ -599,7 +636,9 @@ function AdminMegaMenu({
                 key={it.label}
                 type="button"
                 style={item}
-                onClick={() => sub === "facturacion" ? handleFactClick(it) : onSoon?.()}
+                onClick={() =>
+                  sub === "facturacion" ? handleFactClick(it.key) : onSoon?.()
+                }
                 onMouseOver={(e) => hoverize(e, true)}
                 onMouseOut={(e) => hoverize(e, false)}
               >
@@ -613,173 +652,33 @@ function AdminMegaMenu({
   );
 }
 
-/* =============== Componente de portada (Inicio) =============== */
-function Overview({
-  t, companyName, userName, role, darkMode,
-  weeklySeries, weekRangeLabel,
-  todaysAppointments, todaysLoading,
-  metrics, metricsLoading,
-  n8nState, n8nLoading, recent, recentLoading,
-  onGoAgenda,
-}) {
-  return (
-    <div className="oc-main-content">
-      <section className="oc-hero" aria-label="Resumen general">
-        <div className="oc-hero-text">
-          <h1>{t("welcomeTitle")}</h1>
-          <p>{t("welcomeSubtitle")}</p>
-          <p className="oc-hero-meta">
-            {t("clinicLabel")}: {companyName} · {t("userLabel")}: {userName} · {t("roleLabel")}: {role || "—"}
-          </p>
-        </div>
-
-        <div className="oc-hero-badge" aria-live="polite">
-          <span className="oc-hero-badge-title">
-            {t("stats_appointmentsToday")}
-          </span>
-          <span className="oc-hero-badge-value">
-            {metricsLoading && todaysLoading ? "…" : metrics.citasHoy}
-          </span>
-          <span className="oc-hero-badge-sub">
-            {t("stats_patientsToday")}: {metricsLoading ? "…" : metrics.pacientesHoy}
-          </span>
-        </div>
-      </section>
-
-      <section className="oc-stats-row" aria-label="Indicadores del día">
-        <div className="stat-card">
-          <span className="stat-label">{t("stats_patientsToday")}</span>
-          <span className="stat-value">{metrics.pacientesHoy}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">{t("stats_appointmentsToday")}</span>
-          <span className="stat-value">{metrics.citasHoy}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">{t("stats_revenueToday")}</span>
-          <span className="stat-value">
-            {metrics.facturacionHoy.toLocaleString("es-CO")}{" "}
-            <span className="stat-currency">{t("stats_currency")}</span>
-          </span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">{t("stats_waiting")}</span>
-          <span className="stat-value">{metrics.enEspera}</span>
-        </div>
-      </section>
-
-      <section className="oc-grid" aria-label="Contenido principal del dashboard">
-        <div className="oc-grid-main">
-          <div className="card card-quickcharts">
-            <div
-              className="oc-card-head"
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}
-            >
-              <h3>Pacientes registrados · Últimos 7 días</h3>
-              <span className="oc-muted" style={{ marginLeft: 8, fontSize: 12 }}>
-                {weekRangeLabel}
-              </span>
-            </div>
-
-            {weeklySeries.length === 0 || weeklySeries.every((d) => (d?.value || 0) === 0) ? (
-              <p className="oc-weekly-empty">
-                Sin pacientes registrados en la última semana.
-              </p>
-            ) : (
-              <WeeklyBars data={weeklySeries} />
-            )}
-          </div>
-        </div>
-
-        <aside className="oc-grid-side" aria-label="Panel lateral">
-          <div className="card">
-            <h3>{t("n8n_title")}</h3>
-            {n8nLoading ? (
-              <span className="oc-muted">{t("loading")}</span>
-            ) : (
-              <N8nStatus status={n8nState} />
-            )}
-          </div>
-
-          {/* Citas de hoy */}
-          <div className="card">
-            <div
-              className="oc-card-head"
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}
-            >
-              <h3>{t("todays_appts")}</h3>
-              <button className="oc-small-link" type="button" onClick={onGoAgenda}>
-                {t("see_schedule")}
-              </button>
-            </div>
-
-            {todaysLoading ? (
-              <span className="oc-muted">{t("loading")}</span>
-            ) : todaysAppointments.length === 0 ? (
-              <p className="oc-muted">{t("no_appts_today")}</p>
-            ) : (
-              <ul className="oc-list">
-                {todaysAppointments.slice(0, 5).map((c) => (
-                  <li key={c.id} className="oc-list-item">
-                    <div className="oc-list-main">
-                      <b>{c.pacienteNombre || "Paciente"}</b>{" "}
-                      <span className="oc-muted">
-                        {t("at")} {fmtTime(c.fecha, detectLocale())}
-                      </span>
-                    </div>
-                    <div
-                      className={`oc-tag oc-tag-${(c.estado || "programada")
-                        .toLowerCase()
-                        .replace(/\s+/g, "-")}`}
-                    >
-                      {c.estado || "programada"}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="card">
-            <h3>Actividad reciente</h3>
-            {recentLoading ? (
-              <span className="oc-muted">{t("loading")}</span>
-            ) : recent.length === 0 ? (
-              <p className="oc-muted">{t("recent_empty")}</p>
-            ) : (
-              <RecentActivity items={recent} />
-            )}
-          </div>
-        </aside>
-      </section>
-
-      <footer className="oc-footer">
-        © {new Date().getFullYear()} OdontoCloud | Creado por Ingeniero Juan Madrid
-      </footer>
-    </div>
-  );
-}
-
 /* =============================== Dashboard =============================== */
 export default function Dashboard() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [locale] = useState(detectLocale());
   const t = (key) => MESSAGES[locale][key] || key;
 
-  // Estado "activo" sigue existiendo, pero AHORA se sincroniza con la URL
-  const [activeModule, setActiveModule] = useState("Inicio");
+  // Vista Facturación seleccionada
   const [factView, setFactView] = useState("recibo");
 
+  // Dark mode
   const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem("odontocloud:dark") === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem("odontocloud:dark") === "1";
+    } catch {
+      return false;
+    }
   });
   useEffect(() => {
-    try { localStorage.setItem("odontocloud:dark", darkMode ? "1" : "0"); } catch {}
+    try {
+      localStorage.setItem("odontocloud:dark", darkMode ? "1" : "0");
+    } catch {}
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  // Sesión
   const [session] = useState(() => getOfflineSession());
   const [role] = useState(session?.rol || "");
   const [sessionEmail] = useState(session?.email || "");
@@ -809,6 +708,45 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [sessionEmail]);
 
+  // ===== Helpers de navegación ABSOLUTA dentro del dashboard =====
+  // Prefijo absoluto del dashboard actual (/.../dashboard_admin | _doctor | _recepcion)
+  const dashBase = useMemo(() => {
+    const segs = location.pathname.split("/").filter(Boolean);
+    const idx = segs.findIndex((s) => s.startsWith("dashboard_"));
+    const base = "/" + segs.slice(0, idx + 1).join("/");
+    return base || "/dashboard_admin"; // fallback sensato
+  }, [location.pathname]);
+
+  const goAbs = (segment = "") => {
+    const clean = String(segment).replace(/^\//, "");
+    const target = `${dashBase}/${clean}`.replace(/\/+$/, "");
+    if (location.pathname === target) return; // evita navegación redundante
+    navigate(target);
+  };
+  const goAbsReplace = (segment = "") => {
+    const clean = String(segment).replace(/^\//, "");
+    const target = `${dashBase}/${clean}`.replace(/\/+$/, "");
+    if (location.pathname === target) return;
+    navigate(target, { replace: true });
+  };
+
+  // ===== activeModule sincronizado desde la URL =====
+  const [activeModule, setActiveModule] = useState("Inicio");
+  useEffect(() => {
+    const p = location.pathname.replace(dashBase, "").replace(/^\/+/, "");
+    // p puede ser "", "agenda", "pacientes", "caja", "reportes", "facturacion/xxx", etc.
+    if (!p) return setActiveModule("Inicio");
+    if (p.startsWith("agenda")) return setActiveModule("Agenda");
+    if (p.startsWith("pacientes")) return setActiveModule("Pacientes");
+    if (p.startsWith("caja")) return setActiveModule("Caja");
+    if (p.startsWith("reportes")) return setActiveModule("Reportes");
+    if (p.startsWith("inventario")) return setActiveModule("Inventario");
+    if (p.startsWith("odontograma")) return setActiveModule("Odontograma");
+    if (p.startsWith("facturacion")) return setActiveModule("Facturación");
+    setActiveModule("Inicio");
+  }, [location.pathname, dashBase]);
+
+  // ===== Métricas, series y citas =====
   const [metrics, setMetrics] = useState({
     pacientesHoy: 0,
     citasHoy: 0,
@@ -1011,7 +949,9 @@ export default function Dashboard() {
     );
 
     return () => {
-      try { unsub(); } catch {}
+      try {
+        unsub();
+      } catch {}
     };
   }, [locale]);
 
@@ -1070,91 +1010,24 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-    try { localStorage.removeItem("odc_session"); } catch {}
-    try { await signOut(auth); } catch (e) { console.error("Error al cerrar sesión:", e); }
+    try {
+      localStorage.removeItem("odc_session");
+    } catch {}
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
     window.location.href = "/";
   };
 
-  /* ===== MegaMenú: estado y helpers ===== */
-  const [adminOpen, setAdminOpen] = useState(false);
-  const [adminAnchor, setAdminAnchor] = useState(null);
-  const adminBtnRef = useRef(null);
-  const hoverTimerRef = useRef(null);
-
-  const openAdmin = () => {
-    const rect = adminBtnRef.current?.getBoundingClientRect?.();
-    setAdminAnchor(rect);
-    setAdminOpen(true);
-  };
-  const closeAdmin = () => {
-    setAdminOpen(false);
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-  };
-
-  /* =================== 🔁 Sincroniza URL → vista =================== */
-  useEffect(() => {
-    // Detecta el módulo según la ruta actual
-    // Rutas esperadas relative al dashboard: "", "agenda", "pacientes", "caja", "facturacion/*", "inventario", "odontograma", "reportes"
-    const path = location.pathname.toLowerCase();
-
-    const isPac = path.includes("/pacientes");
-    const isCaja = path.includes("/caja");
-    const isAg = path.includes("/agenda");
-    const isFact = path.includes("/facturacion");
-    const isInv = path.includes("/inventario");
-    const isOdo = path.includes("/odontograma");
-    const isRep = path.includes("/reportes");
-
-    if (isPac) setActiveModule("Pacientes");
-    else if (isCaja) setActiveModule("Caja");
-    else if (isAg) setActiveModule("Agenda");
-    else if (isInv) setActiveModule("Inventario");
-    else if (isOdo) setActiveModule("Odontograma");
-    else if (isRep) setActiveModule("Reportes");
-    else setActiveModule("Inicio");
-
-    // Sub-vistas de Facturación
-    if (isFact) {
-      setActiveModule("Facturación");
-      if (path.includes("/pagos")) setFactView("pagos");
-      else if (path.includes("/facturas")) setFactView("fv");
-      else if (path.includes("/recibo")) setFactView("recibo");
-      else if (path.includes("/saldo")) setFactView("saldo");
-      else if (path.includes("/nc")) setFactView("nc");
-      else if (path.includes("/nd")) setFactView("nd");
-      else if (path.includes("/liq")) setFactView("liq");
-      else if (path.includes("/tras")) setFactView("tras");
-      else if (path.includes("/oc")) setFactView("oc");
-      else if (path.includes("/fc")) setFactView("fc");
-      else setFactView("recibo");
-    }
-  }, [location.pathname]);
-
-  /* =================== Helpers navegación (clicks UI) =================== */
-  const go = (segment = "") => {
-    // navegar relativo al dashboard actual (admin/doctor/recepcion)
-    // Detecta prefijo /dashboard_*
-    const segs = location.pathname.split("/").filter(Boolean);
-    const dashIdx = segs.findIndex((s) => s.startsWith("dashboard_"));
-    const base = dashIdx >= 0 ? `/${segs.slice(0, dashIdx + 1).join("/")}` : "";
-    const clean = String(segment).replace(/^\//, "");
-    navigate(`${base}/${clean}`);
-  };
-
-  /* ===== Contenido por módulo (controlado por activeModule) ===== */
+  /* ===== Contenido por módulo ===== */
   const renderModuleContent = () => {
     switch (activeModule) {
       case "Agenda":
         return <Agenda />;
       case "Pacientes":
-        return (
-          <Suspense fallback={<div style={{ padding: 16 }}>Cargando…</div>}>
-            <Pacientes />
-          </Suspense>
-        );
+        return <Pacientes />;
       case "Facturación":
         return <Facturacion view={factView} />;
       case "Inventario":
@@ -1164,7 +1037,7 @@ export default function Dashboard() {
       case "Reportes":
         return <Reportes />;
       case "Caja":
-        return <Caja />; // Caja leerá los query params (cobro, patientId)
+        return <Caja />;
       case "Inicio":
       default:
         return null;
@@ -1173,7 +1046,9 @@ export default function Dashboard() {
 
   return (
     <div className={`oc-shell ${darkMode ? "oc-dark" : ""}`}>
-      <a href="#oc-main" className="oc-skip-link">Saltar al contenido</a>
+      <a href="#oc-main" className="oc-skip-link">
+        Saltar al contenido
+      </a>
 
       <header className="oc-header" role="banner">
         <div className="oc-header-left">
@@ -1186,56 +1061,70 @@ export default function Dashboard() {
 
         <nav className="oc-nav" role="navigation" aria-label="Navegación principal">
           <NavLink
-            to="" // index del dashboard
+            to={dashBase}
             end
-            className={({ isActive }) => (isActive && activeModule==="Inicio") ? "oc-nav-btn active" : "oc-nav-btn"}
+            className={({ isActive }) =>
+              (isActive && activeModule === "Inicio") ? "oc-nav-btn active" : "oc-nav-btn"
+            }
             title={t("nav_home")}
           >
             {t("nav_home")}
           </NavLink>
 
           <NavLink
-            to="agenda"
-            className={({ isActive }) => (isActive || activeModule==="Agenda") ? "oc-nav-btn active" : "oc-nav-btn"}
+            to={`${dashBase}/agenda`}
+            className={({ isActive }) =>
+              (isActive || activeModule === "Agenda") ? "oc-nav-btn active" : "oc-nav-btn"
+            }
             title={t("nav_agenda")}
           >
             {t("nav_agenda")}
           </NavLink>
 
           <NavLink
-            to="pacientes"
-            className={({ isActive }) => (isActive || activeModule==="Pacientes") ? "oc-nav-btn active" : "oc-nav-btn"}
+            to={`${dashBase}/pacientes`}
+            className={({ isActive }) =>
+              (isActive || activeModule === "Pacientes") ? "oc-nav-btn active" : "oc-nav-btn"
+            }
             title={t("nav_patients")}
           >
             {t("nav_patients")}
           </NavLink>
 
+          {/* Caja */}
           <NavLink
-            to="caja"
-            className={({ isActive }) => (isActive || activeModule==="Caja") ? "oc-nav-btn active" : "oc-nav-btn"}
+            to={`${dashBase}/caja`}
+            className={({ isActive }) =>
+              (isActive || activeModule === "Caja") ? "oc-nav-btn active" : "oc-nav-btn"
+            }
             title={t("nav_cash")}
           >
             {t("nav_cash")}
           </NavLink>
 
-          {/* Administración / Mega menú */}
+          {/* Administración: abre MegaMenú */}
           <button
             type="button"
-            ref={adminBtnRef}
             className="oc-nav-btn"
             title={t("nav_admin")}
             aria-haspopup="true"
-            aria-expanded={adminOpen}
-            onClick={() => (adminOpen ? setAdminOpen(false) : openAdmin())}
-            onMouseEnter={() => openAdmin()}
-            onFocus={() => openAdmin()}
+            aria-expanded={undefined}
+            onClick={(e) => {
+              e.preventDefault();
+            }}
+            onMouseEnter={() => {
+              // se abre desde el componente flotante
+            }}
+            ref={undefined}
           >
             {t("nav_admin")}
           </button>
 
           <NavLink
-            to="reportes"
-            className={({ isActive }) => (isActive || activeModule==="Reportes") ? "oc-nav-btn active" : "oc-nav-btn"}
+            to={`${dashBase}/reportes`}
+            className={({ isActive }) =>
+              (isActive || activeModule === "Reportes") ? "oc-nav-btn active" : "oc-nav-btn"
+            }
             title={t("nav_reports")}
           >
             {t("nav_reports")}
@@ -1246,40 +1135,32 @@ export default function Dashboard() {
           <CommandSearch
             placeholder={t("searchPlaceholder")}
             onNavigate={(module) => {
-              // transformar nombres a rutas
-              if (module === "Inicio") go("");
-              else go(module.toLowerCase()); // agenda, pacientes, facturación (luego ajustamos)
-              if (module === "Facturación") {
-                setFactView("recibo");
-                go("facturacion/recibo");
-              }
+              if (module === "Inicio") goAbsReplace("");
+              else if (module === "Agenda") goAbs("agenda");
+              else if (module === "Pacientes") goAbs("pacientes");
+              else if (module === "Facturación") { setFactView("recibo"); goAbs("facturacion/recibo"); }
+              else if (module === "Inventario") goAbs("inventario");
+              else if (module === "Odontograma") goAbs("odontograma");
+              else if (module === "Reportes") goAbs("reportes");
             }}
             onAction={(key) => {
               switch (key) {
                 case "new_appointment":
                 case "agenda_today":
                 case "export_agenda":
-                  go("agenda");
-                  break;
+                  goAbs("agenda"); break;
                 case "new_patient":
-                  go("pacientes");
-                  break;
+                  goAbs("pacientes"); break;
                 case "new_invoice":
-                  setFactView("fv");
-                  go("facturacion/facturas");
-                  break;
+                  setFactView("fv"); goAbs("facturacion/fv"); break;
                 case "toggle_dark":
-                  setDarkMode((v) => !v);
-                  break;
+                  setDarkMode((v) => !v); break;
                 case "logout":
-                  handleLogout();
-                  break;
+                  handleLogout(); break;
                 case "show_shortcuts":
-                  alert("Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar.");
-                  break;
+                  alert("Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar."); break;
                 case "support":
-                  window.open("https://tu-soporte.odc", "_blank");
-                  break;
+                  window.open("https://tu-soporte.odc", "_blank"); break;
                 default:
                   break;
               }
@@ -1305,41 +1186,174 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Mega menú flotante (usa rutas reales) */}
+      {/* Mega menú flotante */}
       <AdminMegaMenu
-        open={adminOpen}
-        anchorRect={adminAnchor}
+        open={true /* lo dejamos siempre disponible para hover/click externo si lo usas con portal */}
+        anchorRect={null}
         dark={darkMode}
-        onClose={() => setAdminOpen(false)}
-        onSoon={() => { alert("Próximamente"); setAdminOpen(false); }}
-        onNavigatePath={(relPath) => { go(relPath); setAdminOpen(false); }}
+        onClose={() => {}}
+        onSoon={() => alert("Próximamente")}
+        onNavigatePath={(relPath) => goAbs(relPath)}
         onSetFactView={(key) => setFactView(key)}
       />
 
       <main id="oc-main" className="oc-main-wrapper" role="main">
-        {/* Si NO es Inicio, renderiza el módulo */}
         {activeModule !== "Inicio" && renderModuleContent()}
 
-        {/* Inicio (portada) */}
         {activeModule === "Inicio" && (
-          <Overview
-            t={t}
-            companyName={companyName}
-            userName={userName}
-            role={role}
-            darkMode={darkMode}
-            weeklySeries={weeklySeries}
-            weekRangeLabel={weekRangeLabel}
-            todaysAppointments={todaysAppointments}
-            todaysLoading={todaysLoading}
-            metrics={metrics}
-            metricsLoading={metricsLoading}
-            n8nState={n8nState}
-            n8nLoading={n8nLoading}
-            recent={recent}
-            recentLoading={recentLoading}
-            onGoAgenda={() => go("agenda")}
-          />
+          <div className="oc-main-content">
+            {/* HERO */}
+            <section className="oc-hero" aria-label="Resumen general">
+              <div className="oc-hero-text">
+                <h1>{MESSAGES[locale].welcomeTitle}</h1>
+                <p>{MESSAGES[locale].welcomeSubtitle}</p>
+                <p className="oc-hero-meta">
+                  {MESSAGES[locale].clinicLabel}: {companyName} · {MESSAGES[locale].userLabel}:{" "}
+                  {userName} · {MESSAGES[locale].roleLabel}: {role || "—"}
+                </p>
+              </div>
+
+              <div className="oc-hero-badge" aria-live="polite">
+                <span className="oc-hero-badge-title">
+                  {MESSAGES[locale].stats_appointmentsToday}
+                </span>
+                <span className="oc-hero-badge-value">
+                  {metricsLoading && todaysLoading ? "…" : metrics.citasHoy}
+                </span>
+                <span className="oc-hero-badge-sub">
+                  {MESSAGES[locale].stats_patientsToday}: {metricsLoading ? "…" : metrics.pacientesHoy}
+                </span>
+              </div>
+            </section>
+
+            {/* STATS */}
+            <section className="oc-stats-row" aria-label="Indicadores del día">
+              <div className="stat-card">
+                <span className="stat-label">{MESSAGES[locale].stats_patientsToday}</span>
+                <span className="stat-value">{metrics.pacientesHoy}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">{MESSAGES[locale].stats_appointmentsToday}</span>
+                <span className="stat-value">{metrics.citasHoy}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">{MESSAGES[locale].stats_revenueToday}</span>
+                <span className="stat-value">
+                  {metrics.facturacionHoy.toLocaleString("es-CO")}{" "}
+                  <span className="stat-currency">{MESSAGES[locale].stats_currency}</span>
+                </span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">{MESSAGES[locale].stats_waiting}</span>
+                <span className="stat-value">{metrics.enEspera}</span>
+              </div>
+            </section>
+
+            {/* GRID principal */}
+            <section className="oc-grid" aria-label="Contenido principal del dashboard">
+              <div className="oc-grid-main">
+                <div className="card card-quickcharts">
+                  <div
+                    className="oc-card-head"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <h3>Pacientes registrados · Últimos 7 días</h3>
+                    <span className="oc-muted" style={{ marginLeft: 8, fontSize: 12 }}>
+                      {weekRangeLabel}
+                    </span>
+                  </div>
+
+                  {weeklySeries.length === 0 ||
+                  weeklySeries.every((d) => (d?.value || 0) === 0) ? (
+                    <p className="oc-weekly-empty">
+                      Sin pacientes registrados en la última semana.
+                    </p>
+                  ) : (
+                    <WeeklyBars data={weeklySeries} />
+                  )}
+                </div>
+              </div>
+
+              <aside className="oc-grid-side" aria-label="Panel lateral">
+                <div className="card">
+                  <h3>{MESSAGES[locale].n8n_title}</h3>
+                  {n8nLoading ? (
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
+                  ) : (
+                    <N8nStatus status={n8nState} />
+                  )}
+                </div>
+
+                {/* Citas de hoy */}
+                <div className="card">
+                  <div
+                    className="oc-card-head"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <h3>{MESSAGES[locale].todays_appts}</h3>
+                    <button
+                      className="oc-small-link"
+                      type="button"
+                      onClick={() => goAbs("agenda")}
+                    >
+                      {MESSAGES[locale].see_schedule}
+                    </button>
+                  </div>
+
+                  {todaysLoading ? (
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
+                  ) : todaysAppointments.length === 0 ? (
+                    <p className="oc-muted">{MESSAGES[locale].no_appts_today}</p>
+                  ) : (
+                    <ul className="oc-list">
+                      {todaysAppointments.slice(0, 5).map((c) => (
+                        <li key={c.id} className="oc-list-item">
+                          <div className="oc-list-main">
+                            <b>{c.pacienteNombre || "Paciente"}</b>{" "}
+                            <span className="oc-muted">
+                              {MESSAGES[locale].at} {fmtTime(c.fecha, locale)}
+                            </span>
+                          </div>
+                          <div
+                            className={`oc-tag oc-tag-${(c.estado || "programada")
+                              .toLowerCase()
+                              .replace(/\s+/g, "-")}`}
+                          >
+                            {c.estado || "programada"}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="card">
+                  <h3>{MESSAGES[locale].recent_title}</h3>
+                  {recentLoading ? (
+                    <span className="oc-muted">{MESSAGES[locale].loading}</span>
+                  ) : recent.length === 0 ? (
+                    <p className="oc-muted">{MESSAGES[locale].recent_empty}</p>
+                  ) : (
+                    <RecentActivity items={recent} />
+                  )}
+                </div>
+              </aside>
+            </section>
+
+            <footer className="oc-footer">
+              © {new Date().getFullYear()} OdontoCloud | Creado por Ingeniero Juan Madrid
+            </footer>
+          </div>
         )}
       </main>
     </div>
