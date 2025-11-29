@@ -192,18 +192,18 @@ const INITIAL_FORM = {
   notas: "",
 
   // Multimedia / Clínico / CRM / Facturación
-  rxImagenes: [],                    // [{url, name, size, type, created, path}]
-  historiaClinica: {                 // editable
+  rxImagenes: [],
+  historiaClinica: {
     antecedentes: "",
     alergias: "",
     medicamentos: "",
     motivoConsulta: "",
     notas: "",
   },
-  odontograma: [],                   // placeholder
-  periodontograma: [],               // placeholder
-  presupuestos: [],                  // [{id, titulo, costo, estado}]
-  evoluciones: [],                   // [{id, fechaISO, nota}]
+  odontograma: [],
+  periodontograma: [],
+  presupuestos: [],
+  evoluciones: [],
   facturacion: { saldoFavor: 0, saldoCredito: 0 },
 
   // Foto
@@ -316,6 +316,8 @@ function useAppointments(patientId) {
         const [y, m, day] = fechaStr.split("-").map((n) => parseInt(n, 10));
         const [hh, mm] = horaStr.split(":").map((n) => parseInt(n, 10) || 0);
         const dt = new Date(y, (m || 1) - 1, day || 1, hh, mm, 0, 0);
+        // OJO: toISOString pasa a UTC; la fecha de calendario puede “correr” de día.
+        // La conservamos para mostrar horas, pero usaremos `fecha` cruda para navegar a Agenda.
         fechaISO = dt.toISOString();
       }
       return {
@@ -324,6 +326,7 @@ function useAppointments(patientId) {
         fechaISO,
         motivo: x.motivo || x.comentario || "",
         profesional: x.doctor || x.doctorNombre || "—",
+        fechaYYYYMMDD: fechaStr, // ✅ FIX: guardamos la fecha local tal cual para navegación
       };
     };
 
@@ -1653,70 +1656,56 @@ export default function Pacientes() {
                 )}
 
                 {/* Citas (solo lectura + abrir en Agenda) */}
-                /* =================== Citas (solo lectura + abrir en Agenda) =================== */
-{activeTab === "citas" && (
-  <section className="ficha-section">
-    <h4 className="ficha-section-title">Citas</h4>
+                {activeTab === "citas" && (
+                  <section className="ficha-section">
+                    <h4 className="ficha-section-title">Citas</h4>
 
-    <div className="table-wrap">
-      <table className="appointments-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Estado</th>
-            <th>Motivo</th>
-            <th>Profesional / Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loadingCitas ? (
-            <tr><td className="no-data" colSpan={4}>Cargando…</td></tr>
-          ) : citas.length === 0 ? (
-            <tr><td className="no-data" colSpan={4}>Sin citas registradas.</td></tr>
-          ) : (
-            citas.map((c) => {
-              // ✅ CORRECCIÓN: calcula la fecha real de la cita
-              let fecha = null;
-              try {
-                fecha = c.fechaISO ? new Date(c.fechaISO) : null;
-              } catch {
-                fecha = null;
-              }
-              const isoDay = fecha ? fecha.toISOString().slice(0, 10) : "";
-              return (
-                <tr key={c.id}>
-                  <td>{fecha ? fecha.toLocaleString() : "—"}</td>
-                  <td>{c.estado || "—"}</td>
-                  <td>{c.motivo || "—"}</td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>{c.profesional || "—"}</span>
-                      <button
-                        type="button"
-                        className="btn small"
-                        onClick={() => {
-                          if (!isoDay) return alert("La cita no tiene fecha válida.");
-                          // ✅ lleva al día real, no al actual
-                          navAbs(
-                            `agenda?date=${encodeURIComponent(isoDay)}&patientId=${encodeURIComponent(viewing.id)}`
-                          );
-                        }}
-                        title="Abrir en Agenda"
-                      >
-                        Ver en Agenda
-                      </button>
+                    <div className="table-wrap">
+                      <table className="appointments-table">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Motivo</th>
+                            <th>Profesional / Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loadingCitas ? (
+                            <tr><td className="no-data" colSpan={4}>Cargando…</td></tr>
+                          ) : citas.length === 0 ? (
+                            <tr><td className="no-data" colSpan={4}>Sin citas registradas.</td></tr>
+                          ) : (
+                            citas.map((c) => (
+                              <tr key={c.id}>
+                                <td>{c.fechaISO ? new Date(c.fechaISO).toLocaleString() : (c.fechaYYYYMMDD || "—")}</td>
+                                <td>{(c.estado || "—")}</td>
+                                <td>{c.motivo || "—"}</td>
+                                <td>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span>{c.profesional || "—"}</span>
+                                    <button
+                                      type="button"
+                                      className="btn small"
+                                      onClick={() => {
+                                        // ✅ FIX: usar la fecha local de la cita (YYYY-MM-DD) sin pasar por UTC
+                                        const day = c.fechaYYYYMMDD || c.fecha || (c.fechaISO ? new Date(c.fechaISO).toISOString().slice(0,10) : "");
+                                        navAbs(`agenda?date=${encodeURIComponent(day)}&patientId=${encodeURIComponent(viewing.id)}`);
+                                      }}
+                                      title="Abrir en Agenda"
+                                    >
+                                      Ver en Agenda
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    </div>
-  </section>
-)}
-
+                  </section>
+                )}
 
                 {activeTab === "crm" && (
                   <section className="ficha-section">
