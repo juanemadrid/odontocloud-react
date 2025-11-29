@@ -1,5 +1,5 @@
 // ===============================
-// 🚀 App.jsx - Enrutador Principal OdontoCloud
+// 🚀 App.jsx - Enrutador Principal OdontoCloud (fix subrutas)
 // ===============================
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -20,6 +20,15 @@ const getOfflineSession = () => {
   }
 };
 
+// manda al dashboard correcto según rol
+const homeByRole = (rol) => {
+  const r = (rol || "").toLowerCase();
+  if (r === "administrador") return "/dashboard_admin";
+  if (r === "doctor")        return "/dashboard_doctor";
+  if (r === "recepcionista") return "/dashboard_recepcion";
+  return "/";
+};
+
 // 🔐 Componente para proteger rutas según rol
 function RequireRole({ allowedRoles, children }) {
   const session = getOfflineSession();
@@ -28,21 +37,30 @@ function RequireRole({ allowedRoles, children }) {
 
   const rol = session.rol?.toLowerCase();
   if (!allowedRoles.map((r) => r.toLowerCase()).includes(rol)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={homeByRole(session.rol)} replace />;
   }
 
   return children;
 }
 
 export default function App() {
+  const session = getOfflineSession();
+
   return (
     <Routes>
       {/* LOGIN */}
-      <Route path="/" element={<Login />} />
-
-      {/* ADMIN */}
       <Route
-        path="/dashboard_admin"
+        path="/"
+        element={
+          session
+            ? <Navigate to={homeByRole(session.rol)} replace />
+            : <Login />
+        }
+      />
+
+      {/* ADMIN (permite subrutas con /*) */}
+      <Route
+        path="/dashboard_admin/*"
         element={
           <RequireRole allowedRoles={["administrador"]}>
             <Dashboard />
@@ -52,7 +70,7 @@ export default function App() {
 
       {/* DOCTOR */}
       <Route
-        path="/dashboard_doctor"
+        path="/dashboard_doctor/*"
         element={
           <RequireRole allowedRoles={["doctor"]}>
             <Dashboard />
@@ -62,7 +80,7 @@ export default function App() {
 
       {/* RECEPCIONISTA */}
       <Route
-        path="/dashboard_recepcion"
+        path="/dashboard_recepcion/*"
         element={
           <RequireRole allowedRoles={["recepcionista"]}>
             <Dashboard />
