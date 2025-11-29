@@ -23,6 +23,8 @@ import {
   limit,
 } from "firebase/firestore";
 
+import { useLocation } from "react-router-dom";
+
 /* =========================
    Marca / impresión / export
    ========================= */
@@ -88,10 +90,37 @@ const normalize = (s) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/* ======== NUEVO: leer fecha objetivo desde URL / sessionStorage ======== */
+const readTargetDateFromSearch = (search) => {
+  try {
+    const qs = new URLSearchParams(search || "");
+    const raw =
+      qs.get("date") ||
+      qs.get("day") ||
+      qs.get("d") ||
+      qs.get("fecha") ||
+      qs.get("selectedDate") ||
+      (typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem("agenda.targetDate")
+        : "");
+
+    const s = String(raw || "").slice(0, 10); // YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+
+    const [y, m, d] = s.split("-").map((n) => parseInt(n, 10));
+    const local = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0); // fecha local sin UTC
+    return local;
+  } catch {
+    return null;
+  }
+};
+
 /* =========================
    Componente principal
    ========================= */
 export default function Agenda() {
+  const location = useLocation();
+
   const [viewMode, setViewMode] = useState("day"); // "day" | "week" | "detail"
   const [selectedDate, setSelectedDate] = useState(todayDate());
   const [monthDate, setMonthDate] = useState(todayDate());
@@ -102,6 +131,22 @@ export default function Agenda() {
   const [filterSucursal, setFilterSucursal] = useState("");
   const [filterDoctor, setFilterDoctor] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  /* ======== NUEVO: posicionar agenda según la URL al montar/cambiar ======== */
+  useEffect(() => {
+    const target = readTargetDateFromSearch(location.search);
+    if (target) {
+      const day = startOfDay(target);
+      setSelectedDate(day);
+      setMonthDate(day);
+      setViewMode("day"); // aseguramos vista día al aterrizar
+      try {
+        // si venía de sessionStorage como fallback, limpiamos
+        sessionStorage.removeItem("agenda.targetDate");
+      } catch {}
+    }
+    // Si no hay target, se queda en hoy (estado inicial)
+  }, [location.search]);
 
   // ------------ Cargar citas desde Firebase ------------
   useEffect(() => {
@@ -121,7 +166,7 @@ export default function Agenda() {
           const h = parseInt(hStr, 10) || 0;
           const m = parseInt(mStr, 10) || 0;
 
-          // fecha -> Date con hora
+          // fecha -> Date con hora (sin usar ISO/UTC para evitar corrimientos)
           let f;
           if (data.fecha && data.fecha.toDate) {
             f = data.fecha.toDate();
@@ -1190,8 +1235,8 @@ const handlePrint = () => {
         <textarea id="editComentario" rows="3">${cita.comentario || ""}</textarea>
 
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
-          <button type="button" id="btnCancelarEdit" className="btn-cancelar">Cancelar</button>
-          <button type="submit" className="btn-guardar">Guardar cambios</button>
+          <button type="button" id="btnCancelarEdit" class="btn-cancelar">Cancelar</button>
+          <button type="submit" class="btn-guardar">Guardar cambios</button>
         </div>
       </form>
     `;

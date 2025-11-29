@@ -1,3 +1,4 @@
+// src/modules/pacientes/Pacientes.jsx
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./pacientes.css";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -18,6 +19,7 @@ import {
   onSnapshot,
   updateDoc,
   where,
+  addDoc,
 } from "firebase/firestore";
 
 import {
@@ -295,8 +297,6 @@ function useFinancials(patientId) {
 }
 
 /* ==================== Citas en tiempo real (compatible con Agenda) ==================== */
-/* Lee desde `citas` por patientId o pacienteId y construye fechaISO = Date(fecha + horaInicio).
-   Ordena en memoria: más nuevas arriba. */
 function useAppointments(patientId) {
   const [loading, setLoading] = useState(false);
   const [citas, setCitas] = useState([]);
@@ -316,8 +316,6 @@ function useAppointments(patientId) {
         const [y, m, day] = fechaStr.split("-").map((n) => parseInt(n, 10));
         const [hh, mm] = horaStr.split(":").map((n) => parseInt(n, 10) || 0);
         const dt = new Date(y, (m || 1) - 1, day || 1, hh, mm, 0, 0);
-        // OJO: toISOString pasa a UTC; la fecha de calendario puede “correr” de día.
-        // La conservamos para mostrar horas, pero usaremos `fecha` cruda para navegar a Agenda.
         fechaISO = dt.toISOString();
       }
       return {
@@ -409,21 +407,12 @@ export default function Pacientes() {
   const goAgendaForDay = (yyyyMmDd, pid) => {
     const day = String(yyyyMmDd || "").slice(0, 10); // "YYYY-MM-DD"
     if (!day) return navAbs("agenda");
-
-    // Fallback: por si Agenda no lee query, puede leer esto al montar
     try { sessionStorage.setItem("agenda.targetDate", day); } catch {}
-
-    // Varias claves por compatibilidad + timestamp
     const params = new URLSearchParams({
-      date: day,
-      day: day,
-      d: day,
-      fecha: day,
-      selectedDate: day,
+      date: day, day, d: day, fecha: day, selectedDate: day,
       ts: String(new Date(day + "T00:00:00").getTime()),
       patientId: pid || "",
     }).toString();
-
     navAbs(`agenda?${params}`);
   };
 
@@ -452,6 +441,99 @@ export default function Pacientes() {
   // RX upload state + input ref
   const [rxUploading, setRxUploading] = useState(false);
   const rxInputRef = useRef(null);
+
+  // === NUEVO: preferencias de vista Rx ===
+  const rxDensity = "comfy"; // fija, no se puede cambiar
+const [rxFilter, setRxFilter] = useState("");
+
+  const densityCfg = useMemo(() => {
+    switch (rxDensity) {
+      case "comfy": return { thumbW: 220, thumbH: 165, colMin: 240 };
+      case "cozy":  return { thumbW: 160, thumbH: 120, colMin: 180 };
+      default:      return { thumbW: 120, thumbH: 90,  colMin: 140 }; // compact
+    }
+  }, [rxDensity]);
+
+  const isImage = (it) => {
+    if (it?.type?.startsWith?.("image/")) return true;
+    const n = (it?.name || it?.title || "").toLowerCase();
+    return /\.(png|jpe?g|gif|bmp|webp|tiff?)$/.test(n);
+  };
+
+  const filteredRx = useMemo(() => {
+    const q = rxFilter.trim().toLowerCase();
+    const items = Array.isArray(viewing?.rxImagenes) ? viewing.rxImagenes : [];
+    if (!q) return items;
+    return items.filter((it) => {
+      const blob = `${it.name || ""} ${it.title || ""} ${it.desc || ""}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [viewing?.rxImagenes, rxFilter]);
+
+  // === NUEVO: edición de metadatos RX (guardado por item)
+  const updateRxItem = async (idx, patch) => {
+    if (!viewing?.id) return;
+    const items = Array.isArray(viewing.rxImagenes) ? [...viewing.rxImagenes] : [];
+    items[idx] = { ...(items[idx] || {}), ...patch };
+    await updatePatientField({ rxImagenes: items });
+  };
+
+  // === NUEVO: creación rápida de Citas en la ficha
+  const todayIso = () => {
+    const t = new Date();
+    const y = t.getFullYear();
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+  const [ncFecha, setNcFecha] = useState(todayIso());
+  const [ncHora, setNcHora] = useState("");
+  const [ncDoctor, setNcDoctor] = useState("");
+  const [ncEspacio, setNcEspacio] = useState("");
+  const [ncComentario, setNcComentario] = useState("");
+  useEffect(() => {
+    // si el paciente tiene doctor cargado, sugerirlo
+    setNcDoctor(viewing?.doctor || "");
+  }, [viewing?.doctor, viewing?.id]);
+
+  const handleCrearCita = async () => {
+    if (!viewing?.id) return alert("Paciente no cargado.");
+    if (!ncFecha) return alert("Selecciona la fecha.");
+    if (!ncHora) return alert("Selecciona la hora.");
+    if (!ncDoctor.trim()) return alert("Indica el doctor.");
+
+    const nombrePaciente = viewing.nombreCompleto || viewing.paciente || "Paciente";
+    const cel = viewing.celular || viewing.celularPaciente || "";
+    const tel = viewing.telDomicilio || viewing.telefonoPaciente || "";
+    if (!cel && !tel) {
+      return alert("Este paciente no tiene teléfono registrado (celular o fijo). Agrega uno antes de crear la cita.");
+    }
+
+    try {
+      const nuevaCita = {
+        paciente: nombrePaciente,
+        pacienteId: viewing.id,
+        doctor: ncDoctor.trim(),
+        fecha: ncFecha,              // "YYYY-MM-DD" para Agenda.jsx
+        horaInicio: ncHora,          // "HH:mm"
+        espacio: ncEspacio || "",
+        comentario: ncComentario || "",
+        estado: "En espera",
+        creado: new Date().toISOString(),
+        celularPaciente: cel,
+        telefonoPaciente: tel,
+      };
+      await addDoc(collection(db, "citas"), nuevaCita);
+      // limpiar
+      setNcHora("");
+      setNcEspacio("");
+      setNcComentario("");
+      alert("✅ Cita creada. Ya aparece en la lista y en Agenda.");
+    } catch (e) {
+      console.error("Error creando cita:", e);
+      alert("No se pudo crear la cita.");
+    }
+  };
 
   const ciudadesDisponibles = useMemo(
     () => CITIES_BY_COUNTRY[form.paisNacimiento] || [],
@@ -794,7 +876,6 @@ export default function Pacientes() {
         const path = `pacientes/${viewing.id}/rx/${Date.now()}_${safe}`;
         const sref = ref(storage, path);
 
-        // Nota: algunos navegadores no envían contentType en PDF/doc.
         const meta = {
           contentType: fileToSend.type || "application/octet-stream",
           cacheControl: "public, max-age=31536000",
@@ -804,7 +885,9 @@ export default function Pacientes() {
         const url = await getDownloadURL(sref);
         uploads.push({
           url,
-          name: file.name,
+          name: file.name,          // nombre original
+          title: file.name.replace(/\.[^.]+$/, ""), // título para mostrar (editable)
+          desc: "",                 // descripción editable
           type: file.type,
           size: file.size || 0,
           created: Date.now(),
@@ -815,7 +898,6 @@ export default function Pacientes() {
       await updatePatientField({ rxImagenes: [...(viewing.rxImagenes || []), ...uploads] });
     } catch (e) {
       console.error("RX upload error:", e);
-      // Mensaje con pistas de reglas típicas
       const msg =
         "No se pudo subir el/los archivo(s).\n" +
         "• Verifica que el usuario esté autenticado.\n" +
@@ -1469,10 +1551,13 @@ export default function Pacientes() {
                   </section>
                 )}
 
+                {/* ==================== RX / IMÁGENES / DOC — NUEVO LAYOUT ==================== */}
                 {activeTab === "rx" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Rx / Imágenes / Documentos</h4>
-                    <div className="rx-actions">
+
+                    {/* Barra de acciones y preferencias */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <label className="btn blue">
                         Subir archivos
                         <input
@@ -1484,29 +1569,137 @@ export default function Pacientes() {
                           onChange={(e) => handleRxUpload([...(e.target.files || [])])}
                         />
                       </label>
-                      {rxUploading && <span className="hint" style={{ marginLeft: 10 }}>Subiendo…</span>}
+                      {rxUploading && <span className="hint">Subiendo…</span>}
+
+                      <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          className="form-input"
+                          style={{ width: 200 }}
+                          placeholder="Buscar en Rx…"
+                          value={rxFilter}
+                          onChange={(e) => setRxFilter(e.target.value)}
+                          title="Filtra por nombre, título o descripción"
+                        />
+                        
+                      </div>
                     </div>
-                    <div className="rx-grid">
-                      {(viewing.rxImagenes || []).map((it, i) => (
-                        <div className="rx-item" key={`${it.url}-${i}`}>
-                          {it.type?.startsWith("image/") ? (
-                            <a href={it.url} target="_blank" rel="noreferrer">
-                              <img src={it.url} alt={it.name} />
-                            </a>
-                          ) : (
-                            <a className="rx-file" href={it.url} target="_blank" rel="noreferrer">
-                              {it.name || "archivo"}
-                            </a>
-                          )}
-                          <div className="rx-meta">
-                            <span>{it.name}</span>
-                            <button type="button" className="btn small" onClick={() => removeRxItem(i)}>Eliminar</button>
-                          </div>
+
+                    <div className="hint" style={{ marginTop: 6 }}>
+                      {filteredRx.length} elemento(s){rxFilter ? " · filtrado(s)" : ""}.
+                    </div>
+
+                    {/* Cuadrícula responsiva con mini-thumbnails */}
+                    <div
+                      className="rx-grid"
+                      style={{
+                        display: "grid",
+                        gap: 10,
+                        marginTop: 12,
+                        gridTemplateColumns: `repeat(auto-fill, minmax(${densityCfg.colMin}px, 1fr))`,
+                        alignItems: "start",
+                      }}
+                    >
+                      {filteredRx.length === 0 && (
+                        <div className="no-data" style={{ gridColumn: "1 / -1" }}>
+                          {rxFilter ? "Sin coincidencias." : "Sin archivos aún."}
                         </div>
-                      ))}
-                      {(!viewing.rxImagenes || viewing.rxImagenes.length === 0) && (
-                        <div className="no-data">Sin archivos aún.</div>
                       )}
+
+                      {filteredRx.map((it, i) => {
+                        const img = isImage(it);
+                        const title = it.title || it.name || `archivo-${i}`;
+                        const ext = (it.name || "").split(".").pop()?.toUpperCase() || (it.type || "").split("/").pop()?.toUpperCase() || "";
+                        return (
+                          <div
+                            key={`${it.url}-${i}`}
+                            className="rx-item mini-card"
+                            style={{ padding: 8, display: "grid", gap: 8 }}
+                            title={title}
+                          >
+                            {/* Thumb */}
+                            <a
+                              href={it.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                width: "100%",
+                                height: densityCfg.thumbH,
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                border: "1px solid #e5e7eb",
+                                display: "grid",
+                                placeItems: "center",
+                                background: "#fafafa",
+                              }}
+                            >
+                              {img ? (
+                                <img
+                                  src={it.url}
+                                  alt={title}
+                                  style={{
+                                    width: densityCfg.thumbW,
+                                    height: densityCfg.thumbH,
+                                    objectFit: "contain",
+                                    display: "block",
+                                  }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div style={{ textAlign: "center", padding: 10 }}>
+                                  <div style={{ fontSize: 24, fontWeight: 700 }}>{ext || "DOC"}</div>
+                                  <div style={{ fontSize: 12, opacity: 0.7 }}>Ver / descargar</div>
+                                </div>
+                              )}
+                            </a>
+
+                            {/* Nombre resumido */}
+                            <div style={{ fontWeight: 600, fontSize: 13, lineHeight: 1.2 }}>
+                              {title.length > 40 ? title.slice(0, 37) + "…" : title}
+                            </div>
+
+                            {/* Panel plegable para edición de metadatos */}
+                            <details>
+                              <summary style={{ cursor: "pointer", fontSize: 12, color: "#2563eb" }}>
+                                Editar nombre y descripción
+                              </summary>
+                              <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                                <label className="form-label" style={{ marginTop: 4 }}>Nombre para mostrar</label>
+                                <input
+                                  id={`rx-title-${i}`}
+                                  className="form-input"
+                                  defaultValue={it.title || it.name || ""}
+                                  placeholder="Ej. Rx aleta derecha 2025-11-29"
+                                />
+                                <label className="form-label">Descripción</label>
+                                <textarea
+                                  id={`rx-desc-${i}`}
+                                  className="form-input"
+                                  rows={2}
+                                  defaultValue={it.desc || ""}
+                                  placeholder="Observaciones, región, técnica, etc."
+                                />
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+                                  <button
+                                    type="button"
+                                    className="btn blue"
+                                    onClick={() => {
+                                      const titleV = document.getElementById(`rx-title-${i}`)?.value || "";
+                                      const descV = document.getElementById(`rx-desc-${i}`)?.value || "";
+                                      updateRxItem(i, { title: titleV, name: titleV || it.name, desc: descV });
+                                    }}
+                                  >
+                                    Guardar
+                                  </button>
+                                  <button type="button" className="btn" onClick={() => removeRxItem(i)}>Eliminar</button>
+                                </div>
+                                <div className="hint" style={{ fontSize: 11 }}>
+                                  Tipo: {it.type || "—"} · Tamaño: {(it.size || 0).toLocaleString()} bytes
+                                </div>
+                              </div>
+                            </details>
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
@@ -1677,10 +1870,45 @@ export default function Pacientes() {
                   </section>
                 )}
 
-                {/* Citas (solo lectura + abrir en Agenda) */}
+                {/* Citas (lectura + crear + abrir Agenda) */}
                 {activeTab === "citas" && (
                   <section className="ficha-section">
                     <h4 className="ficha-section-title">Citas</h4>
+
+                    {/* NUEVO: formulario rápido de creación */}
+                    <div className="mini-card" style={{ marginBottom: 12 }}>
+                      <div className="mini-card-title">Crear cita para este paciente</div>
+                      <div className="ficha-grid" style={{ marginTop: 8 }}>
+                        <div className="field">
+                          <label>Fecha</label>
+                          <input type="date" className="form-input" value={ncFecha} onChange={(e) => setNcFecha(e.target.value)} />
+                        </div>
+                        <div className="field">
+                          <label>Hora</label>
+                          <input type="time" className="form-input" value={ncHora} onChange={(e) => setNcHora(e.target.value)} />
+                        </div>
+                        <div className="field">
+                          <label>Doctor</label>
+                          <input className="form-input" value={ncDoctor} onChange={(e) => setNcDoctor(e.target.value)} placeholder="Doctor asignado" />
+                        </div>
+                        <div className="field">
+                          <label>Espacio / Sala</label>
+                          <input className="form-input" value={ncEspacio} onChange={(e) => setNcEspacio(e.target.value)} placeholder="Consultorio / Silla" />
+                        </div>
+                        <div className="field" style={{ gridColumn: "1 / -1" }}>
+                          <label>Comentario</label>
+                          <textarea className="form-input" rows={2} value={ncComentario} onChange={(e) => setNcComentario(e.target.value)} placeholder="Motivo / notas de la cita" />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button type="button" className="btn blue" onClick={handleCrearCita}>Guardar cita</button>
+                        {ncFecha && (
+                          <button type="button" className="btn" onClick={() => goAgendaForDay(ncFecha, viewing.id)}>
+                            Ver ese día en Agenda
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
                     <div className="table-wrap">
                       <table className="appointments-table">
