@@ -129,6 +129,27 @@ const makeSearchIndex = (f) =>
     ].filter(Boolean).join(" ")
   );
 
+/* ===== NUEVO: helpers de fecha para RX ===== */
+const isoToInputLocal = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`; // para <input type="datetime-local">
+};
+
+const fmtDateTimeNice = (iso) => {
+  try {
+    return new Date(iso).toLocaleString(browserLocale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch { return ""; }
+};
+
 /* =====================================================================
    Estado inicial
    ===================================================================== */
@@ -185,6 +206,7 @@ const INITIAL_FORM = {
   // EPS
   tipoVinculacion: "",
   nombreEps: "",
+
   polizaSalud: "",
 
   // Doctor
@@ -291,7 +313,7 @@ function useFinancials(patientId) {
   const result = {
     loading, error,
     facturas, pagos,
-    totalFacturado, totalPagado, totalFacturasPagadas, totalFacturasPendientes
+    totalFacturado, totalPagado, totalFacturasPendientes, totalFacturasPagadas
   };
   return result;
 }
@@ -444,7 +466,7 @@ export default function Pacientes() {
 
   // === NUEVO: preferencias de vista Rx ===
   const rxDensity = "comfy"; // fija, no se puede cambiar
-const [rxFilter, setRxFilter] = useState("");
+  const [rxFilter, setRxFilter] = useState("");
 
   const densityCfg = useMemo(() => {
     switch (rxDensity) {
@@ -463,11 +485,25 @@ const [rxFilter, setRxFilter] = useState("");
   const filteredRx = useMemo(() => {
     const q = rxFilter.trim().toLowerCase();
     const items = Array.isArray(viewing?.rxImagenes) ? viewing.rxImagenes : [];
-    if (!q) return items;
-    return items.filter((it) => {
-      const blob = `${it.name || ""} ${it.title || ""} ${it.desc || ""}`.toLowerCase();
-      return blob.includes(q);
+    let out = items;
+
+    if (q) {
+      out = items.filter((it) => {
+        const blob = `${it.name || ""} ${it.title || ""} ${it.desc || ""}`.toLowerCase();
+        return blob.includes(q);
+      });
+    } else {
+      out = items.slice();
+    }
+
+    // === NUEVO: ordenar por fecha de subida (desc) ===
+    out.sort((a, b) => {
+      const aa = (a.uploadedAtMS ?? a.created ?? 0);
+      const bb = (b.uploadedAtMS ?? b.created ?? 0);
+      return bb - aa;
     });
+
+    return out;
   }, [viewing?.rxImagenes, rxFilter]);
 
   // === NUEVO: edición de metadatos RX (guardado por item)
@@ -883,6 +919,10 @@ const [rxFilter, setRxFilter] = useState("");
 
         await uploadBytes(sref, fileToSend, meta);
         const url = await getDownloadURL(sref);
+
+        const nowISO = new Date().toISOString();
+        const nowMS  = Date.now();
+
         uploads.push({
           url,
           name: file.name,          // nombre original
@@ -890,7 +930,9 @@ const [rxFilter, setRxFilter] = useState("");
           desc: "",                 // descripción editable
           type: file.type,
           size: file.size || 0,
-          created: Date.now(),
+          created: nowMS,                    // legado
+          uploadedAtMS: nowMS,               // ✅ nuevo
+          uploadedAtISO: nowISO,             // ✅ nuevo
           path,
         });
       }
@@ -1134,7 +1176,7 @@ const [rxFilter, setRxFilter] = useState("");
                   <label className="form-label">Ciudad de nacimiento</label>
                   <input className="form-input" list="listCitiesBirth" value={form.ciudadNacimiento} onChange={(e) => handleChange("ciudadNacimiento", e.target.value)} placeholder="Escribe y elige…" />
                   <datalist id="listCitiesBirth">
-                    {ciudadesDisponibles.map((c) => (<option key={c} value={c} />))}
+                    { (CITIES_BY_COUNTRY[form.paisNacimiento] || []).map((c) => (<option key={c} value={c} />)) }
                   </datalist>
                 </div>
                 <div>
@@ -1580,7 +1622,6 @@ const [rxFilter, setRxFilter] = useState("");
                           onChange={(e) => setRxFilter(e.target.value)}
                           title="Filtra por nombre, título o descripción"
                         />
-                        
                       </div>
                     </div>
 
@@ -1609,6 +1650,11 @@ const [rxFilter, setRxFilter] = useState("");
                         const img = isImage(it);
                         const title = it.title || it.name || `archivo-${i}`;
                         const ext = (it.name || "").split(".").pop()?.toUpperCase() || (it.type || "").split("/").pop()?.toUpperCase() || "";
+
+                        // === NUEVO: fecha efectiva del item
+                        const uploadedAtISO =
+                          it.uploadedAtISO || (it.created ? new Date(it.created).toISOString() : null);
+
                         return (
                           <div
                             key={`${it.url}-${i}`}
@@ -1678,14 +1724,40 @@ const [rxFilter, setRxFilter] = useState("");
                                   defaultValue={it.desc || ""}
                                   placeholder="Observaciones, región, técnica, etc."
                                 />
+
+                                {/* === NUEVO: Fecha de subida editable === */}
+                                <label className="form-label">Fecha de subida</label>
+                                <input
+                                  id={`rx-date-${i}`}
+                                  type="datetime-local"
+                                  className="form-input"
+                                  defaultValue={isoToInputLocal(uploadedAtISO)}
+                                />
+
                                 <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
                                   <button
                                     type="button"
                                     className="btn blue"
                                     onClick={() => {
                                       const titleV = document.getElementById(`rx-title-${i}`)?.value || "";
-                                      const descV = document.getElementById(`rx-desc-${i}`)?.value || "";
-                                      updateRxItem(i, { title: titleV, name: titleV || it.name, desc: descV });
+                                      const descV  = document.getElementById(`rx-desc-${i}`)?.value || "";
+                                      const dateV  = document.getElementById(`rx-date-${i}`)?.value || ""; // "YYYY-MM-DDTHH:mm"
+                                      let dateISO = uploadedAtISO;
+                                      let dateMS  = it.uploadedAtMS || it.created || null;
+                                      if (dateV) {
+                                        const dt = new Date(dateV);
+                                        if (!isNaN(dt.getTime())) {
+                                          dateISO = dt.toISOString();
+                                          dateMS  = dt.getTime();
+                                        }
+                                      }
+                                      updateRxItem(i, {
+                                        title: titleV,
+                                        name: titleV || it.name,
+                                        desc: descV,
+                                        uploadedAtISO: dateISO,
+                                        uploadedAtMS: dateMS,
+                                      });
                                     }}
                                   >
                                     Guardar
@@ -1694,6 +1766,7 @@ const [rxFilter, setRxFilter] = useState("");
                                 </div>
                                 <div className="hint" style={{ fontSize: 11 }}>
                                   Tipo: {it.type || "—"} · Tamaño: {(it.size || 0).toLocaleString()} bytes
+                                  {uploadedAtISO ? ` · Subido: ${fmtDateTimeNice(uploadedAtISO)}` : ""}
                                 </div>
                               </div>
                             </details>

@@ -20,8 +20,8 @@ export default function ConfigGear({ className = "", basePath = "" }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState("");
-  const navigate = useNavigate();
   const inputRef = useRef(null);
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -29,19 +29,11 @@ export default function ConfigGear({ className = "", basePath = "" }) {
     return SECTIONS.filter((s) => s.toLowerCase().includes(f));
   }, [filter]);
 
-  // ancho responsivo (mobile full, desktop drawer)
-  const panelWidth = () => {
-    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-    if (vw < 640) return vw;           // móvil: full width
-    if (vw < 1024) return 400;         // tablet
-    return 420;                        // desktop
-  };
-
   const openDrawer = () => {
     setOpen(true);
     requestAnimationFrame(() => {
       setMounted(true);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => inputRef.current?.focus(), 60);
     });
   };
 
@@ -57,7 +49,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
     closeDrawer();
   };
 
-  // Escape para cerrar
+  // Esc para cerrar
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && closeDrawer();
@@ -65,7 +57,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // ícono genérico para los ítems
+  // Ícono suave para cada ítem
   const ItemIcon = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M4 7h16M4 12h16M4 17h10" stroke="#64748b" strokeWidth="1.7" strokeLinecap="round"/>
@@ -85,7 +77,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
         ⚙️
       </button>
 
-      {/* Overlay + Drawer izquierdo PRO */}
+      {/* Overlay + Panel IZQUIERDO FULLSCREEN (look pro) */}
       {open && (
         <div
           style={{
@@ -108,7 +100,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
               left: 0,
               top: 0,
               height: "100%",
-              width: panelWidth() + "px",
+              width: "100%",                 // ⬅️ siempre pantalla completa
               background: "#ffffff",
               borderRight: "1px solid #e5e7eb",
               boxShadow: "0 20px 40px rgba(2,6,23,.18)",
@@ -119,7 +111,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header fijo */}
+            {/* Header sticky */}
             <div
               style={{
                 position: "sticky",
@@ -173,10 +165,10 @@ export default function ConfigGear({ className = "", basePath = "" }) {
               </div>
             </div>
 
-            {/* Lista con scrollbar fino */}
-            <nav
+            {/* Contenido: grid profesional con scroll */}
+            <div
               style={{
-                padding: "10px 12px 14px",
+                padding: "14px 16px 16px",
                 overflowY: "auto",
                 height: "100%",
               }}
@@ -184,8 +176,8 @@ export default function ConfigGear({ className = "", basePath = "" }) {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: 8,
+                  gridTemplateColumns: "repeat(3, minmax(240px, 1fr))",
+                  gap: 12,
                 }}
               >
                 {filtered.map((label) => (
@@ -195,15 +187,15 @@ export default function ConfigGear({ className = "", basePath = "" }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
+                      gap: 12,
                       width: "100%",
                       textAlign: "left",
-                      padding: "12px 12px",
-                      borderRadius: 12,
+                      padding: "14px 14px",
+                      borderRadius: 14,
                       border: "1px solid #e5e7eb",
                       background: "#ffffff",
                       cursor: "pointer",
-                      fontSize: "0.95rem",
+                      fontSize: "1rem",
                       fontWeight: 700,
                       color: "#0f172a",
                       boxShadow: "0 1px 0 rgba(2,6,23,.04)",
@@ -224,14 +216,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
                       <ItemIcon />
                     </span>
                     <span style={{ flex: 1 }}>{label}</span>
-                    <span
-                      aria-hidden
-                      style={{
-                        fontSize: 12,
-                        color: "#94a3b8",
-                        fontWeight: 700,
-                      }}
-                    >
+                    <span aria-hidden style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700 }}>
                       →
                     </span>
                   </button>
@@ -241,7 +226,7 @@ export default function ConfigGear({ className = "", basePath = "" }) {
               {filtered.length === 0 && (
                 <div
                   style={{
-                    fontSize: ".9rem",
+                    fontSize: ".95rem",
                     color: "#94a3b8",
                     padding: 12,
                     textAlign: "center",
@@ -250,12 +235,12 @@ export default function ConfigGear({ className = "", basePath = "" }) {
                   Sin resultados
                 </div>
               )}
-            </nav>
+            </div>
 
             {/* Footer sutil */}
             <div
               style={{
-                padding: "10px 14px",
+                padding: "10px 16px",
                 borderTop: "1px solid #e5e7eb",
                 fontSize: ".8rem",
                 color: "#94a3b8",
