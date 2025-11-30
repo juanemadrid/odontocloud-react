@@ -15,10 +15,16 @@ initFirebase()
 import { registerSW } from 'virtual:pwa-register'
 registerSW({ immediate: true })
 
+// 🖼️ Provider de branding (logo/nombre clínica) + estilos de impresión
+import { BrandingProvider } from './context/BrandingContext.jsx'
+import './styles/print.css'
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter basename={BASE_PATH}>
-      <App />
-    </BrowserRouter>
+    <BrandingProvider>
+      <BrowserRouter basename={BASE_PATH}>
+        <App />
+      </BrowserRouter>
+    </BrandingProvider>
   </React.StrictMode>
 )

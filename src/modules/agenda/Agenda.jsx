@@ -26,11 +26,23 @@ import {
 import { useLocation } from "react-router-dom";
 
 /* =========================
-   Marca / impresión / export
+   Branding centralizado (lee <meta> y fallback a localStorage)
    ========================= */
-const COMPANY_NAME = "TU EMPRESA S.A.S.";             // <- cambia aquí
-const COMPANY_LOGO_URL = "/assets/logo-empresa.png";  // <- cambia aquí (ruta pública)
-const SOFTWARE_FOOTER = "Generado por OdontoCloud";
+const lsGet = (k, def = "") => {
+  try { return localStorage.getItem(k) ?? def; } catch { return def; }
+};
+
+const getCompanyName = () =>
+  document.querySelector('meta[name="company-name"]')?.getAttribute("content") ||
+  lsGet("empresa_nombre", "OdontoCloud");
+
+const getCompanyLogo = () =>
+  document.querySelector('meta[name="company-logo"]')?.getAttribute("content") ||
+  lsGet("empresa_logo_url", "");
+
+const getSoftwareFooter = () =>
+  document.querySelector('meta[name="software-footer"]')?.getAttribute("content") ||
+  lsGet("software_footer_text", "Generado por OdontoCloud");
 
 /* =========================
    Utilidades
@@ -90,7 +102,7 @@ const normalize = (s) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/* ======== NUEVO: leer fecha objetivo desde URL / sessionStorage ======== */
+/* ======== Leer fecha objetivo desde URL / sessionStorage ======== */
 const readTargetDateFromSearch = (search) => {
   try {
     const qs = new URLSearchParams(search || "");
@@ -132,7 +144,7 @@ export default function Agenda() {
   const [filterDoctor, setFilterDoctor] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  /* ======== NUEVO: posicionar agenda según la URL al montar/cambiar ======== */
+  /* ======== posicionar agenda según la URL al montar/cambiar ======== */
   useEffect(() => {
     const target = readTargetDateFromSearch(location.search);
     if (target) {
@@ -141,11 +153,9 @@ export default function Agenda() {
       setMonthDate(day);
       setViewMode("day"); // aseguramos vista día al aterrizar
       try {
-        // si venía de sessionStorage como fallback, limpiamos
         sessionStorage.removeItem("agenda.targetDate");
       } catch {}
     }
-    // Si no hay target, se queda en hoy (estado inicial)
   }, [location.search]);
 
   // ------------ Cargar citas desde Firebase ------------
@@ -166,22 +176,14 @@ export default function Agenda() {
           const h = parseInt(hStr, 10) || 0;
           const m = parseInt(mStr, 10) || 0;
 
-          // fecha -> Date con hora (sin usar ISO/UTC para evitar corrimientos)
+          // fecha -> Date con hora (sin usar ISO/UTC)
           let f;
           if (data.fecha && data.fecha.toDate) {
             f = data.fecha.toDate();
             f.setHours(h, m, 0, 0);
           } else if (typeof data.fecha === "string") {
             const [year, month, day] = data.fecha.split("-");
-            f = new Date(
-              parseInt(year, 10),
-              parseInt(month, 10) - 1,
-              parseInt(day, 10),
-              h,
-              m,
-              0,
-              0
-            );
+            f = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), h, m, 0, 0);
           } else if (data.fecha instanceof Date) {
             f = new Date(data.fecha);
             f.setHours(h, m, 0, 0);
@@ -395,7 +397,7 @@ export default function Agenda() {
     return "Últimas citas (detalle)";
   }, [viewMode, selectedDate]);
 
-  // ------------ Controles fecha (igual que tenías) ------------
+  // ------------ Controles fecha ------------
   const goPrev = () => {
     if (viewMode === "day") setSelectedDate(addDays(selectedDate, -1));
     else if (viewMode === "week") setSelectedDate(addDays(selectedDate, -7));
@@ -413,69 +415,79 @@ export default function Agenda() {
     setViewMode("day");
   };
 
- /* =========================
-   Imprimir en ventana emergente (robusto)
-   ========================= */
-const handlePrint = () => {
-  // Utilidades locales
-  const safe = (t) =>
-    String(t ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  /* =========================
+     Imprimir en ventana emergente (robusto) con branding
+     ========================= */
+  const handlePrint = () => {
+    const safe = (t) =>
+      String(t ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
-  // Datos de marca (opcionalmente puedes definir estas <meta> en tu index.html)
-  // <meta name="company-name" content="Nombre de tu empresa">
-  // <meta name="company-logo" content="/ruta/al/logo.png">
-  const companyName =
-    document.querySelector('meta[name="company-name"]')?.getAttribute("content") ||
-    (typeof COMPANY_NAME !== "undefined" ? COMPANY_NAME : "Tu Empresa");
+    const companyName = getCompanyName();
+    const companyLogoUrl = getCompanyLogo();
+    const softwareFooter = getSoftwareFooter();
 
-  const companyLogoUrl =
-    document.querySelector('meta[name="company-logo"]')?.getAttribute("content") || "";
+    const rowsHtml =
+      filteredAppointments.length === 0
+        ? `<tr><td colspan="6" style="padding:8px 6px;color:#6b7280">No hay citas registradas para este rango.</td></tr>`
+        : filteredAppointments
+            .map((c) => {
+              const f = c.fecha.toLocaleDateString(browserLocale);
+              const h = c.fecha.toLocaleTimeString(browserLocale, {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              });
+              return `<tr>
+                <td>${safe(f)}</td>
+                <td>${safe(h)}</td>
+                <td>${safe(c.paciente)}</td>
+                <td>${safe(c.doctor)}</td>
+                <td>${safe(c.espacio)}</td>
+                <td>${safe(c.comentario)}</td>
+              </tr>`;
+            })
+            .join("");
 
-  // Texto que quieres al pie con el nombre del software
-  const softwareFooter = "Generado por OdontoCloud";
+    // === CSS ACTUALIZADO: cabecera centrada, logo grande y nombre debajo ===
+    const css = `
+      @page { size: A4 portrait; margin: 18mm; }
+      body { font-family: Segoe UI, Roboto, Arial, sans-serif; color:#0f172a; }
+      /* === Cabecera centrada con logo grande === */
+      .hdr {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+        gap:10px;
+        border-bottom:2px solid #e5e7eb;
+        padding-bottom:12px;
+        margin-bottom:14px;
+      }
+      .logo {
+        max-height: 130px;   /* puedes subir a 150px si lo deseas */
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+      }
+      .brand {
+        font-size: 24px;     /* aumenta si lo quieres más grande */
+        font-weight: 800;
+        color:#0a86d8;
+        line-height:1.15;
+      }
+      .sub { font-size:12px; color:#6b7280; }
 
-  // Filas de la tabla
-  const rowsHtml =
-    filteredAppointments.length === 0
-      ? `<tr><td colspan="6" style="padding:8px 6px;color:#6b7280">No hay citas registradas para este rango.</td></tr>`
-      : filteredAppointments
-          .map((c) => {
-            const f = c.fecha.toLocaleDateString(browserLocale);
-            const h = c.fecha.toLocaleTimeString(browserLocale, {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
-            return `<tr>
-              <td>${safe(f)}</td>
-              <td>${safe(h)}</td>
-              <td>${safe(c.paciente)}</td>
-              <td>${safe(c.doctor)}</td>
-              <td>${safe(c.espacio)}</td>
-              <td>${safe(c.comentario)}</td>
-            </tr>`;
-          })
-          .join("");
+      table { width:100%; border-collapse:collapse; font-size:12px; }
+      th { text-align:left; background:#f3f4f6; border-bottom:1px solid #e5e7eb; padding:8px 6px; }
+      td { border-bottom:1px solid #f1f5f9; padding:7px 6px; vertical-align:top; }
+      .note { margin-top:8px; font-size:10px; color:#9ca3af; }
+      tr, .hdr { page-break-inside: avoid; }
+    `;
 
-  // Estilos de impresión
-  const css = `
-    @page { size: A4 portrait; margin: 18mm; }
-    body { font-family: Segoe UI, Roboto, Arial, sans-serif; color:#0f172a; }
-    .hdr { display:flex; align-items:center; gap:12px; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; }
-    .brand { font-size:18px; font-weight:700; color:#0a86d8; line-height:1.1; }
-    .sub { font-size:12px; color:#6b7280; }
-    table { width:100%; border-collapse:collapse; font-size:12px; }
-    th { text-align:left; background:#f3f4f6; border-bottom:1px solid #e5e7eb; padding:8px 6px; }
-    td { border-bottom:1px solid #f1f5f9; padding:7px 6px; vertical-align:top; }
-    .note { margin-top:8px; font-size:10px; color:#9ca3af; }
-    tr, .hdr { page-break-inside: avoid; }
-  `;
-
-  // HTML completo
-  const html = `<!doctype html>
+    const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -484,11 +496,9 @@ const handlePrint = () => {
 </head>
 <body>
   <div class="hdr">
-    ${companyLogoUrl ? `<img src="${companyLogoUrl}" alt="Logo" style="height:36px;object-fit:contain">` : ""}
-    <div>
-      <div class="brand">${safe(companyName)}</div>
-      <div class="sub">Agenda de citas · ${safe(currentDateLabel)}</div>
-    </div>
+    ${companyLogoUrl ? `<img src="${companyLogoUrl}" alt="Logo" class="logo">` : ""}
+    <div class="brand">${safe(companyName)}</div>
+    <div class="sub">Agenda de citas · ${safe(currentDateLabel)}</div>
   </div>
 
   <table>
@@ -507,7 +517,6 @@ const handlePrint = () => {
 
   <div class="note">${safe(softwareFooter)}. ${safe(new Date().toLocaleString(browserLocale))}</div>
   <script>
-    // Imprimir cuando termine de cargar la pestaña (incluye el logo)
     window.addEventListener('load', function() {
       try { window.focus(); window.print(); } catch (e) {}
     });
@@ -515,23 +524,20 @@ const handlePrint = () => {
 </body>
 </html>`;
 
-  // Crear Blob y abrir en nueva pestaña (evita el "about:blank" vacío)
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
 
-  if (!w) {
-    alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
-    URL.revokeObjectURL(url);
-    return;
-  }
+    if (!w) {
+      alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
+      URL.revokeObjectURL(url);
+      return;
+    }
 
-  // Liberar URL cuando cargue o después de un tiempo de seguridad
-  const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
-  w.addEventListener?.("load", revoke);
-  setTimeout(revoke, 15000);
-};
-
+    const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
+    w.addEventListener?.("load", revoke);
+    setTimeout(revoke, 15000);
+  };
 
   // ------------ Confirmar / Hoy ------------
   const handleConfirmar = () =>
@@ -547,8 +553,10 @@ const handlePrint = () => {
       return;
     }
 
-    // Cabecera superior con la empresa, luego encabezados de columnas:
-    const headerRow1 = [`Empresa: ${COMPANY_NAME}`];
+    const companyName = getCompanyName();
+    const softwareFooter = getSoftwareFooter();
+
+    const headerRow1 = [`Empresa: ${companyName}`];
     const header = ["Fecha", "Hora", "Paciente", "Doctor", "Espacio", "Comentario"];
 
     const rows = filteredAppointments.map((c) => {
@@ -568,16 +576,15 @@ const handlePrint = () => {
       ];
     });
 
-    // Pie con “Generado por…”
-    const footerRow = [SOFTWARE_FOOTER];
+    const footerRow = [softwareFooter];
 
     const csv = [
-      headerRow1,           // fila 1
-      [],                   // fila en blanco
-      header,               // encabezados
-      ...rows,              // datos
-      [],                   // fila en blanco
-      footerRow,            // pie
+      headerRow1,
+      [],
+      header,
+      ...rows,
+      [],
+      footerRow,
     ]
       .map((r) =>
         (r || [])
@@ -587,7 +594,7 @@ const handlePrint = () => {
       .join("\n");
 
     const fileName =
-      `citas_${COMPANY_NAME.toLowerCase().replace(/\s+/g, "_")}_${toIsoDate(startOfDay(selectedDate))}` +
+      `citas_${companyName.toLowerCase().replace(/\s+/g, "_")}_${toIsoDate(startOfDay(selectedDate))}` +
       (viewMode === "week" ? "_semana" : viewMode === "detail" ? "_detalle" : "") +
       ".csv";
 
@@ -650,7 +657,7 @@ const handlePrint = () => {
   };
 
   /* =========================
-     Nueva Cita (igual que tu lógica, intacta)
+     Nueva Cita (intacta con fixes menores)
      ========================= */
   const handleNuevaCita = () => {
     const modal = document.createElement("div");
@@ -1162,7 +1169,7 @@ const handlePrint = () => {
     });
   };
 
-  // ------------ Editar Cita (sin cambios funcionales) ------------
+  // ------------ Editar Cita ------------
   const handleEditCita = (cita) => {
     const modal = document.createElement("div");
     Object.assign(modal.style, {
@@ -1222,7 +1229,7 @@ const handlePrint = () => {
         <input type="text" id="editEspacio" value="${cita.espacio || ""}" />
 
         <label>Estado</label>
-        <select id="editEstado" className="estado-select">
+        <select id="editEstado" class="estado-select">
           <option value="En espera" ${cita.estado === "En espera" ? "selected" : ""}>En espera</option>
           <option value="En sala" ${cita.estado === "En sala" ? "selected" : ""}>En sala</option>
           <option value="Atendiendo" ${cita.estado === "Atendiendo" ? "selected" : ""}>Atendiendo</option>
@@ -1415,7 +1422,7 @@ const handlePrint = () => {
                             day.isSelected ? "selected" : "",
                           ]
                             .filter(Boolean)
-                            .join(" ")}
+                            .join("")}
                           onClick={() => day.isCurrentMonth && handleMiniClick(day.date)}
                         >
                           {day.date.getDate()}
@@ -1451,7 +1458,7 @@ const handlePrint = () => {
             </div>
           </aside>
 
-          {/* RIGHT: agenda */}
+            {/* RIGHT: agenda */}
           <main className="odc-right" aria-label="Panel principal - agenda">
             {/* Header fijo con fecha alineada */}
             <div className="odc-header-bar" role="region" aria-label="Controles de la agenda"
@@ -1490,7 +1497,7 @@ const handlePrint = () => {
                   </button>
                 </div>
 
-                {/* FECHA: al mismo nivel que las pestañas y el buscador */}
+                {/* FECHA */}
                 <div className="date-nav" style={{ display: "flex", alignItems: "center", gap: 6, flex: "0 0 auto" }}>
                   <button className="btn icon" id="btnPrev" aria-label="Anterior" onClick={goPrev}>‹</button>
                   <button className="btn icon" id="btnNext" aria-label="Siguiente" onClick={goNext}>›</button>

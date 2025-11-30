@@ -13,7 +13,8 @@ import Reportes from "../modules/reportes/Reportes";
 // ⬇️ NUEVO
 import ConfigGear from "../components/ConfigGear";
 import ConfigSection from "../components/ConfigSection";
-
+// ⬇️ NUEVO (router para /config/:slug)
+import ConfigRouter from "../modules/config/ConfigRouter";
 
 // 👉 Caja real
 import Caja from "../modules/caja/Caja";
@@ -1145,34 +1146,36 @@ export default function Dashboard() {
   };
 
   /* ===== Contenido por módulo (controlado por activeModule) ===== */
-const renderModuleContent = () => {
-  switch (activeModule) {
-    case "Agenda":
-      return <Agenda />;
-    case "Pacientes":
-      return (
-        <Suspense fallback={<div style={{ padding: 16 }}>Cargando…</div>}>
-          <Pacientes />
-        </Suspense>
-      );
-    case "Facturación":
-      return <Facturacion view={factView} />;
-    case "Inventario":
-      return <Inventario />;
-    case "Odontograma":
-      return <Odontograma />;
-    case "Reportes":
-      return <Reportes />;
-    case "Caja":
-      return <Caja />; // Caja leerá los query params (cobro, patientId)
-    case "Config":
-      return <ConfigSection />; // ⬅️ NUEVO: pantalla de configuración
-    case "Inicio":
-    default:
-      return null;
-  }
-};
-
+  const renderModuleContent = () => {
+    switch (activeModule) {
+      case "Agenda":
+        return <Agenda />;
+      case "Pacientes":
+        return (
+          <Suspense fallback={<div style={{ padding: 16 }}>Cargando…</div>}>
+            <Pacientes />
+          </Suspense>
+        );
+      case "Facturación":
+        return <Facturacion view={factView} />;
+      case "Inventario":
+        return <Inventario />;
+      case "Odontograma":
+        return <Odontograma />;
+      case "Reportes":
+        return <Reportes />;
+      case "Caja":
+        return <Caja />; // Caja leerá los query params (cobro, patientId)
+      case "Config":
+        // ⬇️ Si la URL es /config/:slug usamos el router; si no, la portada de config
+        return location.pathname.toLowerCase().includes("/config/")
+          ? <ConfigRouter />
+          : <ConfigSection />;
+      case "Inicio":
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className={`oc-shell ${darkMode ? "oc-dark" : ""}`}>
@@ -1245,76 +1248,75 @@ const renderModuleContent = () => {
           </NavLink>
         </nav>
 
-       <div className="oc-header-right">
-  <CommandSearch
-    placeholder={t("searchPlaceholder")}
-    onNavigate={(module) => {
-      if (module === "Inicio") go("");
-      else if (module === "Facturación") {
-        setFactView("recibo");
-        go("facturacion/recibo");
-      } else {
-        go(module.toLowerCase());
-      }
-    }}
-    onAction={(key) => {
-      switch (key) {
-        case "new_appointment":
-        case "agenda_today":
-        case "export_agenda":
-          go("agenda");
-          break;
-        case "new_patient":
-          go("pacientes");
-          break;
-        case "new_invoice":
-          setFactView("fv");
-          go("facturacion/facturas");
-          break;
-        case "toggle_dark":
-          setDarkMode((v) => !v);
-          break;
-        case "logout":
-          handleLogout();
-          break;
-        case "show_shortcuts":
-          alert(
-            "Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar."
-          );
-          break;
-        case "support":
-          window.open("https://tu-soporte.odc", "_blank");
-          break;
-        default:
-          break;
-      }
-    }}
-  />
+        <div className="oc-header-right">
+          <CommandSearch
+            placeholder={t("searchPlaceholder")}
+            onNavigate={(module) => {
+              if (module === "Inicio") go("");
+              else if (module === "Facturación") {
+                setFactView("recibo");
+                go("facturacion/recibo");
+              } else {
+                go(module.toLowerCase());
+              }
+            }}
+            onAction={(key) => {
+              switch (key) {
+                case "new_appointment":
+                case "agenda_today":
+                case "export_agenda":
+                  go("agenda");
+                  break;
+                case "new_patient":
+                  go("pacientes");
+                  break;
+                case "new_invoice":
+                  setFactView("fv");
+                  go("facturacion/facturas");
+                  break;
+                case "toggle_dark":
+                  setDarkMode((v) => !v);
+                  break;
+                case "logout":
+                  handleLogout();
+                  break;
+                case "show_shortcuts":
+                  alert(
+                    "Atajos: Ctrl/Cmd + K para abrir búsqueda, ↑/↓ para moverse, Enter para ejecutar."
+                  );
+                  break;
+                case "support":
+                  window.open("https://tu-soporte.odc", "_blank");
+                  break;
+                default:
+                  break;
+              }
+            }}
+          />
 
-  {/* ⬇️ NUEVO: Botón de tuerca de configuración */}
-  <ConfigGear basePath={basePath} className="ml-2" />
+          {/* ⬇️ NUEVO: Botón de tuerca de configuración */}
+          <ConfigGear basePath={basePath} className="ml-2" />
 
-  <button
-    className="oc-icon-btn"
-    type="button"
-    onClick={() => setDarkMode((v) => !v)}
-    aria-pressed={darkMode}
-    title={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
-  >
-    {darkMode ? "🌙" : "☀️"}
-  </button>
+          <button
+            className="oc-icon-btn"
+            type="button"
+            onClick={() => setDarkMode((v) => !v)}
+            aria-pressed={darkMode}
+            title={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
+          >
+            {darkMode ? "🌙" : "☀️"}
+          </button>
 
-  <button
-    className="oc-icon-btn"
-    type="button"
-    onClick={handleLogout}
-    title={MESSAGES[locale].logout}
-  >
-    {MESSAGES[locale].logout}
-  </button>
-</div>
-</header>
-
+          <button
+            className="oc-icon-btn"
+            type="button"
+            onClick={handleLogout}
+            title={MESSAGES[locale].logout}
+          >
+            {MESSAGES[locale].logout}
+          </button>
+        </div>
+      </header>
 
       {/* Mega menú flotante (usa rutas reales) */}
       <AdminMegaMenu
