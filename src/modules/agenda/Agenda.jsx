@@ -416,82 +416,146 @@ export default function Agenda() {
   };
 
   /* =========================
-     Imprimir en ventana emergente (robusto) con branding
+     Imprimir en ventana emergente (estilo OralDrive)
      ========================= */
-  const handlePrint = () => {
-    const safe = (t) =>
-      String(t ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+const handlePrint = () => {
+  const safe = (t) =>
+    String(t ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
-    const companyName = getCompanyName();
-    const companyLogoUrl = getCompanyLogo();
-    const softwareFooter = getSoftwareFooter();
+  const companyName = getCompanyName();
+  const companyLogoUrl = getCompanyLogo();
+  const softwareFooter = getSoftwareFooter();
 
-    const rowsHtml =
-      filteredAppointments.length === 0
-        ? `<tr><td colspan="6" style="padding:8px 6px;color:#6b7280">No hay citas registradas para este rango.</td></tr>`
-        : filteredAppointments
-            .map((c) => {
-              const f = c.fecha.toLocaleDateString(browserLocale);
-              const h = c.fecha.toLocaleTimeString(browserLocale, {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              });
-              return `<tr>
-                <td>${safe(f)}</td>
-                <td>${safe(h)}</td>
-                <td>${safe(c.paciente)}</td>
-                <td>${safe(c.doctor)}</td>
-                <td>${safe(c.espacio)}</td>
-                <td>${safe(c.comentario)}</td>
-              </tr>`;
-            })
-            .join("");
+  const sedeActual = filterSucursal || "—";
+  const doctorActual = filterDoctor || "—";
 
-    // === CSS ACTUALIZADO: cabecera centrada, logo grande y nombre debajo ===
-    const css = `
-      @page { size: A4 portrait; margin: 18mm; }
-      body { font-family: Segoe UI, Roboto, Arial, sans-serif; color:#0f172a; }
-      /* === Cabecera centrada con logo grande === */
-      .hdr {
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        text-align:center;
-        gap:10px;
-        border-bottom:2px solid #e5e7eb;
-        padding-bottom:12px;
-        margin-bottom:14px;
-      }
-      .logo {
-        max-height: 130px;   /* puedes subir a 150px si lo deseas */
-        width: auto;
-        max-width: 100%;
-        object-fit: contain;
-      }
-      .brand {
-        font-size: 24px;     /* aumenta si lo quieres más grande */
-        font-weight: 800;
-        color:#0a86d8;
-        line-height:1.15;
-      }
-      .sub { font-size:12px; color:#6b7280; }
+  // Actualidad respecto a HOY (si quieres contra selectedDate te lo cambio)
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
 
-      table { width:100%; border-collapse:collapse; font-size:12px; }
-      th { text-align:left; background:#f3f4f6; border-bottom:1px solid #e5e7eb; padding:8px 6px; }
-      td { border-bottom:1px solid #f1f5f9; padding:7px 6px; vertical-align:top; }
-      .note { margin-top:8px; font-size:10px; color:#9ca3af; }
-      tr, .hdr { page-break-inside: avoid; }
-    `;
+  const rowsHtml =
+    filteredAppointments.length === 0
+      ? `<tr class="empty"><td colspan="10">No hay citas registradas para este rango.</td></tr>`
+      : filteredAppointments
+          .map((c, idx) => {
+            const hora = c.fecha.toLocaleTimeString(browserLocale, {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
 
-    const html = `<!doctype html>
+            const documento =
+              c.documento ||
+              c.raw?.documento ||
+              c.raw?.nroDocumento ||
+              "";
+
+            const celular =
+              c.raw?.celularPaciente ||
+              c.raw?.celular ||
+              "";
+
+            const telefonoFijo =
+              c.raw?.telefonoPaciente ||
+              c.raw?.telefono ||
+              "";
+
+            const fechaSolo = new Date(
+              c.fecha.getFullYear(),
+              c.fecha.getMonth(),
+              c.fecha.getDate()
+            );
+            let actualidad = "Futura";
+            if (fechaSolo.getTime() === hoy.getTime()) actualidad = "Hoy";
+            else if (fechaSolo.getTime() < hoy.getTime()) actualidad = "Pasada";
+
+            return `<tr class="${idx % 2 ? "zebra" : ""}">
+              <td class="mono">${safe(hora)}</td>
+              <td>${safe(c.paciente)}</td>
+              <td class="mono">${safe(documento)}</td>
+              <td class="mono">${safe(celular)}</td>
+              <td class="mono">${safe(telefonoFijo)}</td>
+              <td>${safe(c.doctor)}</td>
+              <td>${safe(c.espacio)}</td>
+              <td>${safe(c.comentario)}</td>
+              <td class="status">${safe(c.estado)}</td>
+              <td class="actual">${safe(actualidad)}</td>
+            </tr>`;
+          })
+          .join("");
+
+  const css = `
+    @page { size: A4 portrait; margin: 14mm 16mm; }
+    * { box-sizing: border-box; }
+    html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color:#0f172a; line-height:1.35; }
+
+    /* Cabecera */
+    .hdr {
+      display:flex; flex-direction:column; align-items:center; text-align:center;
+      margin-bottom:14px;
+    }
+    .logo {
+      max-height:120px; width:auto; max-width:100%; object-fit:contain;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,.04));
+    }
+    .brand {
+      margin-top:4px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      font-size:26px; color:#0a86d8;
+    }
+    .sub { margin-top:2px; font-size:12px; color:#64748b; }
+
+    /* Tarjeta info Sede/Doctor */
+    .info-card {
+      width:100%; display:flex; justify-content:center; margin:8px 0 16px;
+    }
+    .info {
+      width:70%; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; border-collapse:separate;
+      font-size:12px;
+    }
+    .info-row { display:flex; border-top:1px solid #e5e7eb; }
+    .info-row:first-child { border-top:0; }
+    .label {
+      width:22%; padding:8px 10px; background:#f8fafc; font-weight:600; color:#334155; border-right:1px solid #e5e7eb;
+    }
+    .value { flex:1; padding:8px 10px; }
+
+    /* Tabla principal */
+    table { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+    thead th {
+      background:#0f172a; color:#ffffff; text-align:center; font-weight:700;
+      padding:9px 8px; position:relative;
+    }
+    thead th + th { box-shadow: inset 1px 0 0 rgba(255,255,255,.08); }
+    tbody td {
+      padding:8px 8px; vertical-align:top; border-bottom:1px solid #e5e7eb;
+    }
+    tbody tr.zebra td { background:#fafafa; }
+    tbody tr.empty td {
+      padding:16px; color:#6b7280; text-align:center; background:#fafafa;
+      border:1px dashed #e5e7eb; border-radius:8px;
+    }
+    td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    td.status { white-space:nowrap; }
+    td.actual { font-weight:600; }
+    /* Bordes exteriores suaves */
+    .tbl-wrap { border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+
+    /* Notas pie */
+    .note { margin-top:10px; font-size:10px; color:#6b7280; }
+
+    /* Evitar cortes feos */
+    tr, .hdr, .info-card { page-break-inside: avoid; }
+  `;
+
+  const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Imprimir – ${safe(companyName)}</title>
+  <title>Agenda – ${safe(companyName)}</title>
   <style>${css}</style>
 </head>
 <body>
@@ -501,21 +565,37 @@ export default function Agenda() {
     <div class="sub">Agenda de citas · ${safe(currentDateLabel)}</div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width:18%">Fecha</th>
-        <th style="width:10%">Hora</th>
-        <th style="width:22%">Paciente</th>
-        <th style="width:20%">Doctor</th>
-        <th style="width:15%">Espacio</th>
-        <th>Comentario</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>
+  <div class="info-card">
+    <div class="info">
+      <div class="info-row"><div class="label">Sede</div><div class="value">${safe(sedeActual)}</div></div>
+      <div class="info-row"><div class="label">Doctor</div><div class="value">${safe(doctorActual)}</div></div>
+    </div>
+  </div>
 
-  <div class="note">${safe(softwareFooter)}. ${safe(new Date().toLocaleString(browserLocale))}</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:9%">Hora</th>
+          <th style="width:17%">Nombre paciente</th>
+          <th style="width:12%">Documento</th>
+          <th style="width:12%">Celular</th>
+          <th style="width:12%">Teléfono</th>
+          <th style="width:10%">Doctor</th>
+          <th style="width:11%">Espacio</th>
+          <th>Comentario</th>
+          <th style="width:9%">Estado</th>
+          <th style="width:9%">Actualidad</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    ${safe(softwareFooter)} · ${safe(new Date().toLocaleString(browserLocale))}
+  </div>
+
   <script>
     window.addEventListener('load', function() {
       try { window.focus(); window.print(); } catch (e) {}
@@ -524,20 +604,21 @@ export default function Agenda() {
 </body>
 </html>`;
 
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
 
-    if (!w) {
-      alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
-      URL.revokeObjectURL(url);
-      return;
-    }
+  if (!w) {
+    alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
+    URL.revokeObjectURL(url);
+    return;
+  }
 
-    const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
-    w.addEventListener?.("load", revoke);
-    setTimeout(revoke, 15000);
-  };
+  const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
+  w.addEventListener?.("load", revoke);
+  setTimeout(revoke, 15000);
+};
+
 
   // ------------ Confirmar / Hoy ------------
   const handleConfirmar = () =>
@@ -1422,7 +1503,7 @@ export default function Agenda() {
                             day.isSelected ? "selected" : "",
                           ]
                             .filter(Boolean)
-                            .join("")}
+                            .join(" ")}
                           onClick={() => day.isCurrentMonth && handleMiniClick(day.date)}
                         >
                           {day.date.getDate()}

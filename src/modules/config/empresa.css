@@ -155,3 +155,8 @@
   opacity: .6;
   cursor: default;
 }
+/* Sidebar sticky y tarjeta limpia (opcional) */
+@media (max-width: 980px){
+  /* En móviles, menú arriba y contenido abajo */
+  .emp-two-col { display:block !important; }
+}

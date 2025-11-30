@@ -1168,9 +1168,9 @@ export default function Dashboard() {
         return <Caja />; // Caja leerá los query params (cobro, patientId)
       case "Config":
         // ⬇️ Si la URL es /config/:slug usamos el router; si no, la portada de config
-        return location.pathname.toLowerCase().includes("/config/")
-          ? <ConfigRouter />
-          : <ConfigSection />;
+        case "Config":
+  return <ConfigRouter />;
+
       case "Inicio":
       default:
         return null;
