@@ -3,9 +3,48 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Metas de branding que la Agenda lee -->
     <meta name="company-name" content="Mi Empresa S.A.S" />
     <meta name="company-logo" content="/assets/logo-empresa.png" />
+    <meta name="software-footer" content="Generado por OdontoCloud" />
+
     <title>OdontoCloud</title>
+
+    <!-- 👇 Sincroniza metas con localStorage: empresa_nombre / empresa_logo_url / software_footer_text -->
+    <script>
+      (function syncBrandingMeta() {
+        function ensureMeta(name, value) {
+          var m = document.querySelector('meta[name="' + name + '"]');
+          if (!m) {
+            m = document.createElement('meta');
+            m.setAttribute('name', name);
+            document.head.appendChild(m);
+          }
+          if (value != null && value !== '') m.setAttribute('content', value);
+        }
+        try {
+          var nombre  = localStorage.getItem('empresa_nombre');
+          var logo    = localStorage.getItem('empresa_logo_url');
+          var footer  = localStorage.getItem('software_footer_text');
+
+          // Si en localStorage hay valores, pisan a las metas por defecto.
+          ensureMeta('company-name',   nombre || document.querySelector('meta[name="company-name"]')?.content || 'OdontoCloud');
+          ensureMeta('company-logo',   logo   || document.querySelector('meta[name="company-logo"]')?.content   || '');
+          ensureMeta('software-footer',footer || document.querySelector('meta[name="software-footer"]')?.content|| 'Generado por OdontoCloud');
+        } catch (e) {
+          console.warn('No fue posible sincronizar branding desde localStorage:', e);
+        }
+
+        // si cambian el branding en otra pestaña, reflejarlo aquí también
+        window.addEventListener('storage', function(ev){
+          if (!ev || !ev.key) return;
+          if (ev.key === 'empresa_nombre' || ev.key === 'empresa_logo_url' || ev.key === 'software_footer_text') {
+            try { syncBrandingMeta(); } catch(_) {}
+          }
+        });
+      })();
+    </script>
 
     <!-- 👇 Paso 2 del fallback SPA (rafgraph): reescribe URLs "fantasma" -->
     <script>
@@ -17,8 +56,8 @@
         }
       })(window.location);
     </script>
-    <script type="module" crossorigin src="/odontocloud-react/assets/index-CV_qHo2x.js"></script>
-    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-TAIXLdwq.css">
+    <script type="module" crossorigin src="/odontocloud-react/assets/index-K92uj4-q.js"></script>
+    <link rel="stylesheet" crossorigin href="/odontocloud-react/assets/index-Bmo_4EHL.css">
   <link rel="manifest" href="/odontocloud-react/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>
