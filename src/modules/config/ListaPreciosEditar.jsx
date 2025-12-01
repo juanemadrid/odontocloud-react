@@ -294,7 +294,7 @@ export default function ListaPreciosEditar() {
   async function seedCatalogoBase() {
     try {
       const colRef = collection(db, "catalogo_categorias");
-    for (const c of DEFAULT_CATS) {
+      for (const c of DEFAULT_CATS) {
         const idAuto = `${c.nombre}`.toLowerCase().normalize("NFD")
           .replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-");
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
@@ -304,6 +304,18 @@ export default function ListaPreciosEditar() {
       console.error(e);
       alert("No se pudo sembrar el catálogo base.");
     }
+  }
+
+  // util: cargar XLSX dinámicamente si no está presente
+  function ensureXLSX() {
+    return new Promise((resolve) => {
+      if (typeof window !== "undefined" && window.XLSX) return resolve(window.XLSX);
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      s.onload = () => resolve(window.XLSX || null);
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
   }
 
   // ---------- incremento porcentual ----------
@@ -338,16 +350,26 @@ export default function ListaPreciosEditar() {
     }
   }
 
-  // ---------- export (MEJORADO: Excel profesional + CSV fallback) ----------
+  // ---------- export (XLSX pro + CSV fallback) ----------
   async function exportar() {
     try {
-      // 1) Construimos la matriz (AOA) con encabezados en el orden exacto
+      // Construcción de datos en orden exacto
       const HEAD = [
         "Categoría", "Código", "Nombre", "Permite desc", "Precio",
         "Genera RIPS", "Es consulta", "Ver en agenda",
         "Nombre en la agenda", "Tiempo", "Identificador", "Cuenta contable"
       ];
-      const aoa = [HEAD];
+      const aoa = [];
+      const titulo = `OdontoCloud · Lista de precios — ${(nombre || "Principal")}`;
+      const fecha = `Exportado: ${new Date().toLocaleString("es-CO")}`;
+
+      // Título y subtítulo (luego los unimos en la hoja)
+      aoa.push([titulo]);
+      aoa.push([fecha]);
+      aoa.push([]);            // línea en blanco
+      aoa.push(HEAD);          // encabezados
+      const headerRowIndex = 4; // 1-based en Excel
+
       const toSiNo = (v) => (v ? "si" : "no");
 
       for (const cat of categorias) {
@@ -373,18 +395,20 @@ export default function ListaPreciosEditar() {
         }
       }
 
-      const XLSX = typeof window !== "undefined" && window.XLSX ? window.XLSX : null;
-      const fileName = `OdontoCloud-ListaPrecios-${(nombre || "Principal")}.xlsx`;
+      // Intentar XLSX primero
+      const XLSX = await ensureXLSX();
+      const fileBase = `OdontoCloud-ListaPrecios-${(nombre || "Principal")}`;
 
-      if (XLSX && XLSX.utils && aoa.length > 1) {
-        // 2) Hoja desde AOA + anchos de columna para que “se vea bonito”
+      if (XLSX && XLSX.utils && aoa.length > headerRowIndex - 1) {
         const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+        // Anchos de columna “bonitos”
         ws["!cols"] = [
           { wch: 22 }, // Categoría
           { wch: 14 }, // Código
           { wch: 36 }, // Nombre
           { wch: 12 }, // Permite desc
-          { wch: 12 }, // Precio
+          { wch: 14 }, // Precio
           { wch: 12 }, // Genera RIPS
           { wch: 12 }, // Es consulta
           { wch: 14 }, // Ver en agenda
@@ -394,6 +418,16 @@ export default function ListaPreciosEditar() {
           { wch: 18 }, // Cuenta contable
         ];
 
+        // Merge del título y del subtítulo sobre todas las columnas
+        ws["!merges"] = [
+          { s: { r:0, c:0 }, e:{ r:0, c:11 } }, // A1:L1
+          { s: { r:1, c:0 }, e:{ r:1, c:11 } }, // A2:L2
+        ];
+
+        // AutoFilter desde encabezados hasta la última fila con datos
+        const lastRow = aoa.length;
+        ws["!autofilter"] = { ref: `A${headerRowIndex}:L${lastRow}` };
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Lista de precios");
 
@@ -401,11 +435,11 @@ export default function ListaPreciosEditar() {
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = fileName;
+        a.download = `${fileBase}.xlsx`;
         a.click();
         URL.revokeObjectURL(a.href);
       } else {
-        // Fallback CSV (manteniendo el mismo orden y formato)
+        // CSV bien formado (mismo orden de columnas)
         const csv = aoa
           .map(row =>
             row
@@ -420,7 +454,7 @@ export default function ListaPreciosEditar() {
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = fileName.replace(".xlsx", ".csv");
+        a.download = `${fileBase}.csv`;
         a.click();
         URL.revokeObjectURL(a.href);
       }

@@ -1,5 +1,6 @@
 // ===============================
-// ⚙️ ConfigRouter.jsx (con redirect por defecto + Lista de precios + EDITAR)
+// ⚙️ ConfigRouter.jsx
+// (redirect por defecto + Lista de precios + Editar + Subruta Productos)
 // ===============================
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -7,7 +8,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import EmpresaDatosBasicos from "./EmpresaDatosBasicos";
 import EmpresaLogo from "./EmpresaLogo";
 import ListaPrecios from "./ListaPrecios";
-import ListaPreciosEditar from "./ListaPreciosEditar"; // ⬅️ NUEVO
+import ListaPreciosEditar from "./ListaPreciosEditar";
+import ListaPreciosProductos from "./ListaPreciosProductos"; // ⬅️ para la subruta /productos
 
 // Mapa de pantallas disponibles (primer nivel /config/:slug)
 const SCREENS = {
@@ -35,7 +37,7 @@ function LeftMenu({ current, onNav }) {
   const items = [
     { slug: "datos-basicos", label: "Datos básicos" },
     { slug: "logo", label: "Logo" },
-    { slug: "lista-de-precios", label: "Lista de precios" },
+    { slug: "lista-de-precios", label: "Lista de precios" }, // 👈 único ítem
     { slug: "consecutivos", label: "Consecutivos", soon: true },
     { slug: "sucursales", label: "Sucursales", soon: true },
     { slug: "metodos-de-pago", label: "Métodos de pago", soon: true },
@@ -107,17 +109,25 @@ export default function ConfigRouter() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const segs = getConfigSegs(pathname);         // ⬅️ ["lista-de-precios","editar",":id"] o []
-  const slug = segs[0] || "";                   // primer nivel
-  const sub = segs[1] || "";                    // segundo nivel (p.ej. "editar")
+  const segs = getConfigSegs(pathname); // p.ej. ["lista-de-precios","productos"] o ["lista-de-precios","editar",":id"]
+  const slug = segs[0] || "";           // primer nivel
+  const sub  = segs[1] || "";           // segundo nivel
   const base = getDashBase(pathname);
 
-  // ¿Estamos en /config/lista-de-precios/editar/:id ?
-  const isListaPreciosEditar = slug === "lista-de-precios" && sub === "editar";
+  // Subrutas de "lista-de-precios"
+  const isListaPreciosRoot      = slug === "lista-de-precios" && !sub;
+  const isListaPreciosProductos = slug === "lista-de-precios" && sub === "productos";
+  const isListaPreciosEditar    = slug === "lista-de-precios" && sub === "editar";
 
-  const Screen = isListaPreciosEditar
-    ? ListaPreciosEditar
-    : SCREENS[slug];
+  // Elegimos qué pantalla renderizar:
+  let Screen = SCREENS[slug] || RightPlaceholder;
+  if (isListaPreciosEditar) {
+    Screen = ListaPreciosEditar;          // /config/lista-de-precios/editar/:id
+  } else if (isListaPreciosProductos) {
+    Screen = ListaPreciosProductos;       // /config/lista-de-precios/productos
+  } else if (isListaPreciosRoot) {
+    Screen = ListaPrecios;                // /config/lista-de-precios (clínicos)
+  }
 
   const go = (s) => navigate(`${base}/config/${s}`);
 
@@ -139,7 +149,7 @@ export default function ConfigRouter() {
         borderRadius: 12,
       }}
     >
-      {/* resalta la sección raíz aunque estés en editar */}
+      {/* el menú izquierdo NO cambia */}
       <LeftMenu current={slug} onNav={go} />
 
       <div
@@ -151,7 +161,7 @@ export default function ConfigRouter() {
           padding: 16,
         }}
       >
-        {!slug ? <RightPlaceholder /> : Screen ? <Screen /> : <RightPlaceholder />}
+        {!slug ? <RightPlaceholder /> : <Screen />}
       </div>
     </div>
   );
