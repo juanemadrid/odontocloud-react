@@ -44,8 +44,11 @@ function useInlineStyles() {
       /* Chips / botones de la barra (sólidos) */
       .chip { height:34px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; cursor:pointer; font-weight:600; background:#f9fafb; transition:.15s }
       .chip:hover { background:#e5e7eb }
-      .chip.blue  { background:#3b82f6; color:#fff; border:none }
-      .chip.green { background:#22c55e; color:#fff; border:none }
+      .chip.blue   { background:#3b82f6; color:#fff; border:none }
+      .chip.green  { background:#22c55e; color:#fff; border:none }
+      .chip.orange { background:#f59e0b; color:#fff; border:none }
+      .chip.indigo { background:#6366f1; color:#fff; border:none }
+      .chip.gray   { background:#64748b; color:#fff; border:none }
 
       .name-row { display:flex; align-items:center; gap:8px; }
       .text-inp { height:38px; padding:0 10px; border-radius:8px; border:1px solid #cbd5e1; outline:none; width:280px }
@@ -79,9 +82,10 @@ function useInlineStyles() {
       .modal .bd{padding:16px}
       .modal .ft{padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end}
 
+      /* Pestañas dentro del modal de Categoría */
       .tabs{display:flex;gap:6px;border-bottom:1px solid #e5e7eb;margin-bottom:12px;padding:0 4px}
-      .tab{padding:8px 10px;border-radius:8px 8px 0 0;border:1px solid #e5e7eb;border-bottom:none;background:#f8fafc;cursor:pointer;font-weight:600}
-      .tab.active{background:#fff}
+      .tab{padding:8px 10px;border-radius:8px 8px 0 0;border:1px solid #e5e7eb;border-bottom:none;background:#f8fafc;cursor:pointer;font-weight:700;color:#334155}
+      .tab.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
 
       .row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
       .inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none}
@@ -280,7 +284,11 @@ export default function ListaPreciosEditar() {
     try {
       const colRef = collection(db, "catalogo_categorias");
       for (const c of DEFAULT_CATS) {
-        const idAuto = `${c.nombre}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-");
+        const idAuto = `${c.nombre}`
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "-");
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
       }
       alert("Catálogo base creado/actualizado. Vuelve a abrir 'Agregar categoría'.");
@@ -412,10 +420,10 @@ export default function ListaPreciosEditar() {
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="chip blue"  title="Exportar"      onClick={exportar}>Exportar</button>
-            <button className="chip"       title="Incrementar %" onClick={()=>{setPct(0);setRoundMode("none");setShowBulk(true);}}>%</button>
-            <button className="chip"       title="Opciones"      onClick={() => setShowOptions(true)}>⚙️</button>
-            <button className="chip green"                       onClick={openCats}>+ Agregar categoría</button>
+            <button className="chip blue"   title="Exportar"      onClick={exportar}>Exportar</button>
+            <button className="chip orange" title="Incrementar %" onClick={()=>{setPct(0);setRoundMode("none");setShowBulk(true);}}>%</button>
+            <button className="chip indigo" title="Opciones"      onClick={() => setShowOptions(true)}>⚙️ Opciones</button>
+            <button className="chip green"  onClick={openCats}>+ Agregar categoría</button>
           </div>
         </div>
 
@@ -465,7 +473,7 @@ export default function ListaPreciosEditar() {
 
         {/* volver */}
         <div style={{ marginTop: 16 }}>
-          <button className="chip" onClick={() => navigate(baseConfig)}>← Volver</button>
+          <button className="chip gray" onClick={() => navigate(baseConfig)}>← Volver</button>
         </div>
       </div>
 
@@ -491,7 +499,7 @@ export default function ListaPreciosEditar() {
               <p className="muted">Se recorren todas las categorías y sus ítems y se actualiza el campo <b>precio</b>.</p>
             </div>
             <div className="ft">
-              <button className="chip" onClick={()=>setShowBulk(false)}>Cerrar</button>
+              <button className="chip gray" onClick={()=>setShowBulk(false)}>Cerrar</button>
               <button className="chip green" onClick={applyBulkIncrement}>Incrementar</button>
             </div>
           </div>
@@ -508,7 +516,7 @@ export default function ListaPreciosEditar() {
               <button className="chip green" onClick={seedCatalogoBase}>Sembrar catálogo base</button>
             </div>
             <div className="ft">
-              <button className="chip" onClick={()=>setShowOptions(false)}>Cerrar</button>
+              <button className="chip gray" onClick={()=>setShowOptions(false)}>Cerrar</button>
             </div>
           </div>
         </div>
@@ -566,7 +574,7 @@ export default function ListaPreciosEditar() {
               )}
             </div>
             <div className="ft">
-              <button className="chip" onClick={()=>setShowCats(false)}>Cerrar</button>
+              <button className="chip gray" onClick={()=>setShowCats(false)}>Cerrar</button>
               {catTab === "nueva" && <button className="chip green" onClick={addNewCategory}>Guardar</button>}
             </div>
           </div>
