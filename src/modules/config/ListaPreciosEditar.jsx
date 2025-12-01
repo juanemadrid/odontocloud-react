@@ -16,7 +16,7 @@ function getDashBase(pathname = "") {
   return i >= 0 ? `/${segs.slice(0, i + 1).join("/")}` : "";
 }
 
-// ---------- catálogo por defecto (para que nunca se vea vacío) ----------
+// ---------- catálogo por defecto ----------
 const DEFAULT_CATS = [
   { nombre: "Rehabilitación Oral", comentario: "" },
   { nombre: "Implantología", comentario: "" },
@@ -29,7 +29,7 @@ const DEFAULT_CATS = [
   { nombre: "Psicología", comentario: "" },
 ];
 
-// ---------- estilos inline mínimos (por si el css global no aplica) ----------
+// ---------- estilos inline mínimos ----------
 function useInlineStyles() {
   useEffect(() => {
     const ID = "lp-edit-inline";
@@ -41,7 +41,7 @@ function useInlineStyles() {
       .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04) }
       .toolbar { display:flex; gap:8px; align-items:center; }
 
-      /* Chips / botones de la barra (sólidos) */
+      /* Chips */
       .chip { height:34px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; cursor:pointer; font-weight:600; background:#f9fafb; transition:.15s }
       .chip:hover { background:#e5e7eb }
       .chip.blue   { background:#3b82f6; color:#fff; border:none }
@@ -60,7 +60,7 @@ function useInlineStyles() {
       th { text-align:left; border-bottom:1px solid #e2e8f0; color:#475569; font-weight:700 }
       tr + tr { border-top:1px solid #e2e8f0 }
 
-      /* Botones fila (sólidos) */
+      /* Botones fila */
       .btn { padding:4px 8px; border:none; border-radius:6px; color:#fff; cursor:pointer; margin-right:6px; font-weight:600; transition:.12s }
       .btn:hover { opacity:.9 }
       .btn.blue   { background:#3b82f6 }
@@ -82,7 +82,7 @@ function useInlineStyles() {
       .modal .bd{padding:16px}
       .modal .ft{padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end}
 
-      /* Pestañas dentro del modal de Categoría */
+      /* Pestañas modal Categoría */
       .tabs{display:flex;gap:6px;border-bottom:1px solid #e5e7eb;margin-bottom:12px;padding:0 4px}
       .tab{padding:8px 10px;border-radius:8px 8px 0 0;border:1px solid #e5e7eb;border-bottom:none;background:#f8fafc;cursor:pointer;font-weight:700;color:#334155}
       .tab.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
@@ -91,7 +91,21 @@ function useInlineStyles() {
       .inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none}
       .ta{border:1px solid #cbd5e1;border-radius:8px;padding:8px;min-height:80px;outline:none}
 
-      @media (max-width:640px){ .text-inp{ width:100% } .row{flex-direction:column;align-items:stretch} }
+      /* —— Estilos del modal de Incremento —— */
+      .field-col{display:flex;flex-direction:column;gap:6px;width:100%}
+      .label-strong{font-weight:700;color:#0f172a}
+      .percent-row{display:flex;align-items:center;gap:10px}
+      .prefix{width:40px;height:36px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#334155;font-weight:700}
+      .num-inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none;flex:1;min-width:160px}
+      .checks{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+      .check-row{display:flex;align-items:center;gap:10px}
+      .check-row input{width:18px;height:18px}
+
+      @media (max-width:640px){
+        .text-inp{ width:100% }
+        .row{flex-direction:column;align-items:stretch}
+        .percent-row{flex-direction:row}
+      }
     `;
     const tag = document.createElement("style");
     tag.id = ID;
@@ -136,7 +150,6 @@ export default function ListaPreciosEditar() {
     async function loadAll() {
       setLoading(true);
 
-      // doc principal
       try {
         const ref = doc(db, "listas_precios", id);
         const snap = await getDoc(ref);
@@ -146,7 +159,6 @@ export default function ListaPreciosEditar() {
         setNombre("");
       }
 
-      // categorías
       try {
         const catRef = collection(db, "listas_precios", id, "categorias");
         const catSnap = await getDocs(catRef);
@@ -235,7 +247,6 @@ export default function ListaPreciosEditar() {
     try {
       const snap = await getDocs(collection(db, "catalogo_categorias"));
       const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      // si está vacío, usamos DEFAULT_CATS (para que se vea como OralDrive)
       setCatalogo(arr.length ? arr : DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
     } catch {
       setCatalogo(DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
@@ -279,16 +290,13 @@ export default function ListaPreciosEditar() {
     }
   }
 
-  // ---------- si quieres “dejar sembrado” el catálogo base en Firestore ----------
+  // ---------- sembrar catálogo base ----------
   async function seedCatalogoBase() {
     try {
       const colRef = collection(db, "catalogo_categorias");
       for (const c of DEFAULT_CATS) {
-        const idAuto = `${c.nombre}`
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "-");
+        const idAuto = `${c.nombre}`.toLowerCase().normalize("NFD")
+          .replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-");
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
       }
       alert("Catálogo base creado/actualizado. Vuelve a abrir 'Agregar categoría'.");
@@ -330,7 +338,7 @@ export default function ListaPreciosEditar() {
     }
   }
 
-  // ---------- export (window.XLSX si está, sino CSV) ----------
+  // ---------- export ----------
   async function exportar() {
     try {
       const rows = [];
@@ -477,26 +485,59 @@ export default function ListaPreciosEditar() {
         </div>
       </div>
 
-      {/* ---------- Modal Incremento % ---------- */}
+      {/* ---------- Modal Incremento % (nuevo layout) ---------- */}
       {showBulk && (
         <div className="modal-mask" onClick={() => setShowBulk(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="hd">Incrementar todos los precios</div>
             <div className="bd">
-              <div className="row">
-                <label style={{ minWidth: 170 }}>Porcentaje de incremento</label>
-                <input className="inp" type="number" value={pct} onChange={(e) => setPct(e.target.value)} placeholder="Ej: 10" />
-                <span className="muted">%</span>
+              <div className="field-col">
+                <label className="label-strong">Porcentaje de incremento *</label>
+                <div className="percent-row">
+                  <div className="prefix">%</div>
+                  <input
+                    className="num-inp"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ingrese el porcentaje"
+                    value={pct}
+                    onChange={(e)=>setPct(e.target.value)}
+                  />
+                </div>
+
+                <div className="checks">
+                  <label className="check-row">
+                    <input
+                      type="radio"
+                      name="round"
+                      checked={roundMode === "down"}
+                      onChange={()=>setRoundMode("down")}
+                    />
+                    <span>Redondear hacia abajo</span>
+                  </label>
+
+                  <label className="check-row">
+                    <input
+                      type="radio"
+                      name="round"
+                      checked={roundMode === "up"}
+                      onChange={()=>setRoundMode("up")}
+                    />
+                    <span>Redondear hacia arriba</span>
+                  </label>
+
+                  <label className="check-row">
+                    <input
+                      type="radio"
+                      name="round"
+                      checked={roundMode === "none"}
+                      onChange={()=>setRoundMode("none")}
+                    />
+                    <span>No redondear</span>
+                  </label>
+                </div>
               </div>
-              <div className="row">
-                <label style={{ minWidth: 170 }}>Redondeo</label>
-                <select className="inp" value={roundMode} onChange={(e)=>setRoundMode(e.target.value)}>
-                  <option value="down">Redondear hacia abajo</option>
-                  <option value="up">Redondear hacia arriba</option>
-                  <option value="none">No redondear</option>
-                </select>
-              </div>
-              <p className="muted">Se recorren todas las categorías y sus ítems y se actualiza el campo <b>precio</b>.</p>
             </div>
             <div className="ft">
               <button className="chip gray" onClick={()=>setShowBulk(false)}>Cerrar</button>
