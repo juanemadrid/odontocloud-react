@@ -294,7 +294,7 @@ export default function ListaPreciosEditar() {
   async function seedCatalogoBase() {
     try {
       const colRef = collection(db, "catalogo_categorias");
-      for (const c of DEFAULT_CATS) {
+    for (const c of DEFAULT_CATS) {
         const idAuto = `${c.nombre}`.toLowerCase().normalize("NFD")
           .replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-");
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
@@ -338,63 +338,89 @@ export default function ListaPreciosEditar() {
     }
   }
 
-  // ---------- export ----------
+  // ---------- export (MEJORADO: Excel profesional + CSV fallback) ----------
   async function exportar() {
     try {
-      const rows = [];
+      // 1) Construimos la matriz (AOA) con encabezados en el orden exacto
+      const HEAD = [
+        "Categoría", "Código", "Nombre", "Permite desc", "Precio",
+        "Genera RIPS", "Es consulta", "Ver en agenda",
+        "Nombre en la agenda", "Tiempo", "Identificador", "Cuenta contable"
+      ];
+      const aoa = [HEAD];
+      const toSiNo = (v) => (v ? "si" : "no");
+
       for (const cat of categorias) {
         const itemsRef = collection(db, "listas_precios", id, "categorias", cat.id, "items");
         const itemsSnap = await getDocs(itemsRef).catch(() => null);
-        const items = itemsSnap ? itemsSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [{}];
+        const items = itemsSnap ? itemsSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
 
         for (const it of items) {
-          rows.push({
-            Categoria: cat.nombre || "",
-            Código: it.codigo || "",
-            Nombre: it.nombre || "",
-            "Permite desc": (it.permite_descuento ? "SI" : "No"),
-            Precio: Number(it.precio || 0),
-            "Genera RIPS": (it.genera_rips ? "SI" : "No"),
-            "Es consulta": (it.es_consulta ? "SI" : "No"),
-            "Ver en agenda": (it.ver_en_agenda ? "SI" : "No"),
-            "Nombre en la agenda": it.nombre_en_agenda || "",
-            Tiempo: it.tiempo || "",
-            Identificador: it.identificador || "",
-            "Cuenta contable": it.cuenta_contable || "",
-          });
+          aoa.push([
+            cat.nombre || "",
+            it.codigo || "",
+            it.nombre || "",
+            toSiNo(!!it.permite_descuento),
+            Number(it.precio || 0),
+            toSiNo(!!it.genera_rips),
+            toSiNo(!!it.es_consulta),
+            toSiNo(!!it.ver_en_agenda),
+            it.nombre_en_agenda || "",
+            Number(it.tiempo || 0),
+            it.identificador || "",
+            it.cuenta_contable || "",
+          ]);
         }
       }
 
       const XLSX = typeof window !== "undefined" && window.XLSX ? window.XLSX : null;
+      const fileName = `OdontoCloud-ListaPrecios-${(nombre || "Principal")}.xlsx`;
 
-      if (XLSX && XLSX.utils && rows.length) {
+      if (XLSX && XLSX.utils && aoa.length > 1) {
+        // 2) Hoja desde AOA + anchos de columna para que “se vea bonito”
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws["!cols"] = [
+          { wch: 22 }, // Categoría
+          { wch: 14 }, // Código
+          { wch: 36 }, // Nombre
+          { wch: 12 }, // Permite desc
+          { wch: 12 }, // Precio
+          { wch: 12 }, // Genera RIPS
+          { wch: 12 }, // Es consulta
+          { wch: 14 }, // Ver en agenda
+          { wch: 28 }, // Nombre en la agenda
+          { wch: 10 }, // Tiempo
+          { wch: 16 }, // Identificador
+          { wch: 18 }, // Cuenta contable
+        ];
+
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, "Lista de precios");
+
         const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${(nombre || "Lista")}.xlsx`;
+        a.download = fileName;
         a.click();
         URL.revokeObjectURL(a.href);
       } else {
-        const headers = Object.keys(rows[0] || {
-          Categoria:"", Código:"", Nombre:"", "Permite desc":"", Precio:"", "Genera RIPS":"", "Es consulta":"", "Ver en agenda":"", "Nombre en la agenda":"", Tiempo:"", Identificador:"", "Cuenta contable":""
-        });
-        const csv = [
-          headers.join(","),
-          ...rows.map(r => headers.map(h => {
-            const v = r[h] ?? "";
-            const s = String(v).replace(/"/g,'""');
-            return /[",\n]/.test(s) ? `"${s}"` : s;
-          }).join(","))
-        ].join("\n");
+        // Fallback CSV (manteniendo el mismo orden y formato)
+        const csv = aoa
+          .map(row =>
+            row
+              .map(v => {
+                const s = String(v ?? "").replace(/"/g, '""');
+                return /[",\n]/.test(s) ? `"${s}"` : s;
+              })
+              .join(",")
+          )
+          .join("\n");
 
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${(nombre || "Lista")}.csv`;
+        a.download = fileName.replace(".xlsx", ".csv");
         a.click();
         URL.revokeObjectURL(a.href);
       }
