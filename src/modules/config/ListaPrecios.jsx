@@ -1,495 +1,205 @@
 // ===============================
-// 💰 ListaPrecios.jsx
-// Configuración -> Lista de precios (listado + formulario /nuevo)
+// 🧾 ListaPrecios.jsx
+// Configuración → Lista de precios (Clínicos + Productos unificados estilo OralDrive)
 // ===============================
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { collection, getDocs, addDoc, doc, deleteDoc, getDoc, setDoc } from "firebase/firestore";
+import {
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc
+} from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 
-// helpers de ruta para trabajar dentro de /dashboard_*/config/...
+// Si más adelante quieres usar tu componente propio de productos,
+// puedes importarlo y enchufarlo dentro de <ListaProductosInline />
+// import ListaPreciosProductos from "./ListaPreciosProductos";
+
+// ---------- helpers ----------
 function getDashBase(pathname = "") {
   const segs = pathname.split("/").filter(Boolean);
   const i = segs.findIndex((s) => s.startsWith("dashboard_"));
   return i >= 0 ? `/${segs.slice(0, i + 1).join("/")}` : "";
 }
-const endsWith = (p, tail) => p.toLowerCase().endsWith(tail.toLowerCase());
 
-/* -------------------- UTIL: exportar Excel/CSV -------------------- */
-async function exportarExcelPlantilla(nombreArchivo = "OdontoCloud-PriceList") {
-  // Cabeceras exactamente como en tu imagen
-  const headers = [
-    "Categoría",
-    "Código",
-    "Nombre",
-    "Permite desc",
-    "Precio",
-    "Genera RIPS",
-    "Es consulta",
-    "Ver en la agenda",
-    "Nombre en la agenda",
-    "Tiempo",
-    "Identificador",
-    "Ver en agenda",
-    "Cuenta contable",
-  ];
-
-  // intentamos usar SheetJS desde CDN; si falla, exportamos CSV
-  try {
-    // Import dinámico desde CDN (funciona en Vite)
-    const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs");
-
-    // Hoja 1: Lista de precios (solo headers, filas en blanco para que llenes)
-    const data = [headers];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Lista de precios");
-
-    // (opcional) Hojas extra si luego las llenas:
-    const ws2 = XLSX.utils.aoa_to_sheet([["Formato"]]);
-    XLSX.utils.book_append_sheet(wb, ws2, "Formatos");
-    const ws3 = XLSX.utils.aoa_to_sheet([["Identificador", "Descripción"]]);
-    XLSX.utils.book_append_sheet(wb, ws3, "Identificadores de tipo de cita");
-
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${nombreArchivo}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    // Fallback: CSV (Excel lo abre perfecto)
-    console.warn("No se pudo cargar XLSX, exportando CSV.", err);
-    const csv = [headers.join(",")].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${nombreArchivo}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-}
-
-/* -------------------- Formulario: Nueva lista -------------------- */
-function NuevoPrecioForm({ tipo = "clinicos", onCancel, onSaved }) {
-  const [nombre, setNombre] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const guardar = async () => {
-    if (!nombre.trim()) {
-      alert("Por favor, escribe el nombre de la lista.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const ahora = new Date().toLocaleString("es-CO", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      await addDoc(collection(db, "listas_precios"), {
-        nombre: nombre.trim(),
-        tipo,                    // clinicos | productos | servicios
-        creado: ahora,
-        actualizado: ahora,
-        enUso: true,
-      });
-      onSaved?.();
-    } catch (e) {
-      console.error("Error creando lista:", e);
-      alert("No se pudo crear la lista. Revisa consola.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="card" style={{ position: "relative" }}>
-      {/* botón Exportar */}
-      <button
-        type="button"
-        title="Exportar"
-        className="ghost-chip"
-        style={{
-          position: "absolute",
-          right: 16,
-          top: 16,
-          height: 34,
-          padding: "0 12px",
-          borderRadius: 999,
-          border: "1px solid #e5e7eb",
-          background: "#eff6ff",
-          fontWeight: 600,
-          cursor: "pointer",
-          opacity: 0.9,
-        }}
-        onClick={() => exportarExcelPlantilla("OdontoCloud-PriceList")}
-      >
-        Exportar
-      </button>
-
-      <div
-        className="lp-formbox"
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 10,
-          padding: 16,
-          background: "#fff",
-          maxWidth: 720,
-        }}
-      >
-        <label
-          htmlFor="nombreLista"
-          style={{ display: "block", fontWeight: 700, marginBottom: 8 }}
-        >
-          Nombre *
-        </label>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input
-            id="nombreLista"
-            type="text"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre de la lista"
-            style={{
-              flex: 1,
-              height: 38,
-              padding: "0 10px",
-              borderRadius: 8,
-              border: `1px solid ${nombre ? "#cbd5e1" : "#fca5a5"}`,
-              outline: "none",
-            }}
-          />
-          <button
-            type="button"
-            title="Sugerir nombre"
-            className="round-tip"
-            onClick={() =>
-              setNombre("Lista de precios " + new Date().toLocaleDateString("es-CO"))
-            }
-            style={{
-              height: 38,
-              width: 38,
-              borderRadius: 999,
-              border: "1px solid #e5e7eb",
-              background: "#f9fafb",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            ⓘ
-          </button>
-        </div>
-
-        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            onClick={guardar}
-            disabled={saving}
-            className="save-btn"
-            style={{
-              height: 36,
-              padding: "0 14px",
-              borderRadius: 8,
-              border: 0,
-              background: "#22c55e",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="neutral-btn"
-            style={{
-              height: 36,
-              padding: "0 14px",
-              borderRadius: 8,
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------- Listado + Tabs -------------------- */
-export default function ListaPrecios() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-
-  const baseDash = useMemo(() => getDashBase(pathname), [pathname]);
-  const baseConfig = `${baseDash}/config/lista-de-precios`;
-  const isNuevo = endsWith(pathname, "/config/lista-de-precios/nuevo");
-
-  const [tab, setTab] = useState("clinicos");
-  const [precios, setPrecios] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [reloadTick, setReloadTick] = useState(0);
-
-  // 🔧 CSS FORZADO – estructura base
+// ---------- estilos inline unificados ----------
+function useInlineStyles() {
   useEffect(() => {
-    const STYLE_ID = "lp-inline-styles-2";
-    if (!document.getElementById(STYLE_ID)) {
-      const css = `
-        .oc-main-content.lp { padding: 16px 20px !important; }
-        .oc-section-title { margin-bottom: 16px !important; }
-        .oc-section-title h2 { margin: 0 !important; font-weight: 800 !important; font-size: 20px !important; color: #0f172a !important; }
-        .lp .card { background:#fff !important; border:1px solid #e5e7eb !important; border-radius:10px !important; padding:16px !important; box-shadow: 0 2px 8px rgba(0,0,0,.04) !important; }
-        .lp .lp-formbox { width:100% !important; max-width: 900px !important; }
-        .lp .card .lp-formbox input[type="text"] { width: 100% !important; }
-        .lp .table-responsive { width:100% !important; overflow-x:auto !important; }
-        .lp .table-responsive table { width:100% !important; border-collapse: collapse !important; }
-        .lp .table-responsive th, .lp .table-responsive td { white-space: nowrap !important; }
-        .lp .tabs-btn { padding: 8px 14px !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 600 !important; cursor: pointer !important; }
-        @media (max-width: 640px){ .oc-main-content.lp { padding: 12px !important; } .oc-section-title h2 { font-size: 18px !important; } }
-      `;
-      const tag = document.createElement("style");
-      tag.id = STYLE_ID;
-      tag.appendChild(document.createTextNode(css));
-      document.head.appendChild(tag);
-    }
-  }, []);
-
-  // 🔧 CSS COLORES BOTONES – asegura fondo sólido
-  useEffect(() => {
-    const ID = "lp-solid-btns";
+    const ID = "lp-oraldrive-unificado";
     if (document.getElementById(ID)) return;
     const css = `
-      .lp .tabs-btn{appearance:none!important;-webkit-appearance:none!important;border:1px solid #cbd5e1!important;font-weight:600!important;cursor:pointer!important}
-      .lp .tabs-btn{background:#f8fafc!important;color:#1e293b!important}
-      .lp .tabs-btn.active{background:#2563eb!important;color:#fff!important;border-color:#1d4ed8!important}
+      .lp-wrap{padding:0;}
+      .lp-h2{margin:0 0 12px;font-weight:800;font-size:20px;color:#0f172a;}
 
-      .lp .save-btn{appearance:none!important;-webkit-appearance:none!important;border:none!important;background:#22c55e!important;color:#fff!important}
-      .lp .neutral-btn{appearance:none!important;-webkit-appearance:none!important;border:1px solid #e5e7eb!important;background:#fff!important;color:#111827!important}
+      /* Tabs arriba */
+      .lp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+      .lp-pill{padding:7px 16px;border-radius:999px;border:1px solid #d1d5db;background:#fff;
+        font-weight:600;color:#374151;cursor:pointer;font-size:14px;transition:.2s;}
+      .lp-pill:hover{background:#f3f4f6;}
+      .lp-pill.active{background:#2b6cb0;color:#fff;border-color:#2b6cb0;}
 
-      .lp .btn-blue{appearance:none!important;-webkit-appearance:none!important;border:none!important;background:#3b82f6!important;color:#fff!important}
-      .lp .btn-sky{appearance:none!important;-webkit-appearance:none!important;border:none!important;background:#06b6d4!important;color:#fff!important}
-      .lp .btn-red{appearance:none!important;-webkit-appearance:none!important;border:none!important;background:#ef4444!important;color:#fff!important}
+      /* Card y encabezados internos */
+      .lp-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+      .lp-card-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+      .lp-subtitle{font-size:16px;font-weight:800;color:#111827;margin:0 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}
 
-      .lp .round-tip{appearance:none!important;-webkit-appearance:none!important;background:#f9fafb!important;border:1px solid #e5e7eb!important;color:#111827!important}
-      .lp .ghost-chip{appearance:none!important;-webkit-appearance:none!important;background:#eff6ff!important;border:1px solid #e5e7eb!important;color:#0f172a!important;opacity:1!important}
+      /* Botón chip y botón principal */
+      .chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #d1d5db;
+        background:#fff;color:#374151;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap;}
+      .chip:hover{background:#f3f4f6;}
+      .btn-primary{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:none;cursor:pointer;
+        font-weight:700;font-size:14px;white-space:nowrap;background:#84cc16;color:#fff;}
+      .btn-primary:hover{filter:brightness(.97);}
+
+      /* Inputs */
+      .lp-input{height:36px;border:1px solid #d1d5db;border-radius:8px;padding:0 12px;outline:none;font-size:14px;background:#fff;}
+      .lp-input:focus{border-color:#9ca3af;box-shadow:0 0 0 3px rgba(148,163,184,.15);}
+
+      /* Tabla */
+      .lp-table-wrap{overflow-x:hidden;width:100%;}
+      .lp-card table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;}
+      thead tr{background:#f9fafb;}
+      th,td{padding:8px 10px;white-space:normal;word-break:break-word;vertical-align:middle;}
+      th{text-align:left;border-bottom:1px solid #e5e7eb;font-weight:700;color:#475569;}
+      tbody tr{border-top:1px solid #f1f5f9;}
+      .muted{color:#6b7280;}
+
+      /* Badges y acciones */
+      .badge{display:inline-block;padding:5px 10px;border-radius:999px;font-weight:700;font-size:12px;line-height:1;white-space:nowrap;}
+      .badge.green{background:#e8f7ee;color:#16a34a;border:1px solid #cbead7;}
+      .btn-soft{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;border:none;cursor:pointer;
+        font-weight:700;font-size:13px;white-space:nowrap;background:#22c55e;color:#fff;}
+      .btn-soft:hover{filter:brightness(.95);}
+
+      .lp-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;}
+      .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:.2s;}
+      .iconbtn.green{background:#ecfdf5;color:#16a34a;border:1px solid #bbf7d0;}
+      .iconbtn.blue{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}
+      .iconbtn.red{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+      .iconbtn:hover{filter:brightness(.97);}
+      .iconbtn svg{width:16px;height:16px;}
     `;
     const tag = document.createElement("style");
     tag.id = ID;
     tag.appendChild(document.createTextNode(css));
     document.head.appendChild(tag);
   }, []);
+}
 
-  // Cargar datos de Firestore
+// ===============================
+// CLÍNICOS
+// ===============================
+function ListaClinicosInline() {
+  const [loading, setLoading] = useState(true);
+  const [listas, setListas] = useState([]);
+  const [modo, setModo] = useState("list");
+  const [nombre, setNombre] = useState("");
+
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const baseDash = useMemo(() => getDashBase(pathname), [pathname]);
+
   useEffect(() => {
-    const loadData = async () => {
+    (async () => {
       setLoading(true);
       try {
-        const ref = collection(db, "listas_precios");
-        const snap = await getDocs(ref);
-        const arr = snap.docs.map((d) => ({
-          id: d.id,
-          nombre: d.data().nombre || "Sin nombre",
-          creado: d.data().creado || "—",
-          actualizado: d.data().actualizado || "—",
-          enUso: d.data().enUso ?? true,
-        }));
-        setPrecios(arr);
-      } catch (e) {
-        console.error("Error cargando listas:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [reloadTick]);
+        const snap = await getDocs(collection(db, "listas_precios"));
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        arr.sort((a, b) => (String(b.actualizado||b.creado||"")).localeCompare(String(a.actualizado||a.creado||"")));
+        setListas(arr);
+      } finally { setLoading(false); }
+    })();
+  }, []);
 
-  // acciones de la fila
-  const editar = (id) => navigate(`${baseConfig}/editar/${id}`);
-
-  const duplicar = async (id) => {
-    try {
-      const ref = doc(db, "listas_precios", id);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return alert("No se encontró la lista para duplicar.");
-      const data = snap.data();
-      const ahora = new Date().toLocaleString("es-CO");
-      // nuevo doc con nombre " (copia)"
-      await addDoc(collection(db, "listas_precios"), {
-        ...data,
-        nombre: `${data.nombre || "Lista"} (copia)`,
-        creado: ahora,
-        actualizado: ahora,
-      });
-      setReloadTick((t) => t + 1);
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo duplicar la lista.");
-    }
+  const crear = async () => {
+    if (!nombre.trim()) return alert("Escribe el nombre de la lista.");
+    const ahora = new Date().toLocaleString("es-CO");
+    const data = { nombre: nombre.trim(), creado: ahora, actualizado: ahora, en_uso: false, tipo: "clinicos" };
+    const ref = await addDoc(collection(db, "listas_precios"), data);
+    setListas((prev) => [{ id: ref.id, ...data }, ...prev]);
+    setNombre(""); setModo("list");
   };
 
-  const eliminar = async (id) => {
-    if (!confirm("¿Eliminar esta lista de precios?")) return;
-    try {
-      await deleteDoc(doc(db, "listas_precios", id));
-      setPrecios((prev) => prev.filter((x) => x.id !== id));
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo eliminar.");
-    }
+  const usar = async (row) => {
+    const snap = await getDocs(collection(db, "listas_precios"));
+    await Promise.all(snap.docs.map((d) => updateDoc(doc(db, "listas_precios", d.id), { en_uso: d.id === row.id })));
+    setListas((prev) => prev.map((x) => ({ ...x, en_uso: x.id === row.id })));
   };
 
-  const irNuevo = () => navigate(`${baseConfig}/nuevo`);
-  const volverListado = () => navigate(baseConfig);
+  const eliminar = async (row) => {
+    if (!window.confirm(`¿Eliminar "${row?.nombre}"?`)) return;
+    await deleteDoc(doc(db, "listas_precios", row.id));
+    setListas((prev) => prev.filter((x) => x.id !== row.id));
+  };
+
+  const clonar = async (row) => {
+    const ahora = new Date().toLocaleString("es-CO");
+    const { id, ...base } = row;
+    const payload = { ...base, nombre: `${row?.nombre || "Lista"} (copia)`, en_uso: false, creado: ahora, actualizado: ahora };
+    const ref = await addDoc(collection(db, "listas_precios"), payload);
+    setListas((prev) => [{ id: ref.id, ...payload }, ...prev]);
+  };
+
+  const irEditar = (row) => navigate(`${baseDash}/config/lista-de-precios/editar/${row.id}`);
+
+  const EditIcon  = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 19h4l9-9-4-4-9 9v4zM14.5 6.5l3 3"/></svg>);
+  const CopyIcon  = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>);
+  const TrashIcon = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12l-1 14H7L6 7zm3-4h6l1 2H8l1-2z"/></svg>);
+  const CheckIcon = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>);
 
   return (
-    <div className="oc-main-content lp">
-      <div className="oc-section-title">
-        <h2>
-          Configuración · {isNuevo ? "Nueva lista de precios" : "Lista de precios"}
-        </h2>
-      </div>
+    <div className="lp-card">
+      <h3 className="lp-subtitle">Lista de precios clínicos</h3>
 
-      {/* Si estamos en /nuevo, renderiza el formulario */}
-      {isNuevo ? (
-        <NuevoPrecioForm
-          tipo={tab}
-          onCancel={volverListado}
-          onSaved={() => {
-            setReloadTick((t) => t + 1);
-            volverListado();
-          }}
-        />
-      ) : (
-        <div className="card">
-          {/* Pestañas + botón nuevo */}
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginBottom: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            {[
-              { key: "clinicos", label: "Lista de precios clínicos" },
-              { key: "productos", label: "Lista de precios productos" },
-              { key: "servicios", label: "Lista de precios servicios" },
-            ].map((t) => (
-              <button
-                key={t.key}
-                className={`tabs-btn ${tab === t.key ? "active" : ""}`}
-                onClick={() => setTab(t.key)}
-                style={{
-                  background: tab === t.key ? "#2563eb" : "#f8fafc",
-                  color: tab === t.key ? "#fff" : "#1e293b",
-                }}
-              >
-                {t.label}
+      {modo === "list" ? (
+        <>
+          <div className="lp-card-header">
+            <div></div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="chip" onClick={() => setModo("nuevo")}>
+                <span style={{ fontWeight: 800, fontSize: 16 }}>＋</span> Nuevo listado de precios
               </button>
-            ))}
-
-            <button
-              className="tabs-btn active"
-              style={{
-                marginLeft: "auto",
-                background: "#65a30d",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 14px",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-              onClick={irNuevo}
-            >
-              + Nuevo listado de precios
-            </button>
+              <button className="chip" onClick={() => alert("Exportar plantilla (próximamente)")}>
+                Exportar plantilla
+              </button>
+            </div>
           </div>
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: ".9rem",
-              }}
-            >
+          <div className="lp-table-wrap">
+            <table>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
-                  <th style={th}>Nombre</th>
-                  <th style={th}>Fecha de creación</th>
-                  <th style={th}>Fecha de actualización</th>
-                  <th style={th}>En uso</th>
-                  <th style={th}>Acciones</th>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Fecha de creación</th>
+                  <th>Fecha de actualización</th>
+                  <th>En uso</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: 20 }}>
-                      Cargando…
-                    </td>
-                  </tr>
-                ) : precios.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: 20 }}>
-                      No hay listas registradas.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={5} style={{ textAlign: "center" }}>Cargando…</td></tr>
+                ) : listas.length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: "center" }} className="muted">Sin datos</td></tr>
                 ) : (
-                  precios.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                      <td style={td}>{p.nombre}</td>
-                      <td style={td}>{p.creado}</td>
-                      <td style={td}>{p.actualizado}</td>
-                      <td style={td}>
-                        <span
-                          style={{
-                            color: p.enUso ? "#15803d" : "#dc2626",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {p.enUso ? "En uso" : "Inactivo"}
-                        </span>
+                  listas.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 600 }}>{r?.nombre || "—"}</td>
+                      <td>{r?.creado || "—"}</td>
+                      <td>{r?.actualizado || "—"}</td>
+                      <td>
+                        {r?.en_uso ? (
+                          <span className="badge green">En uso</span>
+                        ) : (
+                          <button className="btn-soft" onClick={() => usar(r)}>
+                            <CheckIcon /> Usar
+                          </button>
+                        )}
                       </td>
-                      <td style={td}>
-                        <button
-                          className="btn-blue"
-                          style={btnBlue}
-                          title="Editar"
-                          onClick={() => editar(p.id)}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="btn-sky"
-                          style={btnSky}
-                          title="Duplicar"
-                          onClick={() => duplicar(p.id)}
-                        >
-                          📋
-                        </button>
-                        <button
-                          className="btn-red"
-                          style={btnRed}
-                          title="Eliminar"
-                          onClick={() => eliminar(p.id)}
-                        >
-                          🗑️
-                        </button>
+                      <td>
+                        <div className="lp-actions">
+                          <button className="iconbtn green" title="Clonar" onClick={() => clonar(r)}><CopyIcon /></button>
+                          <button className="iconbtn blue"  title="Editar" onClick={() => irEditar(r)}><EditIcon /></button>
+                          <button className="iconbtn red"   title="Eliminar" onClick={() => eliminar(r)}><TrashIcon /></button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -497,47 +207,148 @@ export default function ListaPrecios() {
               </tbody>
             </table>
           </div>
+        </>
+      ) : (
+        <div>
+          <div className="lp-card-header">
+            <h4 style={{ margin: 0, fontWeight: 700 }}>Nueva lista de precios</h4>
+            <button
+              className="chip"
+              onClick={() => setModo("list")}
+            >← Volver</button>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center", maxWidth: 560, marginTop: 10 }}>
+            <input
+              className="lp-input"
+              type="text"
+              placeholder="Nombre de la lista"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              title="Sugerir nombre automático"
+              className="chip"
+              onClick={() => setNombre("Lista de precios " + new Date().toLocaleDateString("es-CO"))}
+            >
+              ⓘ
+            </button>
+            <button className="btn-soft" onClick={crear}>Guardar</button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ===== Estilos base de tabla =====
-const th = {
-  padding: "10px 12px",
-  textAlign: "left",
-  borderBottom: "1px solid #e2e8f0",
-  color: "#475569",
-  fontWeight: 700,
-};
-const td = {
-  padding: "10px 12px",
-  color: "#0f172a",
-};
-const btnBlue = {
-  background: "#3b82f6",
-  border: "none",
-  color: "#fff",
-  padding: "4px 8px",
-  borderRadius: 6,
-  marginRight: 6,
-  cursor: "pointer",
-};
-const btnSky = {
-  background: "#06b6d4",
-  border: "none",
-  color: "#fff",
-  padding: "4px 8px",
-  borderRadius: 6,
-  marginRight: 6,
-  cursor: "pointer",
-};
-const btnRed = {
-  background: "#ef4444",
-  border: "none",
-  color: "#fff",
-  padding: "4px 8px",
-  borderRadius: 6,
-  cursor: "pointer",
-};
+// ===============================
+// PRODUCTOS (UI unificada; sin botón duplicado dentro)
+// ===============================
+function ListaProductosInline() {
+  // Si luego conectas Firestore para productos, reemplaza estos estados
+  const [rows] = useState([]); // aquí pintarás tus productos
+  const [q, setQ] = useState("");
+
+  const AddIcon = () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>);
+  const EditIcon= () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 19h4l9-9-4-4-9 9v4zM14.5 6.5l3 3"/></svg>);
+  const CopyIcon= () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>);
+  const TrashIcon= () => (<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12l-1 14H7L6 7zm3-4h6l1 2H8l1-2z"/></svg>);
+
+  return (
+    <div className="lp-card">
+      <h3 className="lp-subtitle">Lista de precios productos</h3>
+
+      {/* Header tipo OralDrive: búsqueda + botón verde */}
+      <div className="lp-card-header">
+        <input
+          className="lp-input"
+          placeholder="Buscar…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ minWidth: 220 }}
+        />
+        <button className="btn-primary" onClick={() => alert("Nuevo producto (próximamente)")}>
+          <AddIcon /> Nuevo producto
+        </button>
+      </div>
+
+      <div className="lp-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: "32%" }}>Nombre</th>
+              <th style={{ width: "18%" }}>Marca</th>
+              <th>Descripción</th>
+              <th style={{ width: "18%" }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: 18 }} className="muted">
+                  Sin datos
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600 }}>{r.nombre}</td>
+                  <td>{r.marca || "—"}</td>
+                  <td>{r.descripcion || "—"}</td>
+                  <td>
+                    <div className="lp-actions">
+                      <button className="iconbtn green" title="Clonar"><CopyIcon /></button>
+                      <button className="iconbtn blue"  title="Editar"><EditIcon /></button>
+                      <button className="iconbtn red"   title="Eliminar"><TrashIcon /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ===============================
+// CONTENEDOR PRINCIPAL
+// ===============================
+export default function ListaPrecios() {
+  useInlineStyles();
+  const [tab, setTab] = useState("clinicos");
+
+  return (
+    <div className="lp-wrap">
+      <h2 className="lp-h2">Configuración · Lista de precios</h2>
+
+      {/* Pestañas superiores (únicas) */}
+      <div className="lp-tabs">
+        <button className={`lp-pill ${tab === "clinicos" ? "active" : ""}`} onClick={() => setTab("clinicos")}>
+          Lista de precios clínicos
+        </button>
+        <button className={`lp-pill ${tab === "productos" ? "active" : ""}`} onClick={() => setTab("productos")}>
+          Lista de precios productos
+        </button>
+        <button className={`lp-pill ${tab === "servicios" ? "active" : ""}`} onClick={() => setTab("servicios")}>
+          Lista de precios servicios
+        </button>
+      </div>
+
+      {/* Contenido por pestaña (sin botones duplicados adentro) */}
+      {tab === "productos" ? (
+        <ListaProductosInline />
+      ) : tab === "servicios" ? (
+        <div className="lp-card">
+          <h3 className="lp-subtitle">Lista de precios servicios</h3>
+          <p className="muted">Próximamente</p>
+        </div>
+      ) : (
+        <ListaClinicosInline />
+      )}
+    </div>
+  );
+}
