@@ -1,24 +1,25 @@
 // ===============================
 // 💰 ListaPreciosEditar.jsx
 // Edición de una lista de precios (categorías + items + export + incremento %)
-// Versión: acordeón por categoría + 4 botones estilo OralDrive
-// Con modal “Agregar producto” (ahora con Máximo descuento % y $)
+// Con acordeón, 4 botones por categoría y modal "Agregar producto"
+// Autocompletado (Firestore) + alineación de modal
+// Máx. descuento: selector % | $ con un solo input
 // ===============================
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   doc, getDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, setDoc
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 
-// ---------- helpers de ruta ----------
+/* ---------- helpers de ruta ---------- */
 function getDashBase(pathname = "") {
   const segs = pathname.split("/").filter(Boolean);
   const i = segs.findIndex((s) => s.startsWith("dashboard_"));
   return i >= 0 ? `/${segs.slice(0, i + 1).join("/")}` : "";
 }
 
-// ---------- catálogo por defecto ----------
+/* ---------- catálogo por defecto (categorías) ---------- */
 const DEFAULT_CATS = [
   { nombre: "Rehabilitación Oral", comentario: "" },
   { nombre: "Implantología", comentario: "" },
@@ -31,12 +32,26 @@ const DEFAULT_CATS = [
   { nombre: "Psicología", comentario: "" },
 ];
 
-// ---------- helpers de paths ----------
+// PUC simple (solo grupos 1..9, sin subniveles)
+const PUC_QUICK = [
+  { codigo: "1", nombre: "Activos" },
+  { codigo: "2", nombre: "Pasivos" },
+  { codigo: "3", nombre: "Patrimonio" },
+  { codigo: "4", nombre: "Ingresos" },
+  { codigo: "5", nombre: "Gastos" },
+  { codigo: "6", nombre: "Costos de ventas" },
+  { codigo: "7", nombre: "Costos de producción" },
+  { codigo: "8", nombre: "Cuentas de orden deudoras" },
+  { codigo: "9", nombre: "Cuentas de orden acreedoras" },
+];
+
+/* ---------- helpers de paths ---------- */
 const docLista = (id) => doc(db, "listas_precios", id);
 const colCategorias = (id) => collection(db, "listas_precios", id, "categorias");
-const colItems = (id, catId) => collection(db, "listas_precios", id, "categorias", catId, "items");
+const colItems = (id, catId) =>
+  collection(db, "listas_precios", id, "categorias", catId, "items");
 
-// ---------- estilos inline mínimos ----------
+/* ---------- estilos inline mínimos ---------- */
 function useInlineStyles() {
   useEffect(() => {
     const ID = "lp-edit-inline";
@@ -53,7 +68,6 @@ function useInlineStyles() {
       .chip.blue   { background:#3b82f6; color:#fff; border:none }
       .chip.green  { background:#22c55e; color:#fff; border:none }
       .chip.orange { background:#f59e0b; color:#fff; border:none }
-      .chip.indigo { background:#6366f1; color:#fff; border:none }
       .chip.gray   { background:#64748b; color:#fff; border:none }
 
       .name-row { display:flex; align-items:center; gap:8px; }
@@ -79,12 +93,10 @@ function useInlineStyles() {
       .btn.sky    { background:#06b6d4 }
       .btn.sm { height:32px; padding:0 10px; border-radius:8px }
 
-      /* Acordeón */
       .toggle-cell{width:34px}
       .arrow{font-weight:900;font-size:18px;opacity:.7;cursor:pointer;display:inline-block}
       .row-cat-actions{display:flex;gap:6px;justify-content:flex-end}
 
-      /* Fila desplegable */
       .cat-details{background:#fafafa}
       .inner-table{width:100%; border-collapse:collapse; font-size:.88rem}
       .inner-table th, .inner-table td{padding:8px 10px}
@@ -94,21 +106,44 @@ function useInlineStyles() {
 
       /* Modal base */
       .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:999}
-      .modal{background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);width:min(840px,92vw);padding:0;border:1px solid #e5e7eb}
+      .modal{background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);width:min(880px,94vw);padding:0;border:1px solid #e5e7eb}
       .modal .hd{padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:700}
       .modal .bd{padding:16px}
       .modal .ft{padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end}
 
-      .row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-      .col{display:flex;flex-direction:column;gap:6px}
-      .inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none}
-      .ta{border:1px solid #cbd5e1;border-radius:8px;padding:8px;min-height:80px;outline:none}
-      .label-strong{font-weight:700;color:#0f172a}
+      /* —— Grilla de 3 columnas con “field” (label arriba, input abajo) —— */
+      .form-grid-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:start; }
+      .field{ display:flex; flex-direction:column; gap:6px }
+      .field label{ font-weight:700; color:#0f172a }
 
-      /* Toggle simple */
+      .form-row-full{ margin-top:12px }
+
+      .inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none;width:100%}
+      .ta{border:1px solid #cbd5e1;border-radius:8px;padding:8px;min-height:84px;outline:none;width:100%}
+
+      /* Toggle simple / pill */
       .toggle{display:inline-flex;align-items:center;gap:10px}
       .toggle-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:999px;padding:2px 8px;height:32px}
       .toggle-pill span{font-weight:700}
+
+      /* Autocomplete */
+      .ac-wrap{position:relative}
+      .ac-list{
+        position:absolute; z-index:1000; top:100%; left:0; right:0;
+        background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+        box-shadow:0 8px 30px rgba(0,0,0,.12);
+        max-height:240px; overflow:auto; margin-top:4px;
+      }
+      .ac-item{padding:8px 12px; cursor:pointer; display:flex; gap:8px; align-items:center}
+      .ac-item:hover{background:#f1f5f9}
+      .ac-code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight:700; color:#0f172a}
+      .ac-name{color:#334155}
+      .ac-empty{padding:10px 12px; color:#64748b}
+
+      /* —— Selector % | $ para Máximo descuento —— */
+      .seg-wrap{ display:flex; align-items:center; gap:8px; }
+      .seg{ user-select:none; cursor:pointer; border:1px solid #cbd5e1; border-radius:8px; height:36px; min-width:44px; display:flex; align-items:center; justify-content:center; padding:0 10px; font-weight:700; color:#334155; background:#fff; }
+      .seg.on{ background:#0ea5e9; color:#fff; border-color:#0ea5e9; }
     `;
     const tag = document.createElement("style");
     tag.id = ID;
@@ -117,16 +152,59 @@ function useInlineStyles() {
   }, []);
 }
 
-// ---------- componente ----------
+/* ---------- util: normalizar ---------- */
+const norm = (s = "") =>
+  s?.toString().toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+
+/* ---------- formateo COP en vivo ---------- */
+function formatCOPInput(v) {
+  let digits = String(v || "").replace(/\D/g, "");
+  if (digits === "") return "";
+  digits = digits.replace(/^0+(?=\d)/, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+/* ---------- AutoInput ---------- */
+function AutoInput({ value, onChange, placeholder, suggestions = [], getLabel = (o) => o?.nombre || "", onPick, renderRow, minChars = 1 }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    function onDoc(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+  const showList = open && (value?.length || 0) >= minChars;
+  return (
+    <div className="ac-wrap" ref={wrapRef}>
+      <input
+        className="inp"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+      />
+      {showList && (
+        <div className="ac-list">
+          {suggestions.length === 0 ? (
+            <div className="ac-empty">Sin resultados…</div>
+          ) : suggestions.map((sug, i) => (
+            <div key={i} className="ac-item" onClick={() => { onPick?.(sug); setOpen(false); }}>
+              {renderRow ? renderRow(sug) : (<><span className="ac-code">{sug.codigo}</span><span className="ac-name">{getLabel(sug)}</span></>)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- componente principal ---------- */
 export default function ListaPreciosEditar(props) {
   useInlineStyles();
 
-  // id por props (ConfigRouter) o por ruta
   const p = useParams();
-  const listaId =
-    props?.listaId ??
-    p.id ?? p.listaId ?? p.priceListId ?? p.listId ?? null;
-
+  const listaId = props?.listaId ?? p.id ?? p.listaId ?? p.priceListId ?? p.listId ?? null;
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -139,26 +217,28 @@ export default function ListaPreciosEditar(props) {
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
 
-  // modales
   const [showBulk, setShowBulk] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
   const [showCats, setShowCats] = useState(false);
 
   // ---- Modal “Agregar producto” ----
   const [showItemModal, setShowItemModal] = useState(false);
   const [itemCat, setItemCat] = useState(null);
   const emptyItem = {
-    codigo: "", nombre: "", precio: "0", observaciones: "",
+    codigo: "", nombre: "", precio: "", observaciones: "",
     usa_pago_fijo: false, pago_valor_fijo: "0",
     permite_descuento: false, genera_rips: false, es_consulta: false,
     ver_en_agenda: false, cuenta_contable: "",
-    // NUEVOS:
-    max_descuento_pct: "", // %
-    max_descuento_valor: "" // $
+    // único input de descuento + tipo
+    max_descuento_tipo: "pct",   // 'pct' | 'valor'
+    max_descuento_value: ""      // string mostrado en input
   };
   const [itemForm, setItemForm] = useState(emptyItem);
 
-  // incremento %
+  // Catálogos (solo Firestore)
+  const [procCatalog, setProcCatalog] = useState([]);
+  const [pucList] = useState(PUC_QUICK);
+
+  // incremento % (botón superior)
   const [pct, setPct] = useState(0);
   const [roundMode, setRoundMode] = useState("none"); // none | up | down
 
@@ -168,11 +248,12 @@ export default function ListaPreciosEditar(props) {
   const [newCatName, setNewCatName] = useState("");
   const [newCatComment, setNewCatComment] = useState("");
 
-  // ---------- carga doc + categorías ----------
+  /* ---------- carga doc + categorías ---------- */
   useEffect(() => {
     async function loadAll() {
       if (!listaId) { setErrMsg("Ruta inválida: falta el id de la lista."); setLoading(false); return; }
       setLoading(true);
+
       try {
         const snap = await getDoc(docLista(listaId));
         setNombre(snap.exists() ? (snap.data().nombre || "") : "");
@@ -184,12 +265,8 @@ export default function ListaPreciosEditar(props) {
       try {
         const catSnap = await getDocs(colCategorias(listaId));
         const rows = catSnap.docs.map((d) => ({
-          id: d.id,
-          expanded: false,
-          itemsLoaded: false,
-          items: [],
-          activa: d.data().activa ?? true,
-          ...d.data(),
+          id: d.id, expanded: false, itemsLoaded: false, items: [],
+          activa: d.data().activa ?? true, ...d.data(),
         }));
         rows.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
         setCategorias(rows);
@@ -200,7 +277,22 @@ export default function ListaPreciosEditar(props) {
     loadAll();
   }, [listaId]);
 
-  // ---------- guardar nombre ----------
+  /* ---------- cargar catálogo de procedimientos desde Firestore ---------- */
+  useEffect(() => {
+    async function loadProcs() {
+      try {
+        const snap = await getDocs(collection(db, "catalogo_procedimientos"));
+        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(x => x.codigo && x.nombre);
+        setProcCatalog(arr);
+      } catch {
+        setProcCatalog([]);
+      }
+    }
+    loadProcs();
+  }, []);
+
+  /* ---------- guardar nombre ---------- */
   async function guardarNombre() {
     try {
       if (!listaId) return;
@@ -216,7 +308,7 @@ export default function ListaPreciosEditar(props) {
     }
   }
 
-  // ---------- acordeón ----------
+  /* ---------- acordeón ---------- */
   async function toggleExpand(cat) {
     setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, expanded: !c.expanded } : c)));
     if (!cat.itemsLoaded && listaId) {
@@ -228,13 +320,7 @@ export default function ListaPreciosEditar(props) {
     }
   }
 
-  // ---------- acciones de categoría ----------
-  async function toggleActiva(cat) {
-    if (!listaId) return;
-    await updateDoc(doc(colCategorias(listaId), cat.id), { activa: !cat.activa });
-    setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, activa: !c.activa } : c)));
-  }
-
+  /* ---------- acciones de categoría (4 botones) ---------- */
   async function editarCategoria(cat) {
     if (!listaId) return;
     const nombreNuevo = (prompt("Editar nombre de la categoría:", cat.nombre) || "").trim();
@@ -280,18 +366,7 @@ export default function ListaPreciosEditar(props) {
     alert("Precios actualizados.");
   }
 
-  async function duplicar(cat) {
-    if (!listaId) return;
-    const ref = await addDoc(colCategorias(listaId), {
-      nombre: `${cat.nombre || "Categoría"} (copia)`,
-      comentario: cat.comentario || "",
-      activa: true,
-      creado: new Date().toLocaleString("es-CO"),
-    });
-    setCategorias((cs) => [...cs, { ...cat, id: ref.id, nombre: `${cat.nombre || "Categoría"} (copia)`, expanded: false, itemsLoaded: false, items: [], activa: true }]);
-  }
-
-  // ---------- items ----------
+  /* ---------- items ---------- */
   function openNuevoItem(cat) {
     setItemCat(cat);
     setItemForm(emptyItem);
@@ -304,13 +379,22 @@ export default function ListaPreciosEditar(props) {
 
     const toNumber = (v) => Number(String(v).replace(/\D/g, "")) || 0;
 
+    // convertir el único input de descuento según tipo
+    let md_pct = 0, md_valor = 0;
+    if (itemForm.permite_descuento) {
+      if (itemForm.max_descuento_tipo === "pct") {
+        md_pct = Math.max(0, Number(String(itemForm.max_descuento_value).replace(",", ".") || 0));
+      } else {
+        md_valor = toNumber(itemForm.max_descuento_value);
+      }
+    }
+
     const payload = {
       codigo: itemForm.codigo.trim(),
       nombre: itemForm.nombre.trim(),
       permite_descuento: !!itemForm.permite_descuento,
-      // NUEVOS: sólo guardamos si la casilla está marcada; si no, 0
-      max_descuento_pct: itemForm.permite_descuento ? Number(itemForm.max_descuento_pct || 0) : 0,
-      max_descuento_valor: itemForm.permite_descuento ? toNumber(itemForm.max_descuento_valor || 0) : 0,
+      max_descuento_pct: md_pct,
+      max_descuento_valor: md_valor,
       genera_rips: !!itemForm.genera_rips,
       es_consulta: !!itemForm.es_consulta,
       ver_en_agenda: !!itemForm.ver_en_agenda,
@@ -324,7 +408,6 @@ export default function ListaPreciosEditar(props) {
 
     const ref = await addDoc(colItems(listaId, itemCat.id), payload);
 
-    // refresco local
     setCategorias((cs) =>
       cs.map((c) =>
         c.id === itemCat.id
@@ -367,7 +450,7 @@ export default function ListaPreciosEditar(props) {
     setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, items: c.items.filter((x) => x.id !== it.id) } : c)));
   }
 
-  // ---------- sembrar catálogo base ----------
+  /* ---------- sembrar categorías base (modal de categorías) ---------- */
   async function seedCatalogoBase() {
     try {
       const colRef = collection(db, "catalogo_categorias");
@@ -376,13 +459,13 @@ export default function ListaPreciosEditar(props) {
           .replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-");
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
       }
-      alert("Catálogo base creado/actualizado. Vuelve a abrir 'Agregar categoría'.");
+      alert("Catálogo base creado/actualizado. Vuelve a abrir 'Categorías existentes'.");
     } catch {
       alert("No se pudo sembrar el catálogo base.");
     }
   }
 
-  // ---------- categorías: modal ----------
+  /* ---------- categorías: modal ---------- */
   async function openCats() {
     setShowCats(true);
     setCatTab("existentes");
@@ -434,7 +517,7 @@ export default function ListaPreciosEditar(props) {
     }
   }
 
-  // util: cargar XLSX dinámicamente si no está presente
+  /* ---------- util XLSX ---------- */
   function ensureXLSX() {
     return new Promise((resolve) => {
       if (typeof window !== "undefined" && window.XLSX) return resolve(window.XLSX);
@@ -446,7 +529,7 @@ export default function ListaPreciosEditar(props) {
     });
   }
 
-  // ---------- incremento porcentual (global) ----------
+  /* ---------- incremento porcentual (global) ---------- */
   function roundValue(value, mode) {
     if (mode === "up") return Math.ceil(value);
     if (mode === "down") return Math.floor(value);
@@ -476,7 +559,7 @@ export default function ListaPreciosEditar(props) {
     }
   }
 
-  // ---------- export (XLSX pro + CSV fallback) ----------
+  /* ---------- export ---------- */
   async function exportar() {
     try {
       if (!listaId) return;
@@ -488,10 +571,8 @@ export default function ListaPreciosEditar(props) {
       const aoa = [];
       const titulo = `OdontoCloud · Lista de precios — ${(nombre || "Principal")}`;
       const fecha = `Exportado: ${new Date().toLocaleString("es-CO")}`;
-
       aoa.push([titulo]); aoa.push([fecha]); aoa.push([]); aoa.push(HEAD);
       const headerRowIndex = 4;
-
       const toSiNo = (v) => (v ? "si" : "no");
 
       for (const cat of categorias) {
@@ -551,7 +632,32 @@ export default function ListaPreciosEditar(props) {
     }
   }
 
-  // ---------- UI ----------
+  /* ---------- Filtros para autocompletar ---------- */
+  const procSugsByNombre = useMemo(() => {
+    const q = norm(itemForm.nombre);
+    if (!q) return [];
+    return procCatalog
+      .filter(p => norm(p.nombre).includes(q) || norm(p.codigo).startsWith(q))
+      .slice(0, 12);
+  }, [itemForm.nombre, procCatalog]);
+
+  const procSugsByCodigo = useMemo(() => {
+    const q = norm(itemForm.codigo);
+    if (!q) return [];
+    return procCatalog
+      .filter(p => norm(p.codigo).startsWith(q) || norm(p.nombre).includes(q))
+      .slice(0, 12);
+  }, [itemForm.codigo, procCatalog]);
+
+  const cuentaSugs = useMemo(() => {
+    const q = norm(itemForm.cuenta_contable);
+    if (!q) return PUC_QUICK.slice(0, 12);
+    return pucList
+      .filter(c => norm(c.codigo).startsWith(q) || norm(c.nombre).includes(q))
+      .slice(0, 20);
+  }, [itemForm.cuenta_contable, pucList]);
+
+  /* ---------- UI ---------- */
   return (
     <div className="oc-main-content lp">
       <div className="oc-section-title">
@@ -569,22 +675,17 @@ export default function ListaPreciosEditar(props) {
         <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 12 }}>
           <div className="name-row">
             <label style={{ fontWeight: 700 }}>Nombre*</label>
-            <input
-              className="text-inp"
-              value={nombre}
-              placeholder="Principal"
-              onChange={(e) => setNombre(e.target.value)}
-            />
+            <input className="text-inp" value={nombre} placeholder="Principal" onChange={(e) => setNombre(e.target.value)} />
             <button className="btn green" onClick={guardarNombre} disabled={saving} title="Guardar nombre">
               {saving ? "Guardando…" : "Guardar"}
             </button>
           </div>
 
+          {/* Orden estilo OralDrive: %  |  + Agregar categoría  |  Exportar */}
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="chip blue"   title="Exportar"      onClick={exportar}>Exportar</button>
             <button className="chip orange" title="Incrementar %" onClick={()=>{setPct(0);setRoundMode("none");setShowBulk(true);}}>%</button>
-            <button className="chip indigo" title="Opciones"      onClick={() => setShowOptions(true)}>⚙️ Opciones</button>
             <button className="chip green"  onClick={openCats}>+ Agregar categoría</button>
+            <button className="chip blue"   title="Exportar"      onClick={exportar}>Exportar</button>
           </div>
         </div>
 
@@ -621,17 +722,11 @@ export default function ListaPreciosEditar(props) {
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div className="row-cat-actions">
-                          {/* 4 BOTONES “OralDrive” */}
-                          <button className="btn green sm"  title="Nuevo ítem"      onClick={()=>openNuevoItem(c)}>＋</button>
+                          {/* SOLO 4 BOTONES */}
+                          <button className="btn green sm"  title="Nuevo ítem"          onClick={()=>openNuevoItem(c)}>＋</button>
                           <button className="btn orange sm" title="Actualizar precios %" onClick={()=>actualizarPctCategoria(c)}>%</button>
-                          <button className="btn sky sm"    title="Editar categoría" onClick={()=>editarCategoria(c)}>✏️</button>
-                          <button className="btn red sm"    title="Eliminar categoría" onClick={()=>eliminarCategoria(c)}>🗑️</button>
-
-                          {/* Extras opcionales */}
-                          <button className="btn blue sm"   title={c.activa ? "Desactivar" : "Activar"} onClick={() => toggleActiva(c)}>
-                            {c.activa ? "⏻" : "▶"}
-                          </button>
-                          <button className="btn sky sm" title="Duplicar categoría" onClick={()=>duplicar(c)}>↗</button>
+                          <button className="btn sky sm"    title="Editar categoría"     onClick={()=>editarCategoria(c)}>✏️</button>
+                          <button className="btn red sm"    title="Eliminar categoría"   onClick={()=>eliminarCategoria(c)}>🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -692,58 +787,6 @@ export default function ListaPreciosEditar(props) {
         </div>
       </div>
 
-      {/* ---------- Modal Incremento % (global) ---------- */}
-      {showBulk && (
-        <div className="modal-mask" onClick={() => setShowBulk(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="hd">Incrementar todos los precios</div>
-            <div className="bd">
-              <div className="col">
-                <label className="label-strong">Porcentaje de incremento *</label>
-                <div className="row">
-                  <input
-                    className="inp"
-                    style={{maxWidth:160}}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={pct}
-                    onChange={(e)=>setPct(e.target.value)}
-                  />
-                </div>
-
-                <div className="col" style={{gap:8}}>
-                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "down"} onChange={()=>setRoundMode("down")} /> Redondear hacia abajo</label>
-                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "up"} onChange={()=>setRoundMode("up")} /> Redondear hacia arriba</label>
-                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "none"} onChange={()=>setRoundMode("none")} /> No redondear</label>
-                </div>
-              </div>
-            </div>
-            <div className="ft">
-              <button className="chip gray" onClick={()=>setShowBulk(false)}>Cerrar</button>
-              <button className="chip green" onClick={applyBulkIncrement}>Incrementar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Modal Opciones ---------- */}
-      {showOptions && (
-        <div className="modal-mask" onClick={() => setShowOptions(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="hd">Opciones</div>
-            <div className="bd">
-              <p className="muted" style={{ marginTop:0 }}>Acciones generales de la lista.</p>
-              <button className="chip green" onClick={seedCatalogoBase}>Sembrar catálogo base</button>
-            </div>
-            <div className="ft">
-              <button className="chip gray" onClick={()=>setShowOptions(false)}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ---------- Modal Agregar Categoría ---------- */}
       {showCats && (
         <div className="modal-mask" onClick={() => setShowCats(false)}>
@@ -753,6 +796,7 @@ export default function ListaPreciosEditar(props) {
               <div className="row" style={{gap:6, marginBottom:12}}>
                 <button className={`chip ${catTab==="existentes"?"blue":""}`} onClick={()=>setCatTab("existentes")}>Categorías existentes</button>
                 <button className={`chip ${catTab==="nueva"?"blue":""}`} onClick={()=>setCatTab("nueva")}>Editar/Nueva categoría</button>
+                <button className="chip green" onClick={seedCatalogoBase}>Sembrar catálogo base</button>
               </div>
 
               {catTab === "existentes" ? (
@@ -803,121 +847,205 @@ export default function ListaPreciosEditar(props) {
         </div>
       )}
 
-      {/* ---------- Modal Agregar Producto (con Máximo descuento) ---------- */}
+      {/* ---------- Modal Incremento % (global) ---------- */}
+      {showBulk && (
+        <div className="modal-mask" onClick={() => setShowBulk(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="hd">Incrementar todos los precios</div>
+            <div className="bd">
+              <div className="col">
+                <label className="label-strong">Porcentaje de incremento *</label>
+                <div className="row">
+                  <input className="inp" style={{maxWidth:160}} type="number" min="0" step="0.01" placeholder="0" value={pct} onChange={(e)=>setPct(e.target.value)} />
+                </div>
+                <div className="col" style={{gap:8}}>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "down"} onChange={()=>setRoundMode("down")} /> Redondear hacia abajo</label>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "up"} onChange={()=>setRoundMode("up")} /> Redondear hacia arriba</label>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "none"} onChange={()=>setRoundMode("none")} /> No redondear</label>
+                </div>
+              </div>
+            </div>
+            <div className="ft">
+              <button className="chip gray" onClick={()=>setShowBulk(false)}>Cerrar</button>
+              <button className="chip green" onClick={applyBulkIncrement}>Incrementar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Modal Agregar Producto ---------- */}
       {showItemModal && (
         <div className="modal-mask" onClick={() => setShowItemModal(false)}>
           <div className="modal" onClick={(e)=>e.stopPropagation()}>
             <div className="hd">Agregar producto {itemCat ? `· ${itemCat.nombre}` : ""}</div>
             <div className="bd">
-              <div className="col" style={{gap:12}}>
-                <div className="row">
-                  <div className="col" style={{flex:1}}>
-                    <label className="label-strong">Código *</label>
-                    <input className="inp" value={itemForm.codigo} onChange={e=>setItemForm({...itemForm, codigo:e.target.value})} placeholder="Código" />
-                  </div>
-                  <div className="col" style={{flex:2}}>
-                    <label className="label-strong">Nombre *</label>
-                    <input className="inp" value={itemForm.nombre} onChange={e=>setItemForm({...itemForm, nombre:e.target.value})} placeholder="Nombre del procedimiento" />
-                  </div>
-                  <div className="col" style={{width:200}}>
-                    <label className="label-strong">Precio *</label>
-                    <input className="inp" type="number" min="0" value={itemForm.precio} onChange={e=>setItemForm({...itemForm, precio:e.target.value})} placeholder="$0" />
-                  </div>
+              {/* === Fila “perfecta”: Código | Nombre | Precio === */}
+              <div className="form-grid-3">
+                <div className="field">
+                  <label>Código *</label>
+                  <AutoInput
+                    value={itemForm.codigo}
+                    onChange={(v)=>setItemForm({...itemForm, codigo:v})}
+                    placeholder="Código (ej. 890203)"
+                    suggestions={procSugsByCodigo}
+                    onPick={(p)=>setItemForm({...itemForm, codigo:p.codigo, nombre:p.nombre})}
+                    renderRow={(p)=>(<>
+                      <span className="ac-code">{p.codigo}</span>
+                      <span className="ac-name">{p.nombre}</span>
+                    </>)}
+                    minChars={1}
+                  />
                 </div>
 
-                <div className="col">
-                  <label className="label-strong">Observaciones</label>
+                <div className="field">
+                  <label>Nombre *</label>
+                  <AutoInput
+                    value={itemForm.nombre}
+                    onChange={(v)=>setItemForm({...itemForm, nombre:v})}
+                    placeholder="Nombre del procedimiento"
+                    suggestions={procSugsByNombre}
+                    onPick={(p)=>setItemForm({...itemForm, codigo:p.codigo, nombre:p.nombre})}
+                    renderRow={(p)=>(<>
+                      <span className="ac-code">{p.codigo}</span>
+                      <span className="ac-name">{p.nombre}</span>
+                    </>)}
+                    minChars={1}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Precio *</label>
+                  <input
+                    className="inp"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\\d*"
+                    placeholder="$0"
+                    value={itemForm.precio}
+                    onChange={(e)=>setItemForm({...itemForm, precio: formatCOPInput(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              {/* Observaciones */}
+              <div className="form-row-full">
+                <div className="field">
+                  <label>Observaciones</label>
                   <textarea className="ta" value={itemForm.observaciones} onChange={e=>setItemForm({...itemForm, observaciones:e.target.value})} />
                 </div>
+              </div>
 
-                <div className="row">
-                  <div className="col" style={{flex:1}}>
-                    <label className="label-strong">Pago valor fijo a doctores</label>
-                    <div className="row">
-                      <input className="inp" style={{maxWidth:160}} type="number" min="0"
-                             value={itemForm.pago_valor_fijo}
-                             onChange={e=>setItemForm({...itemForm, pago_valor_fijo:e.target.value})} />
-                      <label className="toggle" style={{marginLeft:10}}>
-                        <input type="checkbox" checked={itemForm.usa_pago_fijo}
-                               onChange={e=>setItemForm({...itemForm, usa_pago_fijo:e.target.checked})} />
-                        Usar valor fijo
-                      </label>
-                    </div>
-                    <small className="muted">Use este campo para no liquidar a los doctores por su % configurado sino por un valor fijo en dinero $</small>
-                  </div>
+              {/* Pago fijo a doctores */}
+              <div className="form-row-full" style={{display:"grid", gridTemplateColumns:"160px auto auto", gap:"12px", alignItems:"center"}}>
+                <div className="field" style={{margin:0}}>
+                  <label>Pago valor fijo a doctores</label>
+                  <input className="inp" type="number" min="0"
+                    value={itemForm.pago_valor_fijo}
+                    onChange={e=>setItemForm({...itemForm, pago_valor_fijo:e.target.value})}/>
                 </div>
+                <label className="toggle" style={{marginTop:18}}>
+                  <input type="checkbox" checked={itemForm.usa_pago_fijo}
+                         onChange={e=>setItemForm({...itemForm, usa_pago_fijo:e.target.checked})} />
+                  Usar valor fijo
+                </label>
+                <div className="muted">Use este campo para no liquidar a los doctores por su % configurado sino por un valor fijo en dinero $</div>
+              </div>
 
-                <div className="row">
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={itemForm.permite_descuento}
-                      onChange={e=>setItemForm({
-                        ...itemForm,
-                        permite_descuento:e.target.checked,
-                        // al desmarcar, limpiamos los máximos
-                        ...(e.target.checked ? {} : {max_descuento_pct:"", max_descuento_valor:""})
-                      })}
-                    />
-                    Permite descuento
+              {/* Toggles */}
+              <div className="form-row-full" style={{display:"flex", gap:18, flexWrap:"wrap"}}>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={itemForm.permite_descuento}
+                    onChange={e=>setItemForm({
+                      ...itemForm,
+                      permite_descuento:e.target.checked,
+                      ...(e.target.checked ? {} : {max_descuento_value:""})
+                    })}
+                  />
+                  Permite descuento
+                </label>
+                <label className="toggle">
+                  <input type="checkbox" checked={itemForm.genera_rips} onChange={e=>setItemForm({...itemForm, genera_rips:e.target.checked})}/>
+                  Genera RIPS
+                </label>
+                <label className="toggle">
+                  <input type="checkbox" checked={itemForm.es_consulta} onChange={e=>setItemForm({...itemForm, es_consulta:e.target.checked})}/>
+                  Es consulta
+                </label>
+                <div className="toggle">
+                  <span>Ver en agenda</span>
+                  <label className="toggle-pill">
+                    <input type="checkbox" checked={itemForm.ver_en_agenda}
+                           onChange={e=>setItemForm({...itemForm, ver_en_agenda:e.target.checked})}/>
+                    <span>{itemForm.ver_en_agenda ? "Sí" : "No"}</span>
                   </label>
-                  <label className="toggle"><input type="checkbox" checked={itemForm.genera_rips} onChange={e=>setItemForm({...itemForm, genera_rips:e.target.checked})}/> Genera RIPS</label>
-                  <label className="toggle"><input type="checkbox" checked={itemForm.es_consulta} onChange={e=>setItemForm({...itemForm, es_consulta:e.target.checked})}/> Es consulta</label>
-
-                  <div className="toggle">
-                    <span>Ver en agenda</span>
-                    <label className="toggle-pill">
-                      <input type="checkbox" checked={itemForm.ver_en_agenda}
-                             onChange={e=>setItemForm({...itemForm, ver_en_agenda:e.target.checked})}/>
-                      <span>{itemForm.ver_en_agenda ? "Sí" : "No"}</span>
-                    </label>
-                  </div>
                 </div>
+              </div>
 
-                {/* NUEVO: Máximo descuento (sólo visible si permite descuento) */}
-                {itemForm.permite_descuento && (
-                  <div className="row">
-                    <div className="col" style={{minWidth:240}}>
-                      <label className="label-strong">Máximo descuento (%)</label>
-                      <div className="row" style={{gap:6}}>
+              {/* Máximo descuento: UN solo input con selector % | $ */}
+              {itemForm.permite_descuento && (
+                <div className="form-row-full">
+                  <div className="field">
+                    <label>Máximo descuento</label>
+                    <div className="seg-wrap">
+                      <div
+                        className={`seg ${itemForm.max_descuento_tipo === "pct" ? "on" : ""}`}
+                        onClick={()=>setItemForm({...itemForm, max_descuento_tipo:"pct", max_descuento_value: String(itemForm.max_descuento_value).replace(/\D+/g,"") })}
+                        title="Porcentaje"
+                      >
+                        %
+                      </div>
+                      <div
+                        className={`seg ${itemForm.max_descuento_tipo === "valor" ? "on" : ""}`}
+                        onClick={()=>setItemForm({...itemForm, max_descuento_tipo:"valor", max_descuento_value: formatCOPInput(itemForm.max_descuento_value) })}
+                        title="Valor en $"
+                      >
+                        $
+                      </div>
+
+                      {/* Input único */}
+                      {itemForm.max_descuento_tipo === "pct" ? (
                         <input
                           className="inp"
                           type="number"
                           min="0"
                           step="0.01"
                           placeholder="0"
-                          value={itemForm.max_descuento_pct}
-                          onChange={e=>setItemForm({...itemForm, max_descuento_pct:e.target.value})}
-                          style={{maxWidth:160}}
+                          value={String(itemForm.max_descuento_value).replace(/[^\d.,-]/g,"")}
+                          onChange={(e)=>setItemForm({...itemForm, max_descuento_value:e.target.value})}
                         />
-                        <span className="muted" style={{alignSelf:"center"}}>%</span>
-                      </div>
-                    </div>
-                    <div className="col" style={{minWidth:240}}>
-                      <label className="label-strong">Máximo descuento ($)</label>
-                      <div className="row" style={{gap:6}}>
-                        <span className="muted" style={{alignSelf:"center"}}>$</span>
+                      ) : (
                         <input
                           className="inp"
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="0"
-                          value={itemForm.max_descuento_valor}
-                          onChange={e=>setItemForm({...itemForm, max_descuento_valor:e.target.value})}
-                          style={{maxWidth:200}}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="$0"
+                          value={formatCOPInput(itemForm.max_descuento_value)}
+                          onChange={(e)=>setItemForm({...itemForm, max_descuento_value: formatCOPInput(e.target.value)})}
                         />
-                      </div>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                <div className="row">
-                  <div className="col" style={{flex:1}}>
-                    <label className="label-strong">Cuenta contable</label>
-                    <input className="inp" placeholder="Buscar ítem..." value={itemForm.cuenta_contable}
-                           onChange={e=>setItemForm({...itemForm, cuenta_contable:e.target.value})}/>
-                  </div>
+              {/* Cuenta contable */}
+              <div className="form-row-full">
+                <div className="field">
+                  <label>Cuenta contable</label>
+                  <AutoInput
+                    value={itemForm.cuenta_contable}
+                    onChange={(v)=>setItemForm({...itemForm, cuenta_contable:v})}
+                    placeholder="Buscar ítem..."
+                    suggestions={cuentaSugs}
+                    onPick={(c)=>setItemForm({...itemForm, cuenta_contable: `${c.codigo} · ${c.nombre}`})}
+                    renderRow={(c)=>(<>
+                      <span className="ac-code" style={{minWidth:72}}>{c.codigo}</span>
+                      <span className="ac-name">{c.nombre}</span>
+                    </>)}
+                    minChars={0}
+                  />
                 </div>
               </div>
             </div>

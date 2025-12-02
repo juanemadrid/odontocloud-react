@@ -10,12 +10,15 @@ import EmpresaLogo from "./EmpresaLogo";
 import ListaPrecios from "./ListaPrecios";
 import ListaPreciosEditar from "./ListaPreciosEditar";
 import ListaPreciosProductos from "./ListaPreciosProductos"; // ⬅️ para la subruta /productos
+import ImportarProcedimientos from "./ImportarProcedimientos"; // ⬅️ NUEVO: importador CSV -> Firestore
 
 // Mapa de pantallas disponibles (primer nivel /config/:slug)
 const SCREENS = {
   "datos-basicos": EmpresaDatosBasicos,
   "logo": EmpresaLogo,
   "lista-de-precios": ListaPrecios,
+  // 🔒 Ruta oculta (no está en el menú)
+  "importar-procedimientos": ImportarProcedimientos,
 };
 
 // Extrae TODOS los segmentos que siguen a /config/ (p.ej. ["lista-de-precios","editar","abc123"])
