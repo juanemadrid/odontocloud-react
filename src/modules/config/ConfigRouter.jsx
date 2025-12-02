@@ -109,7 +109,7 @@ export default function ConfigRouter() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const segs = getConfigSegs(pathname); // p.ej. ["lista-de-precios","productos"] o ["lista-de-precios","editar",":id"]
+  const segs = getConfigSegs(pathname); // p.ej. ["lista-de-precios","productos"] o ["lista-de-precios","editar","abc123"]
   const slug = segs[0] || "";           // primer nivel
   const sub  = segs[1] || "";           // segundo nivel
   const base = getDashBase(pathname);
@@ -121,12 +121,17 @@ export default function ConfigRouter() {
 
   // Elegimos qué pantalla renderizar:
   let Screen = SCREENS[slug] || RightPlaceholder;
+  let screenProps = {};
+
   if (isListaPreciosEditar) {
-    Screen = ListaPreciosEditar;          // /config/lista-de-precios/editar/:id
+    // /config/lista-de-precios/editar/:id  → el :id está en segs[2]
+    const listaId = segs[2] || null;
+    Screen = ListaPreciosEditar;
+    screenProps = { listaId, key: `lpedit-${listaId || "none"}` }; // key para forzar recarga si cambia el id
   } else if (isListaPreciosProductos) {
-    Screen = ListaPreciosProductos;       // /config/lista-de-precios/productos
+    Screen = ListaPreciosProductos; // /config/lista-de-precios/productos
   } else if (isListaPreciosRoot) {
-    Screen = ListaPrecios;                // /config/lista-de-precios (clínicos)
+    Screen = ListaPrecios;          // /config/lista-de-precios (clínicos)
   }
 
   const go = (s) => navigate(`${base}/config/${s}`);
@@ -161,7 +166,7 @@ export default function ConfigRouter() {
           padding: 16,
         }}
       >
-        {!slug ? <RightPlaceholder /> : <Screen />}
+        {!slug ? <RightPlaceholder /> : <Screen {...screenProps} />}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 // ===============================
 // 💰 ListaPreciosEditar.jsx
 // Edición de una lista de precios (categorías + items + export + incremento %)
+// Versión: acordeón por categoría + 4 botones estilo OralDrive
+// Con modal “Agregar producto” (ahora con Máximo descuento % y $)
 // ===============================
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -29,11 +31,16 @@ const DEFAULT_CATS = [
   { nombre: "Psicología", comentario: "" },
 ];
 
+// ---------- helpers de paths ----------
+const docLista = (id) => doc(db, "listas_precios", id);
+const colCategorias = (id) => collection(db, "listas_precios", id, "categorias");
+const colItems = (id, catId) => collection(db, "listas_precios", id, "categorias", catId, "items");
+
 // ---------- estilos inline mínimos ----------
 function useInlineStyles() {
   useEffect(() => {
     const ID = "lp-edit-inline";
-    if (document.getElementById(ID)) return;
+    document.getElementById(ID)?.remove();
     const css = `
       .oc-main-content.lp { padding:16px 20px }
       .oc-section-title { margin-bottom:16px }
@@ -41,7 +48,6 @@ function useInlineStyles() {
       .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04) }
       .toolbar { display:flex; gap:8px; align-items:center; }
 
-      /* Chips */
       .chip { height:34px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; cursor:pointer; font-weight:600; background:#f9fafb; transition:.15s }
       .chip:hover { background:#e5e7eb }
       .chip.blue   { background:#3b82f6; color:#fff; border:none }
@@ -56,24 +62,35 @@ function useInlineStyles() {
       .table-responsive { width:100%; overflow-x:auto }
       table { width:100%; border-collapse:collapse; font-size:.9rem }
       thead tr { background:#f1f5f9 }
-      th, td { padding:10px 12px; white-space:nowrap }
+      th, td { padding:10px 12px; white-space:nowrap; vertical-align:middle }
       th { text-align:left; border-bottom:1px solid #e2e8f0; color:#475569; font-weight:700 }
       tr + tr { border-top:1px solid #e2e8f0 }
-
-      /* Botones fila */
-      .btn { padding:4px 8px; border:none; border-radius:6px; color:#fff; cursor:pointer; margin-right:6px; font-weight:600; transition:.12s }
-      .btn:hover { opacity:.9 }
-      .btn.blue   { background:#3b82f6 }
-      .btn.sky    { background:#06b6d4 }
-      .btn.green  { background:#22c55e }
-      .btn.orange { background:#f59e0b }
-      .btn.red    { background:#ef4444 }
-      .btn.sm { height:32px; padding:0 10px; border-radius:8px }
-
+      .muted { color:#64748b }
       .status-pill { padding:2px 8px; border-radius:999px; font-weight:600 }
       .status-on { background:#dcfce7; color:#166534 }
       .status-off{ background:#fee2e2; color:#991b1b }
-      .muted { color:#64748b }
+
+      .btn { padding:4px 8px; border:none; border-radius:6px; color:#fff; cursor:pointer; margin-right:6px; font-weight:600; transition:.12s }
+      .btn:hover { opacity:.9 }
+      .btn.blue   { background:#3b82f6 }
+      .btn.green  { background:#22c55e }
+      .btn.orange { background:#f59e0b }
+      .btn.red    { background:#ef4444 }
+      .btn.sky    { background:#06b6d4 }
+      .btn.sm { height:32px; padding:0 10px; border-radius:8px }
+
+      /* Acordeón */
+      .toggle-cell{width:34px}
+      .arrow{font-weight:900;font-size:18px;opacity:.7;cursor:pointer;display:inline-block}
+      .row-cat-actions{display:flex;gap:6px;justify-content:flex-end}
+
+      /* Fila desplegable */
+      .cat-details{background:#fafafa}
+      .inner-table{width:100%; border-collapse:collapse; font-size:.88rem}
+      .inner-table th, .inner-table td{padding:8px 10px}
+      .inner-table thead tr{background:#f8fafc}
+      .inner-actions{display:flex;gap:6px;justify-content:flex-end}
+      .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
 
       /* Modal base */
       .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:999}
@@ -82,30 +99,16 @@ function useInlineStyles() {
       .modal .bd{padding:16px}
       .modal .ft{padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end}
 
-      /* Pestañas modal Categoría */
-      .tabs{display:flex;gap:6px;border-bottom:1px solid #e5e7eb;margin-bottom:12px;padding:0 4px}
-      .tab{padding:8px 10px;border-radius:8px 8px 0 0;border:1px solid #e5e7eb;border-bottom:none;background:#f8fafc;cursor:pointer;font-weight:700;color:#334155}
-      .tab.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
-
-      .row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+      .row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+      .col{display:flex;flex-direction:column;gap:6px}
       .inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none}
       .ta{border:1px solid #cbd5e1;border-radius:8px;padding:8px;min-height:80px;outline:none}
-
-      /* —— Estilos del modal de Incremento —— */
-      .field-col{display:flex;flex-direction:column;gap:6px;width:100%}
       .label-strong{font-weight:700;color:#0f172a}
-      .percent-row{display:flex;align-items:center;gap:10px}
-      .prefix{width:40px;height:36px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#334155;font-weight:700}
-      .num-inp{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;outline:none;flex:1;min-width:160px}
-      .checks{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-      .check-row{display:flex;align-items:center;gap:10px}
-      .check-row input{width:18px;height:18px}
 
-      @media (max-width:640px){
-        .text-inp{ width:100% }
-        .row{flex-direction:column;align-items:stretch}
-        .percent-row{flex-direction:row}
-      }
+      /* Toggle simple */
+      .toggle{display:inline-flex;align-items:center;gap:10px}
+      .toggle-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:999px;padding:2px 8px;height:32px}
+      .toggle-pill span{font-weight:700}
     `;
     const tag = document.createElement("style");
     tag.id = ID;
@@ -115,10 +118,15 @@ function useInlineStyles() {
 }
 
 // ---------- componente ----------
-export default function ListaPreciosEditar() {
+export default function ListaPreciosEditar(props) {
   useInlineStyles();
 
-  const { id } = useParams();
+  // id por props (ConfigRouter) o por ruta
+  const p = useParams();
+  const listaId =
+    props?.listaId ??
+    p.id ?? p.listaId ?? p.priceListId ?? p.listId ?? null;
+
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -129,11 +137,26 @@ export default function ListaPreciosEditar() {
   const [saving, setSaving] = useState(false);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
 
   // modales
   const [showBulk, setShowBulk] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showCats, setShowCats] = useState(false);
+
+  // ---- Modal “Agregar producto” ----
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [itemCat, setItemCat] = useState(null);
+  const emptyItem = {
+    codigo: "", nombre: "", precio: "0", observaciones: "",
+    usa_pago_fijo: false, pago_valor_fijo: "0",
+    permite_descuento: false, genera_rips: false, es_consulta: false,
+    ver_en_agenda: false, cuenta_contable: "",
+    // NUEVOS:
+    max_descuento_pct: "", // %
+    max_descuento_valor: "" // $
+  };
+  const [itemForm, setItemForm] = useState(emptyItem);
 
   // incremento %
   const [pct, setPct] = useState(0);
@@ -148,146 +171,200 @@ export default function ListaPreciosEditar() {
   // ---------- carga doc + categorías ----------
   useEffect(() => {
     async function loadAll() {
+      if (!listaId) { setErrMsg("Ruta inválida: falta el id de la lista."); setLoading(false); return; }
       setLoading(true);
-
       try {
-        const ref = doc(db, "listas_precios", id);
-        const snap = await getDoc(ref);
+        const snap = await getDoc(docLista(listaId));
         setNombre(snap.exists() ? (snap.data().nombre || "") : "");
-      } catch (e) {
-        console.error("[LP editar] getDoc", e?.code, e?.message);
+      } catch {
         setNombre("");
+        setErrMsg("No se pudo cargar la lista. Revisa la ruta y permisos.");
       }
 
       try {
-        const catRef = collection(db, "listas_precios", id, "categorias");
-        const catSnap = await getDocs(catRef);
+        const catSnap = await getDocs(colCategorias(listaId));
         const rows = catSnap.docs.map((d) => ({
           id: d.id,
-          ...d.data(),
+          expanded: false,
+          itemsLoaded: false,
+          items: [],
           activa: d.data().activa ?? true,
+          ...d.data(),
         }));
         rows.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
         setCategorias(rows);
-      } catch (e) {
-        console.warn("[LP editar] categorías vacías o sin permiso", e?.code, e?.message);
-        setCategorias([]);
       } finally {
         setLoading(false);
       }
     }
     loadAll();
-  }, [id]);
+  }, [listaId]);
 
-  // ---------- acciones básicas ----------
+  // ---------- guardar nombre ----------
   async function guardarNombre() {
     try {
+      if (!listaId) return;
       setSaving(true);
-      await updateDoc(doc(db, "listas_precios", id), {
+      await updateDoc(docLista(listaId), {
         nombre: (nombre || "").trim(),
         actualizado: new Date().toLocaleString("es-CO"),
       });
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("No se pudo actualizar el nombre.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleActiva(cat) {
-    try {
-      await updateDoc(doc(db, "listas_precios", id, "categorias", cat.id), {
-        activa: !cat.activa,
-      });
+  // ---------- acordeón ----------
+  async function toggleExpand(cat) {
+    setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, expanded: !c.expanded } : c)));
+    if (!cat.itemsLoaded && listaId) {
+      const itemsSnap = await getDocs(colItems(listaId, cat.id)).catch(() => null);
+      const items = itemsSnap ? itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
       setCategorias((cs) =>
-        cs.map((c) => (c.id === cat.id ? { ...c, activa: !c.activa } : c))
+        cs.map((c) => (c.id === cat.id ? { ...c, items, itemsLoaded: true } : c))
       );
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo cambiar el estado.");
     }
+  }
+
+  // ---------- acciones de categoría ----------
+  async function toggleActiva(cat) {
+    if (!listaId) return;
+    await updateDoc(doc(colCategorias(listaId), cat.id), { activa: !cat.activa });
+    setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, activa: !c.activa } : c)));
+  }
+
+  async function editarCategoria(cat) {
+    if (!listaId) return;
+    const nombreNuevo = (prompt("Editar nombre de la categoría:", cat.nombre) || "").trim();
+    if (!nombreNuevo) return;
+    const comentario = (prompt("Comentario (opcional):", cat.comentario || "") || "").trim();
+    await updateDoc(doc(colCategorias(listaId), cat.id), { nombre: nombreNuevo, comentario });
+    setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, nombre: nombreNuevo, comentario } : c)));
+  }
+
+  async function eliminarCategoria(cat) {
+    if (!listaId) return;
+    if (!confirm(`¿Eliminar categoría "${cat.nombre}" y TODOS sus ítems?`)) return;
+    const itemsSnap = await getDocs(colItems(listaId, cat.id)).catch(() => null);
+    if (itemsSnap) {
+      await Promise.all(itemsSnap.docs.map((d) => deleteDoc(doc(colItems(listaId, cat.id), d.id))));
+    }
+    await deleteDoc(doc(colCategorias(listaId), cat.id));
+    setCategorias((cs) => cs.filter((c) => c.id !== cat.id));
+  }
+
+  async function actualizarPctCategoria(cat) {
+    if (!listaId) return;
+    const s = prompt("Ajuste porcentual (ej.: 5 para +5%, -10 para -10%)", "5");
+    if (s == null) return;
+    const pnum = Number(s);
+    if (Number.isNaN(pnum)) return alert("Valor inválido.");
+    const itemsSnap = await getDocs(colItems(listaId, cat.id)).catch(() => null);
+    if (!itemsSnap) return;
+    await Promise.all(
+      itemsSnap.docs.map(async (d) => {
+        const it = d.data() || {};
+        const nuevo = Math.round(Number(it.precio || 0) * (1 + pnum / 100));
+        await updateDoc(doc(colItems(listaId, cat.id), d.id), { precio: nuevo, actualizado: new Date().toLocaleString("es-CO") });
+      })
+    );
+    setCategorias((cs) =>
+      cs.map((c) =>
+        c.id === cat.id
+          ? { ...c, items: c.items.map((it) => ({ ...it, precio: Math.round(Number(it.precio || 0) * (1 + pnum / 100)) })) }
+          : c
+      )
+    );
+    alert("Precios actualizados.");
   }
 
   async function duplicar(cat) {
-    try {
-      const catRef = collection(db, "listas_precios", id, "categorias");
-      await addDoc(catRef, {
-        nombre: `${cat.nombre || "Categoría"} (copia)`,
-        comentario: cat.comentario || "",
-        activa: true,
-        creado: new Date().toLocaleString("es-CO"),
-      });
-      const catSnap = await getDocs(catRef);
-      setCategorias(catSnap.docs.map((d) => ({ id: d.id, ...d.data(), activa: d.data().activa ?? true })));
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo duplicar.");
-    }
+    if (!listaId) return;
+    const ref = await addDoc(colCategorias(listaId), {
+      nombre: `${cat.nombre || "Categoría"} (copia)`,
+      comentario: cat.comentario || "",
+      activa: true,
+      creado: new Date().toLocaleString("es-CO"),
+    });
+    setCategorias((cs) => [...cs, { ...cat, id: ref.id, nombre: `${cat.nombre || "Categoría"} (copia)`, expanded: false, itemsLoaded: false, items: [], activa: true }]);
   }
 
-  async function eliminar(cat) {
-    if (!confirm(`¿Eliminar categoría "${cat.nombre}"?`)) return;
-    try {
-      await deleteDoc(doc(db, "listas_precios", id, "categorias", cat.id));
-      setCategorias((cs) => cs.filter((c) => c.id !== cat.id));
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo eliminar.");
-    }
+  // ---------- items ----------
+  function openNuevoItem(cat) {
+    setItemCat(cat);
+    setItemForm(emptyItem);
+    setShowItemModal(true);
   }
 
-  // ---------- agregar categoría (modal) ----------
-  async function openCats() {
-    setShowCats(true);
-    setCatTab("existentes");
-    setNewCatName("");
-    setNewCatComment("");
+  async function guardarNuevoItem() {
+    if (!listaId || !itemCat) return;
+    if (!itemForm.nombre.trim()) return alert("El nombre es obligatorio.");
 
-    try {
-      const snap = await getDocs(collection(db, "catalogo_categorias"));
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setCatalogo(arr.length ? arr : DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
-    } catch {
-      setCatalogo(DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
-    }
+    const toNumber = (v) => Number(String(v).replace(/\D/g, "")) || 0;
+
+    const payload = {
+      codigo: itemForm.codigo.trim(),
+      nombre: itemForm.nombre.trim(),
+      permite_descuento: !!itemForm.permite_descuento,
+      // NUEVOS: sólo guardamos si la casilla está marcada; si no, 0
+      max_descuento_pct: itemForm.permite_descuento ? Number(itemForm.max_descuento_pct || 0) : 0,
+      max_descuento_valor: itemForm.permite_descuento ? toNumber(itemForm.max_descuento_valor || 0) : 0,
+      genera_rips: !!itemForm.genera_rips,
+      es_consulta: !!itemForm.es_consulta,
+      ver_en_agenda: !!itemForm.ver_en_agenda,
+      cuenta_contable: itemForm.cuenta_contable.trim(),
+      comentario: itemForm.observaciones.trim(),
+      precio: toNumber(itemForm.precio),
+      usa_pago_fijo: !!itemForm.usa_pago_fijo,
+      pago_valor_fijo: toNumber(itemForm.pago_valor_fijo),
+      creado: new Date().toLocaleString("es-CO"),
+    };
+
+    const ref = await addDoc(colItems(listaId, itemCat.id), payload);
+
+    // refresco local
+    setCategorias((cs) =>
+      cs.map((c) =>
+        c.id === itemCat.id
+          ? { ...c, items: [...c.items, { id: ref.id, ...payload }], expanded: true }
+          : c
+      )
+    );
+
+    setShowItemModal(false);
   }
 
-  async function addExistingToList(cat) {
-    try {
-      const catRef = collection(db, "listas_precios", id, "categorias");
-      await addDoc(catRef, {
-        nombre: cat.nombre,
-        comentario: cat.comentario || "",
-        activa: true,
-        creado: new Date().toLocaleString("es-CO"),
-      });
-      const catSnap = await getDocs(catRef);
-      setCategorias(catSnap.docs.map((d) => ({ id: d.id, ...d.data(), activa: d.data().activa ?? true })));
-      alert("Categoría agregada.");
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo agregar la categoría.");
-    }
+  async function editarItem(cat, it) {
+    if (!listaId) return;
+    const codigo = (prompt("Código:", it.codigo || "") || "").trim();
+    const nombreProc = (prompt("Nombre:", it.nombre || "") || "").trim();
+    const permite = window.confirm("¿Permite descuento? (Aceptar = Sí / Cancelar = No)");
+    const precioStr = (prompt("Precio (COP):", String(it.precio || 0)) || "0").replace(/\D/g, "");
+    const precio = Number(precioStr || 0);
+
+    await updateDoc(doc(colItems(listaId, cat.id), it.id), {
+      codigo,
+      nombre: nombreProc,
+      permite_descuento: !!permite,
+      precio,
+      actualizado: new Date().toLocaleString("es-CO"),
+    });
+    setCategorias((cs) =>
+      cs.map((c) =>
+        c.id === cat.id
+          ? { ...c, items: c.items.map((x) => (x.id === it.id ? { ...x, codigo, nombre: nombreProc, permite_descuento: !!permite, precio } : x)) }
+          : c
+      )
+    );
   }
 
-  async function addNewCategory() {
-    if (!newCatName.trim()) return alert("Escribe el nombre de la categoría.");
-    try {
-      const catRef = collection(db, "listas_precios", id, "categorias");
-      await addDoc(catRef, {
-        nombre: newCatName.trim(),
-        comentario: newCatComment.trim(),
-        activa: true,
-        creado: new Date().toLocaleString("es-CO"),
-      });
-      const catSnap = await getDocs(catRef);
-      setCategorias(catSnap.docs.map((d) => ({ id: d.id, ...d.data(), activa: d.data().activa ?? true })));
-      setShowCats(false);
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo crear la categoría.");
-    }
+  async function eliminarItem(cat, it) {
+    if (!listaId) return;
+    if (!confirm(`¿Eliminar "${it.nombre}"?`)) return;
+    await deleteDoc(doc(colItems(listaId, cat.id), it.id));
+    setCategorias((cs) => cs.map((c) => (c.id === cat.id ? { ...c, items: c.items.filter((x) => x.id !== it.id) } : c)));
   }
 
   // ---------- sembrar catálogo base ----------
@@ -300,9 +377,60 @@ export default function ListaPreciosEditar() {
         await setDoc(doc(colRef, idAuto), { nombre: c.nombre, comentario: c.comentario || "" }, { merge: true });
       }
       alert("Catálogo base creado/actualizado. Vuelve a abrir 'Agregar categoría'.");
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("No se pudo sembrar el catálogo base.");
+    }
+  }
+
+  // ---------- categorías: modal ----------
+  async function openCats() {
+    setShowCats(true);
+    setCatTab("existentes");
+    setNewCatName("");
+    setNewCatComment("");
+    try {
+      const snap = await getDocs(collection(db, "catalogo_categorias"));
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setCatalogo(arr.length ? arr : DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
+    } catch {
+      setCatalogo(DEFAULT_CATS.map((c, i) => ({ id: `def-${i}`, ...c })));
+    }
+  }
+
+  async function addExistingToList(cat) {
+    if (!listaId) return;
+    try {
+      const catRef = colCategorias(listaId);
+      await addDoc(catRef, {
+        nombre: cat.nombre,
+        comentario: cat.comentario || "",
+        activa: true,
+        creado: new Date().toLocaleString("es-CO"),
+      });
+      const catSnap = await getDocs(catRef);
+      setCategorias(catSnap.docs.map((d) => ({ id: d.id, ...d.data(), activa: d.data().activa ?? true, expanded:false, itemsLoaded:false, items:[] })));
+      alert("Categoría agregada.");
+    } catch {
+      alert("No se pudo agregar la categoría.");
+    }
+  }
+
+  async function addNewCategory() {
+    if (!listaId) return;
+    if (!newCatName.trim()) return alert("Escribe el nombre de la categoría.");
+    try {
+      const catRef = colCategorias(listaId);
+      await addDoc(catRef, {
+        nombre: newCatName.trim(),
+        comentario: newCatComment.trim(),
+        activa: true,
+        creado: new Date().toLocaleString("es-CO"),
+      });
+      const catSnap = await getDocs(catRef);
+      setCategorias(catSnap.docs.map((d) => ({ id: d.id, ...d.data(), activa: d.data().activa ?? true, expanded:false, itemsLoaded:false, items:[] })));
+      setShowCats(false);
+    } catch {
+      alert("No se pudo crear la categoría.");
     }
   }
 
@@ -318,25 +446,24 @@ export default function ListaPreciosEditar() {
     });
   }
 
-  // ---------- incremento porcentual ----------
+  // ---------- incremento porcentual (global) ----------
   function roundValue(value, mode) {
     if (mode === "up") return Math.ceil(value);
     if (mode === "down") return Math.floor(value);
     return value;
   }
   async function applyBulkIncrement() {
+    if (!listaId) return;
     const percent = Number(pct);
     if (!Number.isFinite(percent)) return alert("Ingresa un porcentaje válido.");
     try {
       for (const cat of categorias) {
-        const itemsRef = collection(db, "listas_precios", id, "categorias", cat.id, "items");
-        const itemsSnap = await getDocs(itemsRef).catch(() => null);
+        const itemsSnap = await getDocs(colItems(listaId, cat.id)).catch(() => null);
         if (!itemsSnap) continue;
         for (const d of itemsSnap.docs) {
           const it = d.data() || {};
-          const precioNum = Number(it.precio || 0);
-          const nuevo = roundValue(precioNum * (1 + percent / 100), roundMode);
-          await updateDoc(doc(db, "listas_precios", id, "categorias", cat.id, "items", d.id), {
+          const nuevo = roundValue(Number(it.precio || 0) * (1 + percent / 100), roundMode);
+          await updateDoc(doc(colItems(listaId, cat.id), d.id), {
             precio: nuevo,
             actualizado: new Date().toLocaleString("es-CO"),
           });
@@ -344,8 +471,7 @@ export default function ListaPreciosEditar() {
       }
       alert("Precios actualizados.");
       setShowBulk(false);
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("No se pudo aplicar el incremento.");
     }
   }
@@ -353,7 +479,7 @@ export default function ListaPreciosEditar() {
   // ---------- export (XLSX pro + CSV fallback) ----------
   async function exportar() {
     try {
-      // Construcción de datos en orden exacto
+      if (!listaId) return;
       const HEAD = [
         "Categoría", "Código", "Nombre", "Permite desc", "Precio",
         "Genera RIPS", "Es consulta", "Ver en agenda",
@@ -363,20 +489,14 @@ export default function ListaPreciosEditar() {
       const titulo = `OdontoCloud · Lista de precios — ${(nombre || "Principal")}`;
       const fecha = `Exportado: ${new Date().toLocaleString("es-CO")}`;
 
-      // Título y subtítulo (luego los unimos en la hoja)
-      aoa.push([titulo]);
-      aoa.push([fecha]);
-      aoa.push([]);            // línea en blanco
-      aoa.push(HEAD);          // encabezados
-      const headerRowIndex = 4; // 1-based en Excel
+      aoa.push([titulo]); aoa.push([fecha]); aoa.push([]); aoa.push(HEAD);
+      const headerRowIndex = 4;
 
       const toSiNo = (v) => (v ? "si" : "no");
 
       for (const cat of categorias) {
-        const itemsRef = collection(db, "listas_precios", id, "categorias", cat.id, "items");
-        const itemsSnap = await getDocs(itemsRef).catch(() => null);
+        const itemsSnap = await getDocs(colItems(listaId, cat.id)).catch(() => null);
         const items = itemsSnap ? itemsSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
-
         for (const it of items) {
           aoa.push([
             cat.nombre || "",
@@ -395,71 +515,38 @@ export default function ListaPreciosEditar() {
         }
       }
 
-      // Intentar XLSX primero
       const XLSX = await ensureXLSX();
       const fileBase = `OdontoCloud-ListaPrecios-${(nombre || "Principal")}`;
 
       if (XLSX && XLSX.utils && aoa.length > headerRowIndex - 1) {
         const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-        // Anchos de columna “bonitos”
         ws["!cols"] = [
-          { wch: 22 }, // Categoría
-          { wch: 14 }, // Código
-          { wch: 36 }, // Nombre
-          { wch: 12 }, // Permite desc
-          { wch: 14 }, // Precio
-          { wch: 12 }, // Genera RIPS
-          { wch: 12 }, // Es consulta
-          { wch: 14 }, // Ver en agenda
-          { wch: 28 }, // Nombre en la agenda
-          { wch: 10 }, // Tiempo
-          { wch: 16 }, // Identificador
-          { wch: 18 }, // Cuenta contable
+          { wch: 22 }, { wch: 14 }, { wch: 36 }, { wch: 12 }, { wch: 14 },
+          { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 18 },
         ];
-
-        // Merge del título y del subtítulo sobre todas las columnas
-        ws["!merges"] = [
-          { s: { r:0, c:0 }, e:{ r:0, c:11 } }, // A1:L1
-          { s: { r:1, c:0 }, e:{ r:1, c:11 } }, // A2:L2
-        ];
-
-        // AutoFilter desde encabezados hasta la última fila con datos
+        ws["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:11} }, { s:{r:1,c:0}, e:{r:1,c:11} }];
         const lastRow = aoa.length;
         ws["!autofilter"] = { ref: `A${headerRowIndex}:L${lastRow}` };
-
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Lista de precios");
-
         const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${fileBase}.xlsx`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        a.download = `${fileBase}.xlsx`; a.click(); URL.revokeObjectURL(a.href);
       } else {
-        // CSV bien formado (mismo orden de columnas)
         const csv = aoa
-          .map(row =>
-            row
-              .map(v => {
-                const s = String(v ?? "").replace(/"/g, '""');
-                return /[",\n]/.test(s) ? `"${s}"` : s;
-              })
-              .join(",")
-          )
+          .map(row => row.map(v => {
+            const s = String(v ?? "").replace(/"/g, '""');
+            return /[",\n]/.test(s) ? `"${s}"` : s;
+          }).join(","))
           .join("\n");
-
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${fileBase}.csv`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        a.download = `${fileBase}.csv`; a.click(); URL.revokeObjectURL(a.href);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("No se pudo exportar.");
     }
   }
@@ -470,6 +557,12 @@ export default function ListaPreciosEditar() {
       <div className="oc-section-title">
         <h2>Configuración · Edición Lista de precios</h2>
       </div>
+
+      {errMsg && (
+        <div style={{marginBottom:12, padding:"8px 12px", border:"1px solid #fecaca", background:"#fef2f2", color:"#991b1b", borderRadius:8}}>
+          {errMsg}
+        </div>
+      )}
 
       <div className="card">
         {/* barra superior */}
@@ -495,16 +588,16 @@ export default function ListaPreciosEditar() {
           </div>
         </div>
 
-        {/* tabla categorías */}
+        {/* tabla categorías + acordeón */}
         <div className="table-responsive">
           <table>
             <thead>
               <tr>
-                <th style={{ width: 40 }}></th>
+                <th className="toggle-cell"></th>
                 <th>Categoría</th>
                 <th>Comentario</th>
                 <th style={{ width: 140 }}>Estado</th>
-                <th style={{ width: 260, textAlign: "right" }}>Acciones</th>
+                <th style={{ width: 360, textAlign: "right" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -514,25 +607,79 @@ export default function ListaPreciosEditar() {
                 <tr><td colSpan={5} style={{ textAlign: "center", padding: 20 }}>Sin categorías.</td></tr>
               ) : (
                 categorias.map((c) => (
-                  <tr key={c.id}>
-                    <td>▾</td>
-                    <td style={{ fontWeight: 700 }}>{c.nombre || "Categoría"}</td>
-                    <td className="muted">{c.comentario || "—"}</td>
-                    <td>
-                      <span className={`status-pill ${c.activa ? "status-on" : "status-off"}`}>
-                        {c.activa ? "Conectado" : "Desconectado"}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <button className="btn green"  title="Agregar ítem" onClick={() => alert("Agregar ítem…")}>＋</button>
-                      <button className="btn orange" title="Descuento %" onClick={() => alert("Descuento…")}>%</button>
-                      <button className="btn sky"    title="Duplicar"    onClick={() => duplicar(c)}>↗</button>
-                      <button className="btn red"    title="Eliminar"    onClick={() => eliminar(c)}>B</button>
-                      <button className="btn blue"   title={c.activa ? "Desactivar" : "Activar"} onClick={() => toggleActiva(c)} style={{ marginLeft: 6 }}>
-                        {c.activa ? "⏻" : "▶"}
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={c.id}>
+                    <tr>
+                      <td className="toggle-cell">
+                        <span className="arrow" onClick={()=>toggleExpand(c)}>{c.expanded ? "▾" : "▸"}</span>
+                      </td>
+                      <td style={{ fontWeight: 700 }}>{c.nombre || "Categoría"}</td>
+                      <td className="muted">{c.comentario || "—"}</td>
+                      <td>
+                        <span className={`status-pill ${c.activa ? "status-on" : "status-off"}`}>
+                          {c.activa ? "Conectado" : "Desconectado"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div className="row-cat-actions">
+                          {/* 4 BOTONES “OralDrive” */}
+                          <button className="btn green sm"  title="Nuevo ítem"      onClick={()=>openNuevoItem(c)}>＋</button>
+                          <button className="btn orange sm" title="Actualizar precios %" onClick={()=>actualizarPctCategoria(c)}>%</button>
+                          <button className="btn sky sm"    title="Editar categoría" onClick={()=>editarCategoria(c)}>✏️</button>
+                          <button className="btn red sm"    title="Eliminar categoría" onClick={()=>eliminarCategoria(c)}>🗑️</button>
+
+                          {/* Extras opcionales */}
+                          <button className="btn blue sm"   title={c.activa ? "Desactivar" : "Activar"} onClick={() => toggleActiva(c)}>
+                            {c.activa ? "⏻" : "▶"}
+                          </button>
+                          <button className="btn sky sm" title="Duplicar categoría" onClick={()=>duplicar(c)}>↗</button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* fila expandida con items */}
+                    {c.expanded && (
+                      <tr className="cat-details">
+                        <td></td>
+                        <td colSpan={4}>
+                          <div className="table-responsive">
+                            <table className="inner-table">
+                              <thead>
+                                <tr>
+                                  <th style={{width:110}}>Código</th>
+                                  <th>Lista de precios</th>
+                                  <th style={{width:160}}>Permite descuento</th>
+                                  <th style={{width:140}}>Precio</th>
+                                  <th style={{width:140, textAlign:"right"}}>Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(!c.items || c.items.length===0) ? (
+                                  <tr>
+                                    <td colSpan={5} className="muted" style={{ textAlign:"center", padding:12 }}>
+                                      Sin ítems en esta categoría.
+                                    </td>
+                                  </tr>
+                                ) : c.items.map((it)=>(
+                                  <tr key={it.id}>
+                                    <td className="mono">{it.codigo || "—"}</td>
+                                    <td style={{ fontWeight: 600 }}>{it.nombre || "—"}</td>
+                                    <td>{it.permite_descuento ? "Sí" : "No"}</td>
+                                    <td className="mono">${Number(it.precio||0).toLocaleString("es-CO")}</td>
+                                    <td style={{ textAlign:"right" }}>
+                                      <div className="inner-actions">
+                                        <button className="btn sky sm" onClick={()=>editarItem(c,it)}>✏️</button>
+                                        <button className="btn red sm" onClick={()=>eliminarItem(c,it)}>🗑️</button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -545,57 +692,31 @@ export default function ListaPreciosEditar() {
         </div>
       </div>
 
-      {/* ---------- Modal Incremento % (nuevo layout) ---------- */}
+      {/* ---------- Modal Incremento % (global) ---------- */}
       {showBulk && (
         <div className="modal-mask" onClick={() => setShowBulk(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="hd">Incrementar todos los precios</div>
             <div className="bd">
-              <div className="field-col">
+              <div className="col">
                 <label className="label-strong">Porcentaje de incremento *</label>
-                <div className="percent-row">
-                  <div className="prefix">%</div>
+                <div className="row">
                   <input
-                    className="num-inp"
+                    className="inp"
+                    style={{maxWidth:160}}
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="Ingrese el porcentaje"
+                    placeholder="0"
                     value={pct}
                     onChange={(e)=>setPct(e.target.value)}
                   />
                 </div>
 
-                <div className="checks">
-                  <label className="check-row">
-                    <input
-                      type="radio"
-                      name="round"
-                      checked={roundMode === "down"}
-                      onChange={()=>setRoundMode("down")}
-                    />
-                    <span>Redondear hacia abajo</span>
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="radio"
-                      name="round"
-                      checked={roundMode === "up"}
-                      onChange={()=>setRoundMode("up")}
-                    />
-                    <span>Redondear hacia arriba</span>
-                  </label>
-
-                  <label className="check-row">
-                    <input
-                      type="radio"
-                      name="round"
-                      checked={roundMode === "none"}
-                      onChange={()=>setRoundMode("none")}
-                    />
-                    <span>No redondear</span>
-                  </label>
+                <div className="col" style={{gap:8}}>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "down"} onChange={()=>setRoundMode("down")} /> Redondear hacia abajo</label>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "up"} onChange={()=>setRoundMode("up")} /> Redondear hacia arriba</label>
+                  <label className="toggle"><input type="radio" name="round" checked={roundMode === "none"} onChange={()=>setRoundMode("none")} /> No redondear</label>
                 </div>
               </div>
             </div>
@@ -629,9 +750,9 @@ export default function ListaPreciosEditar() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="hd">Categoría</div>
             <div className="bd">
-              <div className="tabs">
-                <button className={`tab ${catTab==="existentes"?"active":""}`} onClick={()=>setCatTab("existentes")}>Categorías existentes</button>
-                <button className={`tab ${catTab==="nueva"?"active":""}`} onClick={()=>setCatTab("nueva")}>Editar categoría / Nueva categoría</button>
+              <div className="row" style={{gap:6, marginBottom:12}}>
+                <button className={`chip ${catTab==="existentes"?"blue":""}`} onClick={()=>setCatTab("existentes")}>Categorías existentes</button>
+                <button className={`chip ${catTab==="nueva"?"blue":""}`} onClick={()=>setCatTab("nueva")}>Editar/Nueva categoría</button>
               </div>
 
               {catTab === "existentes" ? (
@@ -677,6 +798,132 @@ export default function ListaPreciosEditar() {
             <div className="ft">
               <button className="chip gray" onClick={()=>setShowCats(false)}>Cerrar</button>
               {catTab === "nueva" && <button className="chip green" onClick={addNewCategory}>Guardar</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Modal Agregar Producto (con Máximo descuento) ---------- */}
+      {showItemModal && (
+        <div className="modal-mask" onClick={() => setShowItemModal(false)}>
+          <div className="modal" onClick={(e)=>e.stopPropagation()}>
+            <div className="hd">Agregar producto {itemCat ? `· ${itemCat.nombre}` : ""}</div>
+            <div className="bd">
+              <div className="col" style={{gap:12}}>
+                <div className="row">
+                  <div className="col" style={{flex:1}}>
+                    <label className="label-strong">Código *</label>
+                    <input className="inp" value={itemForm.codigo} onChange={e=>setItemForm({...itemForm, codigo:e.target.value})} placeholder="Código" />
+                  </div>
+                  <div className="col" style={{flex:2}}>
+                    <label className="label-strong">Nombre *</label>
+                    <input className="inp" value={itemForm.nombre} onChange={e=>setItemForm({...itemForm, nombre:e.target.value})} placeholder="Nombre del procedimiento" />
+                  </div>
+                  <div className="col" style={{width:200}}>
+                    <label className="label-strong">Precio *</label>
+                    <input className="inp" type="number" min="0" value={itemForm.precio} onChange={e=>setItemForm({...itemForm, precio:e.target.value})} placeholder="$0" />
+                  </div>
+                </div>
+
+                <div className="col">
+                  <label className="label-strong">Observaciones</label>
+                  <textarea className="ta" value={itemForm.observaciones} onChange={e=>setItemForm({...itemForm, observaciones:e.target.value})} />
+                </div>
+
+                <div className="row">
+                  <div className="col" style={{flex:1}}>
+                    <label className="label-strong">Pago valor fijo a doctores</label>
+                    <div className="row">
+                      <input className="inp" style={{maxWidth:160}} type="number" min="0"
+                             value={itemForm.pago_valor_fijo}
+                             onChange={e=>setItemForm({...itemForm, pago_valor_fijo:e.target.value})} />
+                      <label className="toggle" style={{marginLeft:10}}>
+                        <input type="checkbox" checked={itemForm.usa_pago_fijo}
+                               onChange={e=>setItemForm({...itemForm, usa_pago_fijo:e.target.checked})} />
+                        Usar valor fijo
+                      </label>
+                    </div>
+                    <small className="muted">Use este campo para no liquidar a los doctores por su % configurado sino por un valor fijo en dinero $</small>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={itemForm.permite_descuento}
+                      onChange={e=>setItemForm({
+                        ...itemForm,
+                        permite_descuento:e.target.checked,
+                        // al desmarcar, limpiamos los máximos
+                        ...(e.target.checked ? {} : {max_descuento_pct:"", max_descuento_valor:""})
+                      })}
+                    />
+                    Permite descuento
+                  </label>
+                  <label className="toggle"><input type="checkbox" checked={itemForm.genera_rips} onChange={e=>setItemForm({...itemForm, genera_rips:e.target.checked})}/> Genera RIPS</label>
+                  <label className="toggle"><input type="checkbox" checked={itemForm.es_consulta} onChange={e=>setItemForm({...itemForm, es_consulta:e.target.checked})}/> Es consulta</label>
+
+                  <div className="toggle">
+                    <span>Ver en agenda</span>
+                    <label className="toggle-pill">
+                      <input type="checkbox" checked={itemForm.ver_en_agenda}
+                             onChange={e=>setItemForm({...itemForm, ver_en_agenda:e.target.checked})}/>
+                      <span>{itemForm.ver_en_agenda ? "Sí" : "No"}</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* NUEVO: Máximo descuento (sólo visible si permite descuento) */}
+                {itemForm.permite_descuento && (
+                  <div className="row">
+                    <div className="col" style={{minWidth:240}}>
+                      <label className="label-strong">Máximo descuento (%)</label>
+                      <div className="row" style={{gap:6}}>
+                        <input
+                          className="inp"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0"
+                          value={itemForm.max_descuento_pct}
+                          onChange={e=>setItemForm({...itemForm, max_descuento_pct:e.target.value})}
+                          style={{maxWidth:160}}
+                        />
+                        <span className="muted" style={{alignSelf:"center"}}>%</span>
+                      </div>
+                    </div>
+                    <div className="col" style={{minWidth:240}}>
+                      <label className="label-strong">Máximo descuento ($)</label>
+                      <div className="row" style={{gap:6}}>
+                        <span className="muted" style={{alignSelf:"center"}}>$</span>
+                        <input
+                          className="inp"
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0"
+                          value={itemForm.max_descuento_valor}
+                          onChange={e=>setItemForm({...itemForm, max_descuento_valor:e.target.value})}
+                          style={{maxWidth:200}}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="row">
+                  <div className="col" style={{flex:1}}>
+                    <label className="label-strong">Cuenta contable</label>
+                    <input className="inp" placeholder="Buscar ítem..." value={itemForm.cuenta_contable}
+                           onChange={e=>setItemForm({...itemForm, cuenta_contable:e.target.value})}/>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="ft">
+              <button className="chip gray" onClick={()=>setShowItemModal(false)}>Cerrar</button>
+              <button className="chip green" onClick={guardarNuevoItem}>Guardar</button>
             </div>
           </div>
         </div>

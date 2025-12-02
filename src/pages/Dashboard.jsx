@@ -1167,9 +1167,10 @@ export default function Dashboard() {
       case "Caja":
         return <Caja />; // Caja leerá los query params (cobro, patientId)
       case "Config":
+      case "Configuración":
+      case "Configuracion":
         // ⬇️ Si la URL es /config/:slug usamos el router; si no, la portada de config
-        case "Config":
-  return <ConfigRouter />;
+        return <ConfigRouter />;
 
       case "Inicio":
       default:
@@ -1232,9 +1233,8 @@ export default function Dashboard() {
             title={t("nav_admin")}
             aria-haspopup="true"
             aria-expanded={adminOpen}
+            // 👉 Ahora SOLO abre con clic:
             onClick={() => (adminOpen ? setAdminOpen(false) : openAdmin())}
-            onMouseEnter={() => openAdmin()}
-            onFocus={() => openAdmin()}
           >
             {t("nav_admin")}
           </button>
