@@ -1,6 +1,8 @@
 // ===============================
 // ⚙️ ConfigRouter.jsx
 // (redirect por defecto + Lista de precios + Editar + Subruta Productos)
+// Orden del menú igual a OralDrive
+// HABILITADOS: Sucursales, Especialidades, Consultorios, Profesionales, Consecutivos
 // ===============================
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,19 +11,34 @@ import EmpresaDatosBasicos from "./EmpresaDatosBasicos";
 import EmpresaLogo from "./EmpresaLogo";
 import ListaPrecios from "./ListaPrecios";
 import ListaPreciosEditar from "./ListaPreciosEditar";
-import ListaPreciosProductos from "./ListaPreciosProductos"; // ⬅️ para la subruta /productos
-import ImportarProcedimientos from "./ImportarProcedimientos"; // ⬅️ NUEVO: importador CSV -> Firestore
+import ListaPreciosProductos from "./ListaPreciosProductos";
+import ImportarProcedimientos from "./ImportarProcedimientos";
+
+// Pantallas habilitadas en tu app
+import Sucursales from "./Sucursales";
+import Especialidades from "./Especialidades";
+import Consultorios from "./Consultorios";
+import Profesionales from "./Profesionales";
+import Consecutivos from "./Consecutivos";
 
 // Mapa de pantallas disponibles (primer nivel /config/:slug)
 const SCREENS = {
   "datos-basicos": EmpresaDatosBasicos,
   "logo": EmpresaLogo,
   "lista-de-precios": ListaPrecios,
-  // 🔒 Ruta oculta (no está en el menú)
+
+  // habilitadas
+  "consecutivos": Consecutivos,
+  "sucursales": Sucursales,
+  "especialidades": Especialidades,
+  "consultorios": Consultorios,
+  "profesionales": Profesionales,
+
+  // Ruta oculta (no está en menú)
   "importar-procedimientos": ImportarProcedimientos,
 };
 
-// Extrae TODOS los segmentos que siguen a /config/ (p.ej. ["lista-de-precios","editar","abc123"])
+// Extrae los segmentos que siguen a /config/
 function getConfigSegs(pathname = "") {
   const idx = pathname.toLowerCase().indexOf("/config/");
   if (idx === -1) return [];
@@ -37,27 +54,51 @@ function getDashBase(pathname = "") {
 }
 
 function LeftMenu({ current, onNav }) {
+  // Orden calcado de tu captura de OralDrive:
   const items = [
     { slug: "datos-basicos", label: "Datos básicos" },
     { slug: "logo", label: "Logo" },
-    { slug: "lista-de-precios", label: "Lista de precios" }, // 👈 único ítem
-    { slug: "consecutivos", label: "Consecutivos", soon: true },
-    { slug: "sucursales", label: "Sucursales", soon: true },
+    { slug: "lista-de-precios", label: "Lista de precios" },
+    { slug: "planes", label: "Planes", soon: true },
+    { slug: "consecutivos", label: "Consecutivos" }, // ✅ habilitado
+    { slug: "almacenes", label: "Almacenes", soon: true },
+    { slug: "categorias-inventario", label: "Categorías inventario", soon: true },
+    { slug: "sucursales", label: "Sucursales" }, // ✅ habilitado
     { slug: "metodos-de-pago", label: "Métodos de pago", soon: true },
-    { slug: "especialidades", label: "Especialidades", soon: true },
+    { slug: "bancos", label: "Bancos", soon: true },
+    { slug: "formulario-de-pacientes", label: "Formulario de pacientes", soon: true },
+    { slug: "especialidades", label: "Especialidades" }, // ✅ habilitado
+    { slug: "perfiles", label: "Perfiles", soon: true },
     { slug: "usuarios", label: "Usuarios", soon: true },
     { slug: "condiciones-de-pago", label: "Condiciones de pago", soon: true },
+    { slug: "parametros", label: "Parámetros", soon: true },
+    { slug: "recursos-fisicos", label: "Recursos físicos", soon: true },
     { slug: "plantillas-doc-clinicos", label: "Plantillas Doc. Clínicos", soon: true },
+    { slug: "pestanas-consulta-med", label: "Pestañas Consulta Med.", soon: true },
+    { slug: "cargos", label: "Cargos", soon: true },
     { slug: "impuestos", label: "Impuestos", soon: true },
+    { slug: "catalogo-de-cuentas", label: "Catálogo de cuentas", soon: true },
+    { slug: "suscripcion", label: "Suscripción", soon: true },
+
+    // 🔽 Extras propios de OdontoCloud (habilitados y fuera del set de OralDrive)
+    { slug: "consultorios", label: "Consultorios" }, // ✅ habilitado
+    { slug: "profesionales", label: "Profesionales" }, // ✅ habilitado
   ];
 
   return (
     <aside
       style={{
-        width: 300, flex: "0 0 300px", background: "#fff",
-        border: "1px solid #e5e7eb", borderRadius: 12, padding: 12,
-        position: "sticky", top: 12, alignSelf: "flex-start",
-        maxHeight: "calc(100vh - 24px)", overflow: "auto",
+        width: 300,
+        flex: "0 0 300px",
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: 12,
+        position: "sticky",
+        top: 12,
+        alignSelf: "flex-start",
+        maxHeight: "calc(100vh - 24px)",
+        overflow: "auto",
       }}
       aria-label="Información general"
     >
@@ -96,8 +137,10 @@ function RightPlaceholder() {
     <div
       className="card"
       style={{
-        background: "#fff", border: "1px solid #e5e7eb",
-        borderRadius: 12, padding: 16,
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: 16,
       }}
     >
       <h3 style={{ marginTop: 0 }}>Configuración</h3>
@@ -113,38 +156,39 @@ export default function ConfigRouter() {
   const navigate = useNavigate();
 
   const segs = getConfigSegs(pathname); // p.ej. ["lista-de-precios","productos"] o ["lista-de-precios","editar","abc123"]
-  const slug = segs[0] || "";           // primer nivel
-  const sub  = segs[1] || "";           // segundo nivel
+  const slug = segs[0] || ""; // primer nivel
+  const sub = segs[1] || ""; // segundo nivel
   const base = getDashBase(pathname);
 
   // Subrutas de "lista-de-precios"
-  const isListaPreciosRoot      = slug === "lista-de-precios" && !sub;
+  const isListaPreciosRoot = slug === "lista-de-precios" && !sub;
   const isListaPreciosProductos = slug === "lista-de-precios" && sub === "productos";
-  const isListaPreciosEditar    = slug === "lista-de-precios" && sub === "editar";
+  const isListaPreciosEditar = slug === "lista-de-precios" && sub === "editar";
 
   // Elegimos qué pantalla renderizar:
   let Screen = SCREENS[slug] || RightPlaceholder;
   let screenProps = {};
 
   if (isListaPreciosEditar) {
-    // /config/lista-de-precios/editar/:id  → el :id está en segs[2]
-    const listaId = segs[2] || null;
+    const listaId = segs[2] || null; // /config/lista-de-precios/editar/:id
     Screen = ListaPreciosEditar;
-    screenProps = { listaId, key: `lpedit-${listaId || "none"}` }; // key para forzar recarga si cambia el id
+    screenProps = { listaId, key: `lpedit-${listaId || "none"}` };
   } else if (isListaPreciosProductos) {
     Screen = ListaPreciosProductos; // /config/lista-de-precios/productos
   } else if (isListaPreciosRoot) {
-    Screen = ListaPrecios;          // /config/lista-de-precios (clínicos)
+    Screen = ListaPrecios; // /config/lista-de-precios (clínicos)
   }
 
   const go = (s) => navigate(`${base}/config/${s}`);
 
-  // Redirect /config → /config/datos-basicos
+  // Redirect /config → /config/datos-basicos SOLO si estamos parados en /config
   useEffect(() => {
-    if (!slug) {
+    const lower = pathname.toLowerCase();
+    const isConfigRoot = lower.endsWith("/config") || lower.endsWith("/config/");
+    if (isConfigRoot && !slug) {
       navigate(`${base}/config/datos-basicos`, { replace: true });
     }
-  }, [slug, base, navigate]);
+  }, [pathname, slug, base, navigate]);
 
   return (
     <div
@@ -157,7 +201,6 @@ export default function ConfigRouter() {
         borderRadius: 12,
       }}
     >
-      {/* el menú izquierdo NO cambia */}
       <LeftMenu current={slug} onNav={go} />
 
       <div

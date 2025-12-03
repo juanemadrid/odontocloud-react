@@ -1,7 +1,7 @@
 // ===============================
 // 💰 ListaPreciosEditar.jsx
 // Edición de una lista de precios (categorías + items + export + incremento %)
-// Con acordeón, 4 botones por categoría y modal "Agregar producto"
+// Con acordeón, 4 botones por categoría y modal "Agregar/Editar producto"
 // Autocompletado (Firestore) + alineación de modal
 // Máx. descuento: selector % | $ con un solo input
 // ===============================
@@ -220,9 +220,12 @@ export default function ListaPreciosEditar(props) {
   const [showBulk, setShowBulk] = useState(false);
   const [showCats, setShowCats] = useState(false);
 
-  // ---- Modal “Agregar producto” ----
+  // ---- Modal Producto (crear/editar) ----
   const [showItemModal, setShowItemModal] = useState(false);
   const [itemCat, setItemCat] = useState(null);
+  const [itemMode, setItemMode] = useState("create"); // "create" | "edit"
+  const [itemEditId, setItemEditId] = useState(null);
+
   const emptyItem = {
     codigo: "", nombre: "", precio: "", observaciones: "",
     usa_pago_fijo: false, pago_valor_fijo: "0",
@@ -369,11 +372,45 @@ export default function ListaPreciosEditar(props) {
   /* ---------- items ---------- */
   function openNuevoItem(cat) {
     setItemCat(cat);
+    setItemMode("create");
+    setItemEditId(null);
     setItemForm(emptyItem);
     setShowItemModal(true);
   }
 
-  async function guardarNuevoItem() {
+  // NUEVO: abrir modal en modo EDITAR, precargar
+  function openEditarItem(cat, it) {
+    setItemCat(cat);
+    setItemMode("edit");
+    setItemEditId(it.id);
+
+    // inferir tipo y valor del “máximo descuento” unificado
+    let mdTipo = "pct";
+    let mdValue = "";
+    const pctV = Number(it.max_descuento_pct || 0);
+    const valV = Number(it.max_descuento_valor || 0);
+    if (valV > 0) { mdTipo = "valor"; mdValue = String(valV); }
+    else if (pctV > 0) { mdTipo = "pct"; mdValue = String(pctV); }
+
+    setItemForm({
+      codigo: it.codigo || "",
+      nombre: it.nombre || "",
+      precio: formatCOPInput(it.precio || 0),
+      observaciones: it.comentario || "",
+      usa_pago_fijo: !!it.usa_pago_fijo,
+      pago_valor_fijo: String(it.pago_valor_fijo ?? "0"),
+      permite_descuento: !!it.permite_descuento,
+      genera_rips: !!it.genera_rips,
+      es_consulta: !!it.es_consulta,
+      ver_en_agenda: !!it.ver_en_agenda,
+      cuenta_contable: it.cuenta_contable || "",
+      max_descuento_tipo: mdTipo,
+      max_descuento_value: mdTipo === "valor" ? formatCOPInput(mdValue) : mdValue,
+    });
+    setShowItemModal(true);
+  }
+
+  async function guardarItem() {
     if (!listaId || !itemCat) return;
     if (!itemForm.nombre.trim()) return alert("El nombre es obligatorio.");
 
@@ -403,44 +440,43 @@ export default function ListaPreciosEditar(props) {
       precio: toNumber(itemForm.precio),
       usa_pago_fijo: !!itemForm.usa_pago_fijo,
       pago_valor_fijo: toNumber(itemForm.pago_valor_fijo),
-      creado: new Date().toLocaleString("es-CO"),
+      actualizado: new Date().toLocaleString("es-CO"),
     };
 
-    const ref = await addDoc(colItems(listaId, itemCat.id), payload);
-
-    setCategorias((cs) =>
-      cs.map((c) =>
-        c.id === itemCat.id
-          ? { ...c, items: [...c.items, { id: ref.id, ...payload }], expanded: true }
-          : c
-      )
-    );
+    if (itemMode === "create") {
+      const ref = await addDoc(colItems(listaId, itemCat.id), {
+        ...payload,
+        creado: new Date().toLocaleString("es-CO"),
+      });
+      setCategorias((cs) =>
+        cs.map((c) =>
+          c.id === itemCat.id
+            ? { ...c, items: [...c.items, { id: ref.id, ...payload }], expanded: true }
+            : c
+        )
+      );
+    } else {
+      await updateDoc(doc(colItems(listaId, itemCat.id), itemEditId), payload);
+      setCategorias((cs) =>
+        cs.map((c) =>
+          c.id === itemCat.id
+            ? {
+                ...c,
+                items: c.items.map((x) =>
+                  x.id === itemEditId ? { ...x, ...payload, id: itemEditId } : x
+                ),
+              }
+            : c
+        )
+      );
+    }
 
     setShowItemModal(false);
   }
 
-  async function editarItem(cat, it) {
-    if (!listaId) return;
-    const codigo = (prompt("Código:", it.codigo || "") || "").trim();
-    const nombreProc = (prompt("Nombre:", it.nombre || "") || "").trim();
-    const permite = window.confirm("¿Permite descuento? (Aceptar = Sí / Cancelar = No)");
-    const precioStr = (prompt("Precio (COP):", String(it.precio || 0)) || "0").replace(/\D/g, "");
-    const precio = Number(precioStr || 0);
-
-    await updateDoc(doc(colItems(listaId, cat.id), it.id), {
-      codigo,
-      nombre: nombreProc,
-      permite_descuento: !!permite,
-      precio,
-      actualizado: new Date().toLocaleString("es-CO"),
-    });
-    setCategorias((cs) =>
-      cs.map((c) =>
-        c.id === cat.id
-          ? { ...c, items: c.items.map((x) => (x.id === it.id ? { ...x, codigo, nombre: nombreProc, permite_descuento: !!permite, precio } : x)) }
-          : c
-      )
-    );
+  // (dejamos la versión con prompt desactivada para no romper nada que la llame)
+  async function editarItem(/*cat, it*/) {
+    alert("Ahora la edición abre el mismo modal del alta con los campos precargados.");
   }
 
   async function eliminarItem(cat, it) {
@@ -762,7 +798,7 @@ export default function ListaPreciosEditar(props) {
                                     <td className="mono">${Number(it.precio||0).toLocaleString("es-CO")}</td>
                                     <td style={{ textAlign:"right" }}>
                                       <div className="inner-actions">
-                                        <button className="btn sky sm" onClick={()=>editarItem(c,it)}>✏️</button>
+                                        <button className="btn sky sm" onClick={()=>openEditarItem(c,it)}>✏️</button>
                                         <button className="btn red sm" onClick={()=>eliminarItem(c,it)}>🗑️</button>
                                       </div>
                                     </td>
@@ -873,11 +909,15 @@ export default function ListaPreciosEditar(props) {
         </div>
       )}
 
-      {/* ---------- Modal Agregar Producto ---------- */}
+      {/* ---------- Modal Agregar/Editar Producto ---------- */}
       {showItemModal && (
         <div className="modal-mask" onClick={() => setShowItemModal(false)}>
           <div className="modal" onClick={(e)=>e.stopPropagation()}>
-            <div className="hd">Agregar producto {itemCat ? `· ${itemCat.nombre}` : ""}</div>
+            <div className="hd">
+              {itemMode === "edit"
+                ? <>Editar producto{itemCat ? ` · ${itemCat.nombre}` : ""}</>
+                : <>Agregar producto{itemCat ? ` · ${itemCat.nombre}` : ""}</>}
+            </div>
             <div className="bd">
               {/* === Fila “perfecta”: Código | Nombre | Precio === */}
               <div className="form-grid-3">
@@ -1051,7 +1091,9 @@ export default function ListaPreciosEditar(props) {
             </div>
             <div className="ft">
               <button className="chip gray" onClick={()=>setShowItemModal(false)}>Cerrar</button>
-              <button className="chip green" onClick={guardarNuevoItem}>Guardar</button>
+              <button className="chip green" onClick={guardarItem}>
+                {itemMode === "edit" ? "Actualizar" : "Guardar"}
+              </button>
             </div>
           </div>
         </div>

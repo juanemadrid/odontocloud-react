@@ -1,6 +1,6 @@
 // ===============================
 // 🧾 ListaPrecios.jsx
-// Configuración → Lista de precios (iconos más visibles + Nuevo producto + Editar producto navega)
+// Configuración → Lista de precios (iconos + Nuevo producto + Editar en la misma vista)
 // ===============================
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -66,7 +66,7 @@ function useInlineStyles() {
       .iconbtn.red  {background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
       .iconbtn:hover{filter:brightness(.97);}
 
-      /* Ícono más grande (no crece el botón) */
+      /* Ícono grande */
       .iconbtn > svg{
         width:38px !important;
         height:38px !important;
@@ -79,7 +79,7 @@ function useInlineStyles() {
       .badge{display:inline-block;padding:5px 10px;border-radius:999px;font-weight:700;font-size:12px;line-height:1;}
       .badge.green{background:#e8f7ee;color:#16a34a;border:1px solid #cbead7;}
 
-      /* ---------- Form de Nuevo Producto ---------- */
+      /* ---------- Form (nuevo/editar) ---------- */
       .np-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:6px;}
       .np-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
       .np-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
@@ -283,20 +283,15 @@ function ListaClinicosInline() {
 }
 
 /* ==========================================================
-   PRODUCTOS — listado + NUEVO PRODUCTO
+   PRODUCTOS — listado + NUEVO/EDITAR en la misma vista
 ========================================================== */
 function ListaProductosInline() {
   const [rows, setRows] = useState([]);
-  const [modo, setModo] = useState("list"); // list | nuevo
+  const [modo, setModo] = useState("list"); // list | nuevo | editar
   const [imgPreview, setImgPreview] = useState(null);
+  const [editId, setEditId] = useState(null);
 
-  // 🧭 Navegación al editor (AGREGADO)
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const baseDash = useMemo(() => getDashBase(pathname), [pathname]);
-  const irEditar = (row) => navigate(`${baseDash}/config/lista-de-precios/productos/editar/${row.id}`);
-
-  // Estado del formulario Nuevo producto
+  // Estado del formulario compartido
   const init = {
     nombre: "", referencia: "", descripcion: "",
     cuentaContable: "", categoria: "",
@@ -312,6 +307,7 @@ function ListaProductosInline() {
   };
   const [f, setF] = useState(init);
 
+  // Cargar tabla
   useEffect(() => {
     (async () => {
       try {
@@ -322,19 +318,23 @@ function ListaProductosInline() {
     })();
   }, []);
 
+  // Acciones tabla
   const clonar = async (row) => {
     const { id, ...base } = row;
     const ref = await addDoc(collection(db, "listas_precios_productos"), {
-      ...base, nombre: `${row?.nombre || "Producto"} (copia)`
+      ...base, nombre: `${row?.nombre || "Producto"} (copia)`,
+      creado: new Date().toISOString()
     });
     setRows((p) => [{ id: ref.id, ...base, nombre: `${row?.nombre || "Producto"} (copia)` }, ...p]);
   };
+
   const eliminar = async (row) => {
     if (!window.confirm(`¿Eliminar "${row?.nombre}"?`)) return;
     await deleteDoc(doc(db, "listas_precios_productos", row.id));
     setRows((p) => p.filter((x) => x.id !== row.id));
   };
 
+  // Imagen
   const onFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -343,6 +343,7 @@ function ListaProductosInline() {
     reader.readAsDataURL(file);
   };
 
+  // Guardar nuevo
   const guardarProducto = async () => {
     if (!f.nombre.trim()) return alert("El nombre es obligatorio.");
     const payload = {
@@ -351,12 +352,68 @@ function ListaProductosInline() {
       creado: new Date().toISOString(),
       imgPreview: imgPreview || null
     };
-    await addDoc(collection(db, "productos"), payload); // <- cambia el nombre si usas otra colección
-    setF(init);
-    setImgPreview(null);
-    setModo("list");
+    const ref = await addDoc(collection(db, "listas_precios_productos"), payload);
+    setRows((prev) => [{ id: ref.id, ...payload }, ...prev]);
+    setF(init); setImgPreview(null); setModo("list");
     alert("Producto guardado.");
   };
+
+  // Abrir editar
+  const abrirEditar = (row) => {
+    setEditId(row.id);
+    setF({
+      nombre: row.nombre || "",
+      referencia: row.referencia || "",
+      descripcion: row.descripcion || "",
+      cuentaContable: row.cuentaContable || "",
+      categoria: row.categoria || "",
+      esServicio: !!row.esServicio,
+      precioCompra: row.precioCompra ?? "",
+      marca: row.marca || "",
+      principioActivo: row.principioActivo || "",
+      registroInvima: row.registroInvima || "",
+      formaFarmaceutica: row.formaFarmaceutica || "",
+      concentracion: row.concentracion || "",
+      presentacionComercial: row.presentacionComercial || "",
+      tempAlmacenamiento: row.tempAlmacenamiento || "",
+      unidadTemperatura: row.unidadTemperatura || "",
+      humedadAlmacenamiento: row.humedadAlmacenamiento || "",
+      unidadHumedad: row.unidadHumedad || "",
+      esInventariable: !!row.esInventariable,
+      clasificacionRiesgo: row.clasificacionRiesgo || "",
+      vidaUtil: row.vidaUtil || "",
+      periodicidadMantenimiento: row.periodicidadMantenimiento || "",
+      periodicidadCalibracion: row.periodicidadCalibracion || "",
+      extTexto1: row.extTexto1 || "",
+      extTexto2: row.extTexto2 || "",
+      extNumero1: row.extNumero1 ?? "",
+      extNumero2: row.extNumero2 ?? "",
+      extFecha1: row.extFecha1 || "",
+      extFecha2: row.extFecha2 || ""
+    });
+    setImgPreview(row.imgPreview || null);
+    setModo("editar");
+  };
+
+  // Actualizar edición
+  const actualizarProducto = async () => {
+    if (!editId) return;
+    if (!f.nombre.trim()) return alert("El nombre es obligatorio.");
+    const payload = {
+      ...f,
+      precioCompra: f.precioCompra === "" ? 0 : Number(f.precioCompra),
+      actualizado: new Date().toISOString(),
+      imgPreview: imgPreview || null
+    };
+    await updateDoc(doc(db, "listas_precios_productos", editId), payload);
+    setRows((prev) => prev.map(r => r.id === editId ? { id: editId, ...payload } : r));
+    setEditId(null); setF(init); setImgPreview(null); setModo("list");
+    alert("Producto actualizado.");
+  };
+
+  // UI
+  const FormTitulo = modo === "editar" ? "Editar producto" : "Nuevo producto";
+  const AccionPrincipal = modo === "editar" ? actualizarProducto : guardarProducto;
 
   return (
     <div className="lp-card">
@@ -367,7 +424,7 @@ function ListaProductosInline() {
           <div className="lp-card-header">
             <div></div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="chip" onClick={() => setModo("nuevo")}>
+              <button className="chip" onClick={() => { setF(init); setImgPreview(null); setModo("nuevo"); }}>
                 <span style={{ fontWeight: 800, fontSize: 16 }}>＋</span> Nuevo producto
               </button>
               <button className="chip" onClick={() => alert("Exportar plantilla (próximamente)")}>
@@ -397,8 +454,7 @@ function ListaProductosInline() {
                     <td className="actions">
                       <div className="lp-actions">
                         <button className="iconbtn green" title="Clonar" onClick={() => clonar(r)} aria-label="Clonar"><CopyIcon /></button>
-                        {/* CAMBIO: ahora navega al editor */}
-                        <button className="iconbtn blue"  title="Editar" onClick={() => irEditar(r)} aria-label="Editar"><EditIcon /></button>
+                        <button className="iconbtn blue"  title="Editar" onClick={() => abrirEditar(r)} aria-label="Editar"><EditIcon /></button>
                         <button className="iconbtn red"   title="Eliminar" onClick={() => eliminar(r)} aria-label="Eliminar"><TrashIcon /></button>
                       </div>
                     </td>
@@ -411,10 +467,10 @@ function ListaProductosInline() {
       ) : (
         <>
           <div className="lp-card-header">
-            <h4 style={{ margin: 0, fontWeight: 700 }}>Nuevo producto</h4>
+            <h4 style={{ margin: 0, fontWeight: 700 }}>{FormTitulo}</h4>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn-soft gray" onClick={() => setModo("list")}>← Volver</button>
-              <button className="btn-soft" onClick={guardarProducto}>Guardar</button>
+              <button className="btn-soft gray" onClick={() => { setModo("list"); setEditId(null); setF(init); setImgPreview(null); }}>← Volver</button>
+              <button className="btn-soft" onClick={AccionPrincipal}>{modo === "editar" ? "Actualizar" : "Guardar"}</button>
             </div>
           </div>
 
@@ -596,8 +652,8 @@ function ListaProductosInline() {
             </div>
 
             <div className="np-actions">
-              <button className="btn-soft gray" onClick={() => setModo("list")}>Cancelar</button>
-              <button className="btn-soft" onClick={guardarProducto}>Guardar</button>
+              <button className="btn-soft gray" onClick={() => { setModo("list"); setEditId(null); setF(init); setImgPreview(null); }}>Cancelar</button>
+              <button className="btn-soft" onClick={AccionPrincipal}>{modo === "editar" ? "Actualizar" : "Guardar"}</button>
             </div>
           </div>
         </>

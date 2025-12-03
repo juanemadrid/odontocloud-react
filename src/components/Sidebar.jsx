@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 /*
   Sidebar premium — icons inline, accesible
@@ -6,7 +6,48 @@ import React from "react";
   - activeModule
   - setActiveModule
 */
+
+// Helper: obtiene el nombre de empresa desde localStorage o meta tag
+function getCompanyNameFallback() {
+  try {
+    const ls = localStorage.getItem("empresa_nombre");
+    if (ls && ls.trim()) return ls.trim();
+  } catch {}
+  const meta = document.querySelector('meta[name="company-name"]');
+  const metaVal = meta?.getAttribute("content") || "";
+  return metaVal.trim() || "OdontoCloud";
+}
+
 export default function Sidebar({ activeModule, setActiveModule }) {
+  const [companyName, setCompanyName] = useState(getCompanyNameFallback());
+
+  // Suscribirse a cambios (guardado en Datos básicos dispara un CustomEvent)
+  useEffect(() => {
+    const sync = () => setCompanyName(getCompanyNameFallback());
+
+    // 1) Cuando el formulario de Datos básicos guarda, dispara este CustomEvent
+    window.addEventListener("empresa:nombre-cambiado", sync);
+
+    // 2) Cambios entre pestañas/ventanas (o si alguien escribe localStorage manualmente)
+    const onStorage = (e) => {
+      if (e.key === "empresa_nombre") sync();
+    };
+    window.addEventListener("storage", onStorage);
+
+    // 3) Primera sincronización por si el meta cambia después
+    const metaObserver = new MutationObserver(sync);
+    const meta = document.querySelector('meta[name="company-name"]');
+    if (meta) {
+      metaObserver.observe(meta, { attributes: true, attributeFilter: ["content"] });
+    }
+
+    return () => {
+      window.removeEventListener("empresa:nombre-cambiado", sync);
+      window.removeEventListener("storage", onStorage);
+      metaObserver.disconnect?.();
+    };
+  }, []);
+
   const items = [
     { id: "Inicio", label: "Inicio", icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 8h-3v8H6v-8H3l9-8z" fill="currentColor"/></svg>
@@ -34,8 +75,11 @@ export default function Sidebar({ activeModule, setActiveModule }) {
   return (
     <nav className="oc-sidebar-nav" aria-label="Menú principal">
       <div className="oc-sidebar-brand" aria-hidden>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{marginRight:10}}><path d="M12 2C8 2 5 5 5 9c0 3 2 6 7 11 5-5 7-8 7-11 0-4-3-7-7-7z" fill="currentColor"/></svg>
-        <span>OdontoCloud</span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{marginRight:10}}>
+          <path d="M12 2C8 2 5 5 5 9c0 3 2 6 7 11 5-5 7-8 7-11 0-4-3-7-7-7z" fill="currentColor"/>
+        </svg>
+        {/* Nombre dinámico de empresa */}
+        <span title={companyName}>{companyName}</span>
       </div>
 
       <ul className="oc-side-list">

@@ -144,6 +144,63 @@ export default function Agenda() {
   const [filterDoctor, setFilterDoctor] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // ===== Catálogos (🎯 NUEVO): doctores, consultorios, sucursales =====
+  const [catDoctores, setCatDoctores] = useState([]);       // {id, nombre, especialidad?, activo}
+  const [catConsultorios, setCatConsultorios] = useState([]); // {id, nombre, sucursalId?, sucursalNombre?, activo}
+  const [catSucursales, setCatSucursales] = useState([]);     // {id, nombre, activo}
+
+  useEffect(() => {
+    // Profesionales (doctores)
+    const qDocs = query(collection(db, "profesionales"), where("activo", "==", true));
+    const u1 = onSnapshot(qDocs, (snap) => {
+      setCatDoctores(
+        snap.docs.map((d) => {
+          const x = d.data() || {};
+          return {
+            id: d.id,
+            nombre: x.nombre || x.nombres || x.nombreCompleto || d.id,
+            especialidad: x.especialidad || x.especialidadNombre || "",
+            activo: x.activo !== false,
+          };
+        })
+      );
+    }, () => setCatDoctores([]));
+
+    // Consultorios / espacios físicos
+    const qCons = query(collection(db, "consultorios"), where("activo", "==", true));
+    const u2 = onSnapshot(qCons, (snap) => {
+      setCatConsultorios(
+        snap.docs.map((d) => {
+          const x = d.data() || {};
+          return {
+            id: d.id,
+            nombre: x.nombre || x.descripcion || d.id,
+            sucursalId: x.sucursalId || x.sedeId || "",
+            sucursalNombre: x.sucursalNombre || x.sede || "",
+            activo: x.activo !== false,
+          };
+        })
+      );
+    }, () => setCatConsultorios([]));
+
+    // Sucursales
+    const qSeds = query(collection(db, "sucursales"), where("activo", "==", true));
+    const u3 = onSnapshot(qSeds, (snap) => {
+      setCatSucursales(
+        snap.docs.map((d) => {
+          const x = d.data() || {};
+          return {
+            id: d.id,
+            nombre: x.nombre || x.alias || d.id,
+            activo: x.activo !== false,
+          };
+        })
+      );
+    }, () => setCatSucursales([]));
+
+    return () => { try { u1(); u2(); u3(); } catch {} };
+  }, []);
+
   /* ======== posicionar agenda según la URL al montar/cambiar ======== */
   useEffect(() => {
     const target = readTargetDateFromSearch(location.search);
@@ -212,9 +269,17 @@ export default function Agenda() {
             fecha: f,
             horaInicio: horaRaw,
             paciente: data.paciente || data.pacienteNombre || "Sin nombre",
+
+            // 👇 soporta tanto nombre como id (legado + nuevo)
             doctor: data.doctor || data.doctorNombre || "—",
-            sucursal: data.sucursal || "",
-            espacio: data.espacio || data.consultorio || "",
+            doctorId: data.doctorId || "",
+
+            sucursal: data.sucursal || data.sucursalNombre || "",
+            sucursalId: data.sucursalId || "",
+
+            espacio: data.espacio || data.consultorio || data.consultorioNombre || "",
+            consultorioId: data.consultorioId || "",
+
             comentario: data.comentario || "",
             estado: data.estado || "En espera",
             recordatorio: data.recordatorio || "",
@@ -260,18 +325,22 @@ export default function Agenda() {
     return () => unsub();
   }, [viewMode, selectedDate]);
 
-  // ------------ Opciones de filtros ------------
+  // ------------ Opciones de filtros (desde catálogos; fallback a citas) ------------
   const sucursalesOptions = useMemo(() => {
+    const a = catSucursales.map((s) => s.nombre).filter(Boolean);
+    if (a.length) return a;
     const s = new Set();
     appointments.forEach((c) => c.sucursal && s.add(c.sucursal));
     return Array.from(s);
-  }, [appointments]);
+  }, [appointments, catSucursales]);
 
   const doctoresOptions = useMemo(() => {
+    const a = catDoctores.map((d) => d.nombre).filter(Boolean);
+    if (a.length) return a;
     const s = new Set();
     appointments.forEach((c) => c.doctor && s.add(c.doctor));
     return Array.from(s);
-  }, [appointments]);
+  }, [appointments, catDoctores]);
 
   // ------------ Filtro combinado ------------
   const filteredAppointments = useMemo(() => {
@@ -418,140 +487,139 @@ export default function Agenda() {
   /* =========================
      Imprimir en ventana emergente (estilo OralDrive)
      ========================= */
-const handlePrint = () => {
-  const safe = (t) =>
-    String(t ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  const handlePrint = () => {
+    const safe = (t) =>
+      String(t ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
-  const companyName = getCompanyName();
-  const companyLogoUrl = getCompanyLogo();
-  const softwareFooter = getSoftwareFooter();
+    const companyName = getCompanyName();
+    const companyLogoUrl = getCompanyLogo();
+    const softwareFooter = getSoftwareFooter();
 
-  const sedeActual = filterSucursal || "—";
-  const doctorActual = filterDoctor || "—";
+    const sedeActual = filterSucursal || "—";
+    const doctorActual = filterDoctor || "—";
 
-  // Actualidad respecto a HOY (si quieres contra selectedDate te lo cambio)
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
 
-  const rowsHtml =
-    filteredAppointments.length === 0
-      ? `<tr class="empty"><td colspan="10">No hay citas registradas para este rango.</td></tr>`
-      : filteredAppointments
-          .map((c, idx) => {
-            const hora = c.fecha.toLocaleTimeString(browserLocale, {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
+    const rowsHtml =
+      filteredAppointments.length === 0
+        ? `<tr class="empty"><td colspan="10">No hay citas registradas para este rango.</td></tr>`
+        : filteredAppointments
+            .map((c, idx) => {
+              const hora = c.fecha.toLocaleTimeString(browserLocale, {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              });
 
-            const documento =
-              c.documento ||
-              c.raw?.documento ||
-              c.raw?.nroDocumento ||
-              "";
+              const documento =
+                c.documento ||
+                c.raw?.documento ||
+                c.raw?.nroDocumento ||
+                "";
 
-            const celular =
-              c.raw?.celularPaciente ||
-              c.raw?.celular ||
-              "";
+              const celular =
+                c.raw?.celularPaciente ||
+                c.raw?.celular ||
+                "";
 
-            const telefonoFijo =
-              c.raw?.telefonoPaciente ||
-              c.raw?.telefono ||
-              "";
+              const telefonoFijo =
+                c.raw?.telefonoPaciente ||
+                c.raw?.telefono ||
+                "";
 
-            const fechaSolo = new Date(
-              c.fecha.getFullYear(),
-              c.fecha.getMonth(),
-              c.fecha.getDate()
-            );
-            let actualidad = "Futura";
-            if (fechaSolo.getTime() === hoy.getTime()) actualidad = "Hoy";
-            else if (fechaSolo.getTime() < hoy.getTime()) actualidad = "Pasada";
+              const fechaSolo = new Date(
+                c.fecha.getFullYear(),
+                c.fecha.getMonth(),
+                c.fecha.getDate()
+              );
+              let actualidad = "Futura";
+              if (fechaSolo.getTime() === hoy.getTime()) actualidad = "Hoy";
+              else if (fechaSolo.getTime() < hoy.getTime()) actualidad = "Pasada";
 
-            return `<tr class="${idx % 2 ? "zebra" : ""}">
-              <td class="mono">${safe(hora)}</td>
-              <td>${safe(c.paciente)}</td>
-              <td class="mono">${safe(documento)}</td>
-              <td class="mono">${safe(celular)}</td>
-              <td class="mono">${safe(telefonoFijo)}</td>
-              <td>${safe(c.doctor)}</td>
-              <td>${safe(c.espacio)}</td>
-              <td>${safe(c.comentario)}</td>
-              <td class="status">${safe(c.estado)}</td>
-              <td class="actual">${safe(actualidad)}</td>
-            </tr>`;
-          })
-          .join("");
+              return `<tr class="${idx % 2 ? "zebra" : ""}">
+                <td class="mono">${safe(hora)}</td>
+                <td>${safe(c.paciente)}</td>
+                <td class="mono">${safe(documento)}</td>
+                <td class="mono">${safe(celular)}</td>
+                <td class="mono">${safe(telefonoFijo)}</td>
+                <td>${safe(c.doctor)}</td>
+                <td>${safe(c.espacio)}</td>
+                <td>${safe(c.comentario)}</td>
+                <td class="status">${safe(c.estado)}</td>
+                <td class="actual">${safe(actualidad)}</td>
+              </tr>`;
+            })
+            .join("");
 
-  const css = `
-    @page { size: A4 portrait; margin: 14mm 16mm; }
-    * { box-sizing: border-box; }
-    html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color:#0f172a; line-height:1.35; }
+    const css = `
+      @page { size: A4 portrait; margin: 14mm 16mm; }
+      * { box-sizing: border-box; }
+      html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color:#0f172a; line-height:1.35; }
 
-    /* Cabecera */
-    .hdr {
-      display:flex; flex-direction:column; align-items:center; text-align:center;
-      margin-bottom:14px;
-    }
-    .logo {
-      max-height:120px; width:auto; max-width:100%; object-fit:contain;
-      filter: drop-shadow(0 1px 0 rgba(0,0,0,.04));
-    }
-    .brand {
-      margin-top:4px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
-      font-size:26px; color:#0a86d8;
-    }
-    .sub { margin-top:2px; font-size:12px; color:#64748b; }
+      /* Cabecera */
+      .hdr {
+        display:flex; flex-direction:column; align-items:center; text-align:center;
+        margin-bottom:14px;
+      }
+      .logo {
+        max-height:120px; width:auto; max-width:100%; object-fit:contain;
+        filter: drop-shadow(0 1px 0 rgba(0,0,0,.04));
+      }
+      .brand {
+        margin-top:4px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+        font-size:26px; color:#0a86d8;
+      }
+      .sub { margin-top:2px; font-size:12px; color:#64748b; }
 
-    /* Tarjeta info Sede/Doctor */
-    .info-card {
-      width:100%; display:flex; justify-content:center; margin:8px 0 16px;
-    }
-    .info {
-      width:70%; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; border-collapse:separate;
-      font-size:12px;
-    }
-    .info-row { display:flex; border-top:1px solid #e5e7eb; }
-    .info-row:first-child { border-top:0; }
-    .label {
-      width:22%; padding:8px 10px; background:#f8fafc; font-weight:600; color:#334155; border-right:1px solid #e5e7eb;
-    }
-    .value { flex:1; padding:8px 10px; }
+      /* Tarjeta info Sede/Doctor */
+      .info-card {
+        width:100%; display:flex; justify-content:center; margin:8px 0 16px;
+      }
+      .info {
+        width:70%; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; border-collapse:separate;
+        font-size:12px;
+      }
+      .info-row { display:flex; border-top:1px solid #e5e7eb; }
+      .info-row:first-child { border-top:0; }
+      .label {
+        width:22%; padding:8px 10px; background:#f8fafc; font-weight:600; color:#334155; border-right:1px solid #e5e7eb;
+      }
+      .value { flex:1; padding:8px 10px; }
 
-    /* Tabla principal */
-    table { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
-    thead th {
-      background:#0f172a; color:#ffffff; text-align:center; font-weight:700;
-      padding:9px 8px; position:relative;
-    }
-    thead th + th { box-shadow: inset 1px 0 0 rgba(255,255,255,.08); }
-    tbody td {
-      padding:8px 8px; vertical-align:top; border-bottom:1px solid #e5e7eb;
-    }
-    tbody tr.zebra td { background:#fafafa; }
-    tbody tr.empty td {
-      padding:16px; color:#6b7280; text-align:center; background:#fafafa;
-      border:1px dashed #e5e7eb; border-radius:8px;
-    }
-    td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-    td.status { white-space:nowrap; }
-    td.actual { font-weight:600; }
-    /* Bordes exteriores suaves */
-    .tbl-wrap { border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+      /* Tabla principal */
+      table { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+      thead th {
+        background:#0f172a; color:#ffffff; text-align:center; font-weight:700;
+        padding:9px 8px; position:relative;
+      }
+      thead th + th { box-shadow: inset 1px 0 0 rgba(255,255,255,.08); }
+      tbody td {
+        padding:8px 8px; vertical-align:top; border-bottom:1px solid #e5e7eb;
+      }
+      tbody tr.zebra td { background:#fafafa; }
+      tbody tr.empty td {
+        padding:16px; color:#6b7280; text-align:center; background:#fafafa;
+        border:1px dashed #e5e7eb; border-radius:8px;
+      }
+      td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      td.status { white-space:nowrap; }
+      td.actual { font-weight:600; }
+      /* Bordes exteriores suaves */
+      .tbl-wrap { border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
 
-    /* Notas pie */
-    .note { margin-top:10px; font-size:10px; color:#6b7280; }
+      /* Notas pie */
+      .note { margin-top:10px; font-size:10px; color:#6b7280; }
 
-    /* Evitar cortes feos */
-    tr, .hdr, .info-card { page-break-inside: avoid; }
-  `;
+      /* Evitar cortes feos */
+      tr, .hdr, .info-card { page-break-inside: avoid; }
+    `;
 
-  const html = `<!doctype html>
+    const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -604,21 +672,20 @@ const handlePrint = () => {
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "noopener,noreferrer,width=900,height=700");
 
-  if (!w) {
-    alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
-    URL.revokeObjectURL(url);
-    return;
-  }
+    if (!w) {
+      alert("El navegador bloqueó la ventana de impresión. Permite pop-ups para este sitio.");
+      URL.revokeObjectURL(url);
+      return;
+    }
 
-  const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
-  w.addEventListener?.("load", revoke);
-  setTimeout(revoke, 15000);
-};
-
+    const revoke = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
+    w.addEventListener?.("load", revoke);
+    setTimeout(revoke, 15000);
+  };
 
   // ------------ Confirmar / Hoy ------------
   const handleConfirmar = () =>
@@ -738,7 +805,7 @@ const handlePrint = () => {
   };
 
   /* =========================
-     Nueva Cita (intacta con fixes menores)
+     Nueva Cita — ahora con catálogos (doctor/consultorio/sucursal)
      ========================= */
   const handleNuevaCita = () => {
     const modal = document.createElement("div");
@@ -827,10 +894,30 @@ const handlePrint = () => {
 
         <hr style="margin:10px 0;border:none;border-top:1px solid #ddd;" />
         <h4 style="margin:0;text-align:center;color:#0a86d8;">Detalles de la cita</h4>
-        <input type="text" id="ncDoctor" placeholder="Doctor asignado" required />
+
+        <!-- 👇 Catálogos -->
+        <label>Doctor asignado</label>
+        <select id="ncDoctorSel" required>
+          <option value="">Seleccione doctor…</option>
+        </select>
+
+        <label>Fecha</label>
         <input type="date" id="ncFecha" required value="${toIsoDate(selectedDate)}" />
+
+        <label>Hora</label>
         <input type="time" id="ncHora" required />
-        <input type="text" id="ncEspacio" placeholder="Espacio físico / Sala" />
+
+        <label>Espacio físico / Consultorio</label>
+        <select id="ncConsultorioSel">
+          <option value="">Seleccione consultorio…</option>
+        </select>
+
+        <label>Sucursal</label>
+        <select id="ncSucursalSel">
+          <option value="">Seleccione sucursal…</option>
+        </select>
+
+        <label>Comentario</label>
         <textarea id="ncComentario" placeholder="Comentario sobre la cita" rows="3"></textarea>
 
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
@@ -862,13 +949,38 @@ const handlePrint = () => {
     const inputBuscar = box.querySelector("#buscarPaciente");
     const acResultados = box.querySelector("#acResultados");
 
+    // 👉 Poblar selects desde catálogos actuales (estado React capturado por cierre/closure)
+    const selDoc = box.querySelector("#ncDoctorSel");
+    const selCon = box.querySelector("#ncConsultorioSel");
+    const selSed = box.querySelector("#ncSucursalSel");
+
+    const addOption = (sel, value, text) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = text;
+      sel.appendChild(opt);
+    };
+
+    // Doctores
+    (catDoctores || []).forEach((d) => {
+      const label = d.especialidad ? `${d.nombre} · ${d.especialidad}` : d.nombre;
+      addOption(selDoc, d.id, label);
+    });
+    // Consultorios (mostrar sucursal si viene)
+    (catConsultorios || []).forEach((c) => {
+      const label = c.sucursalNombre ? `${c.nombre} · ${c.sucursalNombre}` : c.nombre;
+      addOption(selCon, c.id, label);
+    });
+    // Sucursales
+    (catSucursales || []).forEach((s) => addOption(selSed, s.id, s.nombre));
+
     chkNuevo.addEventListener("change", () => {
       camposNuevo.style.display = chkNuevo.checked ? "flex" : "none";
       if (chkNuevo.checked) acResultados.style.display = "none";
     });
     box.querySelector("#btnCancelarModal").addEventListener("click", () => modal.remove());
 
-    // ================== AUTOCOMPLETAR ==================
+    // ================== AUTOCOMPLETAR PACIENTE ==================
     let debounceTimer = null;
     let seleccionado = null; // { id, nombre, documento, celular, telefono }
     let activeIndex = -1;
@@ -1065,19 +1177,42 @@ const handlePrint = () => {
       const nombreLibre = (form.querySelector("#buscarPaciente").value || "").trim();
 
       // datos de cita
-      const doctorSel = form.querySelector("#ncDoctor").value.trim();
+      const doctorIdSel = selDoc.value;
       const fechaSeleccionada = form.querySelector("#ncFecha").value;
       const horaSeleccionada = form.querySelector("#ncHora").value;
-      const espacioSel = form.querySelector("#ncEspacio").value.trim();
-      const comentarioSel = form.querySelector("#ncComentario").value.trim();
+      const consultorioIdSel = selCon.value;
+      const sucursalIdSel = selSed.value;
+      const comentarioSel = (form.querySelector("#ncComentario").value || "").trim();
 
       if (!fechaSeleccionada || !horaSeleccionada) {
         alert("⚠️ Debes seleccionar fecha y hora para la cita.");
         return;
       }
-      if (!doctorSel) {
+      if (!doctorIdSel) {
         alert("⚠️ Indica el doctor asignado.");
         return;
+      }
+
+      // Resolver nombres desde catálogos
+      const docRow = (catDoctores || []).find((d) => d.id === doctorIdSel);
+      const doctorNombre = docRow?.nombre || "";
+
+      let consultorioNombre = "";
+      let consultorioSucursalNombre = "";
+      if (consultorioIdSel) {
+        const conRow = (catConsultorios || []).find((c) => c.id === consultorioIdSel);
+        consultorioNombre = conRow?.nombre || "";
+        consultorioSucursalNombre = conRow?.sucursalNombre || "";
+      }
+
+      let sucursalNombre = "";
+      if (sucursalIdSel) {
+        const sRow = (catSucursales || []).find((s) => s.id === sucursalIdSel);
+        sucursalNombre = sRow?.nombre || "";
+      }
+      // Si no se eligió sucursal explícita, pero el consultorio tiene sucursal, úsala
+      if (!sucursalIdSel && consultorioSucursalNombre) {
+        sucursalNombre = consultorioSucursalNombre;
       }
 
       try {
@@ -1227,10 +1362,19 @@ const handlePrint = () => {
         const nuevaCita = {
           paciente: pacienteNombre || "Paciente",
           pacienteId: pacienteId || null,
-          doctor: doctorSel,
+
+          // 🔗 Catálogos
+          doctorId: doctorIdSel,
+          doctor: doctorNombre || "Doctor",
+          consultorioId: consultorioIdSel || "",
+          consultorioNombre: consultorioNombre || "",
+          sucursalId: sucursalIdSel || "",
+          sucursal: sucursalNombre || "",
+
+          // Compatibilidad con tus campos existentes
+          espacio: consultorioNombre || "",
           fecha: fechaSeleccionada,
           horaInicio: horaSeleccionada,
-          espacio: espacioSel,
           comentario: comentarioSel,
           estado: "En espera",
           creado: new Date().toISOString(),
@@ -1286,6 +1430,7 @@ const handlePrint = () => {
 
     const horaInicial = cita.raw?.horaInicio || cita.fecha.toTimeString().slice(0, 5);
 
+    // Mantenemos inputs de texto para edición (compatibilidad con existentes)
     box.innerHTML = `
       <h2 style="margin-top:0;text-align:center;color:#0a86d8;font-weight:600;">✏️ Editar Cita</h2>
       <form id="formEditarCita" style="display:flex;flex-direction:column;gap:12px;margin-top:10px;">
@@ -1539,7 +1684,7 @@ const handlePrint = () => {
             </div>
           </aside>
 
-            {/* RIGHT: agenda */}
+          {/* RIGHT: agenda */}
           <main className="odc-right" aria-label="Panel principal - agenda">
             {/* Header fijo con fecha alineada */}
             <div className="odc-header-bar" role="region" aria-label="Controles de la agenda"

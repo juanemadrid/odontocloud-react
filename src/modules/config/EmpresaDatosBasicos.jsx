@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from "react";
 import "./empresa.css";
 
+/* Utilidad: crea/actualiza meta tags */
 function upsertMeta(name, value) {
-  let m = document.querySelector(`meta[name="${name}"]`);
-  if (!m) {
-    m = document.createElement("meta");
-    m.setAttribute("name", name);
-    document.head.appendChild(m);
-  }
-  m.setAttribute("content", value);
+  try {
+    let m = document.querySelector(`meta[name="${name}"]`);
+    if (!m) {
+      m = document.createElement("meta");
+      m.setAttribute("name", name);
+      document.head.appendChild(m);
+    }
+    m.setAttribute("content", value);
+  } catch {}
 }
+
+/* Claves usadas como “fuente única de verdad” */
+const LS_KEY_FULL = "empresa_datos_basicos";   // todo el formulario
+const LS_KEY_NAME = "oc_company_name";         // nombre visible en UI
+const LS_KEY_NAME_COMPAT = "empresa_nombre";   // compatibilidad vieja
 
 export default function EmpresaDatosBasicos() {
   const [form, setForm] = useState({
@@ -38,22 +46,18 @@ export default function EmpresaDatosBasicos() {
     codigoPrestador: "",
   });
 
-  // 🔹 Cargar lo guardado para que NO se pierda al volver a la pantalla
+  // Carga inicial (localStorage o <meta company-name>)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("empresa_datos_basicos");
+      const saved = localStorage.getItem(LS_KEY_FULL);
       if (saved) {
         const data = JSON.parse(saved);
         setForm((f) => ({ ...f, ...data }));
-      } else {
-        // primer arranque: si hay meta con nombre de empresa, úsala
-        const metaName = document
-          .querySelector('meta[name="company-name"]')
-          ?.getAttribute("content");
-        if (metaName) {
-          setForm((f) => ({ ...f, nombre: metaName }));
-        }
+        return;
       }
+      const metaName =
+        document.querySelector('meta[name="company-name"]')?.getAttribute("content");
+      if (metaName) setForm((f) => ({ ...f, nombre: metaName }));
     } catch {}
   }, []);
 
@@ -62,24 +66,34 @@ export default function EmpresaDatosBasicos() {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const onSave = async (e) => {
+  const onSave = (e) => {
     e.preventDefault();
 
-    // 🔸 Persistimos TODO el formulario
+    // 1) Guardar todo el formulario
     try {
-      localStorage.setItem("empresa_datos_basicos", JSON.stringify(form));
-      // nombre para UI/impresión
-      localStorage.setItem("empresa_nombre", form.nombre || "OdontoCloud");
-      upsertMeta("company-name", form.nombre || "OdontoCloud");
-
-      // si quieres personalizar el pie de impresión, descomenta:
-      // const footer = `Generado por ${form.nombre || "OdontoCloud"}`;
-      // localStorage.setItem("software_footer_text", footer);
-      // upsertMeta("software-footer", footer);
+      localStorage.setItem(LS_KEY_FULL, JSON.stringify(form));
     } catch {}
 
-    // TODO: aquí conectas tu backend si lo deseas
-    console.log("Guardar Empresa · Datos básicos:", form);
+    // 2) Guardar el nombre (dos claves por compatibilidad)
+    const nombre = (form.nombre || "OdontoCloud").trim();
+    try {
+      localStorage.setItem(LS_KEY_NAME, nombre);
+      localStorage.setItem(LS_KEY_NAME_COMPAT, nombre);
+    } catch {}
+
+    // 3) Meta para impresión/otros consumidores
+    upsertMeta("company-name", nombre);
+
+    // 4) Refrescar INMEDIATO el topbar (sin recargar)
+    try {
+      // a) Disparo un CustomEvent
+      window.dispatchEvent(new CustomEvent("oc-company-name-updated", { detail: { nombre } }));
+      // b) Fallback ultra-directo por si el componente aún no escucha
+      const el = document.querySelector(".oc-topbar-title");
+      if (el) el.textContent = nombre;
+    } catch {}
+
+    console.log("✅ Datos básicos guardados:", form);
     alert("Datos básicos guardados.");
   };
 
