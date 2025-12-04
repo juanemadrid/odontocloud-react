@@ -2,7 +2,7 @@
 // ⚙️ ConfigRouter.jsx
 // (redirect por defecto + Lista de precios + Editar + Subruta Productos)
 // Orden del menú igual a OralDrive
-// HABILITADOS: Sucursales, Especialidades, Consultorios, Profesionales, Consecutivos
+// HABILITADOS: Planes, Consecutivos, Sucursales, Especialidades, Consultorios, Profesionales
 // ===============================
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -15,11 +15,12 @@ import ListaPreciosProductos from "./ListaPreciosProductos";
 import ImportarProcedimientos from "./ImportarProcedimientos";
 
 // Pantallas habilitadas en tu app
+import Planes from "./Planes";               // ✅ NUEVO
+import Consecutivos from "./Consecutivos";
 import Sucursales from "./Sucursales";
 import Especialidades from "./Especialidades";
 import Consultorios from "./Consultorios";
 import Profesionales from "./Profesionales";
-import Consecutivos from "./Consecutivos";
 
 // Mapa de pantallas disponibles (primer nivel /config/:slug)
 const SCREENS = {
@@ -28,9 +29,28 @@ const SCREENS = {
   "lista-de-precios": ListaPrecios,
 
   // habilitadas
+  "planes": Planes,                // ✅ NUEVO
   "consecutivos": Consecutivos,
+  "almacenes": undefined,          // (placeholder: próximamente)
+  "categorias-inventario": undefined,
   "sucursales": Sucursales,
+  "metodos-de-pago": undefined,
+  "bancos": undefined,
+  "formulario-de-pacientes": undefined,
   "especialidades": Especialidades,
+  "perfiles": undefined,
+  "usuarios": undefined,
+  "condiciones-de-pago": undefined,
+  "parametros": undefined,
+  "recursos-fisicos": undefined,
+  "plantillas-doc-clinicos": undefined,
+  "pestanas-consulta-med": undefined,
+  "cargos": undefined,
+  "impuestos": undefined,
+  "catalogo-de-cuentas": undefined,
+  "suscripcion": undefined,
+
+  // Extras propios de OdontoCloud (habilitados)
   "consultorios": Consultorios,
   "profesionales": Profesionales,
 
@@ -59,7 +79,7 @@ function LeftMenu({ current, onNav }) {
     { slug: "datos-basicos", label: "Datos básicos" },
     { slug: "logo", label: "Logo" },
     { slug: "lista-de-precios", label: "Lista de precios" },
-    { slug: "planes", label: "Planes", soon: true },
+    { slug: "planes", label: "Planes" }, // ✅ habilitado
     { slug: "consecutivos", label: "Consecutivos" }, // ✅ habilitado
     { slug: "almacenes", label: "Almacenes", soon: true },
     { slug: "categorias-inventario", label: "Categorías inventario", soon: true },
@@ -81,8 +101,8 @@ function LeftMenu({ current, onNav }) {
     { slug: "suscripcion", label: "Suscripción", soon: true },
 
     // 🔽 Extras propios de OdontoCloud (habilitados y fuera del set de OralDrive)
-    { slug: "consultorios", label: "Consultorios" }, // ✅ habilitado
-    { slug: "profesionales", label: "Profesionales" }, // ✅ habilitado
+    { slug: "consultorios", label: "Consultorios" },  // ✅ habilitado
+    { slug: "profesionales", label: "Profesionales" },// ✅ habilitado
   ];
 
   return (
@@ -165,10 +185,16 @@ export default function ConfigRouter() {
   const isListaPreciosProductos = slug === "lista-de-precios" && sub === "productos";
   const isListaPreciosEditar = slug === "lista-de-precios" && sub === "editar";
 
+  // ✅ Subrutas de "planes"
+  const isPlanesRoot = slug === "planes" && !sub;
+  const isPlanesNuevo = slug === "planes" && sub === "nuevo";
+  const isPlanesEditar = slug === "planes" && sub === "editar";
+
   // Elegimos qué pantalla renderizar:
   let Screen = SCREENS[slug] || RightPlaceholder;
   let screenProps = {};
 
+  // ----- Lógica Lista de Precios -----
   if (isListaPreciosEditar) {
     const listaId = segs[2] || null; // /config/lista-de-precios/editar/:id
     Screen = ListaPreciosEditar;
@@ -177,6 +203,21 @@ export default function ConfigRouter() {
     Screen = ListaPreciosProductos; // /config/lista-de-precios/productos
   } else if (isListaPreciosRoot) {
     Screen = ListaPrecios; // /config/lista-de-precios (clínicos)
+  }
+
+  // ----- ✅ Lógica Planes -----
+  if (slug === "planes") {
+    if (isPlanesNuevo) {
+      Screen = Planes;
+      screenProps = { mode: "new" };
+    } else if (isPlanesEditar) {
+      const planId = segs[2] || null; // /config/planes/editar/:id
+      Screen = Planes;
+      screenProps = { mode: "edit", planId, key: `pl-edit-${planId || "none"}` };
+    } else if (isPlanesRoot) {
+      Screen = Planes;
+      screenProps = { mode: "list" };
+    }
   }
 
   const go = (s) => navigate(`${base}/config/${s}`);

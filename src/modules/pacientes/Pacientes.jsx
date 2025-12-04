@@ -496,7 +496,7 @@ export default function Pacientes() {
       out = items.slice();
     }
 
-    // === NUEVO: ordenar por fecha de subida (desc) ===
+    // === NUEVO: ordenar por fecha de subida (desc)
     out.sort((a, b) => {
       const aa = (a.uploadedAtMS ?? a.created ?? 0);
       const bb = (b.uploadedAtMS ?? b.created ?? 0);

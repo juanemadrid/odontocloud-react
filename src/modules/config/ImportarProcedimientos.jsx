@@ -1,6 +1,6 @@
 // ===============================
 // ⚙️ ImportarProcedimientos.jsx
-// Carga CSV (codigo;nombre) -> Firestore/catalago_procedimientos (area=Odontología)
+// Carga CSV (codigo;nombre) o (codigo;nombre;categoria) -> Firestore/catalogo_procedimientos
 // ===============================
 import React, { useState } from "react";
 import { db } from "../../firebase/firebaseConfig";
@@ -20,18 +20,17 @@ export default function ImportarProcedimientos() {
     setRunning(true); setOk(0); setFail(0); setLog([]);
 
     try {
-      // lee el CSV tal cual sale de Excel con separador ;
+      // lee el CSV con separador ;
       const text = await file.text();
       const lines = text.split(/\r?\n/).filter(Boolean);
 
-      // encabezado esperado: codigo;nombre
-      const header = lines.shift();
-      if (!/codigo\s*;\s*nombre/i.test(header || "")) {
-        addLog("Encabezado inválido. Debe ser: codigo;nombre (separado por punto y coma ;)");
+      // encabezado esperado: codigo;nombre[;categoria]
+      const header = lines.shift() || "";
+      if (!/codigo\s*;\s*nombre/i.test(header)) {
+        addLog('Encabezado inválido. Usa: "codigo;nombre" o "codigo;nombre;categoria" (separado por ;)');
         setRunning(false); return;
       }
 
-      // procesa por tandas para no saturar
       const chunkSize = 250;
       for (let i = 0; i < lines.length; i += chunkSize) {
         const chunk = lines.slice(i, i + chunkSize);
@@ -39,13 +38,15 @@ export default function ImportarProcedimientos() {
           chunk.map(async (line) => {
             const parts = line.split(";");
             const codigo = (parts[0] || "").trim().replace(/\./g, "");
-            const nombre = (parts.slice(1).join(";") || "").trim().replace(/^"|"$/g, "");
+            const nombre = (parts[1] || "").trim().replace(/^"|"$/g, "");
+            const categoria = (parts[2] || "").trim(); // opcional
             if (!codigo || !nombre) { setFail((x)=>x+1); return; }
 
             try {
               await setDoc(doc(db, "catalogo_procedimientos", codigo), {
                 codigo,
                 nombre,
+                ...(categoria ? { categoria } : {}),
                 area: "Odontología",
                 activo: true,
                 fuente: "CUPS",
@@ -73,7 +74,7 @@ export default function ImportarProcedimientos() {
   return (
     <div style={{ maxWidth: 760, margin: "24px auto", background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #e5e7eb" }}>
       <h2 style={{ marginTop: 0 }}>Importar procedimientos (Odontología · CUPS 2024)</h2>
-      <p>Sube tu CSV con columnas <b>codigo;nombre</b> (punto y coma).</p>
+      <p>Sube tu CSV con columnas <b>codigo;nombre</b> o <b>codigo;nombre;categoria</b> (punto y coma).</p>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] || null)} />
