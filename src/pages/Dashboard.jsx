@@ -395,7 +395,7 @@ function AdminMegaMenu({
     window.addEventListener("scroll", onScroll, true);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("scroll", true);
     };
   }, [open, onClose]);
 
@@ -609,6 +609,21 @@ function AdminMegaMenu({
         </div>
       )}
     </>
+  );
+}
+
+/* =============== NUEVO: Placeholder temporal para Planes =============== */
+function PlanesPlaceholder() {
+  return (
+    <div className="oc-main-content">
+      <div className="card">
+        <h3>Planes</h3>
+        <p className="oc-muted">
+          Vista de Planes integrada. En el siguiente paso reemplazamos este placeholder por el módulo real
+          (<code>modules/planes/Planes.jsx</code>) con creación/edición, estados y vínculo a facturación.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -1097,7 +1112,10 @@ export default function Dashboard() {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
 
-    const isPac = path.includes("/pacientes");
+    const isPlanes =
+      /\/pacientes\/[^/]+\/planes(\/|$)/.test(path) || path.includes("/planes");
+
+    const isPac = path.includes("/pacientes") && !isPlanes;
     const isCaja = path.includes("/caja");
     const isAg = path.includes("/agenda");
     const isFact = path.includes("/facturacion");
@@ -1106,7 +1124,8 @@ export default function Dashboard() {
     const isRep = path.includes("/reportes");
     const isConf = path.includes("/config"); // ⬅️ NUEVO
 
-    if (isPac) setActiveModule("Pacientes");
+    if (isPlanes) setActiveModule("Planes");
+    else if (isPac) setActiveModule("Pacientes");
     else if (isCaja) setActiveModule("Caja");
     else if (isAg) setActiveModule("Agenda");
     else if (isInv) setActiveModule("Inventario");
@@ -1171,6 +1190,10 @@ export default function Dashboard() {
       case "Configuracion":
         // ⬇️ Si la URL es /config/:slug usamos el router; si no, la portada de config
         return <ConfigRouter />;
+
+      // ⬇️ NUEVO: ruta de Planes
+      case "Planes":
+        return <PlanesPlaceholder />;
 
       case "Inicio":
       default:

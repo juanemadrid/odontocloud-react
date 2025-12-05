@@ -1,11 +1,16 @@
 // ===============================
 // 🗂️ Planes.jsx — Catálogo de Planes (producción)
 // Estructura soportada (prioridad):
-//  1a) listas_precios/{listaId}/categorias/*/items   ✅ NUEVO (para tu estructura actual)
-//  1b) listas_precios/{listaId}/items                 (si existiera plano)
+//  1a) listas_precios/{listaId}/categorias/*/items   ✅
+//  1b) listas_precios/{listaId}/items                 (compat)
 //  2)  listas_precios_productos (campo listaId)
 //  3)  catalogo_procedimientos
 // Guarda renglones en: planes/{planId}/planes_items
+// Mejoras:
+//  - Descuento % y $ con topes (aplica el MAYOR permitido)
+//  - Columna “Desc. $”
+//  - Persistir descuentoValor
+//  - Acciones: Agendar / Facturar (stubs)
 // ===============================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../../firebase/firebaseConfig";
@@ -30,6 +35,7 @@ const sameCat = (a, b) => {
   if (!na || !nb) return false;
   return na === nb || na.includes(nb) || nb.includes(na);
 };
+const toNumber = (v, def = 0) => (Number.isFinite(+v) ? +v : def);
 
 /* ===================== estilos inyectados ===================== */
 function usePlanesStyles() {
@@ -160,14 +166,13 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
 
   const FALLBACK_CATS = ["*","Cirugía Oral","Endodoncia","Implantología","Odontología General","Ortodoncia","Periodoncia","Psicología","Radiología","Rehabilitación Oral"];
 
-  // Cargar categorías + prefijos (catalogo_categorias) y descubrir categorías presentes
+  // Cargar categorías + prefijos
   useEffect(() => {
     let alive = true;
     (async () => {
       const setC = new Set();
       let map = [];
       try {
-        // catálogo de categorías (si existe)
         const snapCats = await getDocs(collection(db, "catalogo_categorias")).catch(() => null);
         if (snapCats && !snapCats.empty) {
           setC.add("*");
@@ -179,21 +184,17 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
           });
         }
 
-        // categorías implícitas desde la lista seleccionada
         if (listaId) {
-          // 1a) anidadas
           const catsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias")).catch(() => null);
           catsSnap?.forEach((d) => {
             const c = (d.data()?.nombre || "").toString().trim();
             if (c) setC.add(c);
           });
-          // 1b) plano (por compatibilidad)
           const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
           subItems?.forEach((d) => {
             const c = (d.data()?.categoria || d.data()?.categoriaNombre || d.data()?.grupo || "").toString().trim();
             if (c) setC.add(c);
           });
-          // 2) espejo
           const qLP = query(collection(db, "listas_precios_productos"), where("listaId", "==", listaId));
           const snapLP = await getDocs(qLP).catch(() => null);
           snapLP?.forEach((d) => {
@@ -222,13 +223,11 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       try {
         let merged = [];
 
-        // 1a) Preferido: anidado por categorías
         if (listaId) {
           const nested = await fetchItemsFromNestedCategories(listaId);
           if (nested.length) merged = nested;
         }
 
-        // 1b) Plano (por compatibilidad)
         if (!merged.length && listaId) {
           const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
           if (subItems && !subItems.empty) {
@@ -253,7 +252,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
           }
         }
 
-        // 2) Colección espejo
         if (!merged.length && listaId) {
           const qLP = query(collection(db, "listas_precios_productos"), where("listaId", "==", listaId));
           const snapLP = await getDocs(qLP).catch(() => null);
@@ -277,7 +275,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
           });
         }
 
-        // 3) Catálogo genérico
         if (!merged.length) {
           const catSnap = await getDocs(collection(db, "catalogo_procedimientos")).catch(() => null);
           catSnap?.forEach((d) => {
@@ -299,7 +296,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
           });
         }
 
-        // Filtro/sort
         const tnorm = normalize(term);
         let filtered = merged.filter((r) => {
           if (cat !== "*" && !sameCat(r.categoria || "", cat)) return false;
@@ -326,6 +322,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         precio: Number(r.precio || 0),
         cantidad,
         descuentoPct: 0,
+        descuentoValor: 0,            // NUEVO
         observaciones: "",
         _max_desc_pct: Number(r.max_desc_pct || 0),
         _max_desc_valor: Number(r.max_desc_valor || 0),
@@ -340,14 +337,18 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         const next = [...prev];
         const row = { ...next[idx] };
         row.cantidad = clamp((row.cantidad || 1) + cantidad, 1, 999999);
-        const pct = clamp(row.descuentoPct || 0, 0, base._max_desc_pct || 100);
         const unit = row.precio || base.precio || 0;
-        row.total = Math.max(0, (unit * row.cantidad) * (pct >= 100 ? 0 : (1 - pct / 100)));
+        const baseAmt = unit * row.cantidad;
+        const pctAmt = baseAmt * clamp(row.descuentoPct || 0, 0, base._max_desc_pct || 100) / 100;
+        const absAmt = clamp(row.descuentoValor || 0, 0, base._max_desc_valor || baseAmt);
+        const disc = row._permite_desc ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
+        row.total = Math.max(0, baseAmt - disc);
         next[idx] = row;
         return next;
       }
-      const pct = 0;
-      const total = Math.max(0, (base.precio * cantidad) * (pct >= 100 ? 0 : (1 - pct / 100)));
+      const baseAmt = base.precio * cantidad;
+      const disc = 0;
+      const total = Math.max(0, baseAmt - disc);
       return [...prev, { ...base, total }];
     });
   };
@@ -356,14 +357,19 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
     setBag((prev) => {
       const next = [...prev];
       const row = { ...next[i], ...patch };
-      const pctTope = Number.isFinite(row._max_desc_pct) ? row._max_desc_pct : 100;
-      const pct = clamp(row.descuentoPct, 0, pctTope);
-      const cant = clamp(row.cantidad, 1, 999999);
-      const unit = Number(row.precio || 0);
-      row.descuentoPct = pct;
-      row.cantidad = cant;
-      row.precio = unit;
-      row.total = Math.max(0, unit * cant * (pct >= 100 ? 0 : (1 - pct / 100)));
+
+      // Normalizar y recalcular con reglas
+      row.cantidad = clamp(toNumber(row.cantidad, 1), 1, 999999);
+      row.precio = toNumber(row.precio, 0);
+      row.descuentoPct = clamp(toNumber(row.descuentoPct, 0), 0, toNumber(row._max_desc_pct, 100));
+      row.descuentoValor = clamp(toNumber(row.descuentoValor, 0), 0, Number.isFinite(row._max_desc_valor) ? row._max_desc_valor : 999999999);
+
+      const baseAmt = row.precio * row.cantidad;
+      const pctAmt = baseAmt * row.descuentoPct / 100;
+      const absAmt = clamp(row.descuentoValor, 0, Number.isFinite(row._max_desc_valor) ? row._max_desc_valor : baseAmt);
+      const disc = row._permite_desc ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
+
+      row.total = Math.max(0, baseAmt - disc);
       next[i] = row; return next;
     });
   };
@@ -374,7 +380,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       const cantidad = Math.max(1, Number(qty) || 1);
       const all = rows.map((r) => ({
         codigo:r.codigo, nombre:r.nombre, precio:Number(r.precio||0),
-        cantidad, descuentoPct:0, observaciones:"",
+        cantidad, descuentoPct:0, descuentoValor:0, observaciones:"",
         _max_desc_pct:Number(r.max_desc_pct||0), _max_desc_valor:Number(r.max_desc_valor||0),
         _permite_desc:!!(r.permite_desc ?? true),
         _flags:{ genera_rips:!!r.genera_rips, es_consulta:!!r.es_consulta, ver_en_agenda:!!r.ver_en_agenda },
@@ -485,9 +491,10 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
                     <th style={{ width:120 }}>Valor unit.</th>
                     <th style={{ width:80 }}>Cant.</th>
                     <th style={{ width:90 }}>Desc. %</th>
+                    <th style={{ width:110 }}>Desc. $</th>
                     <th>Observaciones</th>
                     <th style={{ width:120 }}>Total</th>
-                    <th style={{ width:100 }}>Acciones</th>
+                    <th style={{ width:140 }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,9 +505,14 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
                       <td><input type="number" min={0} value={Number.isFinite(it.precio)?it.precio:0} onChange={(e)=>updateBag(i,{precio:e.target.value})} className="oc-input" style={{ width:110 }} /></td>
                       <td><input type="number" min={1} value={it.cantidad} onChange={(e)=>updateBag(i,{cantidad:e.target.value})} className="oc-input" style={{ width:80 }} /></td>
                       <td><input type="number" min={0} max={100} value={it.descuentoPct} onChange={(e)=>updateBag(i,{descuentoPct:e.target.value})} className="oc-input" style={{ width:80 }} /></td>
+                      <td><input type="number" min={0} value={it.descuentoValor||0} onChange={(e)=>updateBag(i,{descuentoValor:e.target.value})} className="oc-input" style={{ width:110 }} /></td>
                       <td><input value={it.observaciones||""} onChange={(e)=>updateBag(i,{observaciones:e.target.value})} className="oc-input" /></td>
                       <td className="mono">{COP.format(it.total || 0)}</td>
-                      <td><button className="oc-btn danger small" onClick={()=>removeBag(i)}>Quitar</button></td>
+                      <td>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          <button className="oc-btn success small" onClick={()=>removeBag(i)}>Quitar</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -547,13 +559,25 @@ function PlanEditor({ planId, onBack }) {
   const listaId = plan?.listaId || "";
   const updateHead = (patch) => setPlan((p) => ({ ...(p || {}), ...patch }));
 
+  // === Reglas: % y $ con topes; si no permite → 0
   const recompute = (ln) => {
-    const cant = clamp(ln.cantidad, 1, 999999);
-    const pctTope = Number.isFinite(ln._max_desc_pct) ? ln._max_desc_pct : 100;
-    const pct = clamp(ln.descuentoPct, 0, pctTope);
-    const precio = Number(ln.precio || 0);
-    const total = Math.max(0, precio * cant * (pct >= 100 ? 0 : (1 - pct / 100)));
-    return { ...ln, cantidad: cant, descuentoPct: pct, precio, total };
+    const cant = clamp(toNumber(ln.cantidad, 1), 1, 999999);
+    const precio = toNumber(ln.precio, 0);
+
+    const permite = !!(ln._permite_desc ?? true);
+    const topePct = Number.isFinite(ln._max_desc_pct) ? ln._max_desc_pct : 100;
+    const topeAbs = Number.isFinite(ln._max_desc_valor) ? ln._max_desc_valor : Infinity;
+
+    const pct = clamp(toNumber(ln.descuentoPct, 0), 0, topePct);
+    const abs = clamp(toNumber(ln.descuentoValor, 0), 0, topeAbs);
+
+    const baseAmt = precio * cant;
+    const pctAmt = baseAmt * (permite ? pct : 0) / 100;
+    const absAmt = permite ? clamp(abs, 0, topeAbs, baseAmt) : 0; // clamp adicional por si acaso
+    const disc = permite ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
+
+    const total = Math.max(0, baseAmt - disc);
+    return { ...ln, cantidad: cant, precio, descuentoPct: pct, descuentoValor: abs, total };
   };
 
   const addLines = (arr) => {
@@ -562,17 +586,18 @@ function PlanEditor({ planId, onBack }) {
       for (const it of arr) {
         if (map.has(it.codigo)) {
           const m = { ...map.get(it.codigo) };
-          m.cantidad = clamp((m.cantidad || 1) + (Number(it.cantidad) || 1), 1, 999999);
-          m.precio = Number(it.precio || m.precio || 0);
-          m.descuentoPct = Number(m.descuentoPct || 0);
+          m.cantidad = clamp((toNumber(m.cantidad,1) + toNumber(it.cantidad,1)), 1, 999999);
+          m.precio = toNumber(it.precio, m.precio || 0);
+          m.descuentoPct = toNumber(m.descuentoPct, 0);
+          m.descuentoValor = toNumber(m.descuentoValor, 0);
           m.observaciones = m.observaciones || "";
-          m._max_desc_pct = Number(m._max_desc_pct ?? it._max_desc_pct ?? 0);
-          m._max_desc_valor = Number(m._max_desc_valor ?? it._max_desc_valor ?? 0);
+          m._max_desc_pct = toNumber(m._max_desc_pct ?? it._max_desc_pct ?? 0);
+          m._max_desc_valor = toNumber(m._max_desc_valor ?? it._max_desc_valor ?? 0);
           m._permite_desc = (m._permite_desc ?? it._permite_desc ?? true);
           m._flags = m._flags || it._flags || {};
           map.set(it.codigo, recompute(m));
         } else {
-          map.set(it.codigo, recompute({ ...it }));
+          map.set(it.codigo, recompute({ ...it, descuentoValor: toNumber(it.descuentoValor, 0) }));
         }
       }
       return Array.from(map.values());
@@ -593,6 +618,16 @@ function PlanEditor({ planId, onBack }) {
     setLines((p) => id ? p.filter((x) => x.id !== id) : p.filter((_, i) => i !== idx));
   };
 
+  // === Acciones stub (cablear con Agenda/Facturación)
+  const agendar = (ln) => {
+    alert(`(Demo) Agendar: ${ln.codigo} — ${ln.nombre}`);
+    // Ejemplo: navigate(`/dashboard_main/agenda?date=${YYYY_MM_DD}&planId=${plan.id}&item=${ln.id||ln.codigo}`)
+  };
+  const facturar = (ln) => {
+    alert(`(Demo) Facturar: ${ln.codigo} — ${ln.nombre}`);
+    // Ejemplo: crear doc en facturacion y marcar estado del renglón
+  };
+
   const saveAll = async () => {
     if (!plan?.nombre?.trim()) return alert("El nombre del plan es obligatorio.");
     if (!plan?.listaId) return alert("Selecciona la lista de precios.");
@@ -606,18 +641,20 @@ function PlanEditor({ planId, onBack }) {
       const colRef = collection(db, "planes", plan.id, "planes_items");
       await Promise.all(
         lines.map(async (ln) => {
+          const rec = recompute(ln);
           const payload = {
-            codigo: ln.codigo || "",
-            nombre: ln.nombre || "",
-            precio: Number(ln.precio || 0),
-            cantidad: Number(ln.cantidad || 1),
-            descuentoPct: Number(ln.descuentoPct || 0),
-            observaciones: ln.observaciones || "",
-            total: Number(recompute(ln).total || 0),
-            _max_desc_pct: Number(ln._max_desc_pct || 0),
-            _max_desc_valor: Number(ln._max_desc_valor || 0),
-            _permite_desc: !!(ln._permite_desc ?? true),
-            _flags: ln._flags || {},
+            codigo: rec.codigo || "",
+            nombre: rec.nombre || "",
+            precio: toNumber(rec.precio, 0),
+            cantidad: toNumber(rec.cantidad, 1),
+            descuentoPct: toNumber(rec.descuentoPct, 0),
+            descuentoValor: toNumber(rec.descuentoValor, 0), // NUEVO
+            observaciones: rec.observaciones || "",
+            total: toNumber(rec.total, 0),
+            _max_desc_pct: toNumber(rec._max_desc_pct, 0),
+            _max_desc_valor: toNumber(rec._max_desc_valor, 0),
+            _permite_desc: !!(rec._permite_desc ?? true),
+            _flags: rec._flags || {},
             actualizado: serverTimestamp(),
           };
           if (ln.id) await updateDoc(doc(colRef, ln.id), payload);
@@ -668,14 +705,15 @@ function PlanEditor({ planId, onBack }) {
               <th style={{ width:120 }}>Valor unit.</th>
               <th style={{ width:80 }}>Cant.</th>
               <th style={{ width:90 }}>Desc. %</th>
+              <th style={{ width:110 }}>Desc. $</th>{/* NUEVO */}
               <th>Observaciones</th>
               <th style={{ width:120 }}>Total</th>
-              <th style={{ width:160 }}>Acciones</th>
+              <th style={{ width:220 }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {lines.length === 0 ? (
-              <tr><td colSpan={8} className="oc-muted">Sin productos en el plan.</td></tr>
+              <tr><td colSpan={9} className="oc-muted">Sin productos en el plan.</td></tr>
             ) : lines.map((ln, i) => (
               <tr key={ln.id || `new-${i}`}>
                 <td className="mono">{ln.codigo}</td>
@@ -683,9 +721,16 @@ function PlanEditor({ planId, onBack }) {
                 <td><input type="number" min={0} value={Number.isFinite(ln.precio)?ln.precio:0} onChange={(e)=>updateLine(i,{precio:e.target.value})} className="oc-input" style={{ width:110 }} /></td>
                 <td><input type="number" min={1} value={ln.cantidad||1} onChange={(e)=>updateLine(i,{cantidad:e.target.value})} className="oc-input" style={{ width:80 }} /></td>
                 <td><input type="number" min={0} max={100} value={ln.descuentoPct||0} onChange={(e)=>updateLine(i,{descuentoPct:e.target.value})} className="oc-input" style={{ width:80 }} /></td>
+                <td><input type="number" min={0} value={ln.descuentoValor||0} onChange={(e)=>updateLine(i,{descuentoValor:e.target.value})} className="oc-input" style={{ width:110 }} /></td>
                 <td><input className="oc-input" value={ln.observaciones||""} onChange={(e)=>updateLine(i,{observaciones:e.target.value})} /></td>
-                <td className="mono">{COP.format((Number(ln.precio||0)*(ln.cantidad||1)*((ln.descuentoPct||0)>=100?0:(1-(ln.descuentoPct||0)/100)))||0)}</td>
-                <td><button className="oc-btn danger small" onClick={()=>removeLine(ln.id, i)}>Eliminar</button></td>
+                <td className="mono">{COP.format(toNumber(ln.total, (toNumber(ln.precio,0)*toNumber(ln.cantidad,1))))}</td>
+                <td>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <button className="oc-btn outline small" onClick={()=>agendar(ln)}>Agendar</button>
+                    <button className="oc-btn outline small" onClick={()=>facturar(ln)}>Facturar</button>
+                    <button className="oc-btn danger small" onClick={()=>removeLine(ln.id, i)}>Eliminar</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

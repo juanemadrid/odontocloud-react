@@ -142,6 +142,7 @@ function LeftMenu({ current, onNav }) {
                 cursor: it.soon ? "not-allowed" : "pointer",
                 color: it.soon ? "#94a3b8" : "#0f172a",
               }}
+              disabled={!!it.soon}
             >
               {it.label} {it.soon ? " · próximamente" : ""}
             </button>
