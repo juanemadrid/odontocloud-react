@@ -1,9 +1,10 @@
 // ===============================
 // 🗂️ Planes.jsx — Catálogo de Planes (producción)
-// Estructura soportada (en este orden):
-//  1) listas_precios/{listaId}/items
-//  2) listas_precios_productos (campo listaId)
-//  3) catalogo_procedimientos
+// Estructura soportada (prioridad):
+//  1a) listas_precios/{listaId}/categorias/*/items   ✅ NUEVO (para tu estructura actual)
+//  1b) listas_precios/{listaId}/items                 (si existiera plano)
+//  2)  listas_precios_productos (campo listaId)
+//  3)  catalogo_procedimientos
 // Guarda renglones en: planes/{planId}/planes_items
 // ===============================
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -107,6 +108,41 @@ const deriveCategoria = (codigo = "", nombre = "", catName = "", catMap = []) =>
   return "";
 };
 
+/* ===================== util Firestore ===================== */
+// Lee ítems desde la estructura anidada: listas_precios/{listaId}/categorias/*/items
+async function fetchItemsFromNestedCategories(listaId) {
+  try {
+    const catsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias")).catch(() => null);
+    if (!catsSnap || catsSnap.empty) return [];
+    const out = [];
+    for (const catDoc of catsSnap.docs) {
+      const catName = (catDoc.data()?.nombre || "").toString().trim();
+      const itemsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias", catDoc.id, "items")).catch(() => null);
+      if (!itemsSnap || itemsSnap.empty) continue;
+      itemsSnap.forEach((d) => {
+        const x = d.data() || {};
+        const codigo = (x.codigo || "").toString().trim() || d.id;
+        const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
+        const precio = Number(x.precio ?? x.valor ?? 0) || 0;
+        const categoria = (x.categoria || x.categoriaNombre || x.grupo || catName || "").toString().trim() || "Sin categoría";
+        out.push({
+          id: d.id, codigo, nombre, precio, categoria,
+          max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
+          max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
+          permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
+          genera_rips: !!x.genera_rips,
+          es_consulta: !!x.es_consulta,
+          ver_en_agenda: !!x.ver_en_agenda,
+          _norm: normalize(`${codigo} ${nombre} ${categoria}`)
+        });
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /* ===================== Modal: Agregar productos ===================== */
 function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
   const [cats, setCats] = useState(["*"]);
@@ -118,7 +154,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
   const [loading, setLoading] = useState(false);
 
   const [openSug, setOpenSug] = useState(false);
-  const [hover, setHover] = useState(-1);
   const inputRef = useRef(null);
   const [bag, setBag] = useState([]);
   const [catMap, setCatMap] = useState([]);
@@ -146,13 +181,19 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
 
         // categorías implícitas desde la lista seleccionada
         if (listaId) {
-          // subcolección items
+          // 1a) anidadas
+          const catsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias")).catch(() => null);
+          catsSnap?.forEach((d) => {
+            const c = (d.data()?.nombre || "").toString().trim();
+            if (c) setC.add(c);
+          });
+          // 1b) plano (por compatibilidad)
           const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
           subItems?.forEach((d) => {
             const c = (d.data()?.categoria || d.data()?.categoriaNombre || d.data()?.grupo || "").toString().trim();
             if (c) setC.add(c);
           });
-          // colección espejo
+          // 2) espejo
           const qLP = query(collection(db, "listas_precios_productos"), where("listaId", "==", listaId));
           const snapLP = await getDocs(qLP).catch(() => null);
           snapLP?.forEach((d) => {
@@ -169,9 +210,9 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
     return () => { alive = false; };
   }, [listaId]);
 
-  useEffect(() => { if (cat !== "*") { setOpenSug(true); setHover(-1); } else setOpenSug(false); }, [cat]);
+  useEffect(() => { if (cat !== "*") { setOpenSug(true); } else setOpenSug(false); }, [cat]);
 
-  // Query de items (subcolección -> espejo -> catálogo)
+  // Query de items (anidado -> plano -> espejo -> catálogo)
   useEffect(() => {
     let alive = true;
     const mustQuery = (normalize(term).length >= 2) || (cat !== "*");
@@ -181,8 +222,14 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       try {
         let merged = [];
 
-        // 1) Preferido: subcolección listas_precios/{listaId}/items
+        // 1a) Preferido: anidado por categorías
         if (listaId) {
+          const nested = await fetchItemsFromNestedCategories(listaId);
+          if (nested.length) merged = nested;
+        }
+
+        // 1b) Plano (por compatibilidad)
+        if (!merged.length && listaId) {
           const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
           if (subItems && !subItems.empty) {
             merged = subItems.docs.map((d) => {
@@ -191,19 +238,12 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
               const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
               const precio = Number(x.precio ?? x.valor ?? 0) || 0;
               let categoria = (x.categoria || x.categoriaNombre || x.grupo || "").toString().trim();
-              if (!categoria) {
-                if (cat !== "*") categoria = deriveCategoria(codigo, nombre, cat, catMap);
-                if (!categoria && catMap.length) {
-                  for (const c of catMap) { const maybe = deriveCategoria(codigo, nombre, c.nombre, catMap); if (maybe) { categoria = maybe; break; } }
-                }
-                if (!categoria) categoria = "Sin categoría";
-              }
+              if (!categoria) categoria = "Sin categoría";
               return {
                 id: d.id, codigo, nombre, precio, categoria,
-                // topes/flags si existen:
-                max_desc_pct: Number(x.max_desc_pct || 0),
-                max_desc_valor: Number(x.max_desc_valor || 0),
-                permite_desc: !!(x.permite_desc ?? true),
+                max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
+                max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
+                permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
                 genera_rips: !!x.genera_rips,
                 es_consulta: !!x.es_consulta,
                 ver_en_agenda: !!x.ver_en_agenda,
@@ -223,18 +263,12 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
             const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
             const precio = Number(x.precio ?? x.valor ?? 0) || 0;
             let categoria = (x.categoria || x.categoriaNombre || x.grupo || "").toString().trim();
-            if (!categoria) {
-              if (cat !== "*") categoria = deriveCategoria(codigo, nombre, cat, catMap);
-              if (!categoria && catMap.length) {
-                for (const c of catMap) { const maybe = deriveCategoria(codigo, nombre, c.nombre, catMap); if (maybe) { categoria = maybe; break; } }
-              }
-              if (!categoria) categoria = "Sin categoría";
-            }
+            if (!categoria) categoria = "Sin categoría";
             return {
               id: d.id, codigo, nombre, precio, categoria,
-              max_desc_pct: Number(x.max_desc_pct || 0),
-              max_desc_valor: Number(x.max_desc_valor || 0),
-              permite_desc: !!(x.permite_desc ?? true),
+              max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
+              max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
+              permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
               genera_rips: !!x.genera_rips,
               es_consulta: !!x.es_consulta,
               ver_en_agenda: !!x.ver_en_agenda,
@@ -251,19 +285,12 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
             const codigo = (x.codigo || "").toString().trim() || d.id;
             const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
             const precio = Number(x.precio ?? x.valor ?? 0) || 0;
-            let categoria = (x.categoria || x.grupo || "").toString().trim();
-            if (!categoria) {
-              if (cat !== "*") categoria = deriveCategoria(codigo, nombre, cat, catMap);
-              if (!categoria && catMap.length) {
-                for (const c of catMap) { const maybe = deriveCategoria(codigo, nombre, c.nombre, catMap); if (maybe) { categoria = maybe; break; } }
-              }
-              if (!categoria) categoria = "Sin categoría";
-            }
+            let categoria = (x.categoria || x.grupo || "").toString().trim() || "Sin categoría";
             merged.push({
               id: d.id, codigo, nombre, precio, categoria,
-              max_desc_pct: Number(x.max_desc_pct || 0),
-              max_desc_valor: Number(x.max_desc_valor || 0),
-              permite_desc: !!(x.permite_desc ?? true),
+              max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
+              max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
+              permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
               genera_rips: !!x.genera_rips,
               es_consulta: !!x.es_consulta,
               ver_en_agenda: !!x.ver_en_agenda,
@@ -287,7 +314,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       }
     })();
     return () => { alive = false; };
-  }, [listaId, cat, term, catMap]);
+  }, [listaId, cat, term]);
 
   const addFromRow = (r) => {
     const cantidad = Math.max(1, Number(qty) || 1);
@@ -300,7 +327,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         cantidad,
         descuentoPct: 0,
         observaciones: "",
-        // metadatos de control si existen:
         _max_desc_pct: Number(r.max_desc_pct || 0),
         _max_desc_valor: Number(r.max_desc_valor || 0),
         _permite_desc: !!(r.permite_desc ?? true),
@@ -314,7 +340,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         const next = [...prev];
         const row = { ...next[idx] };
         row.cantidad = clamp((row.cantidad || 1) + cantidad, 1, 999999);
-        // recalcular total respetando tope:
         const pct = clamp(row.descuentoPct || 0, 0, base._max_desc_pct || 100);
         const unit = row.precio || base.precio || 0;
         row.total = Math.max(0, (unit * row.cantidad) * (pct >= 100 ? 0 : (1 - pct / 100)));
@@ -326,11 +351,11 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       return [...prev, { ...base, total }];
     });
   };
+
   const updateBag = (i, patch) => {
     setBag((prev) => {
       const next = [...prev];
       const row = { ...next[i], ...patch };
-      // aplicar topes
       const pctTope = Number.isFinite(row._max_desc_pct) ? row._max_desc_pct : 100;
       const pct = clamp(row.descuentoPct, 0, pctTope);
       const cant = clamp(row.cantidad, 1, 999999);
@@ -343,6 +368,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
     });
   };
   const removeBag = (i) => setBag((p) => p.filter((_, idx) => idx !== i));
+
   const cargar = () => {
     if (!bag.length && rows.length) {
       const cantidad = Math.max(1, Number(qty) || 1);
@@ -361,7 +387,6 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
   };
 
   const visibleSug = openSug && (loading || rows.length > 0);
-
   const showHint = rows.length === 0 && normalize(term).length < 2 && cat === "*";
   const showRowsTable = !visibleSug && cat === "*";
 
@@ -393,7 +418,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
                   <div className="oc-muted" style={{ padding: 10 }}>Cargando…</div>
                 ) : rows.length === 0 ? (
                   <div className="oc-muted" style={{ padding: 10 }}>Sin resultados.</div>
-                ) : rows.map((r, i) => (
+                ) : rows.map((r) => (
                   <div
                     key={`${r.id}-${r.codigo}`}
                     className={`oc-sug-item`}
@@ -541,7 +566,6 @@ function PlanEditor({ planId, onBack }) {
           m.precio = Number(it.precio || m.precio || 0);
           m.descuentoPct = Number(m.descuentoPct || 0);
           m.observaciones = m.observaciones || "";
-          // conservar metadatos de tope/flags si llegan
           m._max_desc_pct = Number(m._max_desc_pct ?? it._max_desc_pct ?? 0);
           m._max_desc_valor = Number(m._max_desc_valor ?? it._max_desc_valor ?? 0);
           m._permite_desc = (m._permite_desc ?? it._permite_desc ?? true);
@@ -590,7 +614,6 @@ function PlanEditor({ planId, onBack }) {
             descuentoPct: Number(ln.descuentoPct || 0),
             observaciones: ln.observaciones || "",
             total: Number(recompute(ln).total || 0),
-            // persistimos metadatos útiles para validaciones futuras
             _max_desc_pct: Number(ln._max_desc_pct || 0),
             _max_desc_valor: Number(ln._max_desc_valor || 0),
             _permite_desc: !!(ln._permite_desc ?? true),

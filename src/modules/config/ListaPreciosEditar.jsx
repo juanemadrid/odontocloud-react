@@ -378,17 +378,17 @@ export default function ListaPreciosEditar(props) {
     setShowItemModal(true);
   }
 
-  // NUEVO: abrir modal en modo EDITAR, precargar
+  // NUEVO: abrir modal en modo EDITAR, precargar (con compatibilidad de nombres)
   function openEditarItem(cat, it) {
     setItemCat(cat);
     setItemMode("edit");
     setItemEditId(it.id);
 
     // inferir tipo y valor del “máximo descuento” unificado
+    const pctV = Number(it.max_descuento_pct ?? it.max_desc_pct ?? 0);
+    const valV = Number(it.max_descuento_valor ?? it.max_desc_valor ?? 0);
     let mdTipo = "pct";
     let mdValue = "";
-    const pctV = Number(it.max_descuento_pct || 0);
-    const valV = Number(it.max_descuento_valor || 0);
     if (valV > 0) { mdTipo = "valor"; mdValue = String(valV); }
     else if (pctV > 0) { mdTipo = "pct"; mdValue = String(pctV); }
 
@@ -399,7 +399,7 @@ export default function ListaPreciosEditar(props) {
       observaciones: it.comentario || "",
       usa_pago_fijo: !!it.usa_pago_fijo,
       pago_valor_fijo: String(it.pago_valor_fijo ?? "0"),
-      permite_descuento: !!it.permite_descuento,
+      permite_descuento: !!(it.permite_descuento ?? it.permite_desc ?? false),
       genera_rips: !!it.genera_rips,
       es_consulta: !!it.es_consulta,
       ver_en_agenda: !!it.ver_en_agenda,
@@ -426,12 +426,19 @@ export default function ListaPreciosEditar(props) {
       }
     }
 
+    // Payload con tus campos + ALIAS para compatibilidad con otros módulos
     const payload = {
       codigo: itemForm.codigo.trim(),
       nombre: itemForm.nombre.trim(),
+      // ——— Nombres “tuyos”:
       permite_descuento: !!itemForm.permite_descuento,
       max_descuento_pct: md_pct,
       max_descuento_valor: md_valor,
+      // ——— Alias para compatibilidad:
+      permite_desc: !!itemForm.permite_descuento,
+      max_desc_pct: md_pct,
+      max_desc_valor: md_valor,
+
       genera_rips: !!itemForm.genera_rips,
       es_consulta: !!itemForm.es_consulta,
       ver_en_agenda: !!itemForm.ver_en_agenda,
@@ -619,7 +626,7 @@ export default function ListaPreciosEditar(props) {
             cat.nombre || "",
             it.codigo || "",
             it.nombre || "",
-            toSiNo(!!it.permite_descuento),
+            toSiNo(!!(it.permite_descuento ?? it.permite_desc)),
             Number(it.precio || 0),
             toSiNo(!!it.genera_rips),
             toSiNo(!!it.es_consulta),
@@ -794,7 +801,7 @@ export default function ListaPreciosEditar(props) {
                                   <tr key={it.id}>
                                     <td className="mono">{it.codigo || "—"}</td>
                                     <td style={{ fontWeight: 600 }}>{it.nombre || "—"}</td>
-                                    <td>{it.permite_descuento ? "Sí" : "No"}</td>
+                                    <td>{(it.permite_descuento ?? it.permite_desc) ? "Sí" : "No"}</td>
                                     <td className="mono">${Number(it.precio||0).toLocaleString("es-CO")}</td>
                                     <td style={{ textAlign:"right" }}>
                                       <div className="inner-actions">

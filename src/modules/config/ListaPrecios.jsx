@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  collection, getDocs, addDoc, updateDoc, deleteDoc, doc
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 
@@ -14,6 +14,35 @@ function getDashBase(pathname = "") {
   const segs = pathname.split("/").filter(Boolean);
   const i = segs.findIndex((s) => s.startsWith("dashboard_"));
   return i >= 0 ? `/${segs.slice(0, i + 1).join("/")}` : "";
+}
+
+// COP en vivo
+const formatCOPInput = (v) => {
+  let d = String(v ?? "").replace(/\D/g, "");
+  if (d === "") return "";
+  d = d.replace(/^0+(?=\d)/, "");
+  return d.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+const toNumber = (v) => Number(String(v ?? "").replace(/\D/g, "")) || 0;
+
+// Descargar CSV util
+function downloadCsv(filename, rows) {
+  const csv = rows
+    .map((row) =>
+      row
+        .map((v) => {
+          const s = String(v ?? "").replace(/"/g, '""');
+          return /[",\n]/.test(s) ? `"${s}"` : s;
+        })
+        .join(",")
+    )
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ---------- estilos (solo UI) ----------
@@ -66,7 +95,6 @@ function useInlineStyles() {
       .iconbtn.red  {background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
       .iconbtn:hover{filter:brightness(.97);}
 
-      /* Ícono grande */
       .iconbtn > svg{
         width:38px !important;
         height:38px !important;
@@ -145,17 +173,25 @@ function ListaClinicosInline() {
   const navigate = useNavigate();
   const baseDash = useMemo(() => getDashBase(pathname), [pathname]);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const snap = await getDocs(collection(db, "listas_precios"));
-        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        arr.sort((a, b) => (String(b.actualizado||b.creado||"")).localeCompare(String(a.actualizado||a.creado||"")));
-        setListas(arr);
-      } finally { setLoading(false); }
-    })();
-  }, []);
+  const cargar = async () => {
+    setLoading(true);
+    try {
+      // Solo listas tipo "clinicos"
+      const qref = query(collection(db, "listas_precios"), where("tipo", "==", "clinicos"));
+      const snap = await getDocs(qref);
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      arr.sort((a, b) =>
+        String(b.actualizado || b.creado || "").localeCompare(String(a.actualizado || a.creado || ""))
+      );
+      setListas(arr);
+    } catch {
+      setListas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { cargar(); }, []);
 
   const crear = async () => {
     if (!nombre.trim()) return alert("Escribe el nombre de la lista.");
@@ -167,8 +203,12 @@ function ListaClinicosInline() {
   };
 
   const usar = async (row) => {
-    const snap = await getDocs(collection(db, "listas_precios"));
-    await Promise.all(snap.docs.map((d) => updateDoc(doc(db, "listas_precios", d.id), { en_uso: d.id === row.id })));
+    // Desactivar "en_uso" solo entre listas clínicos
+    const qref = query(collection(db, "listas_precios"), where("tipo", "==", "clinicos"));
+    const snap = await getDocs(qref);
+    await Promise.all(
+      snap.docs.map((d) => updateDoc(doc(db, "listas_precios", d.id), { en_uso: d.id === row.id }))
+    );
     setListas((prev) => prev.map((x) => ({ ...x, en_uso: x.id === row.id })));
   };
 
@@ -200,7 +240,18 @@ function ListaClinicosInline() {
               <button className="chip" onClick={() => setModo("nuevo")}>
                 <span style={{ fontWeight: 800, fontSize: 16 }}>＋</span> Nuevo listado de precios
               </button>
-              <button className="chip" onClick={() => alert("Exportar plantilla (próximamente)")}>
+              <button
+                className="chip"
+                onClick={() =>
+                  downloadCsv(
+                    "Plantilla_Clinicos.csv",
+                    [
+                      ["Categoría","Código","Nombre","Permite desc","Precio","Genera RIPS","Es consulta","Ver en agenda","Cuenta contable"],
+                      ["Odontología General","890201","Consulta inicial","si","0","no","si","no","4 · Ingresos"]
+                    ]
+                  )
+                }
+              >
                 Exportar plantilla
               </button>
             </div>
@@ -232,7 +283,7 @@ function ListaClinicosInline() {
                         {r?.en_uso ? (
                           <span className="badge green">En uso</span>
                         ) : (
-                          <button className="btn-soft" onClick={() => usar(r)} title="Usar esta lista">
+                          <button className="btn-soft" onClick={() => usar(r)} title="Usar esta lista" aria-label="Usar esta lista">
                             <CheckIcon /> Usar
                           </button>
                         )}
@@ -308,15 +359,14 @@ function ListaProductosInline() {
   const [f, setF] = useState(init);
 
   // Cargar tabla
-  useEffect(() => {
-    (async () => {
-      try {
-        const snap = await getDocs(collection(db, "listas_precios_productos"));
-        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setRows(arr);
-      } catch { setRows([]); }
-    })();
-  }, []);
+  const cargar = async () => {
+    try {
+      const snap = await getDocs(collection(db, "listas_precios_productos"));
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setRows(arr);
+    } catch { setRows([]); }
+  };
+  useEffect(() => { cargar(); }, []);
 
   // Acciones tabla
   const clonar = async (row) => {
@@ -343,12 +393,34 @@ function ListaProductosInline() {
     reader.readAsDataURL(file);
   };
 
+  // Exportar plantilla CSV
+  const exportarPlantilla = () => {
+    const head = [
+      "Nombre","Referencia","Descripción","Cuenta contable","Categoría",
+      "Es servicio","Precio compra","Marca","Principio activo","Registro Invima",
+      "Forma farmacéutica","Concentración","Presentación comercial",
+      "Temp. almacenamiento","Unidad temp.","Humedad almac.","Unidad humedad",
+      "Es inventariable","Clasif. riesgo","Vida útil",
+      "Periodicidad mant.","Periodicidad calib.",
+      "Ext. texto 1","Ext. texto 2","Ext. número 1","Ext. número 2","Ext. fecha 1","Ext. fecha 2"
+    ];
+    const sample = [
+      "Hilo reabsorbible 3/0","","","4 · Ingresos","Insumos",
+      "no","0","Marca X","","",
+      "Sutura","","",
+      "25","°C","60","%","si","","",
+      "12 meses","12 meses",
+      "","","","","",""
+    ];
+    downloadCsv("Plantilla_Productos.csv", [head, sample]);
+  };
+
   // Guardar nuevo
   const guardarProducto = async () => {
     if (!f.nombre.trim()) return alert("El nombre es obligatorio.");
     const payload = {
       ...f,
-      precioCompra: f.precioCompra === "" ? 0 : Number(f.precioCompra),
+      precioCompra: toNumber(f.precioCompra),
       creado: new Date().toISOString(),
       imgPreview: imgPreview || null
     };
@@ -368,7 +440,7 @@ function ListaProductosInline() {
       cuentaContable: row.cuentaContable || "",
       categoria: row.categoria || "",
       esServicio: !!row.esServicio,
-      precioCompra: row.precioCompra ?? "",
+      precioCompra: row.precioCompra ? formatCOPInput(row.precioCompra) : "",
       marca: row.marca || "",
       principioActivo: row.principioActivo || "",
       registroInvima: row.registroInvima || "",
@@ -401,7 +473,7 @@ function ListaProductosInline() {
     if (!f.nombre.trim()) return alert("El nombre es obligatorio.");
     const payload = {
       ...f,
-      precioCompra: f.precioCompra === "" ? 0 : Number(f.precioCompra),
+      precioCompra: toNumber(f.precioCompra),
       actualizado: new Date().toISOString(),
       imgPreview: imgPreview || null
     };
@@ -427,7 +499,7 @@ function ListaProductosInline() {
               <button className="chip" onClick={() => { setF(init); setImgPreview(null); setModo("nuevo"); }}>
                 <span style={{ fontWeight: 800, fontSize: 16 }}>＋</span> Nuevo producto
               </button>
-              <button className="chip" onClick={() => alert("Exportar plantilla (próximamente)")}>
+              <button className="chip" onClick={exportarPlantilla}>
                 Exportar plantilla
               </button>
             </div>
@@ -533,7 +605,13 @@ function ListaProductosInline() {
               </div>
               <div className="np-field">
                 <label className="np-label">Precio compra*</label>
-                <input className="np-input" type="number" value={f.precioCompra} onChange={e=>setF({...f,precioCompra:e.target.value})} placeholder="$0" />
+                <input
+                  className="np-input"
+                  inputMode="numeric"
+                  value={f.precioCompra}
+                  onChange={e=>setF({...f,precioCompra:formatCOPInput(e.target.value)})}
+                  placeholder="$0"
+                />
               </div>
             </div>
 
@@ -632,11 +710,11 @@ function ListaProductosInline() {
             <div className="np-row">
               <div className="np-field">
                 <label className="np-label">Extensión número 1</label>
-                <input className="np-input" type="number" value={f.extNumero1} onChange={e=>setF({...f,extNumero1:e.target.value})} placeholder="Ext. número 1 del concepto" />
+                <input className="np-input" inputMode="numeric" value={f.extNumero1} onChange={e=>setF({...f,extNumero1:formatCOPInput(e.target.value)})} placeholder="Ext. número 1 del concepto" />
               </div>
               <div className="np-field">
                 <label className="np-label">Extensión número 2</label>
-                <input className="np-input" type="number" value={f.extNumero2} onChange={e=>setF({...f,extNumero2:e.target.value})} placeholder="Ext. número 2 del concepto" />
+                <input className="np-input" inputMode="numeric" value={f.extNumero2} onChange={e=>setF({...f,extNumero2:formatCOPInput(e.target.value)})} placeholder="Ext. número 2 del concepto" />
               </div>
             </div>
 
@@ -690,6 +768,16 @@ function ListaServiciosInline() {
     setRows((p) => p.filter((x) => x.id !== row.id));
   };
 
+  const exportarPlantilla = () => {
+    downloadCsv(
+      "Plantilla_Servicios.csv",
+      [
+        ["Nombre","Descripción","Cuenta contable","Categoría","Precio base","Genera RIPS"],
+        ["Toma de Rx periapical","","4 · Ingresos","Radiología","0","si"]
+      ]
+    );
+  };
+
   return (
     <div className="lp-card">
       <h3 className="lp-subtitle">Lista de precios servicios</h3>
@@ -700,7 +788,7 @@ function ListaServiciosInline() {
           <button className="chip" onClick={() => alert("Nuevo listado de servicios (próximamente)")}>
             <span style={{ fontWeight: 800, fontSize: 16 }}>＋</span> Nuevo listado de servicios
           </button>
-          <button className="chip" onClick={() => alert("Exportar plantilla (próximamente)")}>
+          <button className="chip" onClick={exportarPlantilla}>
             Exportar plantilla
           </button>
         </div>
