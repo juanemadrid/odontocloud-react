@@ -1108,47 +1108,52 @@ export default function Dashboard() {
     }
   };
 
-  /* =================== 🔁 Sincroniza URL → vista =================== */
-  useEffect(() => {
-    const path = location.pathname.toLowerCase();
+  /* =================== 🔁 Sincroniza URL → vista (arreglado) =================== */
+useEffect(() => {
+  const path = location.pathname.toLowerCase();
 
-    const isPlanes =
-      /\/pacientes\/[^/]+\/planes(\/|$)/.test(path) || path.includes("/planes");
+  // ✅ 1) Prioridad absoluta: todo lo que sea /config/* lo maneja ConfigRouter
+  if (path.includes("/config/")) {
+    setActiveModule("Config");
+    return;
+  }
 
-    const isPac = path.includes("/pacientes") && !isPlanes;
-    const isCaja = path.includes("/caja");
-    const isAg = path.includes("/agenda");
-    const isFact = path.includes("/facturacion");
-    const isInv = path.includes("/inventario");
-    const isOdo = path.includes("/odontograma");
-    const isRep = path.includes("/reportes");
-    const isConf = path.includes("/config"); // ⬅️ NUEVO
+  // 2) Detecciones por módulos
+  const isPacPlanes = /\/pacientes\/[^/]+\/planes(\/|$)/.test(path); // SOLO planes dentro de pacientes
+  const isPac = path.includes("/pacientes") && !isPacPlanes;
+  const isCaja = path.includes("/caja");
+  const isAg = path.includes("/agenda");
+  const isFact = path.includes("/facturacion");
+  const isInv = path.includes("/inventario");
+  const isOdo = path.includes("/odontograma");
+  const isRep = path.includes("/reportes");
 
-    if (isPlanes) setActiveModule("Planes");
-    else if (isPac) setActiveModule("Pacientes");
-    else if (isCaja) setActiveModule("Caja");
-    else if (isAg) setActiveModule("Agenda");
-    else if (isInv) setActiveModule("Inventario");
-    else if (isOdo) setActiveModule("Odontograma");
-    else if (isRep) setActiveModule("Reportes");
-    else if (isConf) setActiveModule("Config"); // ⬅️ NUEVO
-    else setActiveModule("Inicio");
+  if (isPacPlanes) setActiveModule("Planes");
+  else if (isPac) setActiveModule("Pacientes");
+  else if (isCaja) setActiveModule("Caja");
+  else if (isAg) setActiveModule("Agenda");
+  else if (isInv) setActiveModule("Inventario");
+  else if (isOdo) setActiveModule("Odontograma");
+  else if (isRep) setActiveModule("Reportes");
+  else setActiveModule("Inicio");
 
-    if (isFact) {
-      setActiveModule("Facturación");
-      if (path.includes("/pagos")) setFactView("pagos");
-      else if (path.includes("/facturas")) setFactView("fv");
-      else if (path.includes("/recibo")) setFactView("recibo");
-      else if (path.includes("/saldo")) setFactView("saldo");
-      else if (path.includes("/nc")) setFactView("nc");
-      else if (path.includes("/nd")) setFactView("nd");
-      else if (path.includes("/liq")) setFactView("liq");
-      else if (path.includes("/tras")) setFactView("tras");
-      else if (path.includes("/oc")) setFactView("oc");
-      else if (path.includes("/fc")) setFactView("fc");
-      else setFactView("recibo");
-    }
-  }, [location.pathname]);
+  // Facturación: además de marcar el módulo, ajustamos la subvista
+  if (isFact) {
+    setActiveModule("Facturación");
+    if (path.includes("/pagos")) setFactView("pagos");
+    else if (path.includes("/facturas")) setFactView("fv");
+    else if (path.includes("/recibo")) setFactView("recibo");
+    else if (path.includes("/saldo")) setFactView("saldo");
+    else if (path.includes("/nc")) setFactView("nc");
+    else if (path.includes("/nd")) setFactView("nd");
+    else if (path.includes("/liq")) setFactView("liq");
+    else if (path.includes("/tras")) setFactView("tras");
+    else if (path.includes("/oc")) setFactView("oc");
+    else if (path.includes("/fc")) setFactView("fc");
+    else setFactView("recibo");
+  }
+}, [location.pathname]);
+
 
   /* =================== ✅ Rutas absolutas y helper go =================== */
   const basePath = useMemo(() => {

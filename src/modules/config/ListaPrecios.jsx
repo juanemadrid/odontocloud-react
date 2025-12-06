@@ -342,6 +342,25 @@ function ListaProductosInline() {
   const [imgPreview, setImgPreview] = useState(null);
   const [editId, setEditId] = useState(null);
 
+  // 🆕 Detectar la lista clínicos "En uso" para adjuntar listaId a cada producto
+  const [listaIdEnUso, setListaIdEnUso] = useState("");
+  useEffect(() => {
+    (async () => {
+      try {
+        const qref = query(
+          collection(db, "listas_precios"),
+          where("tipo", "==", "clinicos"),
+          where("en_uso", "==", true)
+        );
+        const snap = await getDocs(qref);
+        const first = snap.docs?.[0];
+        setListaIdEnUso(first ? first.id : "");
+      } catch {
+        setListaIdEnUso("");
+      }
+    })();
+  }, []);
+
   // Estado del formulario compartido
   const init = {
     nombre: "", referencia: "", descripcion: "",
@@ -422,7 +441,9 @@ function ListaProductosInline() {
       ...f,
       precioCompra: toNumber(f.precioCompra),
       creado: new Date().toISOString(),
-      imgPreview: imgPreview || null
+      imgPreview: imgPreview || null,
+      // 🆕 clave para que Planes encuentre el precio por lista
+      listaId: listaIdEnUso || null,
     };
     const ref = await addDoc(collection(db, "listas_precios_productos"), payload);
     setRows((prev) => [{ id: ref.id, ...payload }, ...prev]);
@@ -475,7 +496,9 @@ function ListaProductosInline() {
       ...f,
       precioCompra: toNumber(f.precioCompra),
       actualizado: new Date().toISOString(),
-      imgPreview: imgPreview || null
+      imgPreview: imgPreview || null,
+      // 🆕 asegurar que queda ligado a la lista “en uso”
+      listaId: listaIdEnUso || null,
     };
     await updateDoc(doc(db, "listas_precios_productos", editId), payload);
     setRows((prev) => prev.map(r => r.id === editId ? { id: editId, ...payload } : r));
@@ -554,7 +577,7 @@ function ListaProductosInline() {
               ) : (
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <circle cx="12" cy="8" r="4"></circle>
-                  <path d="M6 20c0-3.314 2.686-6 6-6s6 2.686 6 6"></path>
+                  <path d="M6 20c0-3.314 2.686 0 6 0s6 2.686 6 6"></path>
                 </svg>
               )}
             </div>

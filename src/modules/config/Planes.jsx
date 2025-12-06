@@ -1,17 +1,42 @@
 // ===============================
-// 🗂️ Planes.jsx — Catálogo de Planes (producción)
-// Estructura soportada (prioridad):
-//  1a) listas_precios/{listaId}/categorias/*/items   ✅
-//  1b) listas_precios/{listaId}/items                 (compat)
-//  2)  listas_precios_productos (campo listaId)
-//  3)  catalogo_procedimientos
-// Guarda renglones en: planes/{planId}/planes_items
-// Mejoras:
-//  - Descuento % y $ con topes (aplica el MAYOR permitido)
-//  - Columna “Desc. $”
-//  - Persistir descuentoValor
-//  - Acciones: Agendar / Facturar (stubs)
+// 🗂️ Planes.jsx — Catálogo de Planes (PRODUCCIÓN)
 // ===============================
+// Características:
+// - Busca/filtra por categoría y por código/nombre.
+// - Lee ítems desde 4 fuentes en este orden:
+//   1) listas_precios/{listaId}/categorias/*/items
+//   1b) listas_precios/{listaId}/items
+//   2)  listas_precios_productos (con campo listaId)
+//   3)  catalogo_procedimientos (fallback)
+// - Si las 3 primeras devuelven 0, cae automáticamente a 3) para que SIEMPRE veas resultados.
+// - Guarda renglones del plan en: planes/{planId}/planes_items
+// - Descuento % y $ con topes; total calculado.
+// - Botón "Diagnóstico" para verificar fuentes y conteos.
+//
+// Si tus colecciones tienen otros nombres, AJÚSTALAS AQUÍ:
+const COLLECTIONS = {
+  listas_precios: "listas_precios",
+  listas_precios_productos: "listas_precios_productos",
+  catalogo_procedimientos: "catalogo_procedimientos",
+  catalogo_categorias: "catalogo_categorias",
+};
+
+// Si tus campos de precio o nombre usan otros alias, agrega aquí:
+const FIELD_ALIASES = {
+  // ✅ añadidos: precioCompra / precioVenta por compat
+  precio: ["precio", "valor", "price", "monto", "precioCompra", "precio_venta", "precioVenta"],
+  nombre: ["nombre", "descripcion", "descripción", "name"],
+  // ✅ añadido: referencia
+  codigo: ["codigo", "código", "code", "referencia"],
+  categoria: ["categoria", "categoriaNombre", "grupo", "area"],
+  max_desc_pct: ["max_desc_pct", "max_descuento_pct"],
+  max_desc_valor: ["max_desc_valor", "max_descuento_valor"],
+  permite_desc: ["permite_desc", "permite_descuento"],
+  genera_rips: ["genera_rips"],
+  es_consulta: ["es_consulta"],
+  ver_en_agenda: ["ver_en_agenda"],
+};
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../../firebase/firebaseConfig";
 import {
@@ -30,17 +55,36 @@ const normalize = (s) =>
     .replace(/\s+/g, " ")
     .trim();
 const clamp = (n, min, max) => Math.min(max, Math.max(min, Number.isFinite(+n) ? +n : min));
+
+// ⚠️ robusto: limpia $, puntos y comas
+const toNumber = (v, def = 0) => {
+  const n = Number(String(v ?? "").replace(/[^\d-]+/g, ""));
+  return Number.isFinite(n) ? n : def;
+};
+
+// parsea entradas COP como "150.000" / "$ 150,000"
+const parseCOP = (v) => {
+  if (typeof v === "number") return v;
+  return Number(String(v ?? "").replace(/[^\d-]+/g, "")) || 0;
+};
+
 const sameCat = (a, b) => {
   const na = normalize(a), nb = normalize(b);
   if (!na || !nb) return false;
   return na === nb || na.includes(nb) || nb.includes(na);
 };
-const toNumber = (v, def = 0) => (Number.isFinite(+v) ? +v : def);
+
+function pick(obj, keys, def = undefined) {
+  for (const k of keys) {
+    if (obj?.[k] !== undefined && obj[k] !== null) return obj[k];
+  }
+  return def;
+}
 
 /* ===================== estilos inyectados ===================== */
 function usePlanesStyles() {
   useEffect(() => {
-    const id = "oc-planes-styles-v3";
+    const id = "oc-planes-styles-v4";
     if (document.getElementById(id)) return;
     const css = `
       :root{
@@ -115,33 +159,55 @@ const deriveCategoria = (codigo = "", nombre = "", catName = "", catMap = []) =>
 };
 
 /* ===================== util Firestore ===================== */
-// Lee ítems desde la estructura anidada: listas_precios/{listaId}/categorias/*/items
+function mapItem(d, x, catNameFromParent = "") {
+  const codigo = (pick(x, FIELD_ALIASES.codigo, d.id) || "").toString().trim();
+  const nombre = (pick(x, FIELD_ALIASES.nombre, codigo) || "").toString().trim();
+
+  // ✅ precio robusto (acepta string con símbolos)
+  const precio = parseCOP(pick(x, FIELD_ALIASES.precio, 0));
+
+  let categoria = (pick(x, FIELD_ALIASES.categoria, catNameFromParent) || "").toString().trim();
+  if (!categoria) categoria = "Sin categoría";
+
+  return {
+    id: d.id,
+    codigo,
+    nombre,
+    precio,
+    categoria,
+    max_desc_pct: Number(pick(x, FIELD_ALIASES.max_desc_pct, 0)) || 0,
+    max_desc_valor: Number(pick(x, FIELD_ALIASES.max_desc_valor, 0)) || 0,
+    permite_desc: !!pick(x, FIELD_ALIASES.permite_desc, true),
+    genera_rips: !!pick(x, FIELD_ALIASES.genera_rips, false),
+    es_consulta: !!pick(x, FIELD_ALIASES.es_consulta, false),
+    ver_en_agenda: !!pick(x, FIELD_ALIASES.ver_en_agenda, false),
+    _norm: normalize(`${codigo} ${nombre} ${categoria}`)
+  };
+}
+
+// 1) listas_precios/{listaId}/categorias/*/items  (también intenta /procedimientos)
 async function fetchItemsFromNestedCategories(listaId) {
   try {
-    const catsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias")).catch(() => null);
+    const catsSnap = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "categorias")).catch(() => null);
     if (!catsSnap || catsSnap.empty) return [];
     const out = [];
     for (const catDoc of catsSnap.docs) {
       const catName = (catDoc.data()?.nombre || "").toString().trim();
-      const itemsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias", catDoc.id, "items")).catch(() => null);
+
+      // intenta /items
+      let itemsSnap = await getDocs(
+        collection(db, COLLECTIONS.listas_precios, listaId, "categorias", catDoc.id, "items")
+      ).catch(() => null);
+
+      // si no, intenta /procedimientos
+      if (!itemsSnap || itemsSnap.empty) {
+        itemsSnap = await getDocs(
+          collection(db, COLLECTIONS.listas_precios, listaId, "categorias", catDoc.id, "procedimientos")
+        ).catch(() => null);
+      }
+
       if (!itemsSnap || itemsSnap.empty) continue;
-      itemsSnap.forEach((d) => {
-        const x = d.data() || {};
-        const codigo = (x.codigo || "").toString().trim() || d.id;
-        const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
-        const precio = Number(x.precio ?? x.valor ?? 0) || 0;
-        const categoria = (x.categoria || x.categoriaNombre || x.grupo || catName || "").toString().trim() || "Sin categoría";
-        out.push({
-          id: d.id, codigo, nombre, precio, categoria,
-          max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
-          max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
-          permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
-          genera_rips: !!x.genera_rips,
-          es_consulta: !!x.es_consulta,
-          ver_en_agenda: !!x.ver_en_agenda,
-          _norm: normalize(`${codigo} ${nombre} ${categoria}`)
-        });
-      });
+      itemsSnap.forEach((d) => out.push(mapItem(d, d.data() || {}, catName)));
     }
     return out;
   } catch {
@@ -166,6 +232,81 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
 
   const FALLBACK_CATS = ["*","Cirugía Oral","Endodoncia","Implantología","Odontología General","Ortodoncia","Periodoncia","Psicología","Radiología","Rehabilitación Oral"];
 
+  // 🔧 Diagnóstico
+  const diagnostico = async () => {
+    const out = { listaId: listaId || "(vacío)", fuentes: [] };
+
+    // 1) anidado
+    let n1 = 0, sample1 = [];
+    if (listaId) {
+      const catsSnap = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "categorias")).catch(()=>null);
+      if (catsSnap && !catsSnap.empty) {
+        for (const c of catsSnap.docs) {
+          let itSnap = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "categorias", c.id, "items")).catch(()=>null);
+          if (!itSnap || itSnap.empty) {
+            itSnap = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "categorias", c.id, "procedimientos")).catch(()=>null);
+          }
+          if (itSnap && !itSnap.empty) {
+            n1 += itSnap.size;
+            itSnap.docs.slice(0,3).forEach(d => {
+              const x = d.data()||{};
+              sample1.push((pick(x, FIELD_ALIASES.codigo, d.id) || d.id)+"");
+            });
+          }
+        }
+      }
+    }
+    out.fuentes.push({ ruta: "listas_precios/{listaId}/categorias/*/(items|procedimientos)", total: n1, sample: sample1.slice(0,3) });
+
+    // 1b) subcolección items
+    let n1b = 0, sample1b = [];
+    if (listaId) {
+      const subItems = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "items")).catch(()=>null);
+      if (subItems && !subItems.empty) {
+        n1b = subItems.size;
+        subItems.docs.slice(0,3).forEach(d => {
+          const x=d.data()||{};
+          sample1b.push((pick(x, FIELD_ALIASES.codigo, d.id) || d.id)+"");
+        });
+      }
+    }
+    out.fuentes.push({ ruta: "listas_precios/{listaId}/items", total: n1b, sample: sample1b });
+
+    // 2) espejo por listaId
+    let n2 = 0, sample2 = [];
+    if (listaId) {
+      const qLP = query(collection(db, COLLECTIONS.listas_precios_productos), where("listaId","==", listaId));
+      const snapLP = await getDocs(qLP).catch(()=>null);
+      if (snapLP && !snapLP.empty) {
+        n2 = snapLP.size;
+        snapLP.docs.slice(0,3).forEach(d=>{
+          const x=d.data()||{};
+          sample2.push((pick(x, FIELD_ALIASES.codigo, d.id) || d.id)+"");
+        });
+      }
+    }
+    out.fuentes.push({ ruta: "listas_precios_productos (por listaId)", total: n2, sample: sample2 });
+
+    // 3) catálogo
+    let n3 = 0, sample3 = [];
+    const catSnap = await getDocs(collection(db, COLLECTIONS.catalogo_procedimientos)).catch(()=>null);
+    if (catSnap && !catSnap.empty) {
+      n3 = catSnap.size;
+      catSnap.docs.slice(0,3).forEach(d=>{
+        const x=d.data()||{};
+        sample3.push((pick(x, FIELD_ALIASES.codigo, d.id) || d.id)+"");
+      });
+    }
+    out.fuentes.push({ ruta: "catalogo_procedimientos", total: n3, sample: sample3 });
+
+    const lines = [
+      `Lista seleccionada: ${out.listaId}`,
+      ...out.fuentes.map(f => `• ${f.ruta} → ${f.total} items ${f.sample.length?(`(ej: ${f.sample.join(", ")})`):""}`)
+    ];
+    alert(lines.join("\n"));
+    console.info("[Diagnóstico Planes]", out);
+  };
+
   // Cargar categorías + prefijos
   useEffect(() => {
     let alive = true;
@@ -173,7 +314,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       const setC = new Set();
       let map = [];
       try {
-        const snapCats = await getDocs(collection(db, "catalogo_categorias")).catch(() => null);
+        const snapCats = await getDocs(collection(db, COLLECTIONS.catalogo_categorias)).catch(() => null);
         if (snapCats && !snapCats.empty) {
           setC.add("*");
           snapCats.forEach((d) => {
@@ -183,22 +324,21 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
             if (nombre) { setC.add(nombre); map.push({ nombre, prefijos }); }
           });
         }
-
         if (listaId) {
-          const catsSnap = await getDocs(collection(db, "listas_precios", listaId, "categorias")).catch(() => null);
+          const catsSnap = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "categorias")).catch(() => null);
           catsSnap?.forEach((d) => {
             const c = (d.data()?.nombre || "").toString().trim();
             if (c) setC.add(c);
           });
-          const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
+          const subItems = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "items")).catch(() => null);
           subItems?.forEach((d) => {
-            const c = (d.data()?.categoria || d.data()?.categoriaNombre || d.data()?.grupo || "").toString().trim();
+            const c = (pick(d.data()||{}, FIELD_ALIASES.categoria, "") || "").toString().trim();
             if (c) setC.add(c);
           });
-          const qLP = query(collection(db, "listas_precios_productos"), where("listaId", "==", listaId));
+          const qLP = query(collection(db, COLLECTIONS.listas_precios_productos), where("listaId", "==", listaId));
           const snapLP = await getDocs(qLP).catch(() => null);
           snapLP?.forEach((d) => {
-            const c = (d.data()?.categoria || d.data()?.categoriaNombre || d.data()?.grupo || "").toString().trim();
+            const c = (pick(d.data()||{}, FIELD_ALIASES.categoria, "") || "").toString().trim();
             if (c) setC.add(c);
           });
         }
@@ -213,7 +353,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
 
   useEffect(() => { if (cat !== "*") { setOpenSug(true); } else setOpenSug(false); }, [cat]);
 
-  // Query de items (anidado -> plano -> espejo -> catálogo)
+  // Query de items (anidado -> plano -> espejo -> catálogo con fallback)
   useEffect(() => {
     let alive = true;
     const mustQuery = (normalize(term).length >= 2) || (cat !== "*");
@@ -223,94 +363,59 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       try {
         let merged = [];
 
+        // 1) anidado (items/procedimientos)
         if (listaId) {
           const nested = await fetchItemsFromNestedCategories(listaId);
           if (nested.length) merged = nested;
         }
 
+        // 1b) subcol items
         if (!merged.length && listaId) {
-          const subItems = await getDocs(collection(db, "listas_precios", listaId, "items")).catch(() => null);
+          const subItems = await getDocs(collection(db, COLLECTIONS.listas_precios, listaId, "items")).catch(() => null);
           if (subItems && !subItems.empty) {
-            merged = subItems.docs.map((d) => {
-              const x = d.data() || {};
-              const codigo = (x.codigo || "").toString().trim() || d.id;
-              const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
-              const precio = Number(x.precio ?? x.valor ?? 0) || 0;
-              let categoria = (x.categoria || x.categoriaNombre || x.grupo || "").toString().trim();
-              if (!categoria) categoria = "Sin categoría";
-              return {
-                id: d.id, codigo, nombre, precio, categoria,
-                max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
-                max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
-                permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
-                genera_rips: !!x.genera_rips,
-                es_consulta: !!x.es_consulta,
-                ver_en_agenda: !!x.ver_en_agenda,
-                _norm: normalize(`${codigo} ${nombre} ${categoria}`)
-              };
-            });
+            merged = subItems.docs.map((d) => mapItem(d, d.data() || {}));
           }
         }
 
+        // 2) espejo
         if (!merged.length && listaId) {
-          const qLP = query(collection(db, "listas_precios_productos"), where("listaId", "==", listaId));
+          const qLP = query(collection(db, COLLECTIONS.listas_precios_productos), where("listaId", "==", listaId));
           const snapLP = await getDocs(qLP).catch(() => null);
-          merged = (snapLP?.docs || []).map((d) => {
-            const x = d.data() || {};
-            const codigo = (x.codigo || "").toString().trim() || d.id;
-            const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
-            const precio = Number(x.precio ?? x.valor ?? 0) || 0;
-            let categoria = (x.categoria || x.categoriaNombre || x.grupo || "").toString().trim();
-            if (!categoria) categoria = "Sin categoría";
-            return {
-              id: d.id, codigo, nombre, precio, categoria,
-              max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
-              max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
-              permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
-              genera_rips: !!x.genera_rips,
-              es_consulta: !!x.es_consulta,
-              ver_en_agenda: !!x.ver_en_agenda,
-              _norm: normalize(`${codigo} ${nombre} ${categoria}`)
-            };
-          });
+          merged = (snapLP?.docs || []).map((d) => mapItem(d, d.data() || {}));
         }
 
+        // 3) fallback catálogo (¡siempre muestra algo!)
         if (!merged.length) {
-          const catSnap = await getDocs(collection(db, "catalogo_procedimientos")).catch(() => null);
-          catSnap?.forEach((d) => {
-            const x = d.data() || {};
-            const codigo = (x.codigo || "").toString().trim() || d.id;
-            const nombre = (x.nombre || x.descripcion || codigo).toString().trim();
-            const precio = Number(x.precio ?? x.valor ?? 0) || 0;
-            let categoria = (x.categoria || x.grupo || "").toString().trim() || "Sin categoría";
-            merged.push({
-              id: d.id, codigo, nombre, precio, categoria,
-              max_desc_pct: Number(x.max_desc_pct || x.max_descuento_pct || 0),
-              max_desc_valor: Number(x.max_desc_valor || x.max_descuento_valor || 0),
-              permite_desc: !!(x.permite_desc ?? x.permite_descuento ?? true),
-              genera_rips: !!x.genera_rips,
-              es_consulta: !!x.es_consulta,
-              ver_en_agenda: !!x.ver_en_agenda,
-              _norm: normalize(`${codigo} ${nombre} ${categoria}`)
-            });
-          });
+          const catSnap = await getDocs(collection(db, COLLECTIONS.catalogo_procedimientos)).catch(() => null);
+          catSnap?.forEach((d) => merged.push(mapItem(d, d.data() || {})));
         }
 
+        // Filtro por categoría + texto
         const tnorm = normalize(term);
         let filtered = merged.filter((r) => {
-          if (cat !== "*" && !sameCat(r.categoria || "", cat)) return false;
+          if (cat !== "*") {
+            const derived = deriveCategoria(r.codigo, r.nombre, cat, catMap) || r.categoria || "";
+            if (!sameCat(derived, cat)) return false;
+          }
           if (tnorm && !r._norm.includes(tnorm)) return false;
           return true;
         });
-        filtered.sort((a, b) => (a.codigo || "").localeCompare(b.codigo || "") || (a.nombre || "").localeCompare(b.nombre || ""));
-        if (cat !== "*" && !tnorm) filtered = filtered.slice(0, 70);
+
+        filtered.sort(
+          (a, b) =>
+            (a.codigo || "").localeCompare(b.codigo || "") ||
+            (a.nombre || "").localeCompare(b.nombre || "")
+        );
+
+        if (cat !== "*" && !tnorm) filtered = filtered.slice(0, 120);
+
         if (alive) setRows(filtered);
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, [listaId, cat, term]);
+  }, [listaId, cat, term, catMap]);
 
   const addFromRow = (r) => {
     const cantidad = Math.max(1, Number(qty) || 1);
@@ -322,7 +427,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         precio: Number(r.precio || 0),
         cantidad,
         descuentoPct: 0,
-        descuentoValor: 0,            // NUEVO
+        descuentoValor: 0,
         observaciones: "",
         _max_desc_pct: Number(r.max_desc_pct || 0),
         _max_desc_valor: Number(r.max_desc_valor || 0),
@@ -330,8 +435,8 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         _flags: {
           genera_rips: !!r.genera_rips,
           es_consulta: !!r.es_consulta,
-          ver_en_agenda: !!r.ver_en_agenda
-        }
+          ver_en_agenda: !!r.ver_en_agenda,
+        },
       };
       if (idx >= 0) {
         const next = [...prev];
@@ -339,7 +444,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         row.cantidad = clamp((row.cantidad || 1) + cantidad, 1, 999999);
         const unit = row.precio || base.precio || 0;
         const baseAmt = unit * row.cantidad;
-        const pctAmt = baseAmt * clamp(row.descuentoPct || 0, 0, base._max_desc_pct || 100) / 100;
+        const pctAmt = (baseAmt * clamp(row.descuentoPct || 0, 0, base._max_desc_pct || 100)) / 100;
         const absAmt = clamp(row.descuentoValor || 0, 0, base._max_desc_valor || baseAmt);
         const disc = row._permite_desc ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
         row.total = Math.max(0, baseAmt - disc);
@@ -347,8 +452,7 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
         return next;
       }
       const baseAmt = base.precio * cantidad;
-      const disc = 0;
-      const total = Math.max(0, baseAmt - disc);
+      const total = Math.max(0, baseAmt);
       return [...prev, { ...base, total }];
     });
   };
@@ -357,20 +461,21 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
     setBag((prev) => {
       const next = [...prev];
       const row = { ...next[i], ...patch };
-
-      // Normalizar y recalcular con reglas
       row.cantidad = clamp(toNumber(row.cantidad, 1), 1, 999999);
       row.precio = toNumber(row.precio, 0);
       row.descuentoPct = clamp(toNumber(row.descuentoPct, 0), 0, toNumber(row._max_desc_pct, 100));
-      row.descuentoValor = clamp(toNumber(row.descuentoValor, 0), 0, Number.isFinite(row._max_desc_valor) ? row._max_desc_valor : 999999999);
-
+      row.descuentoValor = clamp(
+        toNumber(row.descuentoValor, 0),
+        0,
+        Number.isFinite(row._max_desc_valor) ? row._max_desc_valor : 999999999
+      );
       const baseAmt = row.precio * row.cantidad;
-      const pctAmt = baseAmt * row.descuentoPct / 100;
+      const pctAmt = (baseAmt * row.descuentoPct) / 100;
       const absAmt = clamp(row.descuentoValor, 0, Number.isFinite(row._max_desc_valor) ? row._max_desc_valor : baseAmt);
       const disc = row._permite_desc ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
-
       row.total = Math.max(0, baseAmt - disc);
-      next[i] = row; return next;
+      next[i] = row;
+      return next;
     });
   };
   const removeBag = (i) => setBag((p) => p.filter((_, idx) => idx !== i));
@@ -379,16 +484,24 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
     if (!bag.length && rows.length) {
       const cantidad = Math.max(1, Number(qty) || 1);
       const all = rows.map((r) => ({
-        codigo:r.codigo, nombre:r.nombre, precio:Number(r.precio||0),
-        cantidad, descuentoPct:0, descuentoValor:0, observaciones:"",
-        _max_desc_pct:Number(r.max_desc_pct||0), _max_desc_valor:Number(r.max_desc_valor||0),
-        _permite_desc:!!(r.permite_desc ?? true),
-        _flags:{ genera_rips:!!r.genera_rips, es_consulta:!!r.es_consulta, ver_en_agenda:!!r.ver_en_agenda },
-        total:Number(r.precio||0)*cantidad
+        codigo: r.codigo, nombre: r.nombre, precio: Number(r.precio || 0),
+        cantidad, descuentoPct: 0, descuentoValor: 0, observaciones: "",
+        _max_desc_pct: Number(r.max_desc_pct || 0), _max_desc_valor: Number(r.max_desc_valor || 0),
+        _permite_desc: !!(r.permite_desc ?? true),
+        _flags: { genera_rips: !!r.genera_rips, es_consulta: !!r.es_consulta, ver_en_agenda: !!r.ver_en_agenda },
+        total: Number(r.precio || 0) * cantidad,
       }));
-      onLoadLines(all); onClose(); return;
+      onLoadLines(all);
+      setTerm("");
+      setOpenSug(false);
+      if (inputRef.current) inputRef.current.blur();
+      onClose();
+      return;
     }
     if (bag.length) onLoadLines(bag);
+    setTerm("");
+    setOpenSug(false);
+    if (inputRef.current) inputRef.current.blur();
     onClose();
   };
 
@@ -401,7 +514,10 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
       <div className="oc-modal">
         <div className="oc-modal-h">
           <b>Agregar productos</b>
-          <button className="oc-btn" onClick={onClose}>Cerrar</button>
+          <div style={{display:"flex",gap:8}}>
+            <button className="oc-btn" onClick={diagnostico}>Diagnóstico</button>
+            <button className="oc-btn" onClick={onClose}>Cerrar</button>
+          </div>
         </div>
 
         <div className="oc-modal-t">
@@ -427,8 +543,14 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
                 ) : rows.map((r) => (
                   <div
                     key={`${r.id}-${r.codigo}`}
-                    className={`oc-sug-item`}
-                    onMouseDown={(e) => { e.preventDefault(); addFromRow(r); }}
+                    className="oc-sug-item"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addFromRow(r);
+                      setTerm("");
+                      setOpenSug(false);
+                      if (inputRef.current) inputRef.current.blur();
+                    }}
                   >
                     <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nombre}</div>
                     <div className="mono" style={{ opacity:.85 }}>{r.codigo}</div>
@@ -472,7 +594,19 @@ function AgregarProductosModal({ listaId, onClose, onLoadLines }) {
                       <td>{r.nombre}</td>
                       <td className="mono">{COP.format(r.precio || 0)}</td>
                       <td>{r.categoria || "—"}</td>
-                      <td><button className="oc-btn success small" onClick={() => addFromRow(r)}>Agregar</button></td>
+                      <td>
+                        <button
+                          className="oc-btn success small"
+                          onClick={() => {
+                            addFromRow(r);
+                            setTerm("");
+                            setOpenSug(false);
+                            if (inputRef.current) inputRef.current.blur();
+                          }}
+                        >
+                          Agregar
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -541,7 +675,7 @@ function PlanEditor({ planId, onBack }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const snapL = await getDocs(query(collection(db, "listas_precios"), orderBy("nombre", "asc"))).catch(() => null);
+      const snapL = await getDocs(query(collection(db, COLLECTIONS.listas_precios), orderBy("nombre", "asc"))).catch(() => null);
       if (alive) setListas(snapL ? snapL.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })) : []);
 
       const pSnap = await getDoc(doc(db, "planes", planId));
@@ -559,7 +693,6 @@ function PlanEditor({ planId, onBack }) {
   const listaId = plan?.listaId || "";
   const updateHead = (patch) => setPlan((p) => ({ ...(p || {}), ...patch }));
 
-  // === Reglas: % y $ con topes; si no permite → 0
   const recompute = (ln) => {
     const cant = clamp(toNumber(ln.cantidad, 1), 1, 999999);
     const precio = toNumber(ln.precio, 0);
@@ -573,7 +706,7 @@ function PlanEditor({ planId, onBack }) {
 
     const baseAmt = precio * cant;
     const pctAmt = baseAmt * (permite ? pct : 0) / 100;
-    const absAmt = permite ? clamp(abs, 0, topeAbs, baseAmt) : 0; // clamp adicional por si acaso
+    const absAmt = permite ? Math.min(abs, topeAbs, baseAmt) : 0;
     const disc = permite ? Math.min(Math.max(pctAmt, absAmt), baseAmt) : 0;
 
     const total = Math.max(0, baseAmt - disc);
@@ -618,15 +751,8 @@ function PlanEditor({ planId, onBack }) {
     setLines((p) => id ? p.filter((x) => x.id !== id) : p.filter((_, i) => i !== idx));
   };
 
-  // === Acciones stub (cablear con Agenda/Facturación)
-  const agendar = (ln) => {
-    alert(`(Demo) Agendar: ${ln.codigo} — ${ln.nombre}`);
-    // Ejemplo: navigate(`/dashboard_main/agenda?date=${YYYY_MM_DD}&planId=${plan.id}&item=${ln.id||ln.codigo}`)
-  };
-  const facturar = (ln) => {
-    alert(`(Demo) Facturar: ${ln.codigo} — ${ln.nombre}`);
-    // Ejemplo: crear doc en facturacion y marcar estado del renglón
-  };
+  const agendar = (ln) => { alert(`(Demo) Agendar: ${ln.codigo} — ${ln.nombre}`); };
+  const facturar = (ln) => { alert(`(Demo) Facturar: ${ln.codigo} — ${ln.nombre}`); };
 
   const saveAll = async () => {
     if (!plan?.nombre?.trim()) return alert("El nombre del plan es obligatorio.");
@@ -648,7 +774,7 @@ function PlanEditor({ planId, onBack }) {
             precio: toNumber(rec.precio, 0),
             cantidad: toNumber(rec.cantidad, 1),
             descuentoPct: toNumber(rec.descuentoPct, 0),
-            descuentoValor: toNumber(rec.descuentoValor, 0), // NUEVO
+            descuentoValor: toNumber(rec.descuentoValor, 0),
             observaciones: rec.observaciones || "",
             total: toNumber(rec.total, 0),
             _max_desc_pct: toNumber(rec._max_desc_pct, 0),
@@ -705,7 +831,7 @@ function PlanEditor({ planId, onBack }) {
               <th style={{ width:120 }}>Valor unit.</th>
               <th style={{ width:80 }}>Cant.</th>
               <th style={{ width:90 }}>Desc. %</th>
-              <th style={{ width:110 }}>Desc. $</th>{/* NUEVO */}
+              <th style={{ width:110 }}>Desc. $</th>
               <th>Observaciones</th>
               <th style={{ width:120 }}>Total</th>
               <th style={{ width:220 }}>Acciones</th>
@@ -749,16 +875,11 @@ function PlanEditor({ planId, onBack }) {
 }
 
 /* ===================== Listado / Crear / Editar (wrapper) ===================== */
-/**
- * Props opcionales desde tu router:
- * - mode: "list" | "new" | "edit"
- * - planId: string (si mode === "edit")
- */
 export default function Planes({ mode, planId }) {
   usePlanesStyles();
 
   const [localMode, setLocalMode] = useState(mode || "list");
-  const [editId, setEditId] = useState(planId || null);
+  the [editId, setEditId] = useState(planId || null);
 
   const [term, setTerm] = useState("");
   const [rows, setRows] = useState([]);
@@ -771,7 +892,7 @@ export default function Planes({ mode, planId }) {
     (async () => {
       setLoading(true);
       try {
-        const snapL = await getDocs(query(collection(db, "listas_precios"), orderBy("nombre", "asc"))).catch(() => null);
+        const snapL = await getDocs(query(collection(db, COLLECTIONS.listas_precios), orderBy("nombre", "asc"))).catch(() => null);
         if (alive) setListas(snapL ? snapL.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })) : []);
         const snap = await getDocs(query(collection(db, "planes"), orderBy("nombre", "asc")));
         if (alive) setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })));
