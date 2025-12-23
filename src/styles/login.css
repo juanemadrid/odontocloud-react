@@ -1,0 +1,200 @@
+/* ===================== RESET & FUENTE ===================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Eliminamos el fondo del body, el fondo se maneja desde el JSX */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* ✅ Bloquea scroll vertical */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* === CONTENEDOR LOGIN === */
+.container {
+  display: flex;
+  flex-direction: row;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  width: 85%;
+  max-width: 900px;
+  min-height: 480px;
+  z-index: 2;
+  position: relative;
+  backdrop-filter: blur(6px); /* ✨ efecto vidrio elegante */
+}
+
+/* === PANEL IZQUIERDO === */
+.left-panel {
+  flex: 1;
+  background-color: #fff;
+  text-align: center;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid #f0f0f0;
+}
+
+.logo {
+  width: 240px;
+  max-width: 95%;
+  height: auto;
+  margin: 0 auto 30px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 12px rgba(0, 174, 255, 0.5));
+}
+
+.left-panel h2 {
+  font-size: 30px;
+  color: #222;
+  font-weight: 700;
+}
+
+.left-panel p {
+  font-size: 16px;
+  color: #555;
+  margin-top: 10px;
+}
+
+/* === PANEL DERECHO === */
+.right-panel {
+  flex: 1;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.right-panel h3 {
+  font-size: 22px;
+  color: #222;
+  font-weight: 600;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+/* === FORMULARIO === */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+input {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.3s;
+}
+
+input:focus {
+  border-color: #1fb6ff;
+}
+
+.forgot {
+  font-size: 14px;
+  color: #007bff;
+  text-decoration: none;
+  text-align: center;
+  margin-bottom: 20px;
+  display: block;
+}
+
+button {
+  background-color: #2bb673;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background-color: #25a566;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    width: 95%;
+    min-height: auto;
+    border-radius: 14px;
+  }
+
+  .left-panel,
+  .right-panel {
+    border: none;
+    padding: 40px 25px;
+  }
+
+  .left-panel h2 {
+    font-size: 24px;
+  }
+
+  .left-panel p {
+    font-size: 15px;
+  }
+
+  .right-panel h3 {
+    font-size: 20px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .logo {
+    width: 180px;
+    margin-bottom: 20px;
+  }
+
+  .container {
+    width: 90%;
+    border-radius: 10px;
+  }
+
+  input,
+  button {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+
+/* === FONDO A PANTALLA COMPLETA === */
+.login-root {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* ✅ Fijo en monitores */
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .login-root {
+    background-attachment: scroll; /* ✅ Evita recortes en móviles */
+    background-size: cover;
+  }
+}

@@ -1,0 +1,383 @@
+/* ===============================
+   ODONTOCLOUD – PACIENTES MODULE
+   =============================== */
+
+/* ======= BARRAS SUPERIORES ======= */
+.odc-topbar-green {
+  height: 4px;
+  background: linear-gradient(90deg, #23a559, #0f8e49);
+  border-radius: 4px 4px 0 0;
+}
+
+.odc-topbar-blue {
+  background: linear-gradient(180deg, #0a86d8, #0a6fb3);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 0 0 6px 6px;
+  font-weight: 600;
+}
+
+.odc-top-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.odc-breadcrumbs {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ======= CONTENEDORES ======= */
+.odc-container {
+  padding: 20px;
+  background: #f5f8fb;
+  min-height: calc(100vh - 100px);
+  box-sizing: border-box;
+}
+
+.odc-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  padding: 18px;
+  margin-bottom: 18px;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.odc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.odc-title {
+  margin: 0;
+  font-size: 18px;
+  color: #193a56;
+}
+
+/* ======= BOTONES ======= */
+.btn {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: #e9eef3;
+  color: #203040;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.btn:hover {
+  filter: brightness(0.95);
+}
+
+.btn.green {
+  background: #23a559;
+  color: #fff;
+}
+
+.btn.blue {
+  background: #0a86d8;
+  color: #fff;
+}
+
+.btn.small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* ======= INPUTS Y SELECTS ======= */
+.search-input,
+.form-input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #d3dae3;
+  border-radius: 6px;
+  padding: 8px 10px;
+  outline: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  color: #223b55;
+  box-sizing: border-box;
+}
+
+.search-input:focus,
+.form-input:focus,
+select:focus,
+textarea:focus {
+  border-color: #0a86d8;
+  box-shadow: 0 0 0 2px rgba(10, 134, 216, 0.2);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* ======= TABLA ======= */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.appointments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.appointments-table th {
+  background: #eef3f9;
+  color: #375271;
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #dce3eb;
+  font-weight: 600;
+}
+
+.appointments-table td {
+  padding: 10px;
+  border-bottom: 1px solid #edf1f6;
+  color: #273b52;
+  vertical-align: middle;
+}
+
+.no-data {
+  text-align: center;
+  color: #7689a3;
+  padding: 18px !important;
+}
+
+/* ======= PASTILLAS (ESTADO) ======= */
+.pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  min-width: 70px;
+}
+
+.pill-ok {
+  background: #e6f8ee;
+  color: #1a7547;
+}
+
+.pill-off {
+  background: #fde9e9;
+  color: #a73636;
+}
+
+/* ======= MODAL ======= */
+.odc-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.odc-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.odc-modal .odc-card {
+  position: relative;
+  z-index: 10;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+}
+
+/* ======= FORMULARIO DE PACIENTE ======= */
+.form-section-title {
+  margin-top: 14px;
+  margin-bottom: 4px;
+  font-size: 16px;
+  color: #114b79;
+  border-left: 4px solid #0a86d8;
+  padding-left: 8px;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+}
+
+input[type="checkbox"] {
+  transform: scale(1.2);
+  margin-top: 6px;
+}
+
+/* ======= FOTO PROFESIONAL DEL PACIENTE ======= */
+.foto-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+
+.foto-drop {
+  width: 128px;
+  height: 128px;
+  border-radius: 9999px;
+  border: 2px dashed #cbd5e1;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+
+.foto-drop:hover {
+  border-color: #0a86d8;
+  box-shadow: 0 8px 16px rgba(2, 132, 199, 0.08);
+  transform: translateY(-1px);
+}
+
+.foto-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.foto-empty {
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  color: #64748b;
+  padding: 0 10px;
+}
+
+/* Overlay “Cambiar” */
+.foto-drop::after {
+  content: "Cambiar";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  border-radius: inherit;
+}
+
+.foto-drop:hover::after {
+  opacity: 1;
+}
+
+.foto-row .btn {
+  height: 36px;
+  padding: 0 12px;
+}
+
+/* Avatar mini en tabla */
+.avatar-fallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.appointments-table td img {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+/* ======= SCROLL BAR CUSTOM ======= */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f2f4f7;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #b7c4d3;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #93a8be;
+}
+
+/* ======= TRANSICIONES Y EFECTOS ======= */
+button:active,
+.btn:active {
+  transform: scale(0.97);
+}
+
+input,
+select,
+textarea {
+  transition: all 0.15s ease;
+}
+
+/* ======= RESPONSIVE ======= */
+@media (max-width: 768px) {
+  .odc-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .appointments-table th,
+  .appointments-table td {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .foto-drop {
+    width: 104px;
+    height: 104px;
+  }
+}

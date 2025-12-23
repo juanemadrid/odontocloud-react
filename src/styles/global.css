@@ -1,0 +1,18 @@
+:root{
+  --primary: #0b66c3;
+  --muted: #6b7280;
+  --bg: #f7fafc;
+}
+*{box-sizing:border-box}
+body{font-family:Inter, system-ui, Arial, sans-serif; margin:0; background:var(--bg); color:#111}
+.app-shell{display:grid; grid-template-columns:260px 1fr; min-height:100vh}
+.main-content{padding:24px}
+/* Topbar */
+.topbar{background:var(--primary); color:#fff; padding:12px 20px; display:flex; align-items:center; justify-content:space-between}
+/* Sidebar */
+.sidebar{background:#fff; border-right:1px solid #e6e9ef; padding:20px}
+.logo{font-weight:700; color:var(--primary)}
+.nav-link{display:block; padding:8px 10px; color:#0f1724; text-decoration:none; border-radius:8px}
+.nav-link:hover{background:#f1f5f9}
+/* Simple card */
+.card{background:#fff; padding:16px; border-radius:10px; box-shadow:0 1px 3px rgba(15,23,42,0.06); margin-bottom:16px}
