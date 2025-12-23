@@ -196,7 +196,7 @@ export default function Inventario() {
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
           background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000
         }}>
-          <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "400px" }}>
+          <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "90%", maxWidth: "400px" }}>
             <h2>{editingItem ? "Editar Producto" : "Nuevo Producto"}</h2>
             <form onSubmit={handleSave}>
               <div style={{ marginBottom: "10px" }}>

@@ -101,7 +101,7 @@ export default function Facturacion() {
       </div>
 
       {/* STATS */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
+      <div style={{ display: "flex", gap: "20px", marginBottom: "30px", flexWrap: "wrap" }}>
         <div style={{ flex: 1, padding: "20px", background: "white", borderRadius: "10px", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}>
           <h3 style={{ marginTop: 0, color: "#999" }}>Total Facturado</h3>
           <div style={{ fontSize: "24px", fontWeight: "bold" }}>${stats.total.toLocaleString()}</div>
@@ -126,58 +126,60 @@ export default function Facturacion() {
 
       {/* TABLA */}
       <div style={{ background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "#f5f5f5" }}>
-            <tr>
-              <th style={{ padding: "15px", textAlign: "left" }}>Fecha</th>
-              <th style={{ padding: "15px", textAlign: "left" }}>Paciente</th>
-              <th style={{ padding: "15px", textAlign: "left" }}>Descripción</th>
-              <th style={{ padding: "15px", textAlign: "right" }}>Monto</th>
-              <th style={{ padding: "15px", textAlign: "center" }}>Estado</th>
-              <th style={{ padding: "15px", textAlign: "center" }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} style={{ padding: "20px", textAlign: "center" }}>Cargando...</td></tr>
-            ) : filteredFacturas.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: "20px", textAlign: "center" }}>No hay facturas.</td></tr>
-            ) : (
-              filteredFacturas.map(f => (
-                <tr key={f.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "15px" }}>{f.fecha?.seconds ? new Date(f.fecha.seconds * 1000).toLocaleDateString() : "N/A"}</td>
-                  <td style={{ padding: "15px" }}>{f.pacienteNombre}</td>
-                  <td style={{ padding: "15px" }}>{f.descripcion}</td>
-                  <td style={{ padding: "15px", textAlign: "right" }}>${f.monto?.toLocaleString()}</td>
-                  <td style={{ padding: "15px", textAlign: "center" }}>
-                    <span style={{
-                      padding: "5px 10px",
-                      borderRadius: "15px",
-                      fontSize: "0.85em",
-                      background: f.estado === "Pagada" ? "#dff0d8" : "#fcf8e3",
-                      color: f.estado === "Pagada" ? "#3c763d" : "#8a6d3b"
-                    }}>
-                      {f.estado}
-                    </span>
-                  </td>
-                  <td style={{ padding: "15px", textAlign: "center" }}>
-                    <button
-                      onClick={() => toggleEstado(f)}
-                      style={{
-                        cursor: "pointer",
-                        border: "1px solid #ccc",
-                        background: "none",
+        <div className="oc-table-responsive">
+          <table className="oc-table">
+            <thead style={{ background: "#f5f5f5" }}>
+              <tr>
+                <th style={{ padding: "15px", textAlign: "left" }}>Fecha</th>
+                <th style={{ padding: "15px", textAlign: "left" }}>Paciente</th>
+                <th style={{ padding: "15px", textAlign: "left" }}>Descripción</th>
+                <th style={{ padding: "15px", textAlign: "right" }}>Monto</th>
+                <th style={{ padding: "15px", textAlign: "center" }}>Estado</th>
+                <th style={{ padding: "15px", textAlign: "center" }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} style={{ padding: "20px", textAlign: "center" }}>Cargando...</td></tr>
+              ) : filteredFacturas.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: "20px", textAlign: "center" }}>No hay facturas.</td></tr>
+              ) : (
+                filteredFacturas.map(f => (
+                  <tr key={f.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "15px" }}>{f.fecha?.seconds ? new Date(f.fecha.seconds * 1000).toLocaleDateString() : "N/A"}</td>
+                    <td style={{ padding: "15px" }}>{f.pacienteNombre}</td>
+                    <td style={{ padding: "15px" }}>{f.descripcion}</td>
+                    <td style={{ padding: "15px", textAlign: "right" }}>${f.monto?.toLocaleString()}</td>
+                    <td style={{ padding: "15px", textAlign: "center" }}>
+                      <span style={{
                         padding: "5px 10px",
-                        borderRadius: "5px"
+                        borderRadius: "15px",
+                        fontSize: "0.85em",
+                        background: f.estado === "Pagada" ? "#dff0d8" : "#fcf8e3",
+                        color: f.estado === "Pagada" ? "#3c763d" : "#8a6d3b"
                       }}>
-                      Cambiar Estado
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                        {f.estado}
+                      </span>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center" }}>
+                      <button
+                        onClick={() => toggleEstado(f)}
+                        style={{
+                          cursor: "pointer",
+                          border: "1px solid #ccc",
+                          background: "none",
+                          padding: "5px 10px",
+                          borderRadius: "5px"
+                        }}>
+                        Cambiar Estado
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {modalOpen && (
@@ -185,7 +187,7 @@ export default function Facturacion() {
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
           background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000
         }}>
-          <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "400px" }}>
+          <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "90%", maxWidth: "400px" }}>
             <h2>Nueva Factura</h2>
             <form onSubmit={handleSave}>
               <div style={{ marginBottom: "10px" }}>

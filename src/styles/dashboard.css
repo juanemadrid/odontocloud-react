@@ -453,7 +453,72 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
+
 .oc-dark .oc-muted,
 .oc-dark .oc-hero-meta {
   color: #9ca3af;
+}
+
+/* ============================================================
+   MODULE RESPONSIVENESS UTILITIES
+   ============================================================ */
+
+/* Contenedor flexible que se apila en móviles (ej: Odontograma) */
+.oc-split-view {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 80px); /* Ajuste de altura */
+}
+
+.oc-split-pane-main {
+  flex: 2;
+  overflow-y: auto;
+  border-right: 1px solid var(--oc-border);
+  padding: 20px;
+}
+
+.oc-split-pane-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: #fff;
+}
+
+/* Wrapper para tablas responsive */
+.oc-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.oc-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px; /* Fuerza scroll si es muy angosta */
+}
+
+/* Ajustes específicos para móviles */
+@media (max-width: 900px) {
+  .oc-split-view {
+    flex-direction: column;
+    height: auto; /* Dejar crecer */
+    gap: 0;
+  }
+
+  .oc-split-pane-main {
+    border-right: none;
+    border-bottom: 1px solid var(--oc-border);
+    flex: none; /* Auto height */
+  }
+
+  .oc-split-pane-side {
+    flex: none; /* Auto height */
+  }
+}
+
+@media (max-width: 600px) {
+  .oc-header {
+    padding: 10px 15px;
+  }
 }

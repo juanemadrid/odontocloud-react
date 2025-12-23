@@ -247,10 +247,10 @@ export default function Odontograma() {
     const totalPresupuesto = planTratamiento.reduce((acc, item) => acc + item.precio, 0);
 
     return (
-        <div style={{ display: "flex", height: "calc(100vh - 80px)", fontFamily: "Segoe UI, sans-serif" }}>
+        <div className="oc-split-view" style={{ fontFamily: "Segoe UI, sans-serif" }}>
 
             {/* COLUMNA IZQUIERDA: Herramientas + Visual */}
-            <div style={{ flex: 2, padding: "20px", overflowY: "auto", borderRight: "1px solid #ddd", position: "relative" }}>
+            <div className="oc-split-pane-main" style={{ position: "relative" }}>
 
                 {loading && <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(255,255,255,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 10 }}>Cargando...</div>}
 
@@ -359,7 +359,7 @@ export default function Odontograma() {
             </div>
 
             {/* COLUMNA DERECHA: Plan de Tratamiento */}
-            <div style={{ flex: 1, padding: "20px", background: "#fff", display: "flex", flexDirection: "column" }}>
+            <div className="oc-split-pane-side">
                 <h2 style={{ borderBottom: "2px solid #0a86d8", paddingBottom: "10px", color: "#0a86d8" }}>Plan de Tratamiento</h2>
 
                 <div style={{ flex: 1, overflowY: "auto" }}>
