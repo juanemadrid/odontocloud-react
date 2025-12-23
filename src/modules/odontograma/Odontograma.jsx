@@ -21,6 +21,7 @@ export default function Odontograma() {
     const [selectedToolId, setSelectedToolId] = useState("caries");
     const [odontogramaData, setOdontogramaData] = useState({});
     const [planTratamiento, setPlanTratamiento] = useState([]);
+    const [tipoDenticion, setTipoDenticion] = useState("completo"); // "adulto", "nino", "completo"
 
     // --- Estados de Paciente ---
     const [searchTerm, setSearchTerm] = useState("");
@@ -290,6 +291,29 @@ export default function Odontograma() {
                     )}
                 </div>
 
+                {/* --- CONTROLES DENTICIÓN --- */}
+                <div style={{ marginBottom: "15px", display: "flex", gap: "10px", alignItems: "center" }}>
+                    <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>Dentición:</span>
+                    {["completo", "adulto", "nino"].map((tipo) => (
+                        <button
+                            key={tipo}
+                            onClick={() => setTipoDenticion(tipo)}
+                            style={{
+                                padding: "4px 12px",
+                                border: tipoDenticion === tipo ? "2px solid #0a86d8" : "1px solid #ccc",
+                                background: tipoDenticion === tipo ? "#eef7ff" : "#fff",
+                                color: tipoDenticion === tipo ? "#0a86d8" : "#555",
+                                borderRadius: "20px",
+                                cursor: "pointer",
+                                fontWeight: tipoDenticion === tipo ? "bold" : "normal",
+                                fontSize: "0.85rem"
+                            }}
+                        >
+                            {tipo === "completo" ? "Mixta (Todos)" : tipo === "adulto" ? "Permanente" : "Temporal (Niño)"}
+                        </button>
+                    ))}
+                </div>
+
                 {/* --- HERRAMIENTAS --- */}
                 <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap", opacity: selectedPatient ? 1 : 0.5, pointerEvents: selectedPatient ? "auto" : "none" }}>
                     <strong>Herramientas:</strong>
@@ -342,6 +366,7 @@ export default function Odontograma() {
                 }}>
                     <OdontogramaVisual
                         odontogramaData={odontogramaData}
+                        tipoDenticion={tipoDenticion}
                         onToothClick={(d, z) => {
                             if (selectedToolId === "borrador") {
                                 // Lógica simple de borrado local

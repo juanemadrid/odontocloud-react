@@ -149,7 +149,8 @@ body {
   /* ocupa casi todo el alto disponible debajo del header */
   min-height: calc(100vh - 70px);
   width: 100%;
-  max-width: 1400px;
+  max-width: 1920px;
+  /* Permitir pantalla completa en monitores HD */
   margin: 0 auto;
   padding: 24px 32px 40px;
   box-sizing: border-box;
@@ -170,117 +171,183 @@ body {
    INICIO: HERO
    ============================================================ */
 
+/* ============================================================
+   INICIO: HERO
+   ============================================================ */
+
 .oc-main-content {
-  animation: fadeInUp 0.3s ease-out;
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .oc-hero {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 40px;
   border-radius: var(--radius);
-  border: 1px solid var(--oc-border);
-  background: linear-gradient(135deg, #ffffff, #e4f3ff);
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 20px;
+  background: linear-gradient(120deg, #ffffff, #f0f7ff);
+  border: 1px solid rgba(228, 232, 239, 0.8);
+  box-shadow: var(--shadow-medium);
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decoración sutil de fondo para el Hero */
+.oc-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(6, 163, 255, 0.05));
+  pointer-events: none;
 }
 
 .oc-hero-text h1 {
-  margin: 0 0 4px;
-  font-size: 1.55rem;
+  margin: 0 0 10px;
+  font-size: 1.85rem;
+  color: var(--oc-blue-dark);
+  letter-spacing: -0.5px;
 }
 
 .oc-hero-text p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--oc-muted);
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--oc-text);
+  line-height: 1.5;
+  max-width: 600px;
 }
 
 .oc-hero-meta {
-  margin-top: 4px;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--oc-muted);
+  background: rgba(0, 0, 0, 0.03);
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
 }
 
 /* Badge a la derecha */
-
 .oc-hero-badge {
-  min-width: 170px;
-  text-align: right;
+  min-width: 180px;
+  text-align: center;
   background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid var(--oc-border);
-  padding: 10px 14px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 16px 20px;
+  box-shadow: 0 8px 20px rgba(6, 163, 255, 0.15);
+  transition: transform 0.2s;
+}
+
+.oc-hero-badge:hover {
+  transform: translateY(-2px);
 }
 
 .oc-hero-badge-title {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--oc-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
 .oc-hero-badge-value {
   display: block;
-  font-size: 1.7rem;
-  font-weight: 700;
-  color: var(--oc-blue-dark);
-  margin: 2px 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--oc-blue);
+  margin: 6px 0;
 }
 
 .oc-hero-badge-sub {
   display: block;
-  font-size: 0.78rem;
-  color: var(--oc-muted);
+  font-size: 0.8rem;
+  color: var(--oc-text);
+  opacity: 0.7;
 }
 
 /* ============================================================
-   CARDS DE MÉTRICAS (Pacientes totales, Citas hoy, etc.)
+   CARDS DE MÉTRICAS (KPIs Professionales)
    ============================================================ */
 
 .oc-stats-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
 .stat-card {
   background: var(--oc-card-bg);
-  border-radius: 999px;
+  border-radius: var(--radius);
   border: 1px solid var(--oc-border);
   box-shadow: var(--shadow-soft);
-  padding: 10px 18px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  text-align: center;
+  justify-content: space-between;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-medium);
+  border-color: var(--oc-blue);
+}
+
+/* Barra lateral de color para darle estilo enterprise */
+.stat-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--oc-blue);
+  border-radius: 4px 0 0 4px;
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--oc-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--oc-blue-dark);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--oc-text);
+  margin-top: auto;
+  /* Empuja el valor hacia abajo */
 }
 
 .stat-currency {
-  font-size: 0.7rem;
+  font-size: 1rem;
   color: var(--oc-muted);
+  font-weight: 400;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 /* ============================================================
-   GRID PRINCIPAL (Gráfico + N8N + Actividad)
+   GRID PRINCIPAL (Gráfico + Info)
    ============================================================ */
 
 .oc-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
-  gap: 18px;
+  grid-template-columns: 2.5fr 1fr;
+  /* Más espacio al gráfico */
+  gap: 24px;
   align-items: start;
 }
 
@@ -288,7 +355,7 @@ body {
 .oc-grid-side {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
 }
 
 .card {
@@ -296,32 +363,45 @@ body {
   border-radius: var(--radius);
   border: 1px solid var(--oc-border);
   box-shadow: var(--shadow-soft);
-  padding: 16px 18px;
+  padding: 24px 28px;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-medium);
 }
 
 .card h3 {
   margin-top: 0;
-  font-size: 0.95rem;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: var(--oc-blue-dark);
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
 }
 
 /* CARD del gráfico pacientes semana */
 
 .card-quickcharts {
-  min-height: 230px;
-  position: relative;
+  min-height: 350px;
+  /* Gráfico más alto */
+  display: flex;
+  flex-direction: column;
 }
 
 .oc-weekly-empty {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--oc-muted);
-  margin-top: 6px;
+  margin: auto;
+  /* Centrar mensaje */
+  font-style: italic;
 }
 
 /* Si usas canvas/SVG dentro de QuickCharts */
 .card-quickcharts canvas,
 .card-quickcharts svg {
   width: 100%;
-  height: 170px;
+  flex: 1;
   display: block;
 }
 
@@ -350,6 +430,7 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -467,7 +548,8 @@ body {
 .oc-split-view {
   display: flex;
   gap: 20px;
-  height: calc(100vh - 80px); /* Ajuste de altura */
+  height: calc(100vh - 80px);
+  /* Ajuste de altura */
 }
 
 .oc-split-pane-main {
@@ -495,25 +577,29 @@ body {
 .oc-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 600px; /* Fuerza scroll si es muy angosta */
+  min-width: 600px;
+  /* Fuerza scroll si es muy angosta */
 }
 
 /* Ajustes específicos para móviles */
 @media (max-width: 900px) {
   .oc-split-view {
     flex-direction: column;
-    height: auto; /* Dejar crecer */
+    height: auto;
+    /* Dejar crecer */
     gap: 0;
   }
 
   .oc-split-pane-main {
     border-right: none;
     border-bottom: 1px solid var(--oc-border);
-    flex: none; /* Auto height */
+    flex: none;
+    /* Auto height */
   }
 
   .oc-split-pane-side {
-    flex: none; /* Auto height */
+    flex: none;
+    /* Auto height */
   }
 }
 
