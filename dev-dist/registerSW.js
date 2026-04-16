@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/odontocloud-react/dev-sw.js?dev-sw', { scope: '/odontocloud-react/', type: 'classic' })

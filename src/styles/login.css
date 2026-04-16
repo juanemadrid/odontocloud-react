@@ -1,0 +1,213 @@
+/* ===================== RESET & FUENTE ===================== */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Global reset for the login page context only if needed, 
+   but we avoid html/body to prevent bleeding into the rest of the app */
+
+/* === CONTENEDOR LOGIN === */
+.login-container {
+  display: flex;
+  flex-direction: row;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  width: 85%;
+  max-width: 900px;
+  min-height: 480px;
+  z-index: 2;
+  position: relative;
+  backdrop-filter: blur(6px);
+  /* ✨ efecto vidrio elegante */
+}
+
+/* === PANEL IZQUIERDO === */
+.left-panel {
+  flex: 1;
+  background-color: #fff;
+  text-align: center;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid #f0f0f0;
+}
+
+.logo {
+  width: 240px;
+  max-width: 95%;
+  height: auto;
+  margin: 0 auto -60px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 12px rgba(0, 174, 255, 0.5));
+}
+
+.left-panel h2 {
+  font-size: 30px;
+  color: #222;
+  font-weight: 700;
+  margin-top: 0;
+}
+
+.left-panel p {
+  font-size: 16px;
+  color: #555;
+  margin-top: 10px;
+}
+
+/* === PANEL DERECHO === */
+.right-panel {
+  flex: 1;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.right-panel h3 {
+  font-size: 22px;
+  color: #222;
+  font-weight: 600;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+/* === FORMULARIO === */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel form input {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 20px;
+  min-height: 52px;
+  margin-bottom: 12px !important;
+  font-size: 16px;
+  color: #334155;
+  outline: none;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+input::placeholder {
+  color: #94a3b8;
+  /* Slate 400 */
+  font-weight: 400;
+}
+
+input:focus {
+  background-color: #ffffff;
+  border-color: #2bb673;
+  /* Match button green */
+  box-shadow: 0 0 0 4px rgba(43, 182, 115, 0.1);
+  /* Subtle green glow */
+}
+
+.forgot {
+  font-size: 14px;
+  color: #007bff;
+  text-decoration: none;
+  text-align: center;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.right-panel form button {
+  background-color: #2bb673;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.right-panel form button:hover {
+  background-color: #25a566;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 900px) {
+  .login-container {
+    flex-direction: column;
+    width: 95%;
+    min-height: auto;
+    border-radius: 14px;
+  }
+
+  .left-panel,
+  .right-panel {
+    border: none;
+    padding: 40px 25px;
+  }
+
+  .left-panel h2 {
+    font-size: 24px;
+  }
+
+  .left-panel p {
+    font-size: 15px;
+  }
+
+  .right-panel h3 {
+    font-size: 20px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .logo {
+    width: 180px;
+    margin-bottom: 20px;
+  }
+
+  .login-container {
+    width: 90%;
+    border-radius: 10px;
+  }
+
+  input,
+  .right-panel form button {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+
+/* === FONDO A PANTALLA COMPLETA === */
+.login-root {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  /* ✅ Fijo en monitores */
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .login-root {
+    background-attachment: scroll;
+    /* ✅ Evita recortes en móviles */
+    background-size: cover;
+  }
+}

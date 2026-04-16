@@ -1,0 +1,262 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== ESTADISTICAS API (PRIORIDAD ALTA) =====
+    match /stats/{doc} {
+      allow read, write: if true;
+    }
+
+    // --- función para saber si el usuario está autenticado ---
+    function authed() {
+      return request.auth != null;
+    }
+
+    function isMe(uid) {
+      return authed() && request.auth.uid == uid;
+    }
+
+    // Lee el doc del usuario (para créditos/roles)
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    // Devuelve créditos del usuario (si no existe, 0)
+    // userCredits: Robustly fetch credits (Number or String parse)
+    function userCredits(uid) {
+      let d = userDoc(uid).data;
+      let val = d.get('credits', 0);
+      return val is number ? val : (val is string ? int(val) : 0);
+    }
+
+    // tripCreditsCost: Robustly fetch cost (Number or String parse)
+    function tripCreditsCost() {
+      let val = resource.data.get('credits_cost', 0);
+      return val is number ? val : (val is string ? int(val) : 0);
+    }
+
+    // driverHasEnoughCreditsForTrip: Compare credits vs cost
+    function driverHasEnoughCreditsForTrip() {
+      return userCredits(request.auth.uid) >= tripCreditsCost();
+    }
+
+    // driverHasActiveTrial: Robust check for trial (Timestamp or String)
+    function driverHasActiveTrial() {
+       let d = userDoc(request.auth.uid).data;
+       let trial = d.get('trialEndsAt', null);
+       return (trial is timestamp && trial > request.time) || (trial is string);
+    }
+
+    // Helper: es admin? (Bulletproof)
+    function isAdmin() {
+       return request.auth.uid == 'f4NsCUbGdMh6JbGkmufnOLfwrXhM2' || 
+              request.auth.uid == 'f4Nscub5xMh62bGkmufnOLfwXbM2' ||
+       (
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys().hasAny(['role']) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role is string && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.trim().lower() == 'admin') ||
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys().hasAny(['rol']) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol is string && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol.trim().lower() == 'admin')
+         )
+       );
+    }
+
+    // ===== USUARIOS =====
+    match /users/{uid} {
+      allow read: if authed();
+      allow create: if isMe(uid);
+      allow update: if isMe(uid) || isAdmin() || authed();
+      
+      // Subcolección de favoritos
+      match /fav_addresses/{favId} {
+        allow read, write: if isMe(uid);
+      }
+      
+      allow delete: if isAdmin();
+    }
+
+    // ===== BARRIOS =====
+    match /barrios/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ===== BARRIOS_RESUMEN =====
+    match /barrios_resumen/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ===== NOTIFICACIONES =====
+    match /notificaciones/{doc} {
+      allow read: if authed() && resource.data.target == request.auth.uid;
+      allow create: if authed();
+      allow update, delete: if false;
+    }
+
+    // ===== APP CONFIG =====
+    match /app_config/{doc} {
+      allow read: if authed();
+      allow write: if isAdmin();
+    }
+
+    // ===== CONFIGURACION (General) =====
+    match /configuracion/{doc} {
+       allow read: if authed();
+       allow write: if isAdmin();
+    }
+
+    // ===== TOPUPS =====
+    match /topups/{topupId} {
+      allow read: if authed() && resource.data.uid == request.auth.uid;
+      allow create: if authed() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ===== TOPUP REQUESTS (Manual) =====
+    match /topup_requests/{reqId} {
+      // Create: User can create their own request
+      allow create: if authed() && request.resource.data.uid == request.auth.uid;
+      // Read: User sees own, Admin sees all
+      allow read: if authed() && (resource.data.uid == request.auth.uid || isAdmin());
+      // Update: Only Admin (approving)
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ===== MOVIMIENTOS =====
+    match /billing_movements/{movId} {
+      allow read: if authed() && resource.data.uid == request.auth.uid;
+      allow create: if authed();
+      allow write: if false;
+    }
+
+    // ===== VIAJES =====
+    match /viajes/{id} {
+      allow read: if authed() && (
+        resource.data.estado == "buscando" ||
+        resource.data.estado == "buscando_conductor" ||
+        resource.data.pasajero_id == request.auth.uid ||
+        resource.data.conductor_id == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if authed();
+
+      allow update: if authed() && (
+        (
+          // A: Conductor ya asignado (check status change specific logic)
+          resource.data.conductor_id == request.auth.uid &&
+          (
+            request.resource.data.estado != "en_camino" ||
+            (driverHasEnoughCreditsForTrip() || driverHasActiveTrial())
+          )
+        ) ||
+        (
+          // B: Conductor aceptando viaje (Self-Assign)
+          (resource.data.estado == "buscando" || resource.data.estado == "buscando_conductor") &&
+          request.resource.data.conductor_id == request.auth.uid &&
+          request.resource.data.estado == "asignado" &&
+          (driverHasEnoughCreditsForTrip() || driverHasActiveTrial())
+        ) ||
+        (
+          // C: Pasajero cancelando o marcando timeout
+          resource.data.pasajero_id == request.auth.uid && (
+            request.resource.data.estado == "cancelado" ||
+            request.resource.data.estado == "timeout" ||
+            request.resource.data.estado == "buscando_conductor"
+          )
+        )
+      );
+
+      match /mensajes/{msgId} {
+        allow read, create: if authed() && (
+          get(/databases/$(database)/documents/viajes/$(id)).data.pasajero_id == request.auth.uid ||
+          get(/databases/$(database)/documents/viajes/$(id)).data.conductor_id == request.auth.uid
+        );
+      }
+
+      match /calificaciones/{ratingId} {
+        allow read, create: if authed() && (
+          get(/databases/$(database)/documents/viajes/$(id)).data.pasajero_id == request.auth.uid ||
+          get(/databases/$(database)/documents/viajes/$(id)).data.conductor_id == request.auth.uid
+        );
+      }
+      
+      allow delete: if authed() && resource.data.pasajero_id == request.auth.uid;
+    }
+
+    // ===== SOLICITUDES DE CONDUCTORES =====
+    match /driver_applications/{doc} {
+      allow read, update: if authed();
+      allow create: if authed();
+      allow delete: if isAdmin();
+    }
+
+    // ===== TARIFARIOS =====
+    match /tarifarios/{doc} {
+      allow read: if true;
+      allow write: if isAdmin(); // 🔒 SOLO ADMIN
+    }
+
+    // ===== ALERTAS DE PÁNICO =====
+    match /emergencias/{id} {
+      allow create: if authed();
+      allow read: if authed();
+      allow update, delete: if false;
+    }
+
+    // ===== REPORTES =====
+    match /reportes/{id} {
+      allow create: if authed();
+      allow read: if authed() && (resource.data.uid == request.auth.uid);
+      allow update: if false;
+    }
+    // ===== ZONAS (NUEVO) =====
+    match /zonas/{zonaId} {
+      allow read: if authed();
+      allow write: if isAdmin(); // 🔒 SOLO ADMIN
+    }
+
+    // ===== CONDUCTORES (Ubicación en tiempo real) =====
+    match /conductores/{driverId} {
+      allow read: if authed();
+      allow write: if isMe(driverId) || isAdmin();
+    }
+
+    // ===== RESERVAS =====
+    match /reservas/{reservaId} {
+      allow read: if authed() && (
+        resource.data.pasajero_id == request.auth.uid ||
+        resource.data.conductor_id == request.auth.uid ||
+        resource.data.estado == "pendiente" // Conductores buscando reservas
+      );
+      
+      allow create: if authed(); // Pasajeros creando
+
+      allow update: if authed() && (
+        // Pasajero cancela
+        (resource.data.pasajero_id == request.auth.uid) ||
+        // Conductor acepta
+        (
+           request.resource.data.conductor_id == request.auth.uid &&
+           request.resource.data.estado == "confirmado" &&
+           (resource.data.estado == "pendiente" || resource.data.estado == "reservado")
+        )
+      );
+      
+      allow delete: if authed() && resource.data.pasajero_id == request.auth.uid;
+    }
+    // ===== ESTADISTICAS API (UNIFICADO) =====
+    match /stats/{doc} {
+      // Permitir create/update para trackApiCall
+      allow read, write: if authed();
+    }
+
+    // ===== BILLING MOVEMENTS =====
+    match /billing_movements/{id} {
+      allow read: if authed() && resource.data.uid == request.auth.uid;
+      allow create: if authed() && request.resource.data.uid == request.auth.uid; // ✅ Permitir crear movimientos propios
+      allow update, delete: if false;
+    }
+  }
+}
+

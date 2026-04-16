@@ -1,0 +1,292 @@
+Analyzing taxi_sabana...                                        
+
+warning - A value for optional parameter 'key' isn't ever given - apps\app_conductor\lib\pantallas\autenticacion\pantalla_login.dart:160:11 - unused_element_parameter
+warning - A value for optional parameter 'key' isn't ever given - apps\app_pasajero\lib\pantallas\autenticacion\pantalla_login.dart:160:11 - unused_element_parameter
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\main.dart:8:8 - unnecessary_import
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\main.dart:13:8 - unused_import
+warning - Unused import: 'package:firebase_storage/firebase_storage.dart' - lib\main.dart:14:8 - unused_import
+warning - Unused import: 'package:firebase_auth/firebase_auth.dart' - lib\main.dart:15:8 - unused_import
+warning - Unused import: 'seed/seed_tarifario.dart' - lib\main.dart:41:8 - unused_import
+warning - Unused import: 'servicios/pricing_service.dart' - lib\main.dart:44:8 - unused_import
+warning - The declaration '_requestNotifPermissions' isn't referenced - lib\main.dart:87:14 - unused_element
+warning - Unused import: 'dart:convert' - lib\pantallas\admin\admin_billing.dart:1:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_billing.dart:356:7 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:430:49 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\admin\admin_billing.dart:437:51 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:437:97 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:476:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:478:66 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_billing.dart:545:35 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:821:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:966:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:986:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1076:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1098:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1191:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1221:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1362:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1392:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1394:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1404:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1419:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_billing.dart:1448:54 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\pantallas\admin\admin_campaigns.dart:121:23 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\admin\admin_campaigns.dart:173:44 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\admin\admin_campaigns.dart:173:47 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_carreras.dart:77:43 - deprecated_member_use
+   info - Unnecessary braces in a string interpolation - lib\pantallas\admin\admin_carreras.dart:94:37 - unnecessary_brace_in_string_interps
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_carreras.dart:169:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_carreras.dart:171:30 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_conductores.dart:141:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_conductores.dart:185:57 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_conductores.dart:285:9 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_dashboard.dart:471:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_dashboard.dart:474:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_dashboard.dart:558:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_dashboard.dart:647:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_dashboard.dart:721:62 - deprecated_member_use
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\pantallas\admin\admin_pricing_zones.dart:3:8 - unnecessary_import
+   info - Unnecessary use of 'toList' in a spread - lib\pantallas\admin\admin_pricing_zones.dart:247:12 - unnecessary_to_list_in_spreads
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\pantallas\admin\admin_pricing_zones.dart:297:17 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\admin\admin_revisar_solicitudes.dart:452:41 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\admin_revisar_solicitudes.dart:473:54 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\admin_usuarios.dart:46:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\detalle_solicitud.dart:41:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\detalle_solicitud.dart:193:21 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\detalle_solicitud.dart:260:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\admin\detalle_solicitud.dart:266:21 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\detalle_solicitud.dart:371:97 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\admin\detalle_solicitud.dart:372:96 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\estado_solicitud_conductor.dart:54:46 - use_build_context_synchronously
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\pantallas\autenticacion\home_conductor.dart:102:20 - sized_box_for_whitespace
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_conductor.dart:106:37 - unnecessary_underscores
+  error - The getter 'verdeGeo' isn't defined for the type 'ColoresGeoGo' - lib\pantallas\autenticacion\home_conductor.dart:119:76 - undefined_getter
+warning - The value of the field '_rating' isn't used - lib\pantallas\autenticacion\home_conductor.dart:293:10 - unused_field
+warning - The value of the field '_ratingCount' isn't used - lib\pantallas\autenticacion\home_conductor.dart:294:7 - unused_field
+warning - The value of the field '_docsStatus' isn't used - lib\pantallas\autenticacion\home_conductor.dart:324:24 - unused_field
+   info - The private field _estadoConductor could be 'final' - lib\pantallas\autenticacion\home_conductor.dart:325:10 - prefer_final_fields
+warning - The value of the field '_estadoConductor' isn't used - lib\pantallas\autenticacion\home_conductor.dart:325:10 - unused_field
+warning - The value of the field '_onlineDrivers' isn't used - lib\pantallas\autenticacion\home_conductor.dart:368:7 - unused_field
+   info - The private field _pendientesAllCache could be 'final' - lib\pantallas\autenticacion\home_conductor.dart:377:30 - prefer_final_fields
+warning - The value of the field '_pendientesAllCache' isn't used - lib\pantallas\autenticacion\home_conductor.dart:377:30 - unused_field
+warning - The value of the field '_barriosValidos' isn't used - lib\pantallas\autenticacion\home_conductor.dart:382:15 - unused_field
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_conductor.dart:481:13 - deprecated_member_use
+   info - 'timeLimit' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_conductor.dart:482:13 - deprecated_member_use
+   info - 'zIndex' is deprecated and shouldn't be used. Use zIndexInt instead. On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering - lib\pantallas\autenticacion\home_conductor.dart:580:11 - deprecated_member_use
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_conductor.dart:862:7 - deprecated_member_use
+   info - 'zIndex' is deprecated and shouldn't be used. Use zIndexInt instead. On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering - lib\pantallas\autenticacion\home_conductor.dart:1057:13 - deprecated_member_use
+   info - The local variable '_toDouble' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1099:14 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_toMoney' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1105:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_leerPrecio' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1139:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_norm' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1217:12 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_esCiudad' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1218:10 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_normTxt' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1375:12 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_toDouble' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1388:12 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_toMoney' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1396:9 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_roundTo' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1422:9 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_readPoint' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1427:26 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_calcularTarifaDesdeTarifarioTx' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1457:17 - no_leading_underscores_for_local_identifiers
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_conductor.dart:1497:22 - unnecessary_cast
+   info - The local variable '_mapOrEmpty' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1506:28 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_buscarEnDestinos' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1512:12 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_valorPorRangoKm' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1560:11 - no_leading_underscores_for_local_identifiers
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_conductor.dart:1591:26 - unnecessary_cast
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_conductor.dart:1599:40 - unnecessary_cast
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_conductor.dart:1603:39 - unnecessary_cast
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_conductor.dart:1607:39 - unnecessary_cast
+   info - The local variable '_toDouble2' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1703:14 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_readPoint2' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:1711:28 - no_leading_underscores_for_local_identifiers
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_conductor.dart:1781:9 - use_build_context_synchronously
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_conductor.dart:2109:47 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2121:51 - deprecated_member_use
+   info - The local variable '_resolveColor' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:2272:11 - no_leading_underscores_for_local_identifiers
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2292:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2294:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2308:29 - deprecated_member_use
+   info - 'setMapStyle' is deprecated and shouldn't be used. Use GoogleMap.style instead - lib\pantallas\autenticacion\home_conductor.dart:2326:15 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2361:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2399:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2424:41 - deprecated_member_use
+   info - Unnecessary braces in a string interpolation - lib\pantallas\autenticacion\home_conductor.dart:2444:32 - unnecessary_brace_in_string_interps
+   info - Unnecessary braces in a string interpolation - lib\pantallas\autenticacion\home_conductor.dart:2444:50 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2480:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2547:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2561:24 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2567:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2602:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2602:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2603:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2603:90 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2607:75 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2607:119 - deprecated_member_use
+warning - The declaration '_kpiCard' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:2691:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2695:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2740:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2762:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2847:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2853:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2873:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2874:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2940:23 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2942:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:2952:29 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_conductor.dart:3020:49 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3053:51 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_conductor.dart:3150:29 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3166:31 - deprecated_member_use
+warning - The declaration '_cardOferta' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:3217:10 - unused_element
+   info - The local variable '_toDouble' starts with an underscore - lib\pantallas\autenticacion\home_conductor.dart:3296:12 - no_leading_underscores_for_local_identifiers
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3510:31 - deprecated_member_use
+warning - The declaration '_countIcon' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:3560:10 - unused_element
+   info - 'fromBytes' is deprecated and shouldn't be used. Use BitmapDescriptor.bytes method instead - lib\pantallas\autenticacion\home_conductor.dart:3599:37 - deprecated_member_use
+   info - 'zIndex' is deprecated and shouldn't be used. Use zIndexInt instead. On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering - lib\pantallas\autenticacion\home_conductor.dart:3627:11 - deprecated_member_use
+warning - The declaration '_calcBoundingBox' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:3657:9 - unused_element
+warning - The declaration '_docColor' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:3793:9 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3847:87 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3859:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3898:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3900:82 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:3957:75 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_conductor.dart:3989:51 - use_build_context_synchronously
+   info - 'WillPopScope' is deprecated and shouldn't be used. Use PopScope instead. The Android predictive back feature will not work with WillPopScope. This feature was deprecated after v3.12.0-1.0.pre - lib\pantallas\autenticacion\home_conductor.dart:4031:16 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\pantallas\autenticacion\home_conductor.dart:4148:41 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:4185:37 - deprecated_member_use
+warning - The declaration '_campo' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:4201:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:4210:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_conductor.dart:4335:45 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\pantallas\autenticacion\home_conductor.dart:4396:9 - deprecated_member_use
+warning - The declaration '_LegendRow' isn't referenced - lib\pantallas\autenticacion\home_conductor.dart:4651:7 - unused_element
+warning - Unused import: 'package:flutter/services.dart' - lib\pantallas\autenticacion\home_pasajero.dart:12:8 - unused_import
+   info - The constant name '_COL_VIAJES' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:27:14 - constant_identifier_names
+   info - The constant name '_RADIO_NOTIF_KM' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:65:23 - constant_identifier_names
+   info - The constant name '_MIN_DIA' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:126:20 - constant_identifier_names
+   info - The constant name '_MIN_NOCHE' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:127:20 - constant_identifier_names
+   info - The constant name '_PKM_DIA' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:128:20 - constant_identifier_names
+   info - The constant name '_PKM_NOCHE' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:129:20 - constant_identifier_names
+   info - The constant name '_TOLL_RADIUS_METERS' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:131:23 - constant_identifier_names
+   info - The constant name '_TOLLS' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:132:28 - constant_identifier_names
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_pasajero.dart:170:51 - deprecated_member_use
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_pasajero.dart:222:19 - unnecessary_cast
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_pasajero.dart:265:19 - unnecessary_cast
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:306:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:340:28 - use_build_context_synchronously
+   info - Uses 'await' on an instance of 'int', which is not a subtype of 'Future' - lib\pantallas\autenticacion\home_pasajero.dart:436:17 - await_only_futures
+warning - Unnecessary type check; the result is always 'true' - lib\pantallas\autenticacion\home_pasajero.dart:443:19 - unnecessary_type_check
+warning - Dead code - lib\pantallas\autenticacion\home_pasajero.dart:443:34 - dead_code
+warning - Dead code - lib\pantallas\autenticacion\home_pasajero.dart:596:21 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\pantallas\autenticacion\home_pasajero.dart:596:24 - dead_null_aware_expression
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_pasajero.dart:737:22 - unnecessary_cast
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:741:32 - use_build_context_synchronously
+warning - The declaration '_mostrarResumenAntesDeSolicitar' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:753:16 - unused_element
+   info - Unnecessary use of string interpolation - lib\pantallas\autenticacion\home_pasajero.dart:814:46 - unnecessary_string_interpolations
+   info - The local variable '_pickWithSearch' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:1569:22 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_save' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:1588:22 - no_leading_underscores_for_local_identifiers
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:1608:25 - use_build_context_synchronously
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:1660:47 - unnecessary_underscores
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:1760:7 - use_build_context_synchronously
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:1784:31 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:1914:45 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:2193:25 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:2193:29 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:2203:25 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:2203:29 - unnecessary_underscores
+   info - The private field _session could be 'final' - lib\pantallas\autenticacion\home_pasajero.dart:2248:10 - prefer_final_fields
+warning - The value of the field '_origenLatLng' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:2257:11 - unused_field
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_pasajero.dart:2324:11 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:2642:45 - unnecessary_underscores
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\pantalla_login.dart:196:28 - use_build_context_synchronously
+warning - A value for optional parameter 'key' isn't ever given - lib\pantallas\autenticacion\pantalla_login.dart:845:11 - unused_element_parameter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:449:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:602:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:604:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:627:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:663:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:690:35 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\pantallas\autenticacion\registro_conductor.dart:706:7 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:716:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:718:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:726:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:751:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\registro_conductor.dart:753:50 - deprecated_member_use
+warning - The value of the field '_verificationId' isn't used - lib\pantallas\autenticacion\registro_pasajero.dart:32:11 - unused_field
+   info - Parameter 'key' could be a super parameter - lib\pantallas\chat\chat_page.dart:10:9 - use_super_parameters
+   info - The imported package 'intl' isn't a dependency of the importing package - lib\pantallas\conductor\historial_conductor.dart:4:8 - depend_on_referenced_packages
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\historial_conductor.dart:60:69 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\historial_conductor.dart:91:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\historial_conductor.dart:106:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\historial_conductor.dart:108:67 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\pantallas\conductor\navegacion_conductor.dart:16:9 - use_super_parameters
+warning - The value of the field '_pickupRadiusM' isn't used - lib\pantallas\conductor\navegacion_conductor.dart:44:23 - unused_field
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\pantallas\conductor\navegacion_conductor.dart:82:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\navegacion_conductor.dart:165:55 - deprecated_member_use
+   info - 'PolylineRequest' is deprecated and shouldn't be used. Use RoutesApiRequest instead - lib\pantallas\conductor\navegacion_conductor.dart:492:18 - deprecated_member_use
+warning - The '!' will have no effect because the receiver can't be null - lib\pantallas\conductor\navegacion_conductor.dart:594:35 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\pantallas\conductor\navegacion_conductor.dart:594:44 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\pantallas\conductor\navegacion_conductor.dart:595:35 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\pantallas\conductor\navegacion_conductor.dart:595:44 - unnecessary_non_null_assertion
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\conductor\navegacion_conductor.dart:610:56 - deprecated_member_use
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\conductor\navegacion_conductor.dart:683:56 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\conductor\navegacion_conductor.dart:828:29 - use_build_context_synchronously
+warning - The value of the local variable 'telefono' isn't used - lib\pantallas\conductor\recargar_creditos.dart:121:13 - unused_local_variable
+warning - The value of the local variable 'rides' isn't used - lib\pantallas\conductor\recargar_creditos.dart:210:17 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\recargar_creditos.dart:377:33 - deprecated_member_use
+   info - The 'children' argument should be last in widget constructor invocations - lib\pantallas\conductor\soporte_conductor.dart:95:7 - sort_child_properties_last
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\soporte_conductor.dart:125:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\conductor\soporte_conductor.dart:137:32 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\pantallas\pasajero\estado_viaje.dart:19:9 - use_super_parameters
+warning - The value of the field '_posConductorPrev' isn't used - lib\pantallas\pasajero\estado_viaje.dart:33:11 - unused_field
+   info - The private field _rutaPts could be 'final' - lib\pantallas\pasajero\estado_viaje.dart:37:16 - prefer_final_fields
+warning - The value of the field '_rutaPts' isn't used - lib\pantallas\pasajero\estado_viaje.dart:37:16 - unused_field
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\pantallas\pasajero\estado_viaje.dart:84:41 - deprecated_member_use
+   info - 'setMapStyle' is deprecated and shouldn't be used. Use GoogleMap.style instead - lib\pantallas\pasajero\estado_viaje.dart:113:40 - deprecated_member_use
+  error - Undefined name '_polylines' - lib\pantallas\pasajero\estado_viaje.dart:229:9 - undefined_identifier
+   info - 'PolylineRequest' is deprecated and shouldn't be used. Use RoutesApiRequest instead - lib\pantallas\pasajero\estado_viaje.dart:278:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\estado_viaje.dart:406:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\estado_viaje.dart:408:53 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\pasajero\estado_viaje.dart:485:46 - use_build_context_synchronously
+warning - The declaration '_rad2deg' isn't referenced - lib\pantallas\pasajero\estado_viaje.dart:528:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_mensajes.dart:146:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_mensajes.dart:147:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_mensajes.dart:196:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:116:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:139:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:172:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:191:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:194:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:198:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:209:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_perfil.dart:214:30 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\pantallas\pasajero\tab_perfil.dart:219:9 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\pantallas\pasajero\tab_perfil.dart:220:9 - deprecated_member_use
+   info - The private field _metodoPago could be 'final' - lib\pantallas\pasajero\tab_solicitar.dart:36:10 - prefer_final_fields
+warning - The value of the field '_buscandoUbicacion' isn't used - lib\pantallas\pasajero\tab_solicitar.dart:41:8 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\pasajero\tab_solicitar.dart:153:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\pasajero\tab_solicitar.dart:157:28 - use_build_context_synchronously
+   info - The 'child' argument should be last in widget constructor invocations - lib\pantallas\pasajero\tab_solicitar.dart:257:15 - sort_child_properties_last
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_solicitar.dart:301:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_solicitar.dart:321:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_solicitar.dart:332:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_solicitar.dart:399:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_solicitar.dart:401:69 - deprecated_member_use
+   info - The 'child' argument should be last in widget constructor invocations - lib\pantallas\pasajero\tab_solicitar.dart:448:21 - sort_child_properties_last
+   info - Unnecessary use of multiple underscores - lib\pantallas\pasajero\tab_viajes.dart:48:33 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_viajes.dart:64:35 - deprecated_member_use
+   info - Unnecessary braces in a string interpolation - lib\pantallas\pasajero\tab_viajes.dart:77:51 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_viajes.dart:123:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_viajes.dart:178:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\pasajero\tab_viajes.dart:188:56 - deprecated_member_use
+warning - Unused import: 'dart:math' - lib\pantallas\splash\splash_animado.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\splash\splash_animado.dart:123:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\splash\splash_animado.dart:162:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\splash\splash_animado.dart:224:35 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\seed\seed_tarifario.dart:10:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\seed\seed_tarifario.dart:77:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\seed\seed_tarifario.dart:81:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\seed\seed_tarifario.dart:84:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\seed\seed_tarifario.dart:87:5 - avoid_print
+warning - The value of the field '_docId' isn't used - lib\servicios\pricing_service.dart:13:18 - unused_field
+   info - The local variable '_buscarEn' starts with an underscore - lib\servicios\pricing_service.dart:47:10 - no_leading_underscores_for_local_identifiers
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\calificacion_modal.dart:93:39 - deprecated_member_use
+   info - 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre - lib\widgets\doble_atras_salir.dart:34:7 - deprecated_member_use
+  error - The name 'MyApp' isn't a class - test\widget_test.dart:16:35 - creation_with_non_type
+

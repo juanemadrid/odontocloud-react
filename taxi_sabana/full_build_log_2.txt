@@ -1,0 +1,679 @@
+[  +98 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[   +2 ms] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[   +9 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[        ] executing: [C:\src\flutter/] git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[  +41 ms] Exit code 0 from: git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[        ] 2025-12-03 14:56:10 -0800
+[  +13 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +1 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +43 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[   +1 ms] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[   +9 ms] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[  +47 ms] executing: [G:\taxi_sabana/] C:\src\flutter\bin\cache\dart-sdk\bin\dart pub --suppress-analytics --directory . get --example
+Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.59 (1.3.66 available)
+  characters 1.4.0 (1.4.1 available)
+  cloud_firestore 5.6.12 (6.1.2 available)
+  cloud_firestore_platform_interface 6.6.12 (7.0.6 available)
+  cloud_firestore_web 4.4.12 (5.1.2 available)
+  cloud_functions 5.6.2 (6.0.6 available)
+  cloud_functions_platform_interface 5.8.2 (5.8.9 available)
+  cloud_functions_web 4.11.5 (5.1.2 available)
+  ffi 2.1.4 (2.1.5 available)
+  file_picker 8.3.7 (10.3.9 available)
+  firebase_auth 5.7.0 (6.1.4 available)
+  firebase_auth_platform_interface 7.7.3 (8.1.6 available)
+  firebase_auth_web 5.15.3 (6.1.2 available)
+  firebase_core 3.15.2 (4.4.0 available)
+  firebase_core_web 2.24.1 (3.4.0 available)
+  firebase_database 11.3.10 (12.1.2 available)
+  firebase_database_platform_interface 0.2.6+10 (0.3.0+2 available)
+  firebase_database_web 0.2.6+16 (0.2.7+3 available)
+  firebase_messaging 15.2.10 (16.1.1 available)
+  firebase_messaging_platform_interface 4.6.10 (4.7.6 available)
+  firebase_messaging_web 3.10.10 (4.1.2 available)
+  firebase_storage 12.4.10 (13.0.6 available)
+  firebase_storage_platform_interface 5.2.10 (5.2.17 available)
+  firebase_storage_web 3.10.17 (3.11.2 available)
+  flutter_local_notifications 17.2.4 (20.0.0 available)
+  flutter_local_notifications_linux 4.0.1 (7.0.0 available)
+  flutter_local_notifications_platform_interface 7.2.0 (10.0.0 available)
+  flutter_secure_storage 9.2.4 (10.0.0 available)
+  flutter_secure_storage_linux 1.2.3 (3.0.0 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.0 available)
+  flutter_secure_storage_windows 3.1.2 (4.1.0 available)
+  flutter_tts 4.2.3 (4.2.5 available)
+  geocoding 3.0.0 (4.0.0 available)
+  geocoding_android 3.3.1 (4.0.1 available)
+  geocoding_platform_interface 3.2.0 (5.0.0 available)
+  geolocator 13.0.4 (14.0.2 available)
+  geolocator_android 4.6.2 (5.0.2 available)
+  google_maps_flutter_android 2.18.6 (2.18.12 available)
+  google_maps_flutter_ios 2.15.7 (2.17.0 available)
+  image 4.5.4 (4.7.2 available)
+  image_picker_android 0.8.13+10 (0.8.13+13 available)
+  js 0.6.7 (0.7.2 available)
+  local_auth 2.3.0 (3.0.0 available)
+  local_auth_android 1.0.56 (2.0.4 available)
+  local_auth_darwin 1.6.1 (2.0.1 available)
+  local_auth_windows 1.0.11 (2.0.1 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.17.0 (1.18.0 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  share_plus 10.1.4 (12.0.1 available)
+  share_plus_platform_interface 5.0.2 (6.1.0 available)
+  shared_preferences_android 2.4.18 (2.4.20 available)
+  test_api 0.7.7 (0.7.9 available)
+  timezone 0.9.4 (0.11.0 available)
+  url_launcher_web 2.4.1 (2.4.2 available)
+  webview_flutter 4.13.0 (4.13.1 available)
+Got dependencies!
+59 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+[ +905 ms] Found plugin flutter_native_splash at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_native_splash-2.4.7\
+[  +21 ms] Found plugin webview_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter-4.13.0\
+[   +1 ms] Found plugin webview_flutter_wkwebview at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_wkwebview-3.23.5\
+[   +3 ms] Found plugin webview_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_android-4.10.11\
+[   +1 ms] Found plugin wakelock_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\wakelock_plus-1.4.0\
+[   +4 ms] Found plugin package_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\package_info_plus-9.0.0\
+[   +4 ms] Found plugin url_launcher at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher-6.3.2\
+[   +1 ms] Found plugin url_launcher_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +1 ms] Found plugin url_launcher_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_web-2.4.1\
+[   +1 ms] Found plugin url_launcher_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[   +1 ms] Found plugin url_launcher_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[   +3 ms] Found plugin url_launcher_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_ios-6.3.6\
+[        ] Found plugin url_launcher_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[   +1 ms] Found plugin shared_preferences at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +1 ms] Found plugin shared_preferences_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +2 ms] Found plugin shared_preferences_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[        ] Found plugin shared_preferences_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +2 ms] Found plugin shared_preferences_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[   +1 ms] Found plugin shared_preferences_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.18\
+[   +1 ms] Found plugin share_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\share_plus-10.1.4\
+[   +3 ms] Found plugin path_provider at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[   +1 ms] Found plugin path_provider_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.5.1\
+[        ] Found plugin path_provider_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[   +3 ms] Found plugin local_auth_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_darwin-1.6.1\
+[   +2 ms] Found plugin local_auth_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_android-1.0.56\
+[   +1 ms] Found plugin flutter_plugin_android_lifecycle at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[   +1 ms] Found plugin local_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth-2.3.0\
+[        ] Found plugin local_auth_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_windows-1.0.11\
+[        ] Found plugin in_app_update at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\in_app_update-4.2.5\
+[        ] Found plugin image_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[        ] Found plugin image_picker_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +1 ms] Found plugin file_selector_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +1 ms] Found plugin image_picker_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[        ] Found plugin file_selector_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[        ] Found plugin image_picker_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[        ] Found plugin file_selector_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[        ] Found plugin image_picker_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+3\
+[        ] Found plugin image_picker_for_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[        ] Found plugin image_picker_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+10\
+[        ] Found plugin google_maps_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter-2.14.0\
+[        ] Found plugin google_maps_flutter_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_web-0.5.14+3\
+[   +3 ms] Found plugin google_maps_flutter_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_ios-2.15.7\
+[        ] Found plugin google_maps_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_android-2.18.6\
+[        ] Found plugin geolocator at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator-13.0.4\
+[        ] Found plugin geolocator_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_windows-0.2.5\
+[   +1 ms] Found plugin geolocator_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_web-4.1.3\
+[        ] Found plugin geolocator_apple at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_apple-2.3.13\
+[        ] Found plugin geolocator_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_android-4.6.2\
+[        ] Found plugin geocoding at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding-3.0.0\
+[   +1 ms] Found plugin geocoding_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_ios-3.1.0\
+[        ] Found plugin geocoding_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_android-3.3.1\
+[        ] Found plugin flutter_tts at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_tts-4.2.3\
+[   +1 ms] Found plugin flutter_secure_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage-9.2.4\
+[        ] Found plugin flutter_secure_storage_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_windows-3.1.2\
+[   +1 ms] Found plugin flutter_secure_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_web-1.2.1\
+[   +1 ms] Found plugin flutter_secure_storage_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_macos-3.1.3\
+[        ] Found plugin flutter_secure_storage_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_linux-1.2.3\
+[   +1 ms] Found plugin flutter_overlay_window at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_overlay_window-0.5.0\
+[   +1 ms] Found plugin flutter_local_notifications at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications-17.2.4\
+[   +1 ms] Found plugin flutter_local_notifications_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications_linux-4.0.1\
+[        ] Found plugin flutter_background_service at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service-5.1.0\
+[   +1 ms] Found plugin flutter_background_service_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_ios-5.0.3\
+[        ] Found plugin flutter_background_service_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_android-6.3.1\
+[        ] Found plugin firebase_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.10\
+[        ] Found plugin firebase_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage_web-3.10.17\
+[   +1 ms] Found plugin firebase_core at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.2\
+[   +1 ms] Found plugin firebase_core_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core_web-2.24.1\
+[   +1 ms] Found plugin firebase_messaging at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging-15.2.10\
+[        ] Found plugin firebase_messaging_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging_web-3.10.10\
+[   +1 ms] Found plugin firebase_database at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database-11.3.10\
+[        ] Found plugin firebase_database_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database_web-0.2.6+16\
+[   +1 ms] Found plugin firebase_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.7.0\
+[        ] Found plugin firebase_auth_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth_web-5.15.3\
+[   +1 ms] Found plugin file_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_picker-8.3.7\
+[        ] Found plugin device_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\device_info_plus-12.3.0\
+[   +2 ms] Found plugin cloud_functions at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions-5.6.2\
+[        ] Found plugin cloud_functions_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions_web-4.11.5\
+[   +1 ms] Found plugin cloud_firestore at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.12\
+[        ] Found plugin cloud_firestore_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore_web-4.4.12\
+[   +1 ms] Found plugin audioplayers at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers-6.5.1\
+[   +1 ms] Found plugin audioplayers_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_windows-4.2.1\
+[   +1 ms] Found plugin audioplayers_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_web-5.1.1\
+[        ] Found plugin audioplayers_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_linux-4.2.1\
+[        ] Found plugin audioplayers_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_darwin-6.3.0\
+[   +1 ms] Found plugin audioplayers_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_android-5.2.1\
+[        ] Found plugin android_intent_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\android_intent_plus-6.0.0\
+[ +287 ms] Found plugin flutter_native_splash at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_native_splash-2.4.7\
+[  +10 ms] Found plugin webview_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter-4.13.0\
+[        ] Found plugin webview_flutter_wkwebview at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_wkwebview-3.23.5\
+[   +1 ms] Found plugin webview_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_android-4.10.11\
+[        ] Found plugin wakelock_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\wakelock_plus-1.4.0\
+[   +2 ms] Found plugin package_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\package_info_plus-9.0.0\
+[   +2 ms] Found plugin url_launcher at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher-6.3.2\
+[        ] Found plugin url_launcher_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[        ] Found plugin url_launcher_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_web-2.4.1\
+[        ] Found plugin url_launcher_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[        ] Found plugin url_launcher_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[        ] Found plugin url_launcher_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_ios-6.3.6\
+[        ] Found plugin url_launcher_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[        ] Found plugin shared_preferences at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[        ] Found plugin shared_preferences_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +1 ms] Found plugin shared_preferences_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[        ] Found plugin shared_preferences_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[        ] Found plugin shared_preferences_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.18\
+[        ] Found plugin share_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\share_plus-10.1.4\
+[   +1 ms] Found plugin path_provider at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.5.1\
+[        ] Found plugin path_provider_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[   +2 ms] Found plugin local_auth_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_darwin-1.6.1\
+[   +1 ms] Found plugin local_auth_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_android-1.0.56\
+[        ] Found plugin flutter_plugin_android_lifecycle at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[        ] Found plugin local_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth-2.3.0\
+[        ] Found plugin local_auth_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_windows-1.0.11\
+[        ] Found plugin in_app_update at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\in_app_update-4.2.5\
+[        ] Found plugin image_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[        ] Found plugin image_picker_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +1 ms] Found plugin file_selector_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +1 ms] Found plugin image_picker_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[        ] Found plugin file_selector_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[        ] Found plugin image_picker_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[        ] Found plugin file_selector_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[        ] Found plugin image_picker_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+3\
+[        ] Found plugin image_picker_for_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[        ] Found plugin image_picker_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+10\
+[        ] Found plugin google_maps_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter-2.14.0\
+[        ] Found plugin google_maps_flutter_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_web-0.5.14+3\
+[   +2 ms] Found plugin google_maps_flutter_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_ios-2.15.7\
+[        ] Found plugin google_maps_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_android-2.18.6\
+[        ] Found plugin geolocator at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator-13.0.4\
+[   +1 ms] Found plugin geolocator_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_windows-0.2.5\
+[   +1 ms] Found plugin geolocator_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_web-4.1.3\
+[        ] Found plugin geolocator_apple at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_apple-2.3.13\
+[        ] Found plugin geolocator_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_android-4.6.2\
+[        ] Found plugin geocoding at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding-3.0.0\
+[   +1 ms] Found plugin geocoding_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_ios-3.1.0\
+[        ] Found plugin geocoding_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_android-3.3.1\
+[        ] Found plugin flutter_tts at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_tts-4.2.3\
+[   +1 ms] Found plugin flutter_secure_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage-9.2.4\
+[        ] Found plugin flutter_secure_storage_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_windows-3.1.2\
+[   +1 ms] Found plugin flutter_secure_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_web-1.2.1\
+[   +1 ms] Found plugin flutter_secure_storage_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_macos-3.1.3\
+[        ] Found plugin flutter_secure_storage_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_linux-1.2.3\
+[        ] Found plugin flutter_overlay_window at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_overlay_window-0.5.0\
+[        ] Found plugin flutter_local_notifications at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications-17.2.4\
+[        ] Found plugin flutter_local_notifications_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications_linux-4.0.1\
+[        ] Found plugin flutter_background_service at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service-5.1.0\
+[   +1 ms] Found plugin flutter_background_service_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_ios-5.0.3\
+[        ] Found plugin flutter_background_service_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_android-6.3.1\
+[        ] Found plugin firebase_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.10\
+[        ] Found plugin firebase_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage_web-3.10.17\
+[   +1 ms] Found plugin firebase_core at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.2\
+[        ] Found plugin firebase_core_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core_web-2.24.1\
+[   +1 ms] Found plugin firebase_messaging at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging-15.2.10\
+[        ] Found plugin firebase_messaging_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging_web-3.10.10\
+[        ] Found plugin firebase_database at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database-11.3.10\
+[        ] Found plugin firebase_database_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database_web-0.2.6+16\
+[   +1 ms] Found plugin firebase_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.7.0\
+[        ] Found plugin firebase_auth_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth_web-5.15.3\
+[   +1 ms] Found plugin file_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_picker-8.3.7\
+[        ] Found plugin device_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\device_info_plus-12.3.0\
+[   +2 ms] Found plugin cloud_functions at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions-5.6.2\
+[        ] Found plugin cloud_functions_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions_web-4.11.5\
+[   +1 ms] Found plugin cloud_firestore at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.12\
+[        ] Found plugin cloud_firestore_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore_web-4.4.12\
+[   +1 ms] Found plugin audioplayers at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers-6.5.1\
+[   +1 ms] Found plugin audioplayers_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_windows-4.2.1\
+[   +1 ms] Found plugin audioplayers_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_web-5.1.1\
+[        ] Found plugin audioplayers_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_linux-4.2.1\
+[        ] Found plugin audioplayers_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_darwin-6.3.0\
+[        ] Found plugin audioplayers_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_android-5.2.1\
+[        ] Found plugin android_intent_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\android_intent_plus-6.0.0\
+[  +67 ms] Found plugin flutter_native_splash at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_native_splash-2.4.7\
+[  +10 ms] Found plugin webview_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter-4.13.0\
+[        ] Found plugin webview_flutter_wkwebview at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_wkwebview-3.23.5\
+[   +1 ms] Found plugin webview_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\webview_flutter_android-4.10.11\
+[        ] Found plugin wakelock_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\wakelock_plus-1.4.0\
+[   +2 ms] Found plugin package_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\package_info_plus-9.0.0\
+[   +2 ms] Found plugin url_launcher at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher-6.3.2\
+[        ] Found plugin url_launcher_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +1 ms] Found plugin url_launcher_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_web-2.4.1\
+[        ] Found plugin url_launcher_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[        ] Found plugin url_launcher_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[        ] Found plugin url_launcher_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_ios-6.3.6\
+[        ] Found plugin url_launcher_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[   +1 ms] Found plugin shared_preferences at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[        ] Found plugin shared_preferences_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +1 ms] Found plugin shared_preferences_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[        ] Found plugin shared_preferences_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[        ] Found plugin shared_preferences_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.18\
+[        ] Found plugin share_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\share_plus-10.1.4\
+[   +2 ms] Found plugin path_provider at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.5.1\
+[        ] Found plugin path_provider_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[   +2 ms] Found plugin local_auth_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_darwin-1.6.1\
+[   +1 ms] Found plugin local_auth_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_android-1.0.56\
+[        ] Found plugin flutter_plugin_android_lifecycle at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[        ] Found plugin local_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth-2.3.0\
+[        ] Found plugin local_auth_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\local_auth_windows-1.0.11\
+[        ] Found plugin in_app_update at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\in_app_update-4.2.5\
+[        ] Found plugin image_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[        ] Found plugin image_picker_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[        ] Found plugin file_selector_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[        ] Found plugin image_picker_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[        ] Found plugin file_selector_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[        ] Found plugin image_picker_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[        ] Found plugin file_selector_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[        ] Found plugin image_picker_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+3\
+[        ] Found plugin image_picker_for_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[        ] Found plugin image_picker_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+10\
+[        ] Found plugin google_maps_flutter at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter-2.14.0\
+[        ] Found plugin google_maps_flutter_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_web-0.5.14+3\
+[   +2 ms] Found plugin google_maps_flutter_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_ios-2.15.7\
+[        ] Found plugin google_maps_flutter_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\google_maps_flutter_android-2.18.6\
+[        ] Found plugin geolocator at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator-13.0.4\
+[        ] Found plugin geolocator_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_windows-0.2.5\
+[        ] Found plugin geolocator_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_web-4.1.3\
+[        ] Found plugin geolocator_apple at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_apple-2.3.13\
+[        ] Found plugin geolocator_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_android-4.6.2\
+[        ] Found plugin geocoding at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding-3.0.0\
+[        ] Found plugin geocoding_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_ios-3.1.0\
+[        ] Found plugin geocoding_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_android-3.3.1\
+[        ] Found plugin flutter_tts at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_tts-4.2.3\
+[        ] Found plugin flutter_secure_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage-9.2.4\
+[        ] Found plugin flutter_secure_storage_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_windows-3.1.2\
+[   +1 ms] Found plugin flutter_secure_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_web-1.2.1\
+[        ] Found plugin flutter_secure_storage_macos at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_macos-3.1.3\
+[        ] Found plugin flutter_secure_storage_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage_linux-1.2.3\
+[        ] Found plugin flutter_overlay_window at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_overlay_window-0.5.0\
+[        ] Found plugin flutter_local_notifications at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications-17.2.4\
+[        ] Found plugin flutter_local_notifications_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications_linux-4.0.1\
+[        ] Found plugin flutter_background_service at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service-5.1.0\
+[        ] Found plugin flutter_background_service_ios at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_ios-5.0.3\
+[        ] Found plugin flutter_background_service_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_background_service_android-6.3.1\
+[        ] Found plugin firebase_storage at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.10\
+[        ] Found plugin firebase_storage_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage_web-3.10.17\
+[        ] Found plugin firebase_core at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.2\
+[        ] Found plugin firebase_core_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core_web-2.24.1\
+[   +1 ms] Found plugin firebase_messaging at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging-15.2.10\
+[        ] Found plugin firebase_messaging_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_messaging_web-3.10.10\
+[   +1 ms] Found plugin firebase_database at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database-11.3.10\
+[        ] Found plugin firebase_database_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database_web-0.2.6+16\
+[   +1 ms] Found plugin firebase_auth at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.7.0\
+[        ] Found plugin firebase_auth_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth_web-5.15.3\
+[   +1 ms] Found plugin file_picker at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\file_picker-8.3.7\
+[        ] Found plugin device_info_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\device_info_plus-12.3.0\
+[   +2 ms] Found plugin cloud_functions at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions-5.6.2\
+[        ] Found plugin cloud_functions_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_functions_web-4.11.5\
+[   +1 ms] Found plugin cloud_firestore at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.12\
+[        ] Found plugin cloud_firestore_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore_web-4.4.12\
+[        ] Found plugin audioplayers at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers-6.5.1\
+[        ] Found plugin audioplayers_windows at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_windows-4.2.1\
+[   +1 ms] Found plugin audioplayers_web at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_web-5.1.1\
+[        ] Found plugin audioplayers_linux at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_linux-4.2.1\
+[        ] Found plugin audioplayers_darwin at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_darwin-6.3.0\
+[        ] Found plugin audioplayers_android at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_android-5.2.1\
+[        ] Found plugin android_intent_plus at C:\Users\JoshuaGamingTV\AppData\Local\Pub\Cache\hosted\pub.dev\android_intent_plus-6.0.0\
+[   +8 ms] Generating G:\taxi_sabana\android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.java because it is up-to-date.
+[   +2 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[        ] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[        ] Skipping generating generated_plugins.cmake because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[        ] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[        ] Skipping generating generated_plugins.cmake because it is up-to-date.
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.h because it is up-to-date.
+[        ] Skipping generating GeneratedPluginRegistrant.m because it is up-to-date.
+[        ] Skipping generating GeneratedPluginRegistrant.swift because it is up-to-date.
+[  +88 ms] executing: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[  +81 ms] Exit code 0 from: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[        ] openjdk version "21.0.8" 2025-07-15
+           OpenJDK Runtime Environment (build 21.0.8+-14196175-b1038.72)
+           OpenJDK 64-Bit Server VM (build 21.0.8+-14196175-b1038.72, mixed mode)
+[   +1 ms] executing: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[  +75 ms] Exit code 0 from: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[        ] openjdk version "21.0.8" 2025-07-15
+           OpenJDK Runtime Environment (build 21.0.8+-14196175-b1038.72)
+           OpenJDK 64-Bit Server VM (build 21.0.8+-14196175-b1038.72, mixed mode)
+[   +1 ms] executing: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[  +77 ms] Exit code 0 from: C:\Program Files\Android\Android Studio\jbr\bin\java -version
+[        ] openjdk version "21.0.8" 2025-07-15
+           OpenJDK Runtime Environment (build 21.0.8+-14196175-b1038.72)
+           OpenJDK 64-Bit Server VM (build 21.0.8+-14196175-b1038.72, mixed mode)
+[   +7 ms] Top-level Gradle build file not found, skipping migration of task "clean".
+[   +1 ms] executing: C:\Program Files\Android\Android Studio\jbr\bin\java --version
+[  +85 ms] Exit code 0 from: C:\Program Files\Android\Android Studio\jbr\bin\java --version
+[        ] openjdk 21.0.8 2025-07-15
+           OpenJDK Runtime Environment (build 21.0.8+-14196175-b1038.72)
+           OpenJDK 64-Bit Server VM (build 21.0.8+-14196175-b1038.72, mixed mode)
+[   +1 ms] Version of Java is different than impacted version, no migration attempted.
+[  +11 ms] CMake project not found, skipping support Android 15 16k page size migration.
+[   +2 ms] Using gradle from G:\taxi_sabana\android\gradlew.bat.
+[   +8 ms] LocalFile: 'G:\taxi_sabana\android\build.gradle.kts' doesn't provide an AGP version. Checking settings.
+[   +2 ms] LocalFile: 'G:\taxi_sabana\android\settings.gradle' doesn't provide an AGP version.
+[  +21 ms] Running Gradle task 'bundleRelease'...
+[        ] executing: [G:\taxi_sabana\android/] G:\taxi_sabana\android\gradlew.bat --full-stacktrace --info -Pverbose=true -Ptarget-platform=android-arm,android-arm64,android-x64 -Ptarget=lib\main.dart -Pbase-application-name=android.app.Application -Pdart-defines=RkxVVFRFUl9WRVJTSU9OPTMuMzguNA==,RkxVVFRFUl9DSEFOTkVMPXN0YWJsZQ==,RkxVVFRFUl9HSVRfVVJMPWh0dHBzOi8vZ2l0aHViLmNvbS9mbHV0dGVyL2ZsdXR0ZXIuZ2l0,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049NjZkZDkzZjlhMg==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049YTVjYjk2MzY5ZQ==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My4xMC4z -Pdart-obfuscation=false -Ptrack-widget-creation=true -Ptree-shake-icons=true bundleRelease
+[ +468 ms] Initialized native services in: C:\Users\JoshuaGamingTV\.gradle\native
+[        ] Initialized jansi services in: C:\Users\JoshuaGamingTV\.gradle\native
+[ +211 ms] To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+[        ] Starting process 'Gradle build daemon'. Working directory: C:\Users\JoshuaGamingTV\.gradle\daemon\8.14 Command: C:\Program Files\Android\Android Studio\jbr\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=2G -XX:ReservedCodeCacheSize=512m -XX:+HeapDumpOnOutOfMemoryError -Xmx4G -Dfile.encoding=UTF-8 -Duser.country=CO -Duser.language=es -Duser.variant -cp C:\Users\JoshuaGamingTV\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\lib\gradle-daemon-main-8.14.jar -javaagent:C:\Users\JoshuaGamingTV\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\lib\agents\gradle-instrumentation-agent-8.14.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14
+[ +107 ms] Successfully started process 'Gradle build daemon'
+[ +901 ms] An attempt to start the daemon took 1.0 secs.
+[  +93 ms] The client will now receive all logging from the daemon (pid: 21996). The daemon log file: C:\Users\JoshuaGamingTV\.gradle\daemon\8.14\daemon-21996.out.log
+[        ] Daemon will be stopped at the end of the build 
+[ +294 ms] Using 16 worker leases.
+[ +202 ms] Received JVM installation metadata from 'C:\Program Files\Android\Android Studio\jbr': {JAVA_HOME=C:\Program Files\Android\Android Studio\jbr, JAVA_VERSION=21.0.8, JAVA_VENDOR=JetBrains s.r.o., RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.8+-14196175-b1038.72, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.8+-14196175-b1038.72, VM_VENDOR=JetBrains s.r.o., OS_ARCH=amd64}
+[ +203 ms] Watching the file system is configured to be enabled if available
+[        ] Not watching G:\taxi_sabana\android since the file system is not supported
+[        ] File system watching is active
+[ +295 ms] Starting Build
+[ +108 ms] Settings evaluated using settings file 'G:\taxi_sabana\android\settings.gradle'.
+[ +201 ms] Projects loaded. Root project using build file 'G:\taxi_sabana\android\build.gradle.kts'.
+[        ] Included projects: [root project 'android']
+[+1198 ms] > Configure project :
+[        ] Evaluating root project 'android' using build file 'G:\taxi_sabana\android\build.gradle.kts'.
+[        ] Resource missing. [HTTP GET: https://repo.maven.apache.org/maven2/com/google/gms/google-services/com.google.gms.google-services.gradle.plugin/4.4.2/com.google.gms.google-services.gradle.plugin-4.4.2.pom]
+[        ] Resolved plugin [id: 'com.google.gms.google-services', version: '4.4.2', apply: false]
+[  +92 ms] FAILURE: Build failed with an exception.
+[        ] * Where:
+[        ] Build file 'G:\taxi_sabana\android\build.gradle.kts' line: 3
+[        ] * What went wrong:
+[        ] Plugin [id: 'com.google.gms.google-services', version: '4.4.2', apply: false] was not found in any of the following sources:
+[        ] - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
+[        ] - Included Builds (No included builds contain this plugin)
+[        ] - Plugin Repositories (could not resolve plugin artifact 'com.google.gms.google-services:com.google.gms.google-services.gradle.plugin:4.4.2')
+[        ]   Searched in the following repositories:
+[        ]     Gradle Central Plugin Repository
+[        ] * Try:
+[        ] > Run with --debug option to get more log output.
+[        ] > Run with --scan to get full insights.
+[        ] > Get more help at https://help.gradle.org.
+[        ] * Exception is:
+[        ] org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'com.google.gms.google-services', version: '4.4.2', apply: false] was not found in any of the following sources:
+[        ] - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
+[        ] - Included Builds (No included builds contain this plugin)
+[        ] - Plugin Repositories (could not resolve plugin artifact 'com.google.gms.google-services:com.google.gms.google-services.gradle.plugin:4.4.2')
+[        ]   Searched in the following repositories:
+[        ]     Gradle Central Plugin Repository
+[        ] 	at org.gradle.plugin.use.resolve.internal.PluginResolutionResult.getFound(PluginResolutionResult.java:112)
+[        ] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator.resolvePluginRequest(DefaultPluginRequestApplicator.java:197)
+[        ] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator.applyPlugins(DefaultPluginRequestApplicator.java:101)
+[        ] 	at org.gradle.kotlin.dsl.provider.PluginRequestsHandler.handle(PluginRequestsHandler.kt:45)
+[        ] 	at org.gradle.kotlin.dsl.provider.StandardKotlinScriptEvaluator$InterpreterHost.applyPluginsTo(KotlinScriptEvaluator.kt:242)
+[        ] 	at org.gradle.kotlin.dsl.execution.Interpreter$ProgramHost.applyPluginsTo(Interpreter.kt:387)
+[        ] 	at Program.execute(Unknown Source)
+[        ] 	at org.gradle.kotlin.dsl.execution.Interpreter$ProgramHost.eval(Interpreter.kt:516)
+[        ] 	at org.gradle.kotlin.dsl.execution.Interpreter.eval(Interpreter.kt:214)
+[        ] 	at org.gradle.kotlin.dsl.provider.StandardKotlinScriptEvaluator.evaluate(KotlinScriptEvaluator.kt:133)
+[        ] 	at org.gradle.kotlin.dsl.provider.KotlinScriptPluginFactory$create$1.invoke(KotlinScriptPluginFactory.kt:61)
+[        ] 	at org.gradle.kotlin.dsl.provider.KotlinScriptPluginFactory$create$1.invoke(KotlinScriptPluginFactory.kt:52)
+[        ] 	at org.gradle.kotlin.dsl.provider.KotlinScriptPlugin.apply(KotlinScriptPlugin.kt:35)
+[        ] 	at org.gradle.configuration.BuildOperationScriptPlugin$1.run(BuildOperationScriptPlugin.java:68)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+[        ] 	at org.gradle.configuration.BuildOperationScriptPlugin.lambda$apply$0(BuildOperationScriptPlugin.java:65)
+[        ] 	at org.gradle.internal.code.DefaultUserCodeApplicationContext.apply(DefaultUserCodeApplicationContext.java:44)
+[        ] 	at org.gradle.configuration.BuildOperationScriptPlugin.apply(BuildOperationScriptPlugin.java:65)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$1(DefaultProjectStateRegistry.java:435)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:453)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:434)
+[        ] 	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:46)
+[        ] 	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:27)
+[        ] 	at org.gradle.configuration.project.ConfigureActionsProjectEvaluator.evaluate(ConfigureActionsProjectEvaluator.java:35)
+[        ] 	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.lambda$run$0(LifecycleProjectEvaluator.java:109)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$1(DefaultProjectStateRegistry.java:435)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$fromMutableState$2(DefaultProjectStateRegistry.java:458)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withReplacedLocks(DefaultWorkerLeaseService.java:359)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:458)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:434)
+[        ] 	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.run(LifecycleProjectEvaluator.java:100)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+[        ] 	at org.gradle.configuration.project.LifecycleProjectEvaluator.evaluate(LifecycleProjectEvaluator.java:72)
+[        ] 	at org.gradle.api.internal.project.DefaultProject.evaluateUnchecked(DefaultProject.java:827)
+[        ] 	at org.gradle.api.internal.project.ProjectLifecycleController.lambda$ensureSelfConfigured$2(ProjectLifecycleController.java:88)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$maybeTransitionIfNotCurrentlyTransitioning$10(StateTransitionController.java:199)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:36)
+[        ] 	at org.gradle.internal.model.StateTransitionController.maybeTransitionIfNotCurrentlyTransitioning(StateTransitionController.java:195)
+[        ] 	at org.gradle.api.internal.project.ProjectLifecycleController.ensureSelfConfigured(ProjectLifecycleController.java:88)
+[        ] 	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.ensureConfigured(DefaultProjectStateRegistry.java:400)
+[        ] 	at org.gradle.execution.TaskPathProjectEvaluator.configure(TaskPathProjectEvaluator.java:70)
+[        ] 	at org.gradle.execution.TaskPathProjectEvaluator.configureHierarchy(TaskPathProjectEvaluator.java:84)
+[        ] 	at org.gradle.configuration.DefaultProjectsPreparer.prepareProjects(DefaultProjectsPreparer.java:50)
+[        ] 	at org.gradle.configuration.BuildTreePreparingProjectsPreparer.prepareProjects(BuildTreePreparingProjectsPreparer.java:65)
+[        ] 	at org.gradle.configuration.BuildOperationFiringProjectsPreparer$ConfigureBuild.run(BuildOperationFiringProjectsPreparer.java:52)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+[        ] 	at org.gradle.configuration.BuildOperationFiringProjectsPreparer.prepareProjects(BuildOperationFiringProjectsPreparer.java:40)
+[        ] 	at org.gradle.initialization.VintageBuildModelController.lambda$prepareProjects$2(VintageBuildModelController.java:84)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$transitionIfNotPreviously$11(StateTransitionController.java:213)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:36)
+[        ] 	at org.gradle.internal.model.StateTransitionController.transitionIfNotPreviously(StateTransitionController.java:209)
+[        ] 	at org.gradle.initialization.VintageBuildModelController.prepareProjects(VintageBuildModelController.java:84)
+[        ] 	at org.gradle.initialization.VintageBuildModelController.prepareToScheduleTasks(VintageBuildModelController.java:71)
+[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$prepareToScheduleTasks$6(DefaultBuildLifecycleController.java:175)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$maybeTransition$9(StateTransitionController.java:190)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:36)
+[        ] 	at org.gradle.internal.model.StateTransitionController.maybeTransition(StateTransitionController.java:186)
+[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.prepareToScheduleTasks(DefaultBuildLifecycleController.java:173)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeWorkPreparer.scheduleRequestedTasks(DefaultBuildTreeWorkPreparer.java:36)
+[        ] 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController$scheduleAndRunRequestedTasks$1.apply(VintageBuildTreeWorkController.kt:36)
+[        ] 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController$scheduleAndRunRequestedTasks$1.apply(VintageBuildTreeWorkController.kt:35)
+[        ] 	at org.gradle.composite.internal.DefaultIncludedBuildTaskGraph.withNewWorkGraph(DefaultIncludedBuildTaskGraph.java:112)
+[        ] 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController.scheduleAndRunRequestedTasks(VintageBuildTreeWorkController.kt:35)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$scheduleAndRunTasks$1(DefaultBuildTreeLifecycleController.java:77)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$runBuild$4(DefaultBuildTreeLifecycleController.java:120)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$transition$6(StateTransitionController.java:169)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$transition$7(StateTransitionController.java:169)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
+[        ] 	at org.gradle.internal.model.StateTransitionController.transition(StateTransitionController.java:169)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.runBuild(DefaultBuildTreeLifecycleController.java:117)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.scheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:77)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.scheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:72)
+[        ] 	at org.gradle.tooling.internal.provider.ExecuteBuildActionRunner.run(ExecuteBuildActionRunner.java:31)
+[        ] 	at org.gradle.launcher.exec.ChainingBuildActionRunner.run(ChainingBuildActionRunner.java:35)
+[        ] 	at org.gradle.internal.buildtree.ProblemReportingBuildActionRunner.run(ProblemReportingBuildActionRunner.java:49)
+[        ] 	at org.gradle.launcher.exec.BuildOutcomeReportingBuildActionRunner.run(BuildOutcomeReportingBuildActionRunner.java:71)
+[        ] 	at org.gradle.tooling.internal.provider.FileSystemWatchingBuildActionRunner.run(FileSystemWatchingBuildActionRunner.java:135)
+[        ] 	at org.gradle.launcher.exec.BuildCompletionNotifyingBuildActionRunner.run(BuildCompletionNotifyingBuildActionRunner.java:41)
+[        ] 	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.lambda$execute$0(RootBuildLifecycleBuildActionExecutor.java:54)
+[        ] 	at org.gradle.composite.internal.DefaultRootBuildState.run(DefaultRootBuildState.java:130)
+[        ] 	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.execute(RootBuildLifecycleBuildActionExecutor.java:54)
+[        ] 	at org.gradle.internal.buildtree.InitDeprecationLoggingActionExecutor.execute(InitDeprecationLoggingActionExecutor.java:62)
+[        ] 	at org.gradle.internal.buildtree.InitProblems.execute(InitProblems.java:36)
+[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeContext.execute(DefaultBuildTreeContext.java:40)
+[        ] 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.lambda$execute$0(BuildTreeLifecycleBuildActionExecutor.java:71)
+[        ] 	at org.gradle.internal.buildtree.BuildTreeState.run(BuildTreeState.java:60)
+[        ] 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.execute(BuildTreeLifecycleBuildActionExecutor.java:71)
+[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:67)
+[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:63)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor.execute(RunAsBuildOperationBuildActionExecutor.java:63)
+[        ] 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.lambda$execute$0(RunAsWorkerThreadBuildActionExecutor.java:36)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+[        ] 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.execute(RunAsWorkerThreadBuildActionExecutor.java:36)
+[        ] 	at org.gradle.tooling.internal.provider.continuous.ContinuousBuildActionExecutor.execute(ContinuousBuildActionExecutor.java:110)
+[        ] 	at org.gradle.tooling.internal.provider.SubscribableBuildActionExecutor.execute(SubscribableBuildActionExecutor.java:64)
+[        ] 	at org.gradle.internal.session.DefaultBuildSessionContext.execute(DefaultBuildSessionContext.java:46)
+[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:92)
+[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:80)
+[        ] 	at org.gradle.internal.session.BuildSessionState.run(BuildSessionState.java:73)
+[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:62)
+[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:41)
+[        ] 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:64)
+[        ] 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:32)
+[        ] 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:51)
+[        ] 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:39)
+[        ] 	at org.gradle.internal.buildprocess.execution.SetupLoggingActionExecutor.execute(SetupLoggingActionExecutor.java:47)
+[        ] 	at org.gradle.internal.buildprocess.execution.SetupLoggingActionExecutor.execute(SetupLoggingActionExecutor.java:31)
+[        ] 	at org.gradle.launcher.daemon.server.exec.ExecuteBuild.doBuild(ExecuteBuild.java:70)
+[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.WatchForDisconnection.execute(WatchForDisconnection.java:39)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.ResetDeprecationLogger.execute(ResetDeprecationLogger.java:29)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.RequestStopIfSingleUsedDaemon.execute(RequestStopIfSingleUsedDaemon.java:35)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.ForwardClientInput.lambda$execute$0(ForwardClientInput.java:40)
+[        ] 	at org.gradle.internal.daemon.clientinput.ClientInputForwarder.forwardInput(ClientInputForwarder.java:80)
+[        ] 	at org.gradle.launcher.daemon.server.exec.ForwardClientInput.execute(ForwardClientInput.java:37)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.LogAndCheckHealth.execute(LogAndCheckHealth.java:53)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.LogToClient.doBuild(LogToClient.java:63)
+[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.EstablishBuildEnvironment.doBuild(EstablishBuildEnvironment.java:84)
+[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+[        ] 	at org.gradle.launcher.daemon.server.exec.StartBuildOrRespondWithBusy$1.run(StartBuildOrRespondWithBusy.java:52)
+[        ] 	at org.gradle.launcher.daemon.server.DaemonStateCoordinator.lambda$runCommand$0(DaemonStateCoordinator.java:321)
+[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+[        ] 	at java.base/java.lang.Thread.run(Unknown Source)
+[        ] BUILD FAILED in 4s
+[        ] Watched directory hierarchies: []
+[ +113 ms] Running Gradle task 'bundleRelease'... (completed in 4,5s)
+[  +41 ms] "flutter appbundle" took 6.724ms.
+[  +69 ms] Gradle task bundleRelease failed with exit code 1
+[        ] 
+           #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
+           #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:592:7)
+           <asynchronous suspension>
+           #2      AndroidGradleBuilder.buildAab (package:flutter_tools/src/android/gradle.dart:255:5)
+           <asynchronous suspension>
+           #3      BuildAppBundleCommand.runCommand (package:flutter_tools/src/commands/build_appbundle.dart:168:5)
+           <asynchronous suspension>
+           #4      FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1559:27)
+           <asynchronous suspension>
+           #5      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #6      CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+           <asynchronous suspension>
+           #7      FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:487:9)
+           <asynchronous suspension>
+           #8      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #9      FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:422:5)
+           <asynchronous suspension>
+           #10     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+           <asynchronous suspension>
+           #11     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #12     main (package:flutter_tools/executable.dart:103:3)
+           <asynchronous suspension>
+
+
+[        ] Running 1 shutdown hook
+[        ] Shutdown hooks complete
+[  +87 ms] exiting with code 1

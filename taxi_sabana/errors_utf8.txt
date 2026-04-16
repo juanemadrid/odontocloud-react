@@ -1,0 +1,87 @@
+Analyzing home_pasajero.dart...                                 
+
+   info - The constant name '_COL_VIAJES' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:34:14 - constant_identifier_names
+   info - The constant name '_RADIO_NOTIF_KM' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:128:23 - constant_identifier_names
+   info - The constant name '_MIN_DIA' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:206:20 - constant_identifier_names
+   info - The constant name '_MIN_NOCHE' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:207:20 - constant_identifier_names
+   info - The constant name '_PKM_DIA' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:208:20 - constant_identifier_names
+   info - The constant name '_PKM_NOCHE' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:209:20 - constant_identifier_names
+   info - The constant name '_TOLL_RADIUS_METERS' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:211:23 - constant_identifier_names
+   info - The constant name '_TOLLS' isn't a lowerCamelCase identifier - lib\pantallas\autenticacion\home_pasajero.dart:212:28 - constant_identifier_names
+warning - The value of the field '_vehiculoSeleccionado' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:218:11 - unused_field
+warning - The value of the field '_staleCleanupTimer' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:223:10 - unused_field
+warning - The value of the field '_miZona' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:227:11 - unused_field
+   info - 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead - lib\pantallas\autenticacion\home_pasajero.dart:247:42 - deprecated_member_use
+   info - The local variable '_bool' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:288:16 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_check' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:296:16 - no_leading_underscores_for_local_identifiers
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_pasajero.dart:363:51 - deprecated_member_use
+warning - The value of the local variable 'now' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:427:13 - unused_local_variable
+   info - Statements in an if should be enclosed in a block - lib\pantallas\autenticacion\home_pasajero.dart:522:30 - curly_braces_in_flow_control_structures
+warning - Unnecessary cast - lib\pantallas\autenticacion\home_pasajero.dart:697:19 - unnecessary_cast
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:747:28 - use_build_context_synchronously
+  error - The method '_mostrarSelectorVehiculo' isn't defined for the type '_HomePasajeroState' - lib\pantallas\autenticacion\home_pasajero.dart:762:24 - undefined_method
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:790:28 - use_build_context_synchronously
+  error - The method '_mostrarSelectorVehiculo' isn't defined for the type '_HomePasajeroState' - lib\pantallas\autenticacion\home_pasajero.dart:804:24 - undefined_method
+warning - Unnecessary type check; the result is always 'true' - lib\pantallas\autenticacion\home_pasajero.dart:919:19 - unnecessary_type_check
+warning - Dead code - lib\pantallas\autenticacion\home_pasajero.dart:919:34 - dead_code
+warning - The declaration '_recalcularTaxisPorBarrio' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:977:8 - unused_element
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1279:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1285:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1545:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1549:18 - avoid_print
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1557:20 - avoid_print
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1561:20 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:1562:41 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\pantallas\autenticacion\home_pasajero.dart:1570:18 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:1644:70 - deprecated_member_use
+   info - Unnecessary braces in a string interpolation - lib\pantallas\autenticacion\home_pasajero.dart:1666:92 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:1715:57 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\pantallas\autenticacion\home_pasajero.dart:1994:21 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\pantallas\autenticacion\home_pasajero.dart:1995:21 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:2039:28 - use_build_context_synchronously
+  error - The method '_mostrarSelectorVehiculo' isn't defined for the type '_HomePasajeroState' - lib\pantallas\autenticacion\home_pasajero.dart:2170:40 - undefined_method
+  error - The method '_mostrarSelectorVehiculo' isn't defined for the type '_HomePasajeroState' - lib\pantallas\autenticacion\home_pasajero.dart:2183:38 - undefined_method
+  error - Undefined name '_mostrarSelectorVehiculo' - lib\pantallas\autenticacion\home_pasajero.dart:2543:16 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:2636:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:2764:37 - deprecated_member_use
+   info - The local variable '_pickWithSearch' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:2833:22 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_save' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:2852:22 - no_leading_underscores_for_local_identifiers
+   info - Don't use 'BuildContext's across async gaps - lib\pantallas\autenticacion\home_pasajero.dart:2872:25 - use_build_context_synchronously
+  error - The method '_mostrarSelectorVehiculo' isn't defined for the type '_HomePasajeroState' - lib\pantallas\autenticacion\home_pasajero.dart:3033:69 - undefined_method
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:3080:55 - deprecated_member_use
+   info - The local variable '_openHistorial' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3200:16 - no_leading_underscores_for_local_identifiers
+warning - The declaration '_openHistorial' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:3200:16 - unused_element
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3251:47 - unnecessary_underscores
+   info - The local variable '_mostrarSelectorVehiculo' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3294:16 - no_leading_underscores_for_local_identifiers
+warning - The declaration '_mostrarSelectorVehiculo' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:3294:16 - unused_element
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3401:49 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:3435:80 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3445:101 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3445:104 - unnecessary_underscores
+   info - The local variable '_vehiculoTile' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3510:10 - no_leading_underscores_for_local_identifiers
+warning - The declaration '_vehiculoTile' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:3510:10 - unused_element
+  error - Local variable '_formatMiles' can't be referenced before it is declared - lib\pantallas\autenticacion\home_pasajero.dart:3516:57 - referenced_before_declaration
+  error - Local variable '_assetImage' can't be referenced before it is declared - lib\pantallas\autenticacion\home_pasajero.dart:3542:22 - referenced_before_declaration
+   info - The local variable '_assetImage' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3626:10 - no_leading_underscores_for_local_identifiers
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3630:25 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3630:29 - unnecessary_underscores
+   info - The local variable '_assetIcon' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3635:10 - no_leading_underscores_for_local_identifiers
+warning - The declaration '_assetIcon' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:3635:10 - unused_element
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3640:25 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:3640:29 - unnecessary_underscores
+   info - The local variable '_formatMiles' starts with an underscore - lib\pantallas\autenticacion\home_pasajero.dart:3646:10 - no_leading_underscores_for_local_identifiers
+   info - The private field _session could be 'final' - lib\pantallas\autenticacion\home_pasajero.dart:3688:10 - prefer_final_fields
+warning - The value of the field '_origenLatLng' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:3697:11 - unused_field
+   info - 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings - lib\pantallas\autenticacion\home_pasajero.dart:3768:11 - deprecated_member_use
+   info - Statements in a for should be enclosed in a block - lib\pantallas\autenticacion\home_pasajero.dart:3808:30 - curly_braces_in_flow_control_structures
+warning - The declaration '_distanceKm' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:3830:10 - unused_element
+   info - Unnecessary use of multiple underscores - lib\pantallas\autenticacion\home_pasajero.dart:4234:45 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:4340:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\pantallas\autenticacion\home_pasajero.dart:4369:59 - deprecated_member_use
+warning - The declaration '_BarrioCentro' isn't referenced - lib\pantallas\autenticacion\home_pasajero.dart:4546:7 - unused_element
+warning - The value of the local variable 'fotoVehiculo' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:4642:11 - unused_local_variable
+warning - The value of the local variable 'tel' isn't used - lib\pantallas\autenticacion\home_pasajero.dart:4870:42 - unused_local_variable
+warning - A value for optional parameter 'seats' isn't ever given - lib\pantallas\autenticacion\home_pasajero.dart:4940:10 - unused_element_parameter
+warning - A value for optional parameter 'persons' isn't ever given - lib\pantallas\autenticacion\home_pasajero.dart:4941:10 - unused_element_parameter
+warning - A value for optional parameter 'bags' isn't ever given - lib\pantallas\autenticacion\home_pasajero.dart:4942:10 - unused_element_parameter
+
