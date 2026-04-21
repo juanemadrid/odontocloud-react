@@ -7,7 +7,7 @@ import { useToast } from '../../../context/ToastContext';
 
 export default function DocClinicoModal({ isOpen, onClose, patient, docType, initialData = null }) {
     const { userProfile } = useAuth();
-    const { toast } = useToast();
+    const toast = useToast();
     
     const [saving, setSaving] = useState(false);
     const [contenido, setContenido] = useState("");

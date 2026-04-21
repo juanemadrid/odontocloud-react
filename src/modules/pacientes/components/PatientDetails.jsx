@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { doc, onSnapshot, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { db } from "../../../firebase/firebaseConfig";
+import { db, storage } from "../../../firebase/firebaseConfig";
+import { formatCurrency } from "../../../utils/formatters";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
@@ -359,16 +360,16 @@ const SidebarButton = ({ label, active, onClick, icon: Icon, badge }) => (
     <button
         type="button"
         onClick={onClick}
-        className={`w-full group px-4 py-3 rounded-xl transition-all flex items-center justify-between border-l-4 ${active
-            ? "bg-blue-50 border-blue-600 text-blue-700 shadow-sm"
+        className={`w-full group px-3 py-1.5 rounded-lg transition-all flex items-center justify-between border-l-[3px] ${active
+            ? "bg-indigo-50/50 border-indigo-600 text-indigo-700 shadow-sm"
             : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
     >
-        <div className="flex items-center gap-3">
-            <span className={`transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-110"}`}>
-                <Icon size={16} className={active ? "text-blue-600" : "text-slate-400"} />
+        <div className="flex items-center gap-2.5">
+            <span className={`transition-transform duration-300 ${active ? "scale-105" : "group-hover:scale-105"}`}>
+                <Icon size={14} className={active ? "text-indigo-600" : "text-slate-400"} />
             </span>
-            <span className={`text-[11px] font-black uppercase tracking-wider ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-tight ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
         </div>
         {badge && (
             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded-full uppercase">
@@ -379,7 +380,7 @@ const SidebarButton = ({ label, active, onClick, icon: Icon, badge }) => (
 );
 
 const SidebarSectionTitle = ({ children }) => (
-    <div className="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em] mb-3 mt-8 px-4 border-b border-slate-100 pb-2">
+    <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 mt-5 px-3 border-b border-slate-50 pb-1.5">
         {children}
     </div>
 );
@@ -387,6 +388,7 @@ const SidebarSectionTitle = ({ children }) => (
 export default function PatientDetails({ initialData, onClose, onDelete }) {
     const [patient, setPatient] = useState(initialData || null);
     const [activeTab, setActiveTab] = useState("datos");
+    const [financials, setFinancials] = useState(null);
     const { userProfile } = useAuth();
     const toast = useToast();
 
@@ -433,6 +435,13 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         });
         return () => unsub();
     }, [initialData?.id, methods]);
+
+    useEffect(() => {
+        if (!patient?.id) return;
+        import("../../../services/billingService").then(({ getPatientFinancials }) => {
+            getPatientFinancials(patient.id).then(setFinancials);
+        });
+    }, [patient?.id, activeTab]); // Reload on tab switch to ensure sync
 
     // Cámara Handlers
     const [isCameraActive, setIsCameraActive] = useState(false);
@@ -542,66 +551,72 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
     return (
         <div className="w-full h-full bg-slate-50 flex flex-col animate-fadeIn overflow-hidden">
                 {/* 1. THE COMPACT HUD (Header) */}
-                <div className="bg-white px-4 md:px-8 py-3 md:py-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 z-20 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] relative">
+                <div className="bg-white px-4 md:px-6 py-2.5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 z-20 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] relative">
                     <div className="flex items-center gap-4">
                         <div className="relative group shrink-0">
-                            {fotoPreview ? <img src={fotoPreview} alt="Foto" className="w-12 h-12 rounded-[16px] object-cover ring-2 ring-slate-50 shadow-md" /> : <div className="w-12 h-12 rounded-[16px] bg-blue-600 flex items-center justify-center text-white font-black text-xl ring-2 ring-slate-50 shadow-md">{(patient.nombreCompleto || "P")[0]}</div>}
+                            {fotoPreview ? <img src={fotoPreview} alt="Foto" className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-50 shadow-sm" /> : <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg ring-2 ring-slate-50 shadow-md">{(patient.nombreCompleto || "P")[0]}</div>}
                         </div>
                         <div>
-                            <div className="flex items-center gap-3 mb-0.5">
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">{methods.watch("nombreCompleto") || "Cargando..."}</h3>
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <h3 className="text-base font-black text-slate-800 uppercase tracking-tight leading-none">{methods.watch("nombreCompleto") || "Cargando..."}</h3>
                             </div>
-                            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                <span className="flex items-center gap-1.5"><FiInfo className="text-blue-600" /> {patient.tipoDocumento} {patient.nroDocumento}</span>
-                                <span>Expediente: <span className="text-slate-800">#{patient.nroHistoria || "S/N"}</span></span>
+                            <div className="flex items-center gap-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-1"><FiInfo className="text-indigo-600" /> {patient.tipoDocumento} {patient.nroDocumento}</span>
+                                <span>ID: <span className="text-slate-600">#{patient.nroHistoria || "S/N"}</span></span>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={onClose} className="w-10 h-10 bg-slate-900 text-white rounded-[14px] flex items-center justify-center hover:bg-rose-600 transition-all active:scale-90 shadow-md shadow-slate-200" title="Cerrar expediente">
-                            <FiX size={18} />
+                        <button onClick={onClose} className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-rose-600 transition-all active:scale-95 shadow-md shadow-slate-200" title="Cerrar expediente">
+                            <FiX size={16} />
                         </button>
                     </div>
                 </div>
 
                 {/* 2. STUDIO WORKSPACE (Sidebar + Content) */}
                 <FormProvider {...methods}>
-                    <form onSubmit={methods.handleSubmit(submitForm)} className="flex-1 flex flex-col xl:flex-row overflow-hidden">
+                    <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
                         {/* SIDEBAR */}
-                        <aside className="w-full lg:w-72 bg-white border-b lg:border-b-0 lg:border-r border-slate-100 overflow-x-auto lg:overflow-y-auto p-4 flex flex-row lg:flex-col shrink-0 custom-scrollbar-hidden lg:custom-scrollbar scrollbar-hide">
+                        <aside className="w-full lg:w-60 bg-white border-b lg:border-b-0 lg:border-r border-slate-100 overflow-x-auto lg:overflow-y-auto p-3 flex flex-row lg:flex-col shrink-0 custom-scrollbar-hidden lg:custom-scrollbar scrollbar-hide">
                             <SidebarSectionTitle>Información General</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiUser} label="Datos personales" active={activeTab === "datos"} onClick={() => setActiveTab("datos")} />
-                                <SidebarButton icon={FiTrendingUp} label="Marketing" active={activeTab === "mark"} onClick={() => setActiveTab("mark")} />
-                                <SidebarButton icon={FiShield} label="EPS" active={activeTab === "eps"} onClick={() => setActiveTab("eps")} />
-                                <SidebarButton icon={FiUsers} label="Beneficiarios convenio" active={activeTab === "conv"} onClick={() => setActiveTab("conv")} />
-                                <SidebarButton icon={FiBriefcase} label="Profesionales" active={activeTab === "pro"} onClick={() => setActiveTab("pro")} />
-                                <SidebarButton icon={FiCamera} label="Rx / Imágenes / Doc" active={activeTab === "rx"} onClick={() => setActiveTab("rx")} />
-                                <SidebarButton icon={FiTarget} label="CRM" active={activeTab === "crm"} onClick={() => setActiveTab("crm")} />
+                                <SidebarButton icon={FiUser} label="Datos personales" active={activeTab === "datos"} onClick={() => { if(activeTab === "datos") { setActiveTab(""); setTimeout(() => setActiveTab("datos"), 0); } else setActiveTab("datos"); }} />
+                                <SidebarButton icon={FiTrendingUp} label="Marketing" active={activeTab === "mark"} onClick={() => { if(activeTab === "mark") { setActiveTab(""); setTimeout(() => setActiveTab("mark"), 0); } else setActiveTab("mark"); }} />
+                                <SidebarButton icon={FiShield} label="EPS" active={activeTab === "eps"} onClick={() => { if(activeTab === "eps") { setActiveTab(""); setTimeout(() => setActiveTab("eps"), 0); } else setActiveTab("eps"); }} />
+                                <SidebarButton icon={FiUsers} label="Beneficiarios convenio" active={activeTab === "conv"} onClick={() => { if(activeTab === "conv") { setActiveTab(""); setTimeout(() => setActiveTab("conv"), 0); } else setActiveTab("conv"); }} />
+                                <SidebarButton icon={FiBriefcase} label="Profesionales" active={activeTab === "pro"} onClick={() => { if(activeTab === "pro") { setActiveTab(""); setTimeout(() => setActiveTab("pro"), 0); } else setActiveTab("pro"); }} />
+                                <SidebarButton icon={FiCamera} label="Rx / Imágenes / Doc" active={activeTab === "rx"} onClick={() => { if(activeTab === "rx") { setActiveTab(""); setTimeout(() => setActiveTab("rx"), 0); } else setActiveTab("rx"); }} />
+                                <SidebarButton icon={FiTarget} label="CRM" active={activeTab === "crm"} onClick={() => { if(activeTab === "crm") { setActiveTab(""); setTimeout(() => setActiveTab("crm"), 0); } else setActiveTab("crm"); }} />
                             </div>
 
                             <SidebarSectionTitle>Historia Clínica</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiClipboard} label="Doc. Clínicos" active={activeTab === "hc"} onClick={() => setActiveTab("hc")} />
-                                <SidebarButton icon={FiActivity} label="Odontogramas" active={activeTab === "odonto"} onClick={() => setActiveTab("odonto")} />
-                                <SidebarButton icon={FiActivity} label="Periodontogramas" active={activeTab === "perio"} onClick={() => setActiveTab("perio")} />
-                                <SidebarButton icon={FiFileText} label="Presupuestos & planes" active={activeTab === "presu"} onClick={() => setActiveTab("presu")} />
-                                <SidebarButton icon={FiActivity} label="Evoluciones & Remis" active={activeTab === "evo"} onClick={() => setActiveTab("evo")} />
+                                <SidebarButton icon={FiClipboard} label="Doc. Clínicos" active={activeTab === "hc"} onClick={() => { if(activeTab === "hc") { setActiveTab(""); setTimeout(() => setActiveTab("hc"), 0); } else setActiveTab("hc"); }} />
+                                <SidebarButton icon={FiActivity} label="Odontogramas" active={activeTab === "odonto"} onClick={() => { if(activeTab === "odonto") { setActiveTab(""); setTimeout(() => setActiveTab("odonto"), 0); } else setActiveTab("odonto"); }} />
+                                <SidebarButton icon={FiActivity} label="Periodontogramas" active={activeTab === "perio"} onClick={() => { if(activeTab === "perio") { setActiveTab(""); setTimeout(() => setActiveTab("perio"), 0); } else setActiveTab("perio"); }} />
+                                <SidebarButton icon={FiFileText} label="Presupuestos & planes" active={activeTab === "presu"} onClick={() => { if(activeTab === "presu") { setActiveTab(""); setTimeout(() => setActiveTab("presu"), 0); } else setActiveTab("presu"); }} />
+                                <SidebarButton icon={FiActivity} label="Evoluciones & Remis" active={activeTab === "evo"} onClick={() => { if(activeTab === "evo") { setActiveTab(""); setTimeout(() => setActiveTab("evo"), 0); } else setActiveTab("evo"); }} />
                             </div>
 
                             <SidebarSectionTitle>Facturación</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiDollarSign} label="Saldo a favor" active={activeTab === "saldo"} onClick={() => setActiveTab("saldo")} badge="$" />
-                                <SidebarButton icon={FiDollarSign} label="Realizar pago" active={activeTab === "pago"} onClick={() => setActiveTab("pago")} />
-                                <SidebarButton icon={FiDollarSign} label="Histórico pagos" active={activeTab === "hist_pago"} onClick={() => setActiveTab("hist_pago")} />
-                                <SidebarButton icon={FiFileText} label="Histórico facturas" active={activeTab === "hist_fact"} onClick={() => setActiveTab("hist_fact")} />
+                                <SidebarButton 
+                                    icon={FiDollarSign} 
+                                    label="Saldo a favor" 
+                                    active={activeTab === "saldo"} 
+                                    onClick={() => { if(activeTab === "saldo") { setActiveTab(""); setTimeout(() => setActiveTab("saldo"), 0); } else setActiveTab("saldo"); }} 
+                                    badge={financials?.totals?.totalSaldosAFavor > 0 ? `$${formatCurrency(financials.totals.totalSaldosAFavor)}` : "$ 0"} 
+                                />
+                                <SidebarButton icon={FiDollarSign} label="Realizar pago" active={activeTab === "pago"} onClick={() => { if(activeTab === "pago") { setActiveTab(""); setTimeout(() => setActiveTab("pago"), 0); } else setActiveTab("pago"); }} />
+                                <SidebarButton icon={FiDollarSign} label="Histórico pagos" active={activeTab === "hist_pago"} onClick={() => { if(activeTab === "hist_pago") { setActiveTab(""); setTimeout(() => setActiveTab("hist_pago"), 0); } else setActiveTab("hist_pago"); }} />
+                                <SidebarButton icon={FiFileText} label="Histórico facturas" active={activeTab === "hist_fact"} onClick={() => { if(activeTab === "hist_fact") { setActiveTab(""); setTimeout(() => setActiveTab("hist_fact"), 0); } else setActiveTab("hist_fact"); }} />
                             </div>
                         </aside>
 
                         {/* WORKSPACE CONTENT */}
                         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-white relative overflow-hidden">
                             {isEditableTab ? (
-                                <>
+                                <form onSubmit={methods.handleSubmit(submitForm)} className="h-full flex flex-col">
                                     <div className="px-10 py-4 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10">
                                         <div className="flex items-center gap-3">
                                             <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">{getPageTitle()}</h3>
@@ -622,7 +637,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                         {activeTab === "mark" && <FormMarketing />}
                                         {activeTab === "eps" && <FormAseguramiento />}
                                     </div>
-                                </>
+                                </form>
                             ) : (
                                 <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${isFullHeightTab ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar animate-fadeIn p-2'}`}>
                                     {activeTab === "rx" && <PatientRxTab patient={patient} onUpdate={setPatient} />}
@@ -653,7 +668,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                 </div>
                             )}
                         </main>
-                    </form>
+                    </div>
                 </FormProvider>
         </div>
     );

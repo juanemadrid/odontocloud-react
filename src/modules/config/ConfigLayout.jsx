@@ -15,7 +15,6 @@ const MENU_ITEMS = [
     { label: "Editor Web", slug: "editor-web", icon: FiGlobe, requiresWebsite: true }, // New Item
     { label: "Lista de precios", slug: "listas-precios", icon: FiList },
     { label: "Planes", slug: "planes", icon: FiLayout },
-    { label: "Simulador Presupuesto", slug: "simulador-planes", icon: FiFileText },
     { label: "Consecutivos", slug: "consecutivos", icon: FiHash },
     { label: "Almacenes", slug: "almacenes", icon: FiPackage },
     { label: "Categorías inventario", slug: "categorias-inventario", icon: FiTag },
@@ -80,7 +79,7 @@ export default function ConfigLayout({ children }) {
                     </p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-3 space-y-0.5 custom-scrollbar">
                     {MENU_ITEMS.map((item) => {
                         // Logic to hide Restricted items if no access
                         if (item.requiresWebsite && !hasWebsiteAccess) return null;
@@ -91,9 +90,9 @@ export default function ConfigLayout({ children }) {
                                 key={item.slug}
                                 to={`/dashboard/config/${item.slug}`}
                                 className={`
-                                    flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group
+                                    flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group
                                     ${isActive
-                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                                        ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                                         : "text-slate-500 hover:bg-slate-50 hover:text-blue-600"
                                     }
                                 `}

@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')).render(
     <HelmetProvider>
         <AuthProvider>
             <ToastProvider>
-                <BrowserRouter>
+                <BrowserRouter basename="/odontocloud-react">
                     <App />
                 </BrowserRouter>
             </ToastProvider>

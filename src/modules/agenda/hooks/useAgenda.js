@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, arrayUnion, setDoc } from "firebase/firestore";
+import { collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, arrayUnion, setDoc, or } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useAuth } from "../../../context/AuthContext";
 import { createOrUpdatePatient } from "../../../services/patientService";
@@ -42,27 +42,38 @@ export function useAgenda() {
     useEffect(() => {
         if (!inquilino) return;
 
-        // Fetch doctors directly from 'usuarios' where 'esDoctor' == true (OralDrive architecture)
+        // Fetch doctors: We query all users for the tenant and filter client-side.
+        // This ensures we catch anyone marked as doctor (esDoctor == true OR by role/profile) 
+        // even if the exact boolean field is missing in older records.
         const unsubDocs = onSnapshot(query(
             collection(db, "usuarios"), 
-            where("inquilino", "==", inquilino), 
-            where("esDoctor", "==", true),
-            where("activo", "==", true)
+            or(
+                where("inquilino", "==", inquilino),
+                where("tenantId", "==", inquilino)
+            )
         ), snap => {
-            setDoctors(snap.docs.map(d => {
-                const data = d.data();
-                return { 
-                    id: d.id, 
-                    nombre: data.nombreCompleto || `${data.nombre || ''} ${data.apellido || ''}`.trim(),
-                    ...data 
-                };
-            }));
+            setDoctors(
+                snap.docs
+                    .map(d => {
+                        const data = d.data();
+                        return { 
+                            id: d.id, 
+                            ...data 
+                        };
+                    })
+                    .filter(u => u.activo !== false) // Active users only
+                    .filter(u => 
+                        u.esDoctor === true || 
+                        (typeof u.rol === 'string' && ['doctor', 'odontologo', 'especialista'].includes(u.rol.toLowerCase())) ||
+                        (typeof u.profileName === 'string' && u.profileName.toLowerCase().includes('octor'))
+                    )
+            );
         });
-        const unsubChairs = onSnapshot(query(collection(db, "consultorios"), where("inquilino", "==", inquilino), where("activo", "==", true)), snap => {
-            setChairs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const unsubChairs = onSnapshot(query(collection(db, "consultorios"), where("inquilino", "==", inquilino)), snap => {
+            setChairs(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.activo !== false));
         });
-        const unsubBranches = onSnapshot(query(collection(db, "sucursales"), where("inquilino", "==", inquilino), where("activo", "==", true)), snap => {
-            setBranches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const unsubBranches = onSnapshot(query(collection(db, "sucursales"), where("inquilino", "==", inquilino)), snap => {
+            setBranches(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.activo !== false));
         });
         const unsubSpecs = onSnapshot(query(collection(db, "especialidades"), where("inquilino", "==", inquilino)), snap => {
             setSpecialties(snap.docs.map(d => ({ id: d.id, ...d.data() })));

@@ -10,12 +10,14 @@ import { db } from "../firebase/firebaseConfig";
 // Helpers
 const s = (n) => Number(n || 0);
 
+
 export const getPatientFinancials = async (patientId) => {
     if (!patientId) return { facturas: [], pagos: [], totals: {} };
 
-    const [snapF, snapP] = await Promise.all([
+    const [snapF, snapP, snapPlans] = await Promise.all([
         getDocs(query(collection(db, "facturas"), where("patientId", "==", patientId))),
-        getDocs(query(collection(db, "pagos"), where("patientId", "==", patientId)))
+        getDocs(query(collection(db, "pagos"), where("patientId", "==", patientId))),
+        getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patientId)))
     ]);
 
     const facturas = snapF.docs.map(d => {
@@ -40,9 +42,23 @@ export const getPatientFinancials = async (patientId) => {
         };
     }).sort((a, b) => (b.fechaISO || "").localeCompare(a.fechaISO || ""));
 
+    const plans = snapPlans.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        costoTotal: s(d.data().total || d.data().costoTotal || 0),
+        pagado: s(d.data().recaudado || d.data().pagado || 0)
+    }));
+
     // Calculations
     const totalFacturado = facturas.reduce((acc, f) => acc + f.total, 0);
     const totalPagado = pagos.reduce((acc, p) => acc + p.monto, 0);
+    
+    // Credits (Saldo a Favor)
+    // In this logic, a credit is a payment that hasn't been linked to an invoice yet
+    // or specifically marked as Concepto: SALDO A FAVOR
+    const totalSaldosAFavor = pagos
+        .filter(p => p.concepto === "SALDO A FAVOR")
+        .reduce((acc, p) => acc + p.monto, 0);
 
     const facturasPagadas = facturas.filter((f) => ["pagada", "pagado", "paid"].includes(f.estado));
     const facturasPendientes = facturas.filter((f) => ["pendiente", "abierta", "open", "deuda"].includes(f.estado));
@@ -53,12 +69,15 @@ export const getPatientFinancials = async (patientId) => {
     return {
         facturas,
         pagos,
+        plans,
         totals: {
             totalFacturado,
             totalPagado,
             totalFacturasPendientes,
             totalFacturasPagadas,
-            balance: totalFacturado - totalPagado // Simple balance
+            totalSaldosAFavor,
+            balance: totalFacturado - totalPagado
         }
     };
 };
+

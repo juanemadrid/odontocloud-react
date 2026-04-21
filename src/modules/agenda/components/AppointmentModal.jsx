@@ -223,7 +223,7 @@ export default function AppointmentModal({
                 ...data,
                 start,
                 end,
-                doctor: doctors.find(d => d.id === data.doctorId)?.nombre || "Doctor",
+                doctor: doctors.find(d => d.id === data.doctorId) ? `${doctors.find(d => d.id === data.doctorId).nombre || ''} ${doctors.find(d => d.id === data.doctorId).apellido || ''}`.trim() || doctors.find(d => d.id === data.doctorId).nombreCompleto : "Doctor",
                 // Si es paciente nuevo, marcamos como registro incompleto (captura inicial)
                 paciente: data.isNewPatient ? `${data.nombres} ${data.apellidos}` : data.pacienteNombre,
                 celular: data.isNewPatient ? data.celular : selectedPatientPhone,
@@ -447,7 +447,18 @@ export default function AppointmentModal({
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Profesional *</label>
                                     <select {...register("doctorId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                         <option value="">ELIJA DOCTOR...</option>
-                                        {doctors.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                                        {/* ✅ FILTRADO POR ESPECIALIDAD */}
+                                        {doctors
+                                            .filter(d => {
+                                                const esp = watch("especialidadId");
+                                                if (!esp) return true;
+                                                return d.especialidades && Array.isArray(d.especialidades) && d.especialidades.includes(esp);
+                                            })
+                                            .map(d => {
+                                                const fullName = `${d.nombre || d.nombres || ''} ${d.apellido || d.apellidos || ''}`.trim() || d.nombreCompleto || 'Doctor';
+                                                return <option key={d.id} value={d.id}>{fullName}</option>;
+                                            })
+                                        }
                                     </select>
                                 </div>
 

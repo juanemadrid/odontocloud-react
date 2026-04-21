@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getPlansByPatient, deletePlan } from '../../../services/planService';
+import { getPatientById } from '../../../services/patientService';
 import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
+import { BudgetPrintService } from '../../../services/BudgetPrintService';
 import { db } from '../../../firebase/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEditingPlan }) {
+export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditingPlan }) {
+    const patientId = patient?.id;
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
@@ -14,6 +17,9 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
     
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('presupuesto'); // 'presupuesto' | 'plan'
+    
+    // Deletion Modal State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, planId: null, planName: "" });
     
     // Form fields
     const [formData, setFormData] = useState({
@@ -58,15 +64,47 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("¿Seguro que deseas eliminar este registro?")) return;
+    const handleDeleteClick = (plan) => {
+        setDeleteModal({
+            isOpen: true,
+            planId: plan.id,
+            planName: plan.title || plan.nombre || "este registro"
+        });
+    };
+
+    const confirmDelete = async () => {
+        const id = deleteModal.planId;
+        setDeleteModal({ ...deleteModal, isOpen: false });
         try {
             await deletePlan(id);
-            toast.success("Registro eliminado");
+            toast.success("Registro eliminado permanentemente");
             loadData();
         } catch (e) {
-            toast.error("Error al eliminar");
+            toast.error("Error al eliminar el registro");
         }
+    };
+
+    const handlePrint = async (e, plan) => {
+        if (e) e.stopPropagation();
+        
+        if (!patient) {
+            toast.error("Error: Datos del paciente no cargados");
+            return;
+        }
+
+        const clinic = userProfile?.tenant || {
+            nombre: userProfile?.tenantNombre || userProfile?.clinica || "Clínica",
+            inquilino: userProfile?.inquilino || userProfile?.tenantId || userProfile?.tenant?.id
+        };
+
+        if (!clinic.inquilino && !clinic.id) {
+            console.error("Clinic identification failed:", { userProfile });
+            toast.error("Datos de clínica incompletos. Por favor contacte soporte.");
+            return;
+        }
+
+        // Pass userProfile to generatePDF to use as fallback for professional name
+        await BudgetPrintService.generatePDF(plan, patient, clinic, userProfile);
     };
 
     const openModal = (type) => {
@@ -136,20 +174,45 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
                                 validUntil.setDate(validUntil.getDate() + vigencia);
 
                                 return (
-                                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 uppercase flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#8CC63F]"></div>{p.title || p.nombre}</td>
-                                    <td className="px-6 py-4 uppercase text-slate-400">{userProfile?.tenant?.nombre || "Clínica"}</td>
-                                    <td className="px-6 py-4">{p.profesionalId || p.profesional || "No Asignado"}</td>
-                                    <td className="px-6 py-4 align-middle">
-                                        <div className="flex items-center gap-2"><FiFileText className="text-slate-300"/> {createdAt.toLocaleDateString()}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">{validUntil.toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-right font-black text-slate-700 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onEdit(p)}>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => alert("Generando PDF institucional...")} className="p-1.5 text-slate-400 hover:text-indigo-600"><FiPrinter size={15} /></button>
-                                            <button onClick={() => onEdit(p)} className="p-1.5 text-slate-400 hover:text-blue-500"><FiEdit3 size={15} /></button>
-                                            <button onClick={() => handleDelete(p.id)} className="p-1.5 text-slate-400 hover:text-red-500"><FiTrash2 size={15} /></button>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-2.5 h-2.5 rounded-full ${p.status === 'accepted' ? 'bg-[#8CC63F]' : 'bg-slate-300'}`} />
+                                            <span className="uppercase text-slate-700">{p.title || p.nombre}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
+                                    <td className="px-6 py-4 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
+                                    <td className="px-6 py-4 align-middle">
+                                        <div className="flex items-center gap-2 text-slate-500">
+                                            <FiFileText className="text-slate-300"/> {createdAt.toLocaleDateString()}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center text-slate-500">{validUntil.toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
+                                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
+                                                title="Editar"
+                                            >
+                                                <FiEdit3 size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => handlePrint(e, p)} 
+                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
+                                                title="Imprimir"
+                                            >
+                                                <FiPrinter size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
+                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm" 
+                                                title="Eliminar"
+                                            >
+                                                <FiTrash2 size={14} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -190,19 +253,42 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
                             ) : planesTrat.map(p => {
                                 const createdAt = p.date ? new Date(p.date) : new Date();
                                 return (
-                                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 uppercase flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#8CC63F]"></div>{p.title || p.nombre}</td>
-                                    <td className="px-6 py-4 uppercase text-slate-400">{userProfile?.tenant?.nombre || "Clínica"}</td>
-                                    <td className="px-6 py-4">{p.profesionalId || p.profesional || "No Asignado"}</td>
-                                    <td className="px-6 py-4 text-center">{createdAt.toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-center text-slate-400">Sin finalizar</td>
-                                    <td className="px-6 py-4 text-right font-black text-slate-700 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
-                                    <td className="px-6 py-4 text-right font-black text-[#8CC63F] font-mono">$ 0</td>
+                                <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onEdit(p)}>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => alert("Generando PDF institucional...")} className="p-1.5 text-slate-400 hover:text-indigo-600"><FiPrinter size={15} /></button>
-                                            <button onClick={() => onEdit(p)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-md shadow-md"><FiEdit3 size={15} /></button>
-                                            <button onClick={() => handleDelete(p.id)} className="p-1.5 text-slate-400 hover:text-red-500"><FiTrash2 size={15} /></button>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#8CC63F] shadow-[0_0_8px_rgba(140,198,63,0.5)]" />
+                                            <span className="uppercase text-slate-700">{p.title || p.nombre}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
+                                    <td className="px-6 py-4 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
+                                    <td className="px-6 py-4 text-center text-slate-500">{createdAt.toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-center text-slate-300 text-[10px] uppercase font-black tracking-widest">Sin finalizar</td>
+                                    <td className="px-6 py-4 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                    <td className="px-6 py-4 text-right font-black text-[#8CC63F] font-mono">$ 0</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
+                                                className="p-2 bg-[#8CC63F] text-white rounded-lg hover:bg-[#7bb335] transition-all shadow-sm" 
+                                                title="Ver Plan"
+                                            >
+                                                <FiEdit3 size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => handlePrint(e, p)} 
+                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
+                                                title="Imprimir"
+                                            >
+                                                <FiPrinter size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
+                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm" 
+                                                title="Eliminar"
+                                            >
+                                                <FiTrash2 size={14} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -224,7 +310,7 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
                                 <FiX size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+                        <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Nombre *</label>
                                 <input 
@@ -275,9 +361,48 @@ export default function PlanList({ patientId, refreshKey, onEdit, onNew, setEdit
 
                             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
                                 <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 text-xs font-black uppercase text-slate-500 hover:text-slate-700">Cerrar</button>
-                                <button type="submit" className="px-6 py-2 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-md">Crear</button>
+                                <button 
+                                    type="button" 
+                                    onClick={handleCreateSubmit}
+                                    className="px-6 py-2 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-md"
+                                >
+                                    Crear
+                                </button>
                             </div>
-                        </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmación de Eliminación Elite */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn border border-rose-100">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-6 animate-pulse">
+                                <FiTrash2 size={40} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">¿Confirmar Eliminación?</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+                                Estás a punto de eliminar el presupuesto <span className="text-rose-500 font-bold">"{deleteModal.planName}"</span>. 
+                                Esta acción es irreversible y se perderán todos los datos asociados.
+                            </p>
+                            
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={confirmDelete}
+                                    className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all active:scale-95"
+                                >
+                                    SÍ, ELIMINAR REGISTRO
+                                </button>
+                                <button 
+                                    onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all text-center"
+                                >
+                                    NO, MANTENER REGISTRO
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

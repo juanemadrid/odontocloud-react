@@ -7,7 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { FiPlus, FiSearch, FiFileText, FiImage, FiTrash2, FiDownload, FiUploadCloud } from "react-icons/fi";
 
 export default function PatientRxTab({ patient, onUpdate }) {
-    const { toast } = useToast();
+    const toast = useToast();
     const { userProfile } = useAuth();
     const [viewMode, setViewMode] = useState("list"); // 'list' | 'form'
     const [uploading, setUploading] = useState(false);

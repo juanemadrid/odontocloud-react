@@ -4,17 +4,33 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { FiDollarSign, FiPlusCircle, FiCreditCard, FiSmartphone, FiBriefcase, FiAlertCircle, FiCheck, FiFileText, FiUser } from "react-icons/fi";
+import { formatCurrency } from '../../../utils/formatters';
 
 export default function PagoTab({ patient }) {
     const { userProfile } = useAuth();
-    const { toast } = useToast();
+    const toast = useToast();
     
     const [loading, setLoading] = useState(false);
     const [amount, setAmount] = useState("");
+    const [displayAmount, setDisplayAmount] = useState(""); // For masking
     const [method, setMethod] = useState("Efectivo");
     const [concept, setConcept] = useState("ABONO A TRATAMIENTO");
     const [profesional, setProfesional] = useState(userProfile?.nombreCompleto || "");
     const [notes, setNotes] = useState("");
+
+    const handleAmountChange = (val) => {
+        const rawValue = val.toString().replace(/\D/g, '');
+        const numValue = Number(rawValue);
+        
+        if (rawValue === "") {
+            setAmount("");
+            setDisplayAmount("");
+            return;
+        }
+
+        setAmount(numValue);
+        setDisplayAmount(formatCurrency(numValue));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -42,6 +58,7 @@ export default function PagoTab({ patient }) {
             
             toast.success("Pago registrado exitosamente");
             setAmount("");
+            setDisplayAmount("");
             setNotes("");
             setConcept("ABONO A TRATAMIENTO");
         } catch (error) {
@@ -84,17 +101,18 @@ export default function PagoTab({ patient }) {
                                 <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-black text-slate-200 group-focus-within:text-[#8CC63F] transition-colors leading-none">$</span>
                                 <input 
                                     required
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    className="bg-transparent border-none p-0 pl-10 text-6xl font-black text-slate-800 tracking-tighter outline-none focus:ring-0 w-full placeholder:text-slate-100 placeholder:animate-pulse"
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={displayAmount}
+                                    onChange={(e) => handleAmountChange(e.target.value)}
+                                    className="bg-transparent border-none p-0 pl-10 text-6xl font-black text-slate-800 tracking-tighter outline-none focus:ring-0 w-full placeholder:text-slate-100 placeholder:animate-pulse caret-slate-950"
                                 />
                             </div>
                             <div className="mt-8 flex flex-wrap justify-center gap-2">
                                  {[10000, 50000, 100000, 500000].map(val => (
-                                     <button key={val} type="button" onClick={() => setAmount(val.toString())} className="px-4 py-2 bg-white text-[10px] font-black text-slate-400 border border-slate-100 rounded-full hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                                         + {val.toLocaleString()}
+                                     <button key={val} type="button" onClick={() => handleAmountChange(val)} className="px-4 py-2 bg-white text-[10px] font-black text-slate-400 border border-slate-100 rounded-full hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                         + {formatCurrency(val)}
                                      </button>
                                  ))}
                             </div>
@@ -150,7 +168,7 @@ export default function PagoTab({ patient }) {
                                             placeholder="NOMBRE DEL PROFESIONAL..."
                                             value={profesional}
                                             onChange={(e) => setProfesional(e.target.value.toUpperCase())}
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-slate-200"
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-slate-200 caret-slate-950"
                                         />
                                     </div>
                                 </div>
@@ -164,7 +182,7 @@ export default function PagoTab({ patient }) {
                                             placeholder="DETALLES DE LA TRANSACCIÓN..."
                                             value={notes}
                                             onChange={(e) => setNotes(e.target.value.toUpperCase())}
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-slate-200"
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-slate-200 caret-slate-950"
                                         />
                                     </div>
                                 </div>

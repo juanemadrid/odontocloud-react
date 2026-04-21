@@ -1,98 +1,227 @@
-import React, { useState } from 'react';
-import { FiChevronDown, FiChevronUp, FiFilter, FiSearch } from 'react-icons/fi';
+import React, { useState, useMemo } from 'react';
+import { FiChevronDown, FiFilter, FiSearch, FiMapPin, FiUser, FiX } from 'react-icons/fi';
 import MiniCalendar from './MiniCalendar';
 
-const FilterAccordion = ({ title, isOpen, onToggle, children }) => (
+// Acordeón colapsable - cerrado por defecto
+const FilterAccordion = ({ title, icon: Icon, isOpen, onToggle, count, children }) => (
     <div className="border-b border-slate-100 last:border-0">
         <button
             onClick={onToggle}
-            className="w-full flex justify-between items-center py-4 px-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors"
+            className="w-full flex justify-between items-center py-3 px-3 hover:bg-slate-50/80 rounded-xl transition-all duration-200 group"
         >
-            {title}
-            {isOpen ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
+            <div className="flex items-center gap-2">
+                <Icon size={14} className={`transition-colors ${isOpen ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-400'}`} />
+                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isOpen ? 'text-blue-600' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    {title}
+                </span>
+                {count > 0 && (
+                    <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                        {count}
+                    </span>
+                )}
+            </div>
+            <FiChevronDown
+                size={14}
+                className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-500' : ''}`}
+            />
         </button>
-        {isOpen && (
-            <div className="pb-4 px-2 animate-fadeIn">
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="pb-3 px-1">
                 {children}
             </div>
-        )}
+        </div>
     </div>
 );
 
-export default function AgendaSidebar({ selectedDate, onDateChange, doctors, selectedDoctor, onSelectDoctor, branches = [], selectedBranch, onSelectBranch }) {
-    const [openSections, setOpenSections] = useState({ sucursal: true, profesionales: true });
+export default function AgendaSidebar({
+    selectedDate, onDateChange,
+    doctors,
+    selectedDoctor, onSelectDoctor,
+    branches = [],
+    selectedBranch, onSelectBranch
+}) {
+    // Ambas secciones CERRADAS por defecto
+    const [openSections, setOpenSections] = useState({ sucursal: false, profesionales: false });
+    const [doctorSearch, setDoctorSearch] = useState('');
+    const [branchSearch, setBranchSearch] = useState('');
 
     const toggleSection = (sec) => {
         setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
     };
 
+    // Filtrar doctores mientras se escribe
+    const filteredDoctors = useMemo(() => {
+        if (!doctorSearch.trim()) return doctors;
+        const q = doctorSearch.toLowerCase();
+        return doctors.filter(d => (d.nombre || '').toLowerCase().includes(q));
+    }, [doctors, doctorSearch]);
+
+    // Filtrar sedes mientras se escribe
+    const filteredBranches = useMemo(() => {
+        if (!branchSearch.trim()) return branches;
+        const q = branchSearch.toLowerCase();
+        return branches.filter(b => (b.nombre || '').toLowerCase().includes(q));
+    }, [branches, branchSearch]);
+
+    // Build the name robustly directly from the node
+    const getFullName = (u) => {
+        if (!u) return "?";
+        return `${u.nombre || u.nombres || ''} ${u.apellido || u.apellidos || ''}`.trim() || u.nombreCompleto || u.email || "Doctor";
+    };
+
+    const selectedBranchName = branches.find(b => b.id === selectedBranch)?.nombre;
+    const selectedDoctorObj = doctors.find(d => d.id === selectedDoctor);
+    const selectedDoctorName = getFullName(selectedDoctorObj);
+
     return (
-        <div className="w-full h-full flex flex-col gap-4">
+        <div className="w-full h-full flex flex-col gap-3">
             {/* Calendar Card */}
-            <div className="bg-white rounded-[28px] shadow-sm border border-slate-100 p-2">
+            <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 p-2 shrink-0">
                 <MiniCalendar selectedDate={selectedDate} onDateChange={onDateChange} />
             </div>
 
             {/* Filters Card */}
-            <div className="bg-white rounded-[28px] shadow-sm border border-slate-100 flex-1 overflow-hidden flex flex-col">
-                <div className="p-5 border-b border-slate-50 bg-slate-50/30">
-                    <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                        <FiFilter className="text-blue-600" />
+            <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex-1 overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30 shrink-0">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                        <FiFilter className="text-blue-600" size={12} />
                         <span>Filtros de Agenda</span>
                     </div>
                 </div>
 
-                <div className="p-3 flex-1 overflow-y-auto custom-scrollbar">
+                {/* Accordion list */}
+                <div className="p-2 flex-1 overflow-y-auto custom-scrollbar">
+
+                    {/* ─── SEDE / SUCURSAL ─── */}
                     <FilterAccordion
-                        title="Sede / Sucursal"
+                        title={selectedBranch ? selectedBranchName : "Sede / Sucursal"}
+                        icon={FiMapPin}
                         isOpen={openSections.sucursal}
                         onToggle={() => toggleSection('sucursal')}
+                        count={selectedBranch ? 1 : 0}
                     >
-                        <select
-                            value={selectedBranch || ""}
-                            onChange={(e) => onSelectBranch(e.target.value)}
-                            className="w-full p-4 text-[11px] font-bold bg-slate-50 border border-slate-100 rounded-[16px] text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all uppercase tracking-tight cursor-pointer appearance-none shadow-sm"
-                        >
-                            <option value="">TODAS LAS SEDES</option>
-                            {branches.map(branch => (
-                                <option key={branch.id} value={branch.id}>
-                                    {branch.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </FilterAccordion>
+                        {/* Buscador de sedes */}
+                        {branches.length > 3 && (
+                            <div className="relative mb-2 mt-1">
+                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar sede..."
+                                    value={branchSearch}
+                                    onChange={e => setBranchSearch(e.target.value)}
+                                    className="w-full pl-8 pr-8 py-2 text-[10px] bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-300 placeholder:text-slate-300 font-bold uppercase transition-all"
+                                />
+                                {branchSearch && (
+                                    <button onClick={() => setBranchSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                                        <FiX size={11} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
-                    <FilterAccordion
-                        title="Profesionales"
-                        isOpen={openSections.profesionales}
-                        onToggle={() => toggleSection('profesionales')}
-                    >
-                        <div className="relative mb-4">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <input
-                                type="text"
-                                placeholder="BUSCAR PROFESIONAL..."
-                                className="w-full pl-11 pr-4 py-3 text-[11px] bg-slate-50 border border-slate-100 rounded-[16px] outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all placeholder:text-slate-300 font-bold uppercase"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+                        {/* "Todas las sedes" siempre visible */}
+                        <div className="flex flex-col gap-1 mt-1">
                             <button
-                                onClick={() => onSelectDoctor(null)}
-                                className={`text-left text-[11px] py-3.5 px-5 rounded-[16px] transition-all truncate font-black uppercase tracking-widest ${!selectedDoctor ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                                onClick={() => { onSelectBranch(''); toggleSection('sucursal'); }}
+                                className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                    !selectedBranch
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                }`}
                             >
-                                Todos los profesionales
+                                <FiMapPin size={11} />
+                                Todas las sedes
                             </button>
-                            {doctors.map(doc => (
+
+                            {filteredBranches.map(branch => (
                                 <button
-                                    key={doc.id}
-                                    onClick={() => onSelectDoctor(doc.id)}
-                                    className={`text-left text-[11px] py-3.5 px-5 rounded-[16px] transition-all truncate font-black uppercase tracking-widest ${selectedDoctor === doc.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                                    key={branch.id}
+                                    onClick={() => { onSelectBranch(branch.id); toggleSection('sucursal'); }}
+                                    className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                        selectedBranch === branch.id
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                    }`}
                                 >
-                                    {doc.nombre}
+                                    <FiMapPin size={11} />
+                                    {branch.nombre}
                                 </button>
                             ))}
+
+                            {filteredBranches.length === 0 && branchSearch && (
+                                <p className="text-[9px] text-slate-300 font-bold uppercase text-center py-2">Sin resultados</p>
+                            )}
                         </div>
                     </FilterAccordion>
+
+                    {/* ─── PROFESIONALES ─── */}
+                    <FilterAccordion
+                        title={selectedDoctor ? selectedDoctorName : "Profesionales"}
+                        icon={FiUser}
+                        isOpen={openSections.profesionales}
+                        onToggle={() => toggleSection('profesionales')}
+                        count={selectedDoctor ? 1 : 0}
+                    >
+                        {/* Buscador funcional */}
+                        <div className="relative mb-2 mt-1">
+                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Buscar profesional..."
+                                value={doctorSearch}
+                                onChange={e => setDoctorSearch(e.target.value)}
+                                className="w-full pl-8 pr-8 py-2 text-[10px] bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-300 placeholder:text-slate-300 font-bold uppercase transition-all"
+                            />
+                            {doctorSearch && (
+                                <button onClick={() => setDoctorSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                                    <FiX size={11} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Lista filtrada */}
+                        <div className="flex flex-col gap-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-0.5">
+                            {/* "Todos" solo si no hay búsqueda activa */}
+                            {!doctorSearch && (
+                                <button
+                                    onClick={() => { onSelectDoctor(null); toggleSection('profesionales'); }}
+                                    className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                        !selectedDoctor
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <FiUser size={11} />
+                                    Todos los profesionales
+                                </button>
+                            )}
+
+                            {filteredDoctors.map(doc => (
+                                <button
+                                    key={doc.id}
+                                    onClick={() => { onSelectDoctor(doc.id); setDoctorSearch(''); toggleSection('profesionales'); }}
+                                    className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                        selectedDoctor === doc.id
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] font-black shrink-0">
+                                        {(getFullName(doc) || '?')[0].toUpperCase()}
+                                    </span>
+                                    <span className="truncate">{getFullName(doc)}</span>
+                                </button>
+                            ))}
+
+                            {filteredDoctors.length === 0 && (
+                                <p className="text-[9px] text-slate-300 font-bold uppercase text-center py-3">
+                                    {doctorSearch ? 'Sin resultados' : 'No hay doctores registrados'}
+                                </p>
+                            )}
+                        </div>
+                    </FilterAccordion>
+
                 </div>
             </div>
         </div>

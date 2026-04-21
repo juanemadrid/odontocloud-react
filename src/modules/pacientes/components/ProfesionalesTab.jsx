@@ -6,12 +6,13 @@ import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function ProfesionalesTab({ patient, onUpdate }) {
-    const { toast } = useToast();
+    const toast = useToast();
     const { userProfile } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const [catalogProfesionales, setCatalogProfesionales] = useState([]);
+    const [especialidadesMap, setEspecialidadesMap] = useState({});
     const [selectedProfId, setSelectedProfId] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -38,6 +39,18 @@ export default function ProfesionalesTab({ patient, onUpdate }) {
                     };
                 });
                 setCatalogProfesionales(data.sort((a,b) => a.nombreCompleto?.localeCompare(b.nombreCompleto) || 0));
+
+                // Cargar especialidades para el mapeo visual
+                const espQ = query(
+                    collection(db, "especialidades"), 
+                    where("inquilino", "==", userProfile.inquilino)
+                );
+                const espSnap = await getDocs(espQ);
+                const eMap = {};
+                espSnap.forEach(e => {
+                    eMap[e.id] = e.data().nombre || "Sin nombre";
+                });
+                setEspecialidadesMap(eMap);
             } catch (err) {
                 console.error("Error cargando profesionales:", err);
             }
@@ -184,7 +197,7 @@ export default function ProfesionalesTab({ patient, onUpdate }) {
                                                     </span>
                                                     {prof.especialidades?.length > 0 && (
                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
-                                                            {prof.especialidades.join(", ")}
+                                                            {prof.especialidades.map(id => especialidadesMap[id] || id).join(", ")}
                                                         </span>
                                                     )}
                                                 </div>
@@ -229,7 +242,7 @@ export default function ProfesionalesTab({ patient, onUpdate }) {
                                             <span className="font-bold text-[12px] text-slate-800 uppercase tracking-tight">{pro.nombre}</span>
                                         </td>
                                         <td className="py-4 px-4 text-[11px] font-bold text-slate-500 uppercase">
-                                            {pro.especialidades?.length > 0 ? pro.especialidades.join(", ") : "—"}
+                                            {pro.especialidades?.length > 0 ? pro.especialidades.map(id => especialidadesMap[id] || id).join(", ") : "—"}
                                         </td>
                                         <td className="py-4 px-4 text-[11px] text-slate-400 font-medium tracking-tight">
                                             {formatDate(pro.ultimaActualizacion)}

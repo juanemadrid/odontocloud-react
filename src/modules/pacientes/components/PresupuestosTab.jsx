@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
+import { useFormContext } from 'react-hook-form';
 import PlanList from './PlanList';
 import PlanEditor from './PlanEditor';
 import { FiPlus, FiFileText, FiArrowRight } from "react-icons/fi";
 
-export default function PresupuestosTab({ patient }) {
+export default function PresupuestosTab({ patient: dbPatient }) {
+    const { watch } = useFormContext();
     // Mode: 'list' | 'create' | 'edit'
     const [mode, setMode] = useState('list');
     const [editingPlan, setEditingPlan] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Merge DB patient with LIVE form data to ensure PDF has the latest name/doc
+    const patient = {
+        ...dbPatient,
+        nombreCompleto: watch("nombreCompleto") || dbPatient?.nombreCompleto,
+        nroDocumento: watch("nroDocumento") || dbPatient?.nroDocumento,
+        celular: watch("celular") || dbPatient?.celular,
+        email: watch("email") || dbPatient?.email
+    };
 
     const handleSaved = () => {
         setMode('list');
@@ -49,7 +60,7 @@ export default function PresupuestosTab({ patient }) {
                     {/* Content View */}
                     <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
                         <PlanList
-                            patientId={patient.id}
+                            patient={patient}
                             refreshKey={refreshKey}
                             onEdit={handleEdit}
                             onNew={handleNew}

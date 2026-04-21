@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiAlertCircle, FiTrendingUp, FiUsers, FiBox, FiArrowRight } from "react-icons/fi";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
@@ -6,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function SmartAlerts() {
     const { userProfile } = useAuth();
+    const navigate = useNavigate();
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -68,15 +70,62 @@ export default function SmartAlerts() {
                     });
                 });
 
-                // 3. Efficiency Check (Mocked for Demo)
-                foundAlerts.push({
-                    id: 'kpi-profit',
-                    type: 'negocio',
-                    title: 'Tratamiento más rentable',
-                    description: 'Las "Limpiezas" han generado un 20% más de margen este mes.',
-                    icon: FiTrendingUp,
-                    color: 'emerald'
+                // 3. Efficiency Check (Real Data from treatment_plans)
+                const qPlans = query(
+                    collection(db, "treatment_plans"),
+                    where("inquilino", "==", userProfile.inquilino),
+                    limit(50)
+                );
+                const snapPlans = await getDocs(qPlans);
+                const treatmentCounts = {};
+                
+                snapPlans.docs.forEach(docPlan => {
+                    const data = docPlan.data();
+                    // Optional: check if data belongs to tenant if property exists
+                    // if (data.inquilino && data.inquilino !== userProfile.inquilino) return;
+
+                    if (data.items && Array.isArray(data.items)) {
+                        data.items.forEach(item => {
+                            // Validar que exista descripción y cantidad
+                            if (!item.desc) return;
+                            const name = item.desc;
+                            const subtotal = (Number(item.amount) || 0) * (Number(item.qty) || 1);
+                            
+                            if (!treatmentCounts[name]) {
+                                treatmentCounts[name] = { name, total: 0 };
+                            }
+                            treatmentCounts[name].total += subtotal;
+                        });
+                    }
                 });
+
+                let mostProfitable = null;
+                Object.values(treatmentCounts).forEach(t => {
+                    if (!mostProfitable || t.total > mostProfitable.total) {
+                        mostProfitable = t;
+                    }
+                });
+
+                if (mostProfitable && mostProfitable.total > 0) {
+                    foundAlerts.push({
+                        id: 'kpi-profit',
+                        type: 'negocio',
+                        title: 'Tratamiento Más Rentable',
+                        description: `"${mostProfitable.name}" es tu tratamiento más cotizado, sumando $${mostProfitable.total.toLocaleString('es-CO')} este periodo.`,
+                        icon: FiTrendingUp,
+                        color: 'emerald'
+                    });
+                } else {
+                    // Fallback visual si no hay datos suficientes todavía
+                    foundAlerts.push({
+                        id: 'kpi-profit-empty',
+                        type: 'negocio',
+                        title: 'Sin Datos Suficientes',
+                        description: 'Crea más presupuestos para calcular tu tratamiento más rentable.',
+                        icon: FiTrendingUp,
+                        color: 'emerald'
+                    });
+                }
 
                 setAlerts(foundAlerts);
             } catch (err) {
@@ -106,6 +155,11 @@ export default function SmartAlerts() {
             {alerts.map((alert) => (
                 <div
                     key={alert.id}
+                    onClick={() => {
+                        if (alert.type === 'fidelización') navigate('/dashboard/pacientes');
+                        else if (alert.type === 'inventario') navigate('/dashboard/inventario');
+                        else if (alert.type === 'negocio') navigate('/dashboard/reportes');
+                    }}
                     className="group bg-white border border-slate-100 p-4 rounded-2xl flex items-start gap-4 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer"
                 >
                     <div className={`

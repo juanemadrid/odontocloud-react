@@ -6,7 +6,7 @@ import { useToast } from '../../../context/ToastContext';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
-    const { toast } = useToast();
+    const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     

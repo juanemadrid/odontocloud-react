@@ -34,6 +34,7 @@ export default function Indicadores() {
     pendiente: 0
   });
   const [recentInvoices, setRecentInvoices] = useState([]);
+  const [topTreatments, setTopTreatments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadStats = async () => {
@@ -78,6 +79,29 @@ export default function Indicadores() {
 
       const totalPendiente = totalFacturado - totalRecaudado;
 
+      // 4. Top Tratamientos (Business Intelligence)
+      const qPlans = query(collection(db, "treatment_plans"), where("inquilino", "==", userProfile.inquilino));
+      const snapPlans = await getDocs(qPlans);
+      const treatmentCounts = {};
+      
+      snapPlans.docs.forEach(docPlan => {
+          const data = docPlan.data();
+          if (data.items && Array.isArray(data.items)) {
+              data.items.forEach(item => {
+                  if (!item.desc) return;
+                  const name = item.desc;
+                  const subtotal = (Number(item.amount) || 0) * (Number(item.qty) || 1);
+                  if (!treatmentCounts[name]) {
+                      treatmentCounts[name] = { name, total: 0 };
+                  }
+                  treatmentCounts[name].total += subtotal;
+              });
+          }
+      });
+      const topT = Object.values(treatmentCounts)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
       setStats({
         pacientes: totalPacientes,
         citas: totalCitas,
@@ -86,6 +110,7 @@ export default function Indicadores() {
         pendiente: totalPendiente
       });
       setRecentInvoices(recent);
+      setTopTreatments(topT);
 
     } catch (error) {
       console.error("Error loading reports:", error);
@@ -235,6 +260,36 @@ export default function Indicadores() {
                 </div>
               </div>
             </div>
+
+            {/* Rentabilidad de Tratamientos */}
+            <div className="bg-white rounded-[40px] border border-slate-200/50 shadow-[0_20px_50px_rgba(0,0,0,0.03)] p-8 relative overflow-hidden mt-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-[16px] font-black text-slate-800 uppercase tracking-tight">Análisis de Rentabilidad</h3>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Top 5 Tratamientos más cotizados según presupuestos</p>
+                </div>
+                <div className="bg-purple-50 text-purple-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-100">
+                  Business Intelligence
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {topTreatments.map((t, i) => (
+                  <div key={i} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 hover:scale-105 transition-transform duration-300">
+                    <div className="text-[28px] font-black text-slate-200 mb-2 leading-none">#{i + 1}</div>
+                    <div className="text-[11px] font-black text-slate-700 uppercase tracking-tight h-8 line-clamp-2 leading-tight">{t.name}</div>
+                    <div className="mt-4 text-[16px] font-black text-emerald-600">${t.total.toLocaleString('es-CO')}</div>
+                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cotizado/Presupuestado</div>
+                  </div>
+                ))}
+                {topTreatments.length === 0 && (
+                  <div className="col-span-5 text-center py-10 text-slate-400 font-bold text-sm">
+                    No hay datos de presupuestos para analizar.
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
       </div>

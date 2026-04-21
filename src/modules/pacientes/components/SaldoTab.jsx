@@ -1,134 +1,221 @@
 import React, { useEffect, useState } from 'react';
 import { getPatientFinancials } from '../../../services/billingService';
-import { FiDollarSign, FiTrendingUp, FiActivity, FiArrowRight, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { 
+    FiDollarSign, FiPlus, FiSearch, FiFileText, FiClock, 
+    FiCheckCircle, FiAlertCircle, FiTrendingUp, FiArrowRight, FiActivity
+} from "react-icons/fi";
+import AddCreditModal from './AddCreditModal';
+import { formatCurrency } from '../../../utils/formatters';
 
 export default function SaldoTab({ patient }) {
     const [financials, setFinancials] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [modalOpen, setModalOpen] = useState(false);
+
+
+    const loadData = async () => {
+        if (!patient?.id) return;
+        setLoading(true);
+        const data = await getPatientFinancials(patient.id);
+        setFinancials(data);
+        setLoading(false);
+    };
 
     useEffect(() => {
-        if (!patient?.id) return;
-        const load = async () => {
-            const data = await getPatientFinancials(patient.id);
-            setFinancials(data);
-            setLoading(false);
-        };
-        load();
+        loadData();
     }, [patient?.id]);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-20 opacity-30 animate-pulse">
             <FiActivity size={48} className="text-slate-400 mb-4" />
-            <h5 className="text-[14px] font-black uppercase tracking-widest text-slate-500">Analizando Finanzas...</h5>
+            <h5 className="text-[14px] font-black uppercase tracking-widest text-slate-500">Analizando Finanzas Hub...</h5>
         </div>
     );
 
-    const { totals } = financials;
+    const { totals, plans = [] } = financials;
     const isDebtFree = totals.balance <= 0;
 
+    const filteredPlans = plans.filter(p => 
+        (p.name || p.type || "Operatoria").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="flex-1 flex flex-col p-6 md:p-10 animate-fadeIn bg-slate-50/20 custom-scrollbar overflow-y-auto">
-            {/* Header / Intro */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-                <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-indigo-600 rounded-[22px] flex items-center justify-center text-white shadow-xl shadow-indigo-100">
-                        <FiTrendingUp size={28} />
+        <div className="flex-1 flex flex-col h-full bg-slate-50/20 animate-fadeIn overflow-hidden">
+            
+            {/* 1. HUD ELITE (Top metrics) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 md:px-10 border-b border-slate-100 bg-white shrink-0">
+                <HUDCard 
+                    label="Total Facturado" 
+                    value={totals.totalFacturado} 
+                    icon={FiFileText} 
+                    color="slate" 
+                />
+                <HUDCard 
+                    label="Total Recaudado" 
+                    value={totals.totalPagado} 
+                    icon={FiCheckCircle} 
+                    color="emerald" 
+                />
+                <HUDCard 
+                    label="Saldo por Cobrar" 
+                    value={totals.balance > 0 ? totals.balance : 0} 
+                    icon={FiAlertCircle} 
+                    color="rose" 
+                    isCritical={totals.balance > 0}
+                />
+                <HUDCard 
+                    label="Saldo a Favor" 
+                    value={totals.totalSaldosAFavor} 
+                    icon={FiDollarSign} 
+                    color="indigo" 
+                    badge="Crédito"
+                />
+            </div>
+
+            {/* 2. TOOLBAR & TABLE AREA */}
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30">
+                
+                {/* TOOLBAR */}
+                <div className="px-6 md:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm border-b border-slate-100/50">
+                    <div className="relative w-full sm:w-96">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar en recibos de caja..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-600 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all placeholder:text-slate-200 uppercase"
+                        />
                     </div>
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-1 uppercase">Estado de <span className="text-indigo-600 underline decoration-indigo-100 decoration-8 underline-offset-4">Cuenta</span></h2>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                           <span>Balance financiero consolidado</span>
-                           <FiArrowRight size={10} className="text-slate-200" />
-                           <span className="text-slate-500">{patient?.nombreCompleto}</span>
-                        </div>
+                    
+                    <button 
+                        onClick={() => setModalOpen(true)}
+                        className="w-full sm:w-auto px-8 py-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-full font-black text-[11px] uppercase tracking-widest shadow-xl shadow-[#8CC63F]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                         <FiPlus size={16} strokeWidth={3} /> Adicionar saldo a favor
+                    </button>
+                </div>
+
+                {/* TABLE (Recibo de Caja Style) */}
+                <div className="flex-1 overflow-auto custom-scrollbar p-6 pt-2">
+                    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+                        <table className="w-full text-left border-collapse min-w-[700px]">
+                            <thead className="bg-slate-50/80 border-b border-slate-100">
+                                <tr>
+                                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del Plan</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Sucursal</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Costo Total</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Pagado</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo</th>
+                                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {filteredPlans.length > 0 ? (
+                                    filteredPlans.map(plan => {
+                                        const saldo = plan.costoTotal - plan.pagado;
+                                        return (
+                                            <tr key={plan.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                <td className="py-5 px-8">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                                                            <FiFileText size={14} />
+                                                        </div>
+                                                        <span className="text-[12px] font-black text-slate-700 uppercase tracking-tight">{plan.name || "Operatoria Gral."}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 px-6 text-center">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{plan.sucursal || "Sede Principal"}</span>
+                                                </td>
+                                                <td className="py-5 px-6 text-right">
+                                                    <span className="text-[12px] font-black text-slate-700">$ {formatCurrency(plan.costoTotal)}</span>
+                                                </td>
+                                                <td className="py-5 px-6 text-right">
+                                                    <span className="text-[12px] font-black text-emerald-600">$ {formatCurrency(plan.pagado)}</span>
+                                                </td>
+                                                <td className="py-5 px-6 text-right">
+                                                    <span className={`text-[12px] font-black ${saldo > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                                                        $ {formatCurrency(saldo)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-5 px-8 text-center">
+                                                    <button className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90 mx-auto">
+                                                        <FiArrowRight size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan="6" className="py-20 text-center">
+                                            <div className="flex flex-col items-center opacity-20">
+                                                <FiFileText size={48} className="mb-4" />
+                                                <p className="text-xs font-black uppercase tracking-widest">No hay planes de tratamiento financieros registrados</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border ${isDebtFree ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
-                    {isDebtFree ? <FiCheckCircle size={18} /> : <FiAlertCircle size={18} />}
-                    <span className="text-[11px] font-black uppercase tracking-widest">{isDebtFree ? 'Al día en pagos' : 'Presenta deuda pendiente'}</span>
+                {/* FOOTER INFO */}
+                <div className="px-10 py-6 border-t border-slate-100 bg-white flex justify-between items-center opacity-60">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <FiCheckCircle size={12} className="text-emerald-500" /> Auditoría financiera activa v4.0
+                    </p>
+                    <div className="flex gap-4">
+                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inversión Bruta: ${formatCurrency(totals.totalFacturado)}</span>
+                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Abonos Totales: ${formatCurrency(totals.totalPagado)}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                {/* Facturación Total */}
-                <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-100/50 transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                             <FiDollarSign size={18} />
-                        </div>
-                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Inversión Bruta</span>
-                    </div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Total Facturado</div>
-                    <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                        <span className="text-sm font-bold text-slate-300 mr-1">$</span>
-                        {totals.totalFacturado.toLocaleString('es-CO')}
-                    </div>
-                </div>
+            {/* MODAL INTEGRATION */}
+            <AddCreditModal 
+                isOpen={modalOpen} 
+                onClose={() => setModalOpen(false)} 
+                patient={patient} 
+                onUpdate={loadData}
+            />
+        </div>
+    );
+}
 
-                {/* Recaudado */}
-                <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-emerald-100/30 transition-all duration-300 border-b-4 border-b-emerald-400">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500">
-                             <FiCheckCircle size={18} />
-                        </div>
-                        <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest">Abonos Efectuados</span>
-                    </div>
-                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 leading-none text-emerald-500/60">Total Recaudado</div>
-                    <div className="text-3xl font-black text-emerald-600 tracking-tighter">
-                        <span className="text-sm font-bold text-emerald-300 mr-1">$</span>
-                        {totals.totalPagado.toLocaleString('es-CO')}
-                    </div>
-                </div>
+function HUDCard({ label, value, icon: Icon, color, isCritical, badge }) {
+    const colors = {
+        indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 ring-indigo-500/10",
+        emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 ring-emerald-500/10",
+        rose: "bg-rose-50 text-rose-600 border-rose-100 ring-rose-500/10",
+        slate: "bg-slate-50 text-slate-600 border-slate-100 ring-slate-500/10"
+    };
 
-                {/* Por Cobrar / Balance */}
-                <div className={`bg-white p-8 rounded-[32px] border shadow-sm hover:shadow-xl transition-all duration-300 ${totals.balance > 0 ? 'border-rose-100 shadow-rose-100/40 border-b-4 border-b-rose-400' : 'border-slate-100 shadow-slate-100/50'}`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${totals.balance > 0 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
-                             <FiAlertCircle size={18} />
-                        </div>
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${totals.balance > 0 ? 'text-rose-300' : 'text-slate-300'}`}>Balance Pendiente</span>
-                    </div>
-                    <div className={`text-[10px] font-black uppercase tracking-widest mb-1 leading-none ${totals.balance > 0 ? 'text-rose-400' : 'text-slate-400'}`}>Saldo por Cobrar</div>
-                    <div className={`text-4xl font-black tracking-tighter ${totals.balance > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
-                        <span className="text-sm font-bold opacity-30 mr-1">$</span>
-                        {totals.balance.toLocaleString('es-CO')}
-                    </div>
+    return (
+        <div className={`p-5 rounded-[24px] border ${colors[color]} ring-4 transition-all hover:scale-[1.02] duration-300 relative overflow-hidden group`}>
+            <div className="flex justify-between items-start mb-3 relative z-10">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-white shadow-sm`}>
+                    <Icon size={16} />
                 </div>
+                {badge && (
+                    <span className="text-[8px] font-black bg-white/50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                        {badge}
+                    </span>
+                )}
             </div>
-
-            {/* Account Info Illustration / Details */}
-            <div className="max-w-4xl bg-white border border-slate-100 rounded-[40px] p-10 flex flex-col md:flex-row items-center gap-10">
-                 <div className="w-32 h-32 bg-indigo-50 rounded-[32px] flex items-center justify-center text-indigo-600 shadow-inner relative overflow-hidden group">
-                      <FiDollarSign size={48} className="relative z-10 transition-transform group-hover:scale-125" />
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-indigo-100/50 blur-xl translate-y-1/2" />
-                 </div>
-                 <div className="flex-1 text-center md:text-left">
-                      <h4 className="text-[14px] font-black text-slate-800 uppercase tracking-tight mb-2">Comportamiento de Pago</h4>
-                      <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                          Este paciente ha cubierto el <span className="text-indigo-600 underline">{(totals.totalFacturado > 0 ? (totals.totalPagado / totals.totalFacturado * 100).toFixed(0) : 100)}%</span> de su tratamiento total. 
-                          {totals.balance > 0 
-                            ? " Se recomienda realizar un abono pronto para continuar con las fases planificadas." 
-                            : " El expediente se encuentra financieramente saludable y al día."}
-                      </p>
-                 </div>
-                 <div className="flex flex-col gap-2 shrink-0">
-                      <div className="bg-slate-50 px-5 py-3 rounded-2xl flex items-center justify-between gap-6 border border-slate-100/50">
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Próxima Devolución</span>
-                           <span className="text-[11px] font-black text-slate-800 uppercase">$ 0</span>
-                      </div>
-                      <div className="bg-slate-50 px-5 py-3 rounded-2xl flex items-center justify-between gap-6 border border-slate-100/50">
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo a Favor</span>
-                           <span className="text-[11px] font-black text-emerald-600 uppercase">$ 0</span>
-                      </div>
-                 </div>
+            <div className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-0.5 leading-none">{label}</div>
+            <div className={`text-xl font-black tracking-tighter leading-none ${isCritical ? 'animate-pulse' : ''}`}>
+                <span className="text-xs mr-0.5 opacity-40">$</span>
+                {formatCurrency(value)}
             </div>
-
-            {/* Floating Hint */}
-            <div className="mt-auto pt-10 text-center opacity-30">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Módulo Financiero Auditado por Sistema OdontoCloud v4.0</p>
+            
+            {/* Subtle background decoration */}
+            <div className={`absolute -right-2 -bottom-2 opacity-5 transition-transform group-hover:scale-150 duration-700`}>
+                <Icon size={64} />
             </div>
         </div>
     );
 }
+

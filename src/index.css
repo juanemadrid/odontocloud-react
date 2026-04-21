@@ -53,6 +53,14 @@
   .border-slate-100, .border-slate-50 {
     @apply border-slate-200;
   }
+
+  /* Refuerzo global para visibilidad del cursor (Caret) en Dashboard */
+  .oc-main-wrapper input, 
+  .oc-main-wrapper textarea,
+  .animate-fadeIn input,
+  .animate-fadeIn textarea {
+    caret-color: #000000 !important;
+  }
 }
 
 /* Variables CSS Globales para el tema claro */

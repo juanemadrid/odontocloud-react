@@ -2,29 +2,24 @@ import React from 'react';
 import CircularSurfaceSelector from './CircularSurfaceSelector';
 import { TOOLS } from './TratamientosToolbar';
 
-// Función para mapear el número FDI del diente a uno de los SVGs reales(Universal Numbering System) que enviaste
+// Base URL de Vite (configurado en vite.config.mjs como '/odontocloud-react/')
+const BASE = import.meta.env.BASE_URL;
+
+// Función para mapear el número FDI del diente a uno de los SVGs reales
 const getToothImageStr = (iso) => {
     const num = parseInt(iso, 10);
     const n = num % 10;
     
-    // Mapeo anatómico exacto usando los SVGs que subiste a teeth_svg:
-    // 8.svg = Incisivo Central (FDI: x1)
-    // 7.svg = Incisivo Lateral (FDI: x2)
-    // 6.svg = Canino (FDI: x3)
-    // 5.svg = Primer Premolar (FDI: x4)
-    // 4.svg = Segundo Premolar (FDI: x5)
-    // 3.svg = Primer Molar (FDI: x6)
-    // 2.svg = Segundo y Tercer Molar (FDI: x7, x8)
+    // Mapeo anatómico exacto usando los SVGs en public/images/teeth_svg/
+    if (n === 1) return `${BASE}images/teeth_svg/8.svg?v=4`;
+    if (n === 2) return `${BASE}images/teeth_svg/7.svg?v=4`;
+    if (n === 3) return `${BASE}images/teeth_svg/6.svg?v=4`;
+    if (n === 4) return `${BASE}images/teeth_svg/5.svg?v=4`;
+    if (n === 5) return `${BASE}images/teeth_svg/4.svg?v=4`;
+    if (n === 6) return `${BASE}images/teeth_svg/3.svg?v=4`;
+    if (n >= 7) return `${BASE}images/teeth_svg/2.svg?v=4`;
     
-    if (n === 1) return '/images/teeth_svg/8.svg?v=3';
-    if (n === 2) return '/images/teeth_svg/7.svg?v=3';
-    if (n === 3) return '/images/teeth_svg/6.svg?v=3';
-    if (n === 4) return '/images/teeth_svg/5.svg?v=3';
-    if (n === 5) return '/images/teeth_svg/4.svg?v=3';
-    if (n === 6) return '/images/teeth_svg/3.svg?v=3';
-    if (n >= 7) return '/images/teeth_svg/2.svg?v=3';
-    
-    return '/images/teeth_svg/3.svg?v=3'; // Fallback molar
+    return `${BASE}images/teeth_svg/3.svg?v=4`; // Fallback molar
 };
 
 export default function InteractiveTooth({ 
@@ -133,6 +128,7 @@ export default function InteractiveTooth({
             >
                 {isUpper ? (
                     <>
+                    {/* SUPERIOR: Diente arriba → Número → Selector circular abajo (mirando al centro) */}
                     <div className={`flex flex-col items-center p-1.5 rounded-[20px] transition-all duration-300 ${isActive ? 'bg-indigo-50/50 ring-2 ring-indigo-200 shadow-lg shadow-indigo-100/50 scale-105 z-10' : 'hover:bg-slate-50'}`}>
                         <div 
                             className={`relative flex-1 transition-all ${isReadOnly ? '' : 'cursor-pointer'}`}
@@ -159,8 +155,27 @@ export default function InteractiveTooth({
                         </div>
                     </div>
 
-                    {/* Espaciado ajustado */}
-                    <div className="mt-1 mb-1">
+                    {/* Número debajo del diente */}
+                    <div className="text-[10px] xl:text-[12px] font-black text-slate-700 tracking-tighter my-0.5 transition-all">
+                        {numero}
+                    </div>
+
+                    {/* Selector circular al fondo del bloque superior (mira hacia el centro) */}
+                    <div className="mb-1">
+                        <CircularSurfaceSelector 
+                            activeToothId={numero}
+                            toothData={data}
+                            onZoneClick={onZoneClick}
+                            isReadOnly={isReadOnly}
+                            isUpper={isUpper}
+                            isRightSide={isRightSide}
+                        />
+                    </div>
+                    </>
+                ) : (
+                    <>
+                    {/* INFERIOR: Selector circular arriba (mira hacia el centro) → Número → Diente abajo */}
+                    <div className="mt-1">
                         <CircularSurfaceSelector 
                             activeToothId={numero}
                             toothData={data}
@@ -171,25 +186,9 @@ export default function InteractiveTooth({
                         />
                     </div>
 
-                    <div className="text-[10px] xl:text-[12px] font-black text-slate-800 tracking-tighter mb-4 transition-all">
+                    {/* Número encima del diente */}
+                    <div className="text-[10px] xl:text-[12px] font-black text-slate-700 tracking-tighter my-0.5 transition-all">
                         {numero}
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="text-[10px] xl:text-[12px] font-black text-slate-800 tracking-tighter mt-4 transition-all">
-                        {numero}
-                    </div>
-
-                    <div className="mt-1 mb-1">
-                        <CircularSurfaceSelector 
-                            activeToothId={numero}
-                            toothData={data}
-                            onZoneClick={onZoneClick}
-                            isReadOnly={isReadOnly}
-                            isUpper={isUpper}
-                            isRightSide={isRightSide}
-                        />
                     </div>
 
                     <div className={`flex flex-col items-center p-1.5 rounded-[20px] transition-all duration-300 ${isActive ? 'bg-indigo-50/50 ring-2 ring-indigo-200 shadow-lg shadow-indigo-100/50 scale-105 z-10' : 'hover:bg-slate-50'}`}>
@@ -217,9 +216,9 @@ export default function InteractiveTooth({
                             {renderZoneOverlays()}
                         </div>
                     </div>
-                </>
-            )}
+                    </>
+                )}
+            </div>
         </div>
-    </div>
     );
 }

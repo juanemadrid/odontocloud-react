@@ -47,16 +47,26 @@ export default function OdontogramaVisual({
     return (
         <div className="w-full h-auto min-h-[400px] bg-white overflow-hidden pb-8">
             {/* Contenedor 100% fluido. Sin w-max para evitar scroll horizontal. */}
-            <div className="flex flex-col items-center mx-auto p-1 lg:p-4 gap-y-2 lg:gap-y-4 w-full">
+            <div className="flex flex-col items-center mx-auto p-1 lg:p-4 w-full">
                 
-                {showAdult && renderRow(RowUpperPermanent, true)}
-                {showChild && renderRow(RowUpperTemp, true)}
-                
-                {/* Separador visual de arcadas superior/inferior */}
-                <div className="w-full max-w-4xl h-px bg-slate-100 my-2" />
+                {/* Arcada Superior */}
+                <div className="flex flex-col items-center w-full">
+                    {showAdult && renderRow(RowUpperPermanent, true)}
+                    {showChild && renderRow(RowUpperTemp, true)}
+                </div>
 
-                {showChild && renderRow(RowLowerTemp, false)}
-                {showAdult && renderRow(RowLowerPermanent, false)}
+                {/* Línea central clínica - separa las arcadas */}
+                <div className="w-full max-w-5xl flex items-center gap-3 my-1 px-4">
+                    <div className="flex-1 border-t border-dashed border-slate-200" />
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Plano oclusal</span>
+                    <div className="flex-1 border-t border-dashed border-slate-200" />
+                </div>
+
+                {/* Arcada Inferior */}
+                <div className="flex flex-col items-center w-full">
+                    {showChild && renderRow(RowLowerTemp, false)}
+                    {showAdult && renderRow(RowLowerPermanent, false)}
+                </div>
 
             </div>
         </div>

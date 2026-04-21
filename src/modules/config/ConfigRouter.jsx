@@ -27,7 +27,6 @@ import EmpresaBancos from "./EmpresaBancos";
 import ConfigRecursosFisicos from "./ConfigRecursosFisicos";
 import EmpresaFormularioPacientes from "./EmpresaFormularioPacientes";
 import ConfigConsentimientos from "./ConfigConsentimientos";
-import SimuladorPresupuesto from "./SimuladorPresupuesto";
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -80,8 +79,6 @@ export default function ConfigRouter() {
                 return <ConfigConsecutivos />;
             case "editor-web": // New Route
                 return <WebsiteEditor />;
-            case "simulador-planes":
-                return <SimuladorPresupuesto />;
             case "almacenes":
                 return <EmpresaAlmacenes />;
             case "categorias-inventario":

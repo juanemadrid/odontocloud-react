@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc, or } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { db, firebaseConfig } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiFilter, FiUser, FiArrowLeft, FiArrowRight, FiSave, FiInfo, FiMail, FiPhone, FiCreditCard, FiMapPin, FiActivity, FiLayers, FiChevronRight, FiChevronLeft, FiChevronsRight, FiChevronsLeft } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiFilter, FiUser, FiArrowLeft, FiArrowRight, FiSave, FiInfo, FiMail, FiPhone, FiCreditCard, FiMapPin, FiActivity, FiLayers, FiChevronRight, FiChevronLeft, FiChevronsRight, FiChevronsLeft, FiEye, FiEyeOff, FiHelpCircle } from "react-icons/fi";
 import Input from "../../components/ui/Input";
 
 export default function EmpresaUsuarios() {
@@ -31,6 +31,7 @@ export default function EmpresaUsuarios() {
     const [searchTermSelected, setSearchTermSelected] = useState("");
     const [searchTermSucAvailable, setSearchTermSucAvailable] = useState("");
     const [searchTermSucSelected, setSearchTermSucSelected] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     // Form State
     const initialForm = {
@@ -56,6 +57,7 @@ export default function EmpresaUsuarios() {
         comisionPorcentaje: 0, // "Porcentaje"
         clinicalDocsWithLogo: true, // "¿Documentos clínicos se imprimen con logo?"
         clinicalDocsHeader: "sucursal", // "sucursal" o "personalizado"
+        encabezadoPersonalizado: "", // New conditional field
         formaPago: "Realizadas y pagadas", // "Forma de pago"
 
         password: ""
@@ -68,7 +70,14 @@ export default function EmpresaUsuarios() {
         setLoading(true);
         try {
             // Usuarios (sin orderBy email para evitar error de índice si hay filtros de tenant)
-            const usersQ = query(collection(db, "usuarios"), where("inquilino", "==", userProfile.inquilino));
+            // Usuarios (Buscando tanto por 'inquilino' como por 'tenantId' para máxima compatibilidad)
+            const usersQ = query(
+                collection(db, "usuarios"),
+                or(
+                    where("inquilino", "==", userProfile.inquilino),
+                    where("tenantId", "==", userProfile.inquilino)
+                )
+            );
             const uSnap = await getDocs(usersQ);
 
             // Otros recursos (sin orderBy para evitar errores de índice si no existen)
@@ -86,7 +95,18 @@ export default function EmpresaUsuarios() {
             const sortedSpecialties = espSnap.docs.map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 
-            setUsers(uSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            const normalizedUsers = uSnap.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    ...data,
+                    // Normalización de campos de asociación
+                    inquilino: data.inquilino || data.tenantId || userProfile.inquilino,
+                    tenantId: data.tenantId || data.inquilino || userProfile.inquilino
+                };
+            });
+
+            setUsers(normalizedUsers);
             setRolesDisponibles(sortedProfiles);
             setSucursales(sortedBranches);
             setSpecialties(sortedSpecialties);
@@ -170,6 +190,7 @@ export default function EmpresaUsuarios() {
                 comisionPorcentaje: user.comisionPorcentaje || 0,
                 clinicalDocsWithLogo: user.clinicalDocsWithLogo !== undefined ? user.clinicalDocsWithLogo : true,
                 clinicalDocsHeader: user.clinicalDocsHeader || "sucursal",
+                encabezadoPersonalizado: user.encabezadoPersonalizado || "",
                 formaPago: user.formaPago || "Realizadas y pagadas",
 
                 profileId: user.profileId || "",
@@ -263,6 +284,7 @@ export default function EmpresaUsuarios() {
                 comisionPorcentaje: Number(formData.comisionPorcentaje) || 0,
                 clinicalDocsWithLogo: formData.clinicalDocsWithLogo !== undefined ? formData.clinicalDocsWithLogo : true,
                 clinicalDocsHeader: formData.clinicalDocsHeader || "sucursal",
+                encabezadoPersonalizado: formData.encabezadoPersonalizado || "",
                 formaPago: formData.formaPago || "Realizadas y pagadas",
                 profileType: formData.profileType || "Doctor",
 
@@ -340,7 +362,7 @@ export default function EmpresaUsuarios() {
     };
 
     return (
-        <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="space-y-10 p-2 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Toolbar: Search & Actions */}
             <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
@@ -373,14 +395,14 @@ export default function EmpresaUsuarios() {
                         </div>
 
                         {/* Search Input */}
-                        <div className="relative group">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all" />
+                        <div className="relative group/search">
+                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-500 transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Buscar miembro..."
+                                placeholder="Buscar por nombre o documento..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-[14px] font-extrabold text-slate-800 outline-none focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-sm w-64"
+                                className="pl-12 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm w-80"
                             />
                         </div>
 
@@ -450,7 +472,7 @@ export default function EmpresaUsuarios() {
                                                     <span className="text-[12px] font-black text-slate-600 uppercase tracking-tighter">{u.profileName || u.rol || "Sin perfil"}</span>
                                                 </div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-3.5 opacity-60">
-                                                    {u.sucursales?.length || 0} sedes asignadas
+                                                    {u.sucursales?.length || 0} sucursales asignadas
                                                 </span>
                                             </div>
                                         </td>
@@ -495,694 +517,425 @@ export default function EmpresaUsuarios() {
                 </div>
             </div>
 
-            {/* Modal - Rendered via Portal to escape Layout stacking/animation conflicts */}
             {modalOpen && ReactDOM.createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-hidden">
-                    <div className="bg-[#FCFDFF] w-full max-w-4xl rounded-[40px] shadow-[0_40px_120px_rgba(0,0,0,0.35)] flex flex-col h-[90vh] animate-scale-in overflow-hidden relative border border-white/60">
-                        {/* Header: Institutional & Actions */}
-                        <div className="bg-white/90 backdrop-blur-xl px-10 py-7 border-b border-slate-100/80 flex items-center justify-between shrink-0 relative z-20">
-                            <div className="absolute top-0 left-10 w-24 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-500 rounded-b-full shadow-[0_4px_12px_rgba(37,99,235,0.2)]" />
-                            <div className="flex items-center gap-6">
-                                <button
-                                    onClick={() => setModalOpen(false)}
-                                    className="w-12 h-12 rounded-2xl border border-slate-100 bg-slate-50/50 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-white hover:border-red-100 hover:shadow-xl hover:shadow-red-500/10 transition-all active:scale-95 group"
-                                >
-                                    <FiX size={24} className="group-hover:rotate-90 transition-transform duration-500" />
-                                </button>
-                                <div className="flex items-center gap-5">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-[0_12px_30px_rgba(37,99,235,0.3)]">
-                                        <FiUser size={28} className="text-white" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <h2 className="text-[22px] font-black text-slate-800 uppercase tracking-tighter leading-none mb-1">
-                                            {editId ? "Editar Miembro" : "Nuevo Miembro"}
-                                        </h2>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                                            <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.2em] opacity-80">Gestión de Talento Humano</p>
-                                        </div>
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all duration-500">
+                    <div className="bg-white w-full max-w-6xl h-[95vh] rounded-[32px] overflow-hidden shadow-[0_48px_128px_rgba(0,0,0,0.3)] flex flex-col animate-scale-in border border-white/40">
+                        {/* Header: Pure Elite Styling */}
+                        <div className="bg-[#0F172A] px-6 py-4 flex items-center justify-between shrink-0 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-blue-600/20 to-transparent skew-x-[30deg] pointer-events-none" />
+                            <div className="flex items-center gap-6 relative z-10">
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-900/20 group">
+                                    <FiUser size={28} className="text-white group-hover:scale-110 transition-transform duration-300" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-[20px] font-black text-white uppercase tracking-[-0.02em] leading-tight">
+                                        {editId ? "Configuración de Perfil" : "Apertura de Cuenta Master"}
+                                    </h2>
+                                    <div className="flex items-center gap-3">
+                                        <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-400 uppercase tracking-widest">OdontoCloud Elite</div>
+                                        <div className="w-1 h-1 rounded-full bg-slate-700" />
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Gestión de privilegios y datos</p>
                                     </div>
                                 </div>
                             </div>
+                            <button
+                                onClick={() => setModalOpen(false)}
+                                className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center text-slate-500 hover:text-white hover:bg-red-500 transition-all duration-300 active:scale-90 group"
+                            >
+                                <FiX size={24} className="group-hover:rotate-90 transition-transform duration-500" />
+                            </button>
                         </div>
 
-                        {/* Modal Body with subtle grid background */}
-                        <div className="flex-1 overflow-hidden relative bg-white">
-                            <div className="absolute inset-0 pointer-events-none opacity-[0.015]"
-                                style={{ backgroundImage: `radial-gradient(#000 0.5px, transparent 0.5px)`, backgroundSize: '20px 20px' }} />
-
-                            <form onSubmit={handleSubmitForm} className="h-full overflow-y-auto custom-scrollbar p-10 space-y-12 pb-32">
-                                {/* SECTION 1: INFORMACIÓN BÁSICA */}
-                                <div className="relative">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-50/50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100/50">
-                                            <FiInfo size={20} />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <h4 className="text-[12px] font-black text-blue-600 uppercase tracking-[0.3em] leading-none mb-1">Información básica</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Datos de identificación personal</p>
-                                        </div>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-blue-100/50 to-transparent" />
-                                    </div>
-
-                                    <div className="space-y-8 bg-white border border-slate-100 p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.02)]">
-                                        {/* Es Laboratorio Checkbox */}
-                                        <div className="flex items-center gap-3 ml-2 mb-4">
-                                            <label className="relative flex items-center gap-3 cursor-pointer group">
-                                                <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${formData.esLaboratory ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200 group-hover:border-blue-300'}`}>
-                                                    {formData.esLaboratory && <FiCheck className="text-white text-xs" />}
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only"
-                                                        checked={formData.esLaboratory}
-                                                        onChange={e => setFormData({ ...formData, esLaboratory: e.target.checked })}
-                                                    />
-                                                </div>
-                                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">¿Es laboratorio o centro diagnóstico?</span>
-                                            </label>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Nombre *</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.nombre}
-                                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                                                    required
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
+                        {/* Modal Body: Two-Column Side-by-Side Scrolling Sections */}
+                        <div className="flex-1 overflow-hidden relative bg-[#F8FAFC]">
+                            <form onSubmit={handleSubmitForm} className="h-full overflow-y-auto custom-scrollbar p-6 pb-32 space-y-6">
+                                {/* BLOQUE 1: INFORMACIÓN BÁSICA */}
+                                <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 relative">
+                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
+                                    
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50 pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                                                <FiUser size={20} />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Apellido *</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.apellido}
-                                                    onChange={e => setFormData({ ...formData, apellido: e.target.value })}
-                                                    required
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
+                                            <div>
+                                                <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Información básica</h4>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Datos personales de identificación</p>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Tipo documento *</label>
-                                                <select
-                                                    value={formData.tipoDocumento}
-                                                    onChange={e => setFormData({ ...formData, tipoDocumento: e.target.value })}
-                                                    required
-                                                    className="w-full h-14 bg-slate-50 focus:bg-white border border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-black text-[12px] uppercase text-slate-700 outline-none transition-all"
-                                                >
-                                                    <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
-                                                    <option value="Cédula de extranjería">Cédula de extranjería</option>
-                                                    <option value="Pasaporte">Pasaporte</option>
-                                                    <option value="Tarjeta de identidad">Tarjeta de identidad</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Número de documento *</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.numeroDocumento}
-                                                    onChange={e => setFormData({ ...formData, numeroDocumento: e.target.value })}
-                                                    required
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Teléfono móvil *</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.telefonoMovil}
-                                                    onChange={e => setFormData({ ...formData, telefonoMovil: e.target.value })}
-                                                    required
-                                                    placeholder="3XX XXX XXXX"
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Teléfono fijo</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.telefonoFijo}
-                                                    onChange={e => setFormData({ ...formData, telefonoFijo: e.target.value })}
-                                                    placeholder="Ingrese un número de teléfono"
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                            <div className="md:col-span-1 space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Dirección *</label>
-                                                <Input
-                                                    type="text"
-                                                    value={formData.direccion}
-                                                    onChange={e => setFormData({ ...formData, direccion: e.target.value })}
-                                                    required
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Género *</label>
-                                                <select
-                                                    value={formData.genero}
-                                                    onChange={e => setFormData({ ...formData, genero: e.target.value })}
-                                                    required
-                                                    className="w-full h-14 bg-slate-50 focus:bg-white border border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-black text-[12px] uppercase text-slate-700 outline-none transition-all"
-                                                >
-                                                    <option value="Masculino">Masculino</option>
-                                                    <option value="Femenino">Femenino</option>
-                                                    <option value="Otro">Otro</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha de nacimiento *</label>
-                                                <Input
-                                                    type="date"
-                                                    value={formData.fechaNacimiento}
-                                                    onChange={e => setFormData({ ...formData, fechaNacimiento: e.target.value })}
-                                                    required
-                                                    className="h-14 bg-slate-50 focus:bg-white border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold text-slate-700 transition-all"
-                                                />
-                                            </div>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-2 italic">¿Es laboratorio o centro diagnóstico?</label>
+                                            <button type="button" onClick={() => setFormData({ ...formData, esLaboratory: !formData.esLaboratory })} className={`w-12 h-6 rounded-full transition-all duration-500 relative ${formData.esLaboratory ? "bg-blue-600" : "bg-slate-200"}`}>
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-500 shadow-sm ${formData.esLaboratory ? "left-7" : "left-1"}`} />
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* SECTION 2: INFORMACIÓN EMPRESARIAL */}
-                                <div className="relative">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-10 h-10 rounded-xl bg-emerald-50/50 text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
-                                            <FiLayers size={20} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre *</label>
+                                            <Input type="text" value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} required placeholder="Ingrese nombre" className="h-10 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
                                         </div>
-                                        <div className="flex flex-col">
-                                            <h4 className="text-[12px] font-black text-emerald-600 uppercase tracking-[0.3em] leading-none mb-1">Información empresarial</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configuración de lógica de negocio</p>
-                                        </div>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-emerald-100/50 to-transparent" />
-                                    </div>
-
-                                    <div className="space-y-10 bg-white border border-slate-100 p-10 rounded-[40px] shadow-[0_15px_50px_rgba(0,0,0,0.02)] relative overflow-hidden">
-                                        {/* Toggles Group */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                            <div className="flex items-center justify-between group/toggle">
-                                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider group-hover/toggle:text-blue-600 transition-colors">Es doctor</span>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={formData.esDoctor}
-                                                        onChange={e => setFormData({ ...formData, esDoctor: e.target.checked })}
-                                                    />
-                                                    <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${formData.esDoctor ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-slate-200 shadow-inner'}`}>
-                                                        <div className={`absolute top-1 left-1 bg-white rounded-full h-4 w-4 transition-all duration-300 ${formData.esDoctor ? 'translate-x-6' : 'translate-x-0'}`} />
-                                                    </div>
-                                                </label>
-                                            </div>
-
-                                            <div className="flex items-center justify-between group/toggle">
-                                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider group-hover/toggle:text-emerald-600 transition-colors">¿Documentos clínicos se imprimen con logo?</span>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={formData.clinicalDocsWithLogo}
-                                                        onChange={e => setFormData({ ...formData, clinicalDocsWithLogo: e.target.checked })}
-                                                    />
-                                                    <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${formData.clinicalDocsWithLogo ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-slate-200 shadow-inner'}`}>
-                                                        <div className={`absolute top-1 left-1 bg-white rounded-full h-4 w-4 transition-all duration-300 ${formData.clinicalDocsWithLogo ? 'translate-x-6' : 'translate-x-0'}`} />
-                                                    </div>
-                                                </label>
-                                            </div>
-
-                                            <div className="flex items-center justify-between group/toggle">
-                                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider group-hover/toggle:text-indigo-600 transition-colors">Puedo ver todo lo de otros doctores</span>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={formData.seeOtherDoctorsData}
-                                                        onChange={e => setFormData({ ...formData, seeOtherDoctorsData: e.target.checked })}
-                                                    />
-                                                    <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${formData.seeOtherDoctorsData ? 'bg-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-200 shadow-inner'}`}>
-                                                        <div className={`absolute top-1 left-1 bg-white rounded-full h-4 w-4 transition-all duration-300 ${formData.seeOtherDoctorsData ? 'translate-x-6' : 'translate-x-0'}`} />
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pt-4 border-t border-slate-50">
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Porcentaje</label>
-                                                <Input
-                                                    type="number"
-                                                    value={formData.comisionPorcentaje}
-                                                    onChange={e => setFormData({ ...formData, comisionPorcentaje: e.target.value })}
-                                                    placeholder="0"
-                                                    className="h-14 bg-slate-50 border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-bold"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Cabecera documentos clínicos</label>
-                                                <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100 h-14">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, clinicalDocsHeader: 'sucursal' })}
-                                                        className={`flex-1 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.clinicalDocsHeader === 'sucursal' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-                                                    >
-                                                        Sucursal
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, clinicalDocsHeader: 'personalizado' })}
-                                                        className={`flex-1 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.clinicalDocsHeader === 'personalizado' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-                                                    >
-                                                        Personalizado
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Forma de pago</label>
-                                                <select
-                                                    value={formData.formaPago}
-                                                    onChange={e => setFormData({ ...formData, formaPago: e.target.value })}
-                                                    className="w-full h-14 bg-slate-50 focus:bg-white border border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-black text-[11px] uppercase text-slate-700 outline-none transition-all"
-                                                >
-                                                    <option value="Realizadas y pagadas">Realizadas y pagadas</option>
-                                                    <option value="Solo realizadas">Solo realizadas</option>
-                                                    <option value="Solo pagadas">Solo pagadas</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Tipo de perfil</label>
-                                                <select
-                                                    value={formData.profileType}
-                                                    onChange={e => setFormData({ ...formData, profileType: e.target.value })}
-                                                    className="w-full h-14 bg-slate-50 focus:bg-white border border-slate-100 focus:border-blue-500 rounded-2xl px-5 font-black text-[11px] uppercase text-slate-700 outline-none transition-all"
-                                                >
-                                                    <option value="Doctor">Doctor</option>
-                                                    <option value="Administrativo">Administrativo</option>
-                                                    <option value="Auxiliar">Auxiliar</option>
-                                                    <option value="Recepción">Recepción</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Sucursales Assignment (Doble Lista) */}
-                                        <div className="pt-8 space-y-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-emerald-50/50 text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
-                                                    <FiMapPin size={20} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <h4 className="text-[12px] font-black text-emerald-600 uppercase tracking-[0.3em] leading-none mb-1">Sucursales</h4>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asignación de sedes operativas</p>
-                                                </div>
-                                                <div className="h-px flex-1 bg-gradient-to-r from-emerald-100/50 to-transparent" />
-                                            </div>
-
-                                            <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-[0_15px_50px_rgba(0,0,0,0.02)]">
-                                                <div className="flex flex-row items-stretch gap-4 h-[500px]">
-                                                    {/* Disponibles */}
-                                                    <div className="flex flex-col flex-1 border border-slate-100 rounded-[20px] overflow-hidden bg-slate-50/10 shadow-sm">
-                                                        <div className="bg-white px-4 py-3 border-b border-slate-100 space-y-2">
-                                                            <div className="flex items-center justify-between px-1">
-                                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sucursales disponibles</span>
-                                                                <span className="text-[8px] font-bold bg-slate-50 px-1.5 py-0.5 rounded text-slate-400 font-mono">
-                                                                    {sucursales.filter(s => !formData.sucursales.includes(s.id)).length}
-                                                                </span>
-                                                            </div>
-                                                            <div className="relative group">
-                                                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={12} />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="FILTRAR DISPONIBLES..."
-                                                                    value={searchTermSucAvailable}
-                                                                    onChange={e => setSearchTermSucAvailable(e.target.value)}
-                                                                    className="w-full h-8 pl-9 pr-3 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black uppercase tracking-widest focus:bg-white focus:border-emerald-400 transition-all outline-none"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-white/50">
-                                                            <div className="space-y-0.5">
-                                                                {sucursales
-                                                                    .filter(s => !formData.sucursales.includes(s.id))
-                                                                    .filter(s => (s.nombre || "").toLowerCase().includes(searchTermSucAvailable.toLowerCase()))
-                                                                    .map(suc => (
-                                                                        <button
-                                                                            key={suc.id}
-                                                                            type="button"
-                                                                            onClick={() => toggleSelection("sucursales", suc.id)}
-                                                                            className="w-full text-left px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all border border-transparent hover:border-slate-100 group flex items-center justify-between"
-                                                                        >
-                                                                            <span className="truncate">{suc.nombre}</span>
-                                                                            <FiChevronRight size={10} className="opacity-0 group-hover:opacity-100" />
-                                                                        </button>
-                                                                    ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-center justify-center gap-2 w-16 bg-slate-50/30 rounded-xl p-1 border border-slate-100 self-center py-4">
-                                                        <button
-                                                            type="button"
-                                                            className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 opacity-50 cursor-not-allowed flex items-center justify-center"
-                                                            title="Seleccione un elemento para mover"
-                                                        >
-                                                            <FiChevronRight size={18} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const filtered = sucursales
-                                                                    .filter(s => !formData.sucursales.includes(s.id))
-                                                                    .filter(s => (s.nombre || "").toLowerCase().includes(searchTermSucAvailable.toLowerCase()))
-                                                                    .map(s => s.id);
-                                                                if (filtered.length > 0) {
-                                                                    setFormData(prev => ({ ...prev, sucursales: [...new Set([...prev.sucursales, ...filtered])] }));
-                                                                    setSearchTermSucAvailable("");
-                                                                }
-                                                            }}
-                                                            className="w-10 h-10 rounded-lg bg-emerald-600 text-white border border-emerald-500 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all shadow-md shadow-emerald-500/20 flex items-center justify-center group"
-                                                            title="Añadir filtrados"
-                                                        >
-                                                            <FiChevronsRight size={18} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 opacity-50 cursor-not-allowed flex items-center justify-center"
-                                                            title="Seleccione un elemento para mover"
-                                                        >
-                                                            <FiChevronLeft size={18} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setFormData(prev => ({ ...prev, sucursales: [] }));
-                                                                setSearchTermSucSelected("");
-                                                            }}
-                                                            className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 hover:text-red-500 hover:border-red-200 hover:scale-105 active:scale-95 transition-all shadow-sm flex items-center justify-center group"
-                                                            title="Remover todos"
-                                                        >
-                                                            <FiChevronsLeft size={18} />
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Seleccionados */}
-                                                    <div className="flex flex-col flex-1 border border-emerald-100 rounded-[20px] overflow-hidden bg-emerald-50/5 shadow-sm">
-                                                        <div className="bg-white px-4 py-3 border-b border-emerald-100 space-y-2">
-                                                            <div className="flex items-center justify-between px-1">
-                                                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Seleccionados</span>
-                                                                <span className="text-[8px] font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-600 font-mono">
-                                                                    {formData.sucursales.length}
-                                                                </span>
-                                                            </div>
-                                                            <div className="relative group">
-                                                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 group-focus-within:text-emerald-600 transition-colors" size={12} />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="FILTRAR SELECCIONADOS..."
-                                                                    value={searchTermSucSelected}
-                                                                    onChange={e => setSearchTermSucSelected(e.target.value)}
-                                                                    className="w-full h-8 pl-9 pr-3 bg-emerald-50/30 border border-emerald-100 rounded-lg text-[9px] font-black uppercase tracking-widest focus:bg-white focus:border-emerald-400 transition-all outline-none"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-emerald-50/10">
-                                                            <div className="space-y-0.5">
-                                                                {formData.sucursales
-                                                                    .map(id => sucursales.find(s => s.id === id))
-                                                                    .filter(Boolean)
-                                                                    .filter(s => (s.nombre || "").toLowerCase().includes(searchTermSucSelected.toLowerCase()))
-                                                                    .map(suc => (
-                                                                        <button
-                                                                            key={suc.id}
-                                                                            type="button"
-                                                                            onClick={() => toggleSelection("sucursales", suc.id)}
-                                                                            className="w-full text-left px-3 py-1.5 rounded-md text-[10px] font-black text-emerald-800 bg-white shadow-sm border border-emerald-100 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-between group"
-                                                                        >
-                                                                            <span className="truncate">{suc.nombre}</span>
-                                                                            <div className="w-4 h-4 rounded bg-emerald-50 text-emerald-400 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
-                                                                                <FiX size={8} />
-                                                                            </div>
-                                                                        </button>
-                                                                    ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellido *</label>
+                                            <Input type="text" value={formData.apellido} onChange={e => setFormData({ ...formData, apellido: e.target.value })} required placeholder="Ingrese apellidos" className="h-10 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* SECTION 3: ESPECIALIDADES (Doble Lista) */}
-                                {formData.esDoctor && (
-                                    <div className="relative animate-in fade-in slide-in-from-top-4 duration-700">
-                                        <div className="flex items-center gap-4 mb-8">
-                                            <div className="w-10 h-10 rounded-xl bg-orange-50/50 text-orange-600 flex items-center justify-center shadow-sm border border-orange-100/50">
-                                                <FiActivity size={20} />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <h4 className="text-[12px] font-black text-orange-600 uppercase tracking-[0.3em] leading-none mb-1">Especialidades</h4>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asignación de competencias profesionales</p>
-                                            </div>
-                                            <div className="h-px flex-1 bg-gradient-to-r from-orange-100/50 to-transparent" />
-                                        </div>
-
-                                        <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-[0_15px_50px_rgba(0,0,0,0.02)]">
-                                            <div className="flex flex-row items-stretch gap-4 h-[500px]">
-                                                {/* Disponibles */}
-                                                <div className="flex flex-col flex-1 border border-slate-100 rounded-[20px] overflow-hidden bg-slate-50/10 shadow-sm">
-                                                    <div className="bg-white px-4 py-3 border-b border-slate-100 space-y-2">
-                                                        <div className="flex items-center justify-between px-1">
-                                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Disponibles</span>
-                                                            <span className="text-[8px] font-bold bg-slate-50 px-1.5 py-0.5 rounded text-slate-400 font-mono">
-                                                                {specialties.filter(s => !formData.especialidades.includes(s.id)).length}
-                                                            </span>
-                                                        </div>
-                                                        <div className="relative group">
-                                                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={12} />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="FILTRAR DISPONIBLES..."
-                                                                value={searchTermAvailable}
-                                                                onChange={e => setSearchTermAvailable(e.target.value)}
-                                                                className="w-full h-8 pl-9 pr-3 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black uppercase tracking-widest focus:bg-white focus:border-blue-400 transition-all outline-none"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-white/50">
-                                                        <div className="space-y-0.5">
-                                                            {specialties
-                                                                .filter(s => !formData.especialidades.includes(s.id))
-                                                                .filter(s => s.nombre.toLowerCase().includes(searchTermAvailable.toLowerCase()))
-                                                                .map(spec => (
-                                                                    <button
-                                                                        key={spec.id}
-                                                                        type="button"
-                                                                        onClick={() => toggleSelection("especialidades", spec.id)}
-                                                                        className="w-full text-left px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all border border-transparent hover:border-slate-100 group flex items-center justify-between"
-                                                                    >
-                                                                        <span className="truncate">{spec.nombre}</span>
-                                                                    </button>
-                                                                ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col items-center justify-center gap-2 w-16 bg-slate-50/30 rounded-xl p-1 border border-slate-100 self-center py-4">
-                                                    <button
-                                                        type="button"
-                                                        className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 opacity-50 cursor-not-allowed flex items-center justify-center"
-                                                        title="Seleccione un elemento para mover"
-                                                    >
-                                                        <FiChevronRight size={18} />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const filtered = specialties
-                                                                .filter(s => !formData.especialidades.includes(s.id))
-                                                                .filter(s => s.nombre.toLowerCase().includes(searchTermAvailable.toLowerCase()))
-                                                                .map(s => s.id);
-                                                            if (filtered.length > 0) {
-                                                                setFormData(prev => ({ ...prev, especialidades: [...new Set([...prev.especialidades, ...filtered])] }));
-                                                                setSearchTermAvailable("");
-                                                            }
-                                                        }}
-                                                        className="w-10 h-10 rounded-lg bg-blue-600 text-white border border-blue-500 hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center group"
-                                                        title="Añadir filtrados"
-                                                    >
-                                                        <FiChevronsRight size={18} />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 opacity-50 cursor-not-allowed flex items-center justify-center"
-                                                        title="Seleccione un elemento para mover"
-                                                    >
-                                                        <FiChevronLeft size={18} />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData(prev => ({ ...prev, especialidades: [] }));
-                                                            setSearchTermSelected("");
-                                                        }}
-                                                        className="w-10 h-10 rounded-lg bg-white text-slate-400 border border-slate-200 hover:text-red-500 hover:border-red-200 hover:scale-105 active:scale-95 transition-all shadow-sm flex items-center justify-center group"
-                                                        title="Remover todos"
-                                                    >
-                                                        <FiChevronsLeft size={18} />
-                                                    </button>
-                                                </div>
-
-                                                {/* Seleccionados */}
-                                                <div className="flex flex-col flex-1 border border-blue-100 rounded-[20px] overflow-hidden bg-blue-50/5 shadow-sm">
-                                                    <div className="bg-white px-4 py-3 border-b border-blue-100 space-y-2">
-                                                        <div className="flex items-center justify-between px-1">
-                                                            <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Seleccionados</span>
-                                                            <span className="text-[8px] font-bold bg-blue-50 px-1.5 py-0.5 rounded text-blue-600 font-mono">
-                                                                {formData.especialidades.length}
-                                                            </span>
-                                                        </div>
-                                                        <div className="relative group">
-                                                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 group-focus-within:text-blue-600 transition-colors" size={12} />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="FILTRAR SELECCIONADOS..."
-                                                                value={searchTermSelected}
-                                                                onChange={e => setSearchTermSelected(e.target.value)}
-                                                                className="w-full h-8 pl-9 pr-3 bg-blue-50/30 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest focus:bg-white focus:border-blue-400 transition-all outline-none"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-blue-50/10">
-                                                        <div className="space-y-0.5">
-                                                            {formData.especialidades
-                                                                .map(id => specialties.find(s => s.id === id))
-                                                                .filter(Boolean)
-                                                                .filter(s => s.nombre.toLowerCase().includes(searchTermSelected.toLowerCase()))
-                                                                .map(spec => (
-                                                                    <button
-                                                                        key={spec.id}
-                                                                        type="button"
-                                                                        onClick={() => toggleSelection("especialidades", spec.id)}
-                                                                        className="w-full text-left px-3 py-1.5 rounded-md text-[10px] font-black text-blue-800 bg-white shadow-sm border border-blue-100 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-between group"
-                                                                    >
-                                                                        <span className="truncate">{spec.nombre}</span>
-                                                                        <div className="w-4 h-4 rounded bg-blue-50 text-blue-400 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
-                                                                            <FiX size={8} />
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* SECTION 4: SEGURIDAD & SESIÓN */}
-                                <div className="relative">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-                                            <FiMail size={20} />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <h4 className="text-[12px] font-black text-slate-800 uppercase tracking-[0.3em] leading-none mb-1">Seguridad & Sesión</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Credenciales y privilegios de acceso</p>
-                                        </div>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 bg-slate-900 p-10 rounded-[40px] shadow-2xl shadow-slate-200">
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Nombre de usuario *</label>
-                                            <Input
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                required
-                                                placeholder="ejemplo@odontosalud.com"
-                                                className="h-14 bg-white/10 border-white/10 focus:border-blue-500 rounded-2xl px-5 font-bold text-white transition-all"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
-                                                Contraseña {editId && <span className="text-[8px] opacity-60">(Solo para cambiar)</span>}
-                                            </label>
-                                            <Input
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                                required={!editId}
-                                                placeholder="••••••••••••"
-                                                className="h-14 bg-white/10 border-white/10 focus:border-blue-500 rounded-2xl px-5 font-bold text-white transition-all"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Perfil Asignado *</label>
-                                            <select
-                                                value={formData.profileId}
-                                                onChange={e => setFormData({ ...formData, profileId: e.target.value })}
-                                                required
-                                                className="w-full h-14 bg-white/10 border border-white/10 focus:border-blue-500 rounded-2xl px-5 font-black text-[11px] uppercase text-white outline-none transition-all appearance-none"
-                                            >
-                                                <option value="" className="text-slate-800">Seleccionar perfil...</option>
-                                                {rolesDisponibles.map(r => (
-                                                    <option key={r.id} value={r.id} className="text-slate-800">{r.nombre}</option>
-                                                ))}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo documento *</label>
+                                            <select value={formData.tipoDocumento} onChange={e => setFormData({ ...formData, tipoDocumento: e.target.value })} className="w-full h-10 bg-slate-50/50 border border-slate-100 rounded-lg px-3 font-bold text-[11px] text-slate-600 outline-none hover:border-slate-200 transition-all">
+                                                <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                                                <option value="Cédula de extranjería">Cédula de extranjería</option>
+                                                <option value="Pasaporte">Pasaporte</option>
                                             </select>
                                         </div>
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Número de documento *</label>
+                                            <Input type="text" value={formData.numeroDocumento} onChange={e => setFormData({ ...formData, numeroDocumento: e.target.value })} required placeholder="Número de identidad" className="h-10 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
+                                        </div>
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono móvil *</label>
+                                            <div className="relative">
+                                                <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                                <Input type="text" value={formData.telefonoMovil} onChange={e => setFormData({ ...formData, telefonoMovil: e.target.value })} required placeholder="Ej: 310..." className="h-10 pl-12 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono fijo</label>
+                                            <Input type="text" value={formData.telefonoFijo} onChange={e => setFormData({ ...formData, telefonoFijo: e.target.value })} placeholder="Ej: 601..." className="h-10 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
+                                        </div>
+                                        <div className="space-y-2.5 lg:col-span-2">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Dirección *</label>
+                                            <div className="relative">
+                                                <FiMapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                                <Input type="text" value={formData.direccion} onChange={e => setFormData({ ...formData, direccion: e.target.value })} required placeholder="Dirección de residencia" className="h-10 pl-12 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Género *</label>
+                                            <select value={formData.genero} onChange={e => setFormData({ ...formData, genero: e.target.value })} className="w-full h-10 bg-slate-50/50 border border-slate-200 rounded-xl px-4 font-bold text-[13px] text-slate-700 outline-none hover:border-blue-300 focus:border-blue-500 focus:bg-white transition-all shadow-sm">
+                                                <option value="Femenino">Femenino</option>
+                                                <option value="Masculino">Masculino</option>
+                                                <option value="Otro">Otro</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de nacimiento *</label>
+                                            <Input type="date" value={formData.fechaNacimiento} onChange={e => setFormData({ ...formData, fechaNacimiento: e.target.value })} required className="h-10 bg-slate-50/50 border-slate-200 rounded-xl px-5 font-bold text-slate-700 shadow-sm text-[13px] focus:bg-white transition-all caret-black" />
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* BLOQUE 2: INFORMACIÓN EMPRESARIAL */}
+                                <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 relative">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-600" />
+                                    
+                                    <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                                            <FiLayers size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Información empresarial</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Configuración de rol y prestaciones</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Es doctor</span>
+                                                </div>
+                                                <button type="button" onClick={() => setFormData({ ...formData, esDoctor: !formData.esDoctor })} className={`w-12 h-6 rounded-full transition-all duration-500 relative ${formData.esDoctor ? "bg-emerald-500" : "bg-slate-200"}`}>
+                                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-500 shadow-sm ${formData.esDoctor ? "left-7" : "left-1"}`} />
+                                                </button>
+                                            </div>
+
+                                            {formData.esDoctor && (
+                                                <div className="space-y-4 animate-in slide-in-from-left-2 transition-all">
+                                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 transition-all">
+                                                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Puede ver todo lo de otros doctores</span>
+                                                        <button type="button" onClick={() => setFormData({ ...formData, seeOtherDoctorsData: !formData.seeOtherDoctorsData })} className={`w-10 h-5 rounded-full transition-all duration-300 relative ${formData.seeOtherDoctorsData ? "bg-blue-600" : "bg-slate-300"}`}>
+                                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${formData.seeOtherDoctorsData ? "left-6" : "left-1"}`} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-1.5 transition-all">
+                                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Porcentaje</label>
+                                                        <Input type="number" value={formData.comisionPorcentaje} onChange={e => setFormData({ ...formData, comisionPorcentaje: e.target.value })} placeholder="0" className="h-10 bg-white border-slate-200 rounded-lg px-4 font-black text-blue-600 text-[16px] shadow-sm" />
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 transition-all">
+                                                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">¿Documentos clinicos se imprimen con logo?</span>
+                                                        <button type="button" onClick={() => setFormData({ ...formData, clinicalDocsWithLogo: !formData.clinicalDocsWithLogo })} className={`w-10 h-5 rounded-full transition-all duration-300 relative ${formData.clinicalDocsWithLogo ? "bg-blue-600" : "bg-slate-300"}`}>
+                                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${formData.clinicalDocsWithLogo ? "left-6" : "left-1"}`} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-1.5 transition-all">
+                                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Cabecera documentos clínicos</label>
+                                                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                                                            <button type="button" onClick={() => setFormData({ ...formData, clinicalDocsHeader: "sucursal" })} className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${formData.clinicalDocsHeader === "sucursal" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}>Sucursal</button>
+                                                            <button type="button" onClick={() => setFormData({ ...formData, clinicalDocsHeader: "personalizado" })} className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${formData.clinicalDocsHeader === "personalizado" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}>Personalizado</button>
+                                                        </div>
+                                                    </div>
+
+                                                    {formData.clinicalDocsHeader === 'personalizado' && (
+                                                        <div className="space-y-1.5 animate-in slide-in-from-top-2 transition-all">
+                                                            <div className="flex items-center gap-2 ml-1">
+                                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Encabezado personalizado</label>
+                                                                <FiHelpCircle size={12} className="text-slate-300 cursor-help" title="Este encabezado se usará en impresiones clínicas" />
+                                                            </div>
+                                                            <textarea 
+                                                                value={formData.encabezadoPersonalizado}
+                                                                onChange={e => setFormData({ ...formData, encabezadoPersonalizado: e.target.value })}
+                                                                placeholder="Escriba el encabezado que aparecerá en los documentos..."
+                                                                className="w-full h-24 p-4 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 text-[12px] shadow-sm focus:border-blue-500 focus:bg-white outline-none transition-all caret-black custom-scrollbar resize-none"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Forma de pago</label>
+                                                <select value={formData.formaPago} onChange={e => setFormData({ ...formData, formaPago: e.target.value })} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg px-3 font-black text-[11px] text-slate-700 focus:border-blue-500 transition-all">
+                                                    <option value="Realizadas y pagadas">Realizadas y pagadas</option>
+                                                    <option value="Solo realizadas">Solo realizadas</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de perfil *</label>
+                                                <select required value={formData.profileId} onChange={e => setFormData({ ...formData, profileId: e.target.value })} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg px-3 font-black text-[11px] text-slate-700 focus:border-blue-500 transition-all">
+                                                    <option value="">Seleccione perfil...</option>
+                                                    {rolesDisponibles.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {formData.esDoctor && (
+                                        <div className="space-y-3 animate-in fade-in transition-all">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <FiActivity size={16} className="text-blue-500" />
+                                                <label className="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em]">Especializaciones *</label>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 xl:grid-cols-[1fr,30px,1fr] gap-3">
+                                                <div className="flex flex-col bg-slate-50 rounded-xl border border-slate-100 overflow-hidden h-52">
+                                                    <div className="px-4 py-2 border-b border-slate-100 bg-white/50 space-y-1.5">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Especializaciones disponibles</span>
+                                                        <div className="relative">
+                                                            <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                                                            <input type="text" placeholder="Filtrar..." value={searchTermAvailable} onChange={e => setSearchTermAvailable(e.target.value)} className="w-full h-7 pl-8 pr-3 bg-white border border-slate-200 rounded-md text-[10px] font-bold outline-none focus:border-blue-400" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+                                                        {specialties
+                                                            .filter(s => !formData.especialidades.includes(s.id) && s.nombre.toLowerCase().includes(searchTermAvailable.toLowerCase()))
+                                                            .map(s => (
+                                                                <button key={s.id} type="button" onClick={() => toggleSelection('especialidades', s.id)} className="w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 border border-transparent transition-all group/it">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="truncate">{s.nombre.toUpperCase()}</span>
+                                                                        <FiPlus className="opacity-0 group-hover/it:opacity-100 text-blue-500" />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-center opacity-10">
+                                                    <FiChevronsRight size={18} className="hidden xl:block" />
+                                                </div>
+
+                                                <div className="flex flex-col bg-blue-50/10 rounded-xl border border-blue-200/40 overflow-hidden h-52">
+                                                    <div className="px-4 py-2 border-b border-blue-100 bg-blue-50/30 space-y-1.5">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Seleccionadas</span>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-300" size={12} />
+                                                            <input type="text" placeholder="Buscar..." value={searchTermSelected} onChange={e => setSearchTermSelected(e.target.value)} className="w-full h-7 pl-8 pr-3 bg-white border border-blue-100 rounded-md text-[10px] font-bold outline-none focus:border-blue-400" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+                                                        {specialties
+                                                            .filter(s => formData.especialidades.includes(s.id) && s.nombre.toLowerCase().includes(searchTermSelected.toLowerCase()))
+                                                            .map(s => (
+                                                                <button key={s.id} type="button" onClick={() => toggleSelection('especialidades', s.id)} className="w-full text-left px-3 py-2 rounded-lg text-[10px] font-black bg-white text-blue-800 shadow-sm border border-blue-100 hover:bg-red-50 hover:text-red-600 transition-all group/sel">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="truncate">{s.nombre.toUpperCase()}</span>
+                                                                        <FiX className="opacity-0 group-hover/sel:opacity-100" />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </section>
+
+                                {/* BLOQUE 3: SUCURSALES */}
+                                <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 relative">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-900" />
+                                    
+                                    <div className="flex items-center gap-3 border-b border-slate-50 pb-3 mb-2">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-800 flex items-center justify-center shadow-inner">
+                                            <FiMapPin size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Acceso a Sucursales *</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Puntos de atención autorizados</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 xl:grid-cols-[1fr,30px,1fr] gap-3">
+                                        <div className="flex flex-col bg-slate-50 rounded-xl border border-slate-100 overflow-hidden h-52">
+                                            <div className="px-4 py-2 border-b border-slate-100 bg-white/50 space-y-1.5">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sucursales disponibles</span>
+                                                <div className="relative">
+                                                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                                                    <input type="text" placeholder="Filtrar..." value={searchTermSucAvailable} onChange={e => setSearchTermSucAvailable(e.target.value)} className="w-full h-7 pl-8 pr-3 bg-white border border-slate-200 rounded-md text-[10px] font-bold outline-none focus:border-blue-400" />
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+                                                {sucursales
+                                                    .filter(s => !formData.sucursales.includes(s.id) && s.nombre.toLowerCase().includes(searchTermSucAvailable.toLowerCase()))
+                                                    .map(s => (
+                                                        <button key={s.id} type="button" onClick={() => toggleSelection('sucursales', s.id)} className="w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-white hover:text-blue-600 border border-transparent transition-all group/suc">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="truncate">{s.nombre.toUpperCase()}</span>
+                                                                <FiPlus className="opacity-0 group-hover/suc:opacity-100 text-blue-500" />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-center opacity-10">
+                                            <FiArrowRight size={18} className="hidden xl:block" />
+                                        </div>
+
+                                        <div className="flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden h-52 shadow-sm">
+                                            <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 space-y-1.5">
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Acceso Autorizado</span>
+                                                <div className="relative">
+                                                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                                                    <input type="text" placeholder="Buscar..." value={searchTermSucSelected} onChange={e => setSearchTermSucSelected(e.target.value)} className="w-full h-7 pl-8 pr-3 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 outline-none focus:border-blue-500 caret-black" />
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+                                                {sucursales
+                                                    .filter(s => formData.sucursales.includes(s.id) && s.nombre.toLowerCase().includes(searchTermSucSelected.toLowerCase()))
+                                                    .map(s => (
+                                                        <button key={s.id} type="button" onClick={() => toggleSelection('sucursales', s.id)} className="w-full text-left px-3 py-2 rounded-lg text-[10px] font-black bg-blue-50 text-blue-700 hover:bg-red-50 hover:text-red-600 transition-all group/sel border border-blue-100 hover:border-red-100">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="truncate">{s.nombre.toUpperCase()}</span>
+                                                                <FiX className="opacity-0 group-hover/sel:opacity-100" />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* BLOQUE 4: DATOS DE SESIÓN */}
+                                <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6 relative">
+                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 rounded-l-3xl" />
+
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                                            <FiActivity size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Datos de sesión</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Credenciales de acceso al sistema</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Correo electrónico *</label>
+                                            <div className="relative">
+                                                <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required placeholder="usuario@clinica.com" className="w-full h-11 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl pl-11 pr-4 font-bold text-[13px] text-slate-700 outline-none transition-all caret-black" />
+                                            </div>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Este correo se usa para iniciar sesión</p>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Contraseña *</label>
+                                            <div className="relative">
+                                                <input type={showPassword ? "text" : "password"} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editId} placeholder="Mínimo 8 caracteres" className="w-full h-11 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl pl-4 pr-12 font-bold text-[13px] text-slate-700 outline-none transition-all caret-black" />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                                </button>
+                                            </div>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">{editId ? "Dejar vacío para conservar la actual" : "Mín. 8 caracteres alfanuméricos"}</p>
+                                        </div>
+                                    </div>
+                                </section>
                             </form>
                         </div>
 
-                        {/* Professional Footer Area */}
-                        < div className="bg-white px-10 py-8 border-t border-slate-100 flex items-center justify-between shrink-0 relative z-20" >
-                            <div className="flex flex-col">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5 italic">Confirmación de Registro</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full bg-blue-50 flex items-center justify-center">
-                                        <FiCheck size={10} className="text-blue-600" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-500">Asegúrese de validar los accesos antes de guardar</span>
+                        {/* Professional Footer Container */}
+                        <div className="bg-white px-10 py-8 border-t border-slate-100 flex items-center justify-between shrink-0 relative z-20">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Validación de Datos en Tiempo Real</span>
+                                </div>
+                                <div className="h-4 w-px bg-slate-200" />
+                                <div className="flex items-center gap-3">
+                                    <FiInfo className="text-blue-500" size={14} />
+                                    <span className="text-[9px] font-bold text-slate-400 leading-tight max-w-[200px]">Los cambios en el perfil de acceso se aplicarán de inmediato al próximo inicio de sesión.</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => setModalOpen(false)}
-                                    className="px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all duration-300"
                                 >
-                                    Cancelar
+                                    Descartar
                                 </button>
                                 <button
                                     onClick={handleSubmitForm}
                                     disabled={saving}
-                                    className="relative group/save overflow-hidden bg-slate-900 hover:bg-black text-white px-10 py-3 rounded-[20px] text-[13px] font-black uppercase tracking-[0.2em] flex items-center gap-4 shadow-[0_15px_45px_rgba(0,0,0,0.15)] transition-all active:scale-95"
+                                    className="group relative h-14 bg-slate-900 hover:bg-blue-600 text-white px-12 rounded-2xl text-[13px] font-black uppercase tracking-[0.3em] flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:shadow-blue-500/30 transition-all duration-500 active:scale-95 disabled:opacity-50 overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 bg-blue-600 translate-y-full group-hover/save:translate-y-0 transition-transform duration-500" />
-                                    <span className="relative z-10 font-bold">{saving ? "G U A R D A N D O..." : "G U A R D A R"}</span>
-                                    <FiSave size={18} className="relative z-10 group-hover/save:rotate-12 transition-transform duration-500" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    {saving ? (
+                                        <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin relative z-10" />
+                                    ) : (
+                                        <>
+                                            <span className="relative z-10">{editId ? "Confirmar Cambios" : "Ejecutar Registro"}</span>
+                                            <FiSave size={20} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
-                    </div >
-                </div >,
+                    </div>
+                </div>,
                 document.body
-            )
-            }
+            )}
         </div >
     );
 }
