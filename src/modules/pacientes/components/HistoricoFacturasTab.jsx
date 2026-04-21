@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
-import { FiFileText, FiCalendar, FiActivity, FiArrowRight, FiPrinter, FiEye, FiCheckCircle, FiClock, FiXCircle, FiUser } from 'react-icons/fi';
+import { FiFileText, FiCalendar, FiActivity, FiArrowRight, FiPrinter, FiEye, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
+import { formatCurrency } from '../../../utils/formatters';
 
 export default function HistoricoFacturasTab({ patientId }) {
     const [facturas, setFacturas] = useState([]);
@@ -17,10 +18,10 @@ export default function HistoricoFacturasTab({ patientId }) {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                fecha: doc.data().fechaISO ? new Date(doc.data().fechaISO) : new Date()
+            const data = snapshot.docs.map(d => ({
+                id: d.id,
+                ...d.data(),
+                fecha: d.data().fechaISO ? new Date(d.data().fechaISO) : new Date()
             }));
             setFacturas(data);
             setLoading(false);
@@ -34,9 +35,9 @@ export default function HistoricoFacturasTab({ patientId }) {
 
     const getStatusStyles = (status) => {
         const s = (status || "pendiente").toLowerCase();
-        if (["pagada", "pagado", "paid"].includes(s)) return { color: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500", icon: FiCheckCircle };
-        if (["cancelada", "anulada", "void"].includes(s)) return { color: "bg-rose-50 text-rose-600", dot: "bg-rose-500", icon: FiXCircle };
-        return { color: "bg-amber-50 text-amber-600", dot: "bg-amber-500", icon: FiClock };
+        if (["pagada", "pagado", "paid"].includes(s)) return { color: "bg-emerald-50 text-emerald-600", icon: FiCheckCircle };
+        if (["cancelada", "anulada", "void"].includes(s)) return { color: "bg-rose-50 text-rose-600", icon: FiXCircle };
+        return { color: "bg-amber-50 text-amber-600", icon: FiClock };
     };
 
     if (loading) return (
@@ -116,15 +117,23 @@ export default function HistoricoFacturasTab({ patientId }) {
                                       <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Monto de Venta</div>
                                       <div className="text-2xl font-black text-indigo-700 tracking-tighter leading-none">
                                           <span className="text-[14px] font-bold text-slate-300 mr-1">$</span>
-                                          {(fact.total || 0).toLocaleString('es-CO')}
+                                          {formatCurrency(fact.total || 0)}
                                       </div>
                                  </div>
 
                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[22px]">
-                                      <button onClick={() => alert("Mostrando detalle...")} className="w-11 h-11 bg-white text-slate-400 hover:bg-slate-800 hover:text-white rounded-[16px] flex items-center justify-center transition-all shadow-sm">
+                                      <button
+                                          onClick={() => alert("Mostrando detalle...")}
+                                          title="Ver detalle"
+                                          className="w-11 h-11 bg-white text-slate-400 hover:bg-slate-800 hover:text-white rounded-[16px] flex items-center justify-center transition-all shadow-sm"
+                                      >
                                           <FiEye size={18} />
                                       </button>
-                                      <button onClick={() => alert("Generando PDF Institucional...")} className="w-11 h-11 bg-white text-slate-400 hover:bg-indigo-600 hover:text-white rounded-[16px] flex items-center justify-center transition-all shadow-sm">
+                                      <button
+                                          onClick={() => window.print()}
+                                          title="Imprimir factura"
+                                          className="w-11 h-11 bg-white text-slate-400 hover:bg-indigo-600 hover:text-white rounded-[16px] flex items-center justify-center transition-all shadow-sm"
+                                      >
                                           <FiPrinter size={18} />
                                       </button>
                                  </div>

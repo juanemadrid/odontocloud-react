@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
-import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRight, FiPrinter, FiUser } from 'react-icons/fi';
+import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRight, FiPrinter } from 'react-icons/fi';
+import { formatCurrency } from '../../../utils/formatters';
 
 export default function HistoricoPagosTab({ patientId }) {
     const [pagos, setPagos] = useState([]);
@@ -19,10 +20,10 @@ export default function HistoricoPagosTab({ patientId }) {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                fecha: doc.data().fecha?.toDate() || new Date()
+            const data = snapshot.docs.map(d => ({
+                id: d.id,
+                ...d.data(),
+                fecha: d.data().fecha?.toDate() || new Date()
             }));
             setPagos(data);
             setLoading(false);
@@ -35,7 +36,7 @@ export default function HistoricoPagosTab({ patientId }) {
     }, [patientId]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm("¿Seguró que deseas anular este pago?")) return;
+        if (!window.confirm("¿Seguro que deseas anular este pago?")) return;
         try {
             await deleteDoc(doc(db, "pagos", id));
             toast.success("Pago anulado");
@@ -115,15 +116,23 @@ export default function HistoricoPagosTab({ patientId }) {
                                   <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Valor Abono</div>
                                   <div className="text-2xl font-black text-emerald-600 tracking-tighter">
                                       <span className="text-sm font-bold text-emerald-200 mr-1">$</span>
-                                      {(pago.monto || 0).toLocaleString('es-CO')}
+                                      {formatCurrency(pago.monto || 0)}
                                   </div>
                              </div>
 
                              <div className="flex items-center gap-2">
-                                  <button onClick={() => alert("Imprimiendo recibo de caja...")} className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm">
+                                  <button
+                                      onClick={() => window.print()}
+                                      title="Imprimir recibo"
+                                      className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                                  >
                                       <FiPrinter size={16} />
                                   </button>
-                                  <button onClick={() => handleDelete(pago.id)} className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm">
+                                  <button
+                                      onClick={() => handleDelete(pago.id)}
+                                      title="Anular pago"
+                                      className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                                  >
                                       <FiTrash2 size={16} />
                                   </button>
                              </div>

@@ -53,11 +53,14 @@ export const getPatientFinancials = async (patientId) => {
     const totalFacturado = facturas.reduce((acc, f) => acc + f.total, 0);
     const totalPagado = pagos.reduce((acc, p) => acc + p.monto, 0);
     
-    // Credits (Saldo a Favor)
-    // In this logic, a credit is a payment that hasn't been linked to an invoice yet
-    // or specifically marked as Concepto: SALDO A FAVOR
+    // Credits (Saldo a Favor) - payments explicitly marked as credit advances
     const totalSaldosAFavor = pagos
         .filter(p => p.concepto === "SALDO A FAVOR")
+        .reduce((acc, p) => acc + p.monto, 0);
+
+    // Regular payments (abonos to treatment, not credit advances)
+    const totalAbonosTratamiento = pagos
+        .filter(p => p.concepto !== "SALDO A FAVOR")
         .reduce((acc, p) => acc + p.monto, 0);
 
     const facturasPagadas = facturas.filter((f) => ["pagada", "pagado", "paid"].includes(f.estado));
@@ -66,6 +69,12 @@ export const getPatientFinancials = async (patientId) => {
     const totalFacturasPagadas = facturasPagadas.reduce((acc, f) => acc + f.total, 0);
     const totalFacturasPendientes = facturasPendientes.reduce((acc, f) => acc + f.total, 0);
 
+    // Raw balance: what is owed (positive = debt, negative = overpaid)
+    const rawBalance = totalFacturado - totalPagado;
+    
+    // Net balance for display: never show negative (overpayment shows as saldo a favor)
+    const balance = rawBalance > 0 ? rawBalance : 0;
+
     return {
         facturas,
         pagos,
@@ -73,10 +82,12 @@ export const getPatientFinancials = async (patientId) => {
         totals: {
             totalFacturado,
             totalPagado,
+            totalAbonosTratamiento,
             totalFacturasPendientes,
             totalFacturasPagadas,
             totalSaldosAFavor,
-            balance: totalFacturado - totalPagado
+            balance,         // Deuda actual (>= 0, nunca negativo)
+            rawBalance       // Valor real: negativo = crédito no aplicado
         }
     };
 };
