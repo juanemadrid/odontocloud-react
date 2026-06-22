@@ -204,6 +204,12 @@ export default function ClinicalAIAssistant({
                 if (spanishVoice) {
                     utterance.voice = spanishVoice;
                 }
+                
+                // Safety fallback: if speech synthesis gets blocked or stuck, start listening after 5 seconds anyway
+                const safetyTimer = setTimeout(() => {
+                    startListening();
+                }, 5000);
+
                 utterance.onstart = () => {
                     scrollToBottom();
                 };
@@ -211,9 +217,11 @@ export default function ClinicalAIAssistant({
                     scrollToBottom();
                 };
                 utterance.onend = () => {
+                    clearTimeout(safetyTimer);
                     startListening();
                 };
                 utterance.onerror = () => {
+                    clearTimeout(safetyTimer);
                     startListening();
                 };
                 window.speechSynthesis.speak(utterance);
@@ -426,6 +434,14 @@ export default function ClinicalAIAssistant({
                     if (spanishVoice) {
                         utterance.voice = spanishVoice;
                     }
+                    
+                    // Safety fallback: if response speech synthesis gets blocked, start listening after 6 seconds
+                    const responseSafetyTimer = setTimeout(() => {
+                        if (!(response.fieldToUpdate === 'submit' && response.extractedValue === true)) {
+                            startListening();
+                        }
+                    }, 6000);
+
                     utterance.onstart = () => {
                         scrollToBottom();
                     };
@@ -434,11 +450,13 @@ export default function ClinicalAIAssistant({
                     };
                     
                     utterance.onend = () => {
+                        clearTimeout(responseSafetyTimer);
                         if (!(response.fieldToUpdate === 'submit' && response.extractedValue === true)) {
                             startListening();
                         }
                     };
                     utterance.onerror = () => {
+                        clearTimeout(responseSafetyTimer);
                         startListening();
                     };
                     
