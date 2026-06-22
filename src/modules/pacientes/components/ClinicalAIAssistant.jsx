@@ -71,7 +71,6 @@ export default function ClinicalAIAssistant({
     const activeTabRef = React.useRef(activeTab);
     const currentStepRef = React.useRef(currentStep);
     const chatHistoryRef = React.useRef(chatHistory);
-    const apiKeyRef = React.useRef(apiKey);
     const serviciosRef = React.useRef(servicios);
 
     // Keep refs up-to-date on every render
@@ -83,7 +82,6 @@ export default function ClinicalAIAssistant({
     useEffect(() => { activeTabRef.current = activeTab; });
     useEffect(() => { currentStepRef.current = currentStep; });
     useEffect(() => { chatHistoryRef.current = chatHistory; });
-    useEffect(() => { apiKeyRef.current = apiKey; });
     useEffect(() => { serviciosRef.current = servicios; });
 
     const scrollToBottom = () => {
@@ -123,6 +121,9 @@ export default function ClinicalAIAssistant({
     const [showSettings, setShowSettings] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+
+    const apiKeyRef = React.useRef(apiKey);
+    useEffect(() => { apiKeyRef.current = apiKey; });
 
     // Mount/Unmount coordination for background voice assistant and pre-fetching voices
     useEffect(() => {
