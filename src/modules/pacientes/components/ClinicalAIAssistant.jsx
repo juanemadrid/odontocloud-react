@@ -62,6 +62,30 @@ export default function ClinicalAIAssistant({
     const isFirstRun = React.useRef(true);
     const chatContainerRef = React.useRef(null);
 
+    // Refs to stabilize dependencies of the debounced speech processor
+    const doctorsRef = React.useRef(doctors);
+    const planesRef = React.useRef(planes);
+    const setValueRef = React.useRef(setValue);
+    const watchRef = React.useRef(watch);
+    const onSubmitFormRef = React.useRef(onSubmitForm);
+    const activeTabRef = React.useRef(activeTab);
+    const currentStepRef = React.useRef(currentStep);
+    const chatHistoryRef = React.useRef(chatHistory);
+    const apiKeyRef = React.useRef(apiKey);
+    const serviciosRef = React.useRef(servicios);
+
+    // Keep refs up-to-date on every render
+    useEffect(() => { doctorsRef.current = doctors; });
+    useEffect(() => { planesRef.current = planes; });
+    useEffect(() => { setValueRef.current = setValue; });
+    useEffect(() => { watchRef.current = watch; });
+    useEffect(() => { onSubmitFormRef.current = onSubmitForm; });
+    useEffect(() => { activeTabRef.current = activeTab; });
+    useEffect(() => { currentStepRef.current = currentStep; });
+    useEffect(() => { chatHistoryRef.current = chatHistory; });
+    useEffect(() => { apiKeyRef.current = apiKey; });
+    useEffect(() => { serviciosRef.current = servicios; });
+
     const scrollToBottom = () => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -237,7 +261,7 @@ export default function ClinicalAIAssistant({
         }
     }, [isConversational, userProfile, setValue, activeTab]);
 
-    // Conversational Mode: Debounced speech processor (waits for 1.5 seconds of silence before calling Gemini)
+    // Conversational Mode: Debounced speech processor (waits for 800ms of silence before calling Gemini)
     useEffect(() => {
         if (!isConversational || !transcript.trim()) return;
 
@@ -247,14 +271,14 @@ export default function ClinicalAIAssistant({
 
             // Detectar comandos de voz para cambio de pestaña
             if (textLower.includes("nota aclaratoria") || textLower.includes("nota aclaratorio") || textLower.includes("cambiar a nota") || textLower.includes("pasar a nota") || textLower.includes("ir a nota")) {
-                if (setActiveTab && activeTab !== 'nota') {
+                if (setActiveTab && activeTabRef.current !== 'nota') {
                     stopListening();
                     resetTranscript();
                     setActiveTab('nota');
                     return;
                 }
             } else if (textLower.includes("evolución") || textLower.includes("evolucion") || textLower.includes("cambiar a evolución") || textLower.includes("cambiar a evolucion") || textLower.includes("pasar a evolución") || textLower.includes("pasar a evolucion") || textLower.includes("ir a evolución") || textLower.includes("ir a evolucion")) {
-                if (setActiveTab && activeTab !== 'evolucion') {
+                if (setActiveTab && activeTabRef.current !== 'evolucion') {
                     stopListening();
                     resetTranscript();
                     setActiveTab('evolucion');
@@ -268,7 +292,7 @@ export default function ClinicalAIAssistant({
             setLoading(true);
 
             try {
-                const effectiveKey = apiKey.trim() || import.meta.env.VITE_GEMINI_API_KEY || '';
+                const effectiveKey = apiKeyRef.current.trim() || import.meta.env.VITE_GEMINI_API_KEY || '';
                 if (!effectiveKey) {
                     toast.error('Debe configurar su Clave API de Gemini.');
                     setShowSettings(true);
@@ -280,51 +304,51 @@ export default function ClinicalAIAssistant({
 
                 // Preparar los datos actuales del formulario
                 const contextData = {
-                    doctors: doctors || [],
-                    planes: planes || [],
-                    servicios: servicios || [],
-                    activeTab: activeTab,
+                    doctors: doctorsRef.current || [],
+                    planes: planesRef.current || [],
+                    servicios: serviciosRef.current || [],
+                    activeTab: activeTabRef.current,
                     currentForm: {
-                        doctorId: watch ? watch("doctorId") : '',
-                        planId: watch ? watch("planId") : '',
-                        horaInicio: watch ? watch("horaInicio") : '',
-                        horaFin: watch ? watch("horaFin") : '',
-                        comentario: watch ? watch("comentario") : '',
-                        aplicaMedicamento: watch ? watch("aplicaMedicamento") : false,
-                        detalleMedicamento: watch ? watch("detalleMedicamento") : '',
-                        controlEsterilizacion: watch ? watch("controlEsterilizacion") : false
+                        doctorId: watchRef.current ? watchRef.current("doctorId") : '',
+                        planId: watchRef.current ? watchRef.current("planId") : '',
+                        horaInicio: watchRef.current ? watchRef.current("horaInicio") : '',
+                        horaFin: watchRef.current ? watchRef.current("horaFin") : '',
+                        comentario: watchRef.current ? watchRef.current("comentario") : '',
+                        aplicaMedicamento: watchRef.current ? watchRef.current("aplicaMedicamento") : false,
+                        detalleMedicamento: watchRef.current ? watchRef.current("detalleMedicamento") : '',
+                        controlEsterilizacion: watchRef.current ? watchRef.current("controlEsterilizacion") : false
                     }
                 };
 
                 // Llamar al servicio interactivo guiado
-                const response = await chatGuidedAssistant(rawText, currentStep, chatHistory, contextData, effectiveKey);
+                const response = await chatGuidedAssistant(rawText, currentStepRef.current, chatHistoryRef.current, contextData, effectiveKey);
 
                 // Actualizar los campos del formulario en React Hook Form en tiempo real
                 if (response.fieldToUpdate && response.extractedValue !== null) {
                     if (response.fieldToUpdate === 'horas') {
-                        if (response.extractedValue.horaInicio) setValue('horaInicio', response.extractedValue.horaInicio);
-                        if (response.extractedValue.horaFin) setValue('horaFin', response.extractedValue.horaFin);
+                        if (response.extractedValue.horaInicio) setValueRef.current('horaInicio', response.extractedValue.horaInicio);
+                        if (response.extractedValue.horaFin) setValueRef.current('horaFin', response.extractedValue.horaFin);
                     } else if (response.fieldToUpdate === 'horaInicio') {
-                        setValue('horaInicio', response.extractedValue);
+                        setValueRef.current('horaInicio', response.extractedValue);
                     } else if (response.fieldToUpdate === 'aplicaMedicamento') {
-                        setValue('aplicaMedicamento', !!response.extractedValue);
+                        setValueRef.current('aplicaMedicamento', !!response.extractedValue);
                     } else if (response.fieldToUpdate === 'controlEsterilizacion') {
-                        setValue('controlEsterilizacion', !!response.extractedValue);
+                        setValueRef.current('controlEsterilizacion', !!response.extractedValue);
                     } else if (response.fieldToUpdate === 'submit') {
                         if (response.extractedValue === true) {
                             // Rellenar automáticamente la hora de fin con la hora actual si está vacía
-                            if (watch && !watch("horaFin")) {
+                            if (watchRef.current && !watchRef.current("horaFin")) {
                                 const now = new Date();
                                 const hh = String(now.getHours()).padStart(2, '0');
                                 const mm = String(now.getMinutes()).padStart(2, '0');
-                                setValue('horaFin', `${hh}:${mm}`);
+                                setValueRef.current('horaFin', `${hh}:${mm}`);
                             }
-                            if (onSubmitForm) {
-                                onSubmitForm();
+                            if (onSubmitFormRef.current) {
+                                onSubmitFormRef.current();
                             }
                         }
                     } else {
-                        setValue(response.fieldToUpdate, response.extractedValue);
+                        setValueRef.current(response.fieldToUpdate, response.extractedValue);
                     }
                 }
 
@@ -333,8 +357,8 @@ export default function ClinicalAIAssistant({
                     Object.entries(response.extraUpdates).forEach(([field, val]) => {
                         if (val !== null && val !== undefined) {
                             if (field === 'aplicaMedicamento' || field === 'controlEsterilizacion') {
-                                setValue(field, !!val);
-                            } else if (field === 'completarProcedimientos' && Array.isArray(val) && setPlantillaDetails && servicios) {
+                                setValueRef.current(field, !!val);
+                            } else if (field === 'completarProcedimientos' && Array.isArray(val) && setPlantillaDetails && serviciosRef.current) {
                                 setPlantillaDetails(prev => {
                                     const next = { ...prev };
                                     if (val.includes("todos") || val.includes("all")) {
@@ -348,19 +372,19 @@ export default function ClinicalAIAssistant({
                                     } else {
                                         val.forEach(item => {
                                             if (typeof item === 'number') {
-                                                const srv = servicios[item - 1];
+                                                const srv = serviciosRef.current[item - 1];
                                                 if (srv && next[srv.id]) {
                                                     next[srv.id] = { ...next[srv.id], checked: true };
                                                 }
                                             } else if (typeof item === 'string') {
                                                 const idx = parseInt(item, 10);
                                                 if (!isNaN(idx)) {
-                                                    const srv = servicios[idx - 1];
+                                                    const srv = serviciosRef.current[idx - 1];
                                                     if (srv && next[srv.id]) {
                                                         next[srv.id] = { ...next[srv.id], checked: true };
                                                     }
                                                 } else {
-                                                    const srv = servicios.find(s => 
+                                                    const srv = serviciosRef.current.find(s => 
                                                         (s.desc || s.procedimiento || s.nombre || '').toLowerCase().includes(item.toLowerCase())
                                                     );
                                                     if (srv && next[srv.id]) {
@@ -373,7 +397,7 @@ export default function ClinicalAIAssistant({
                                     return next;
                                 });
                             } else if (field === 'medicamentos' && Array.isArray(val)) {
-                                const current = watch ? watch("medicamentos") || [] : [];
+                                const current = watchRef.current ? watchRef.current("medicamentos") || [] : [];
                                 const filteredNew = val.filter(newMed => 
                                     newMed.medicamento && 
                                     !current.some(c => 
@@ -382,11 +406,11 @@ export default function ClinicalAIAssistant({
                                     )
                                 );
                                 if (filteredNew.length > 0) {
-                                    setValue("medicamentos", [...current, ...filteredNew]);
-                                    setValue("aplicaMedicamento", true);
+                                    setValueRef.current("medicamentos", [...current, ...filteredNew]);
+                                    setValueRef.current("aplicaMedicamento", true);
                                 }
                             } else if (field === 'esterilizaciones' && Array.isArray(val)) {
-                                const current = watch ? watch("esterilizaciones") || [] : [];
+                                const current = watchRef.current ? watchRef.current("esterilizaciones") || [] : [];
                                 const filteredNew = val.filter(newEst => 
                                     newEst.ciclo &&
                                     !current.some(c => 
@@ -395,11 +419,11 @@ export default function ClinicalAIAssistant({
                                     )
                                 );
                                 if (filteredNew.length > 0) {
-                                    setValue("esterilizaciones", [...current, ...filteredNew]);
-                                    setValue("controlEsterilizacion", true);
+                                    setValueRef.current("esterilizaciones", [...current, ...filteredNew]);
+                                    setValueRef.current("controlEsterilizacion", true);
                                 }
                             } else {
-                                setValue(field, val);
+                                setValueRef.current(field, val);
                             }
                         }
                     });
@@ -412,8 +436,8 @@ export default function ClinicalAIAssistant({
 
                 // Generar vista estructurada para la previsualización inferior
                 setResult({
-                    comentario: watch ? watch("comentario") : (response.fieldToUpdate === 'comentario' ? response.extractedValue : ''),
-                    tratamiento: watch ? watch("planId") : '',
+                    comentario: watchRef.current ? watchRef.current("comentario") : (response.fieldToUpdate === 'comentario' ? response.extractedValue : ''),
+                    tratamiento: watchRef.current ? watchRef.current("planId") : '',
                     prognosis: 'Favorable'
                 });
 
@@ -481,7 +505,7 @@ export default function ClinicalAIAssistant({
         }, 800); // 800 ms de silencio (más ágil y rápido)
 
         return () => clearTimeout(timer);
-    }, [transcript, isConversational, apiKey, chatHistory, stopListening, startListening, resetTranscript, currentStep, doctors, planes, setValue, watch, onSubmitForm, activeTab]);
+    }, [transcript, isConversational, stopListening, startListening, resetTranscript]);
 
     const handleSaveApiKey = (e) => {
         e.preventDefault();
