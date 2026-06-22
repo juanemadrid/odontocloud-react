@@ -117,6 +117,37 @@ export default function ClinicalAIAssistant({
         setTranscript
     } = useSpeechRecognition(isConversational);
 
+    // Ref to always have latest interimTranscript available in timers
+    const interimTranscriptRef = React.useRef(interimTranscript);
+    useEffect(() => { interimTranscriptRef.current = interimTranscript; }, [interimTranscript]);
+    const transcriptRef = React.useRef(transcript);
+    useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+    const isLoadingRef = React.useRef(false);
+
+    // Fallback: promote interimTranscript → transcript after 1.5s silence
+    // Fixes Chrome bug where results sometimes never become 'final'
+    useEffect(() => {
+        if (!isConversational || !interimTranscript.trim()) return;
+        
+        const flushTimer = setTimeout(() => {
+            // Only flush if there's interim text but no new final text arrived, and we're not already processing
+            const latestInterim = interimTranscriptRef.current.trim();
+            const latestFinal = transcriptRef.current.trim();
+            if (latestInterim && !isLoadingRef.current) {
+                // Promote interim to final transcript so the debounce effect triggers
+                setTranscript(prev => {
+                    const cleanPrev = prev.trim();
+                    if (!cleanPrev) return latestInterim;
+                    // Avoid appending duplicates
+                    if (cleanPrev.endsWith(latestInterim)) return cleanPrev;
+                    return cleanPrev + ' ' + latestInterim;
+                });
+            }
+        }, 1500);
+        
+        return () => clearTimeout(flushTimer);
+    }, [interimTranscript, isConversational, setTranscript]);
+
     const [apiKey, setApiKey] = useState('');
     const [showSettings, setShowSettings] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -291,6 +322,7 @@ export default function ClinicalAIAssistant({
             stopListening();
             resetTranscript();
             setLoading(true);
+            isLoadingRef.current = true;
 
             try {
                 const effectiveKey = apiKeyRef.current.trim() || import.meta.env.VITE_GEMINI_API_KEY || '';
@@ -502,6 +534,7 @@ export default function ClinicalAIAssistant({
                 startListening();
             } finally {
                 setLoading(false);
+                isLoadingRef.current = false;
             }
         }, 800); // 800 ms de silencio (más ágil y rápido)
 
