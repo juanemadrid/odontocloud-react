@@ -217,7 +217,7 @@ export async function chatGuidedAssistant(rawText, currentStep, history = [], co
         throw new Error('Se requiere una clave API de Gemini.');
     }
 
-    const { doctors, planes, currentForm, activeTab } = contextData;
+    const { doctors, planes, currentForm, activeTab, servicios } = contextData;
 
     let systemPrompt = "";
     if (activeTab === 'nota') {
