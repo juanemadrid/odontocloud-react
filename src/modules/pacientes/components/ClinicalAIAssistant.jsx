@@ -199,7 +199,7 @@ export default function ClinicalAIAssistant({
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(greeting);
                 utterance.lang = 'es-ES';
-                utterance.rate = 0.95; // Habla a velocidad natural, menos robótico
+                utterance.rate = 1.0; // Velocidad estándar fluida
                 const spanishVoice = getSpanishVoice();
                 if (spanishVoice) {
                     utterance.voice = spanishVoice;
@@ -421,7 +421,7 @@ export default function ClinicalAIAssistant({
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(response.speechResponse);
                     utterance.lang = 'es-ES';
-                    utterance.rate = 0.95; // Habla a velocidad natural, menos robótico
+                    utterance.rate = 1.0; // Velocidad estándar fluida
                     const spanishVoice = getSpanishVoice();
                     if (spanishVoice) {
                         utterance.voice = spanishVoice;
