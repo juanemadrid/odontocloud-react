@@ -11,10 +11,33 @@ import { useAuth } from '../../../context/AuthContext';
 const getSpanishVoice = () => {
     if (!window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
-    let voice = voices.find(v => v.lang === 'es-ES' || v.lang === 'es_ES');
+    const spanishVoices = voices.filter(v => v.lang.startsWith('es') || v.lang.startsWith('ES'));
+    if (spanishVoices.length === 0) return null;
+    
+    // 1. Prioritize neural/natural voices (Edge neural voices)
+    let voice = spanishVoices.find(v => v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural'));
+    
+    // 2. Prioritize Google voices (Chrome online voices)
     if (!voice) {
-        voice = voices.find(v => v.lang.startsWith('es'));
+        voice = spanishVoices.find(v => v.name.toLowerCase().includes('google'));
     }
+    
+    // 3. Prioritize specific Spanish accents (Spain/Mexico/Colombia) depending on availability
+    if (!voice) {
+        voice = spanishVoices.find(v => v.lang === 'es-ES' || v.lang === 'es_ES');
+    }
+    if (!voice) {
+        voice = spanishVoices.find(v => v.lang === 'es-MX' || v.lang === 'es_MX');
+    }
+    if (!voice) {
+        voice = spanishVoices.find(v => v.lang === 'es-CO' || v.lang === 'es_CO');
+    }
+    
+    // 4. Fallback to any Spanish voice
+    if (!voice) {
+        voice = spanishVoices[0];
+    }
+    
     return voice;
 };
 
@@ -111,6 +134,9 @@ export default function ClinicalAIAssistant({
     useEffect(() => {
         if (isConversational) {
             const isDoc = userProfile?.esDoctor || userProfile?.rol === 'doctor';
+            const doctorName = userProfile?.nombreCompleto || userProfile?.nombre || "";
+            const cleanName = doctorName.replace(/^(Dr\.|Dra\.|Dr|Dra)\s+/i, '');
+            const displayName = cleanName ? `doctor ${cleanName}` : "doctor";
             
             let greeting = "";
             
@@ -133,13 +159,13 @@ export default function ClinicalAIAssistant({
 
                 if (isFirstRun.current) {
                     if (currentStart === 2) {
-                        greeting = "¡Hola, doctor! Le habla Anita, su asistente virtual. ¿Qué aclaración clínica registraremos hoy?";
+                        greeting = `¡Hola, ${displayName}! Le habla Anita, su asistente virtual. ¿Qué aclaración clínica registraremos hoy?`;
                     } else {
                         greeting = "¡Hola! Le habla Anita, su asistente virtual. Para iniciar, ¿qué doctor registra esta nota?";
                     }
                 } else {
                     if (currentStart === 2) {
-                        greeting = "Le habla Anita. Por favor, dícteme la aclaración clínica.";
+                        greeting = `Le habla Anita, ${displayName}. Por favor, dícteme la aclaración clínica.`;
                     } else {
                         greeting = "Le habla Anita. ¿Qué doctor registra la nota aclaratoria?";
                     }
@@ -148,7 +174,7 @@ export default function ClinicalAIAssistant({
                 if (isFirstRun.current) {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = "¡Hola, doctor! Le habla Anita, su asistente virtual. ¿Con qué plan de tratamiento iniciamos hoy?";
+                        greeting = `¡Hola, ${displayName}! Le habla Anita, su asistente virtual. ¿Con qué plan de tratamiento iniciamos hoy?`;
                     } else {
                         setCurrentStep(1);
                         greeting = "¡Hola! Le habla Anita, su asistente virtual. ¿Qué doctor está a cargo hoy?";
@@ -156,9 +182,8 @@ export default function ClinicalAIAssistant({
                 } else {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = "Le habla Anita. ¿Qué plan de tratamiento registraremos hoy, doctor?";
+                        greeting = `Le habla Anita. ¿Qué plan de tratamiento registraremos hoy, ${displayName}?`;
                     } else {
-                        setCurrentStep(1);
                         greeting = "Le habla Anita. ¿Qué doctor está a cargo del procedimiento hoy?";
                     }
                 }
@@ -174,7 +199,7 @@ export default function ClinicalAIAssistant({
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(greeting);
                 utterance.lang = 'es-ES';
-                utterance.rate = 1.08; // Habla ligeramente más rápido y fluido
+                utterance.rate = 0.95; // Habla a velocidad natural, menos robótico
                 const spanishVoice = getSpanishVoice();
                 if (spanishVoice) {
                     utterance.voice = spanishVoice;
@@ -396,7 +421,7 @@ export default function ClinicalAIAssistant({
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(response.speechResponse);
                     utterance.lang = 'es-ES';
-                    utterance.rate = 1.08; // Habla ligeramente más rápido y fluido
+                    utterance.rate = 0.95; // Habla a velocidad natural, menos robótico
                     const spanishVoice = getSpanishVoice();
                     if (spanishVoice) {
                         utterance.voice = spanishVoice;
