@@ -108,15 +108,37 @@ export const searchPatients = async (inquilino, searchTerm) => {
     const term = normalize(searchTerm);
     if (!term) return [];
 
-    const q = query(
-        collection(db, "pacientes"),
-        where("inquilino", "==", inquilino),
-        where("nombreCompletoLower", ">=", term),
-        where("nombreCompletoLower", "<=", term + "\uf8ff"),
-        limit(20)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try {
+        const q = query(
+            collection(db, "pacientes"),
+            where("inquilino", "==", inquilino),
+            where("nombreCompletoLower", ">=", term),
+            where("nombreCompletoLower", "<=", term + "\uf8ff"),
+            limit(20)
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.warn("searchPatients: Composite index might be missing. Using client-side fallback.", err);
+        try {
+            // Fallback: Fetch all patients for this inquilino (usually fast for a single tenant)
+            const qFallback = query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino)
+            );
+            const snap = await getDocs(qFallback);
+            const allPatients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Client-side filtering with robust fallback for missing nombreCompletoLower
+            return allPatients.filter(p => {
+                const nameLower = p.nombreCompletoLower || normalize(p.nombreCompleto || p.paciente || "");
+                return nameLower && nameLower.includes(term);
+            }).slice(0, 20);
+        } catch (fallbackErr) {
+            console.error("Critical error in searchPatients fallback:", fallbackErr);
+            return [];
+        }
+    }
 };
 
 export const getPatientById = async (id) => {

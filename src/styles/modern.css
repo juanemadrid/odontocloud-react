@@ -106,6 +106,17 @@
     justify-content: space-between;
 }
 
+.viva-navbar.glass-premium-light {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 10px 30px -10px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+
 .viva-container {
     max-width: 1600px;
     margin: 0 auto;

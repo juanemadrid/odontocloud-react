@@ -13,6 +13,7 @@ import PageHeader from "../components/common/PageHeader";
 import TestimonialsSection from "./landing/TestimonialsSection";
 import { getPlans } from "../services/adminService";
 import { FiMessageCircle } from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa";
 import TrialModal from "../components/landing/TrialModal";
 import "../styles/modern.css";
 
@@ -57,7 +58,7 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
 
         if (isMaster) {
             const loadMaster = async () => {
-                setLoading(true);
+                if (!config.heroTitle) setLoading(true);
                 try {
                     const ref = doc(db, "website_config", "general");
                     const snap = await getDoc(ref);
@@ -133,7 +134,7 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
         }
 
         const loadContent = async () => {
-            setLoading(true);
+            if (config.slug !== clinicSlug) setLoading(true);
             try {
                 if (clinicSlug) {
                     const q = query(collection(db, "tenants"), where("slug", "==", clinicSlug));
@@ -202,8 +203,8 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
                 {!section && <HeroSection key={heroKey} config={config} onShowTrial={onShowTrial} />}
 
                 {/* Services Section - Show if 'servicios' requested OR homepage */}
-                {(!config.isMaster && (!section || section === 'servicios')) && (
-                    <div id="services" className={section === 'servicios' ? "min-h-screen bg-white" : ""}>
+                {((!config.isMaster && !section) || section === 'servicios') && (
+                    <div id="features" className={section === 'servicios' ? "min-h-screen bg-white" : ""}>
                         {/* Dedicated Page Header */}
                         {section === 'servicios' && (
                             <PageHeader
@@ -479,19 +480,6 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
                     </section>
                 )}
 
-                {/* Floating WhatsApp Support */}
-                <a
-                    href={`https://wa.me/57${(config?.contactPhone || "3001234567").replace(/\D/g, '')}?text=Hola,%20quisiera%20más%20información%20sobre%20sus%20servicios%20en%20${config?.name || 'la clínica'}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="fixed bottom-8 right-8 z-[90] bg-[#25D366] text-white p-4 rounded-full shadow-[0_10px_20px_rgba(37,211,102,0.3)] hover:bg-[#20bd5a] hover:scale-110 transition-all duration-300 group"
-                    title="Habla con soporte"
-                >
-                    <FiMessageCircle size={28} />
-                    <span className="absolute right-full mr-4 bg-slate-900 text-white text-xs py-2 px-4 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10">
-                        ¿Necesitas ayuda?
-                    </span>
-                </a>
 
                 {/* TRIAL MODAL */}
                 <TrialModal

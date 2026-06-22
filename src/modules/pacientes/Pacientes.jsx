@@ -108,7 +108,7 @@ const INITIAL_FORM = {
 export default function Pacientes() {
   const { userProfile } = useAuth();
   const toast = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // listado
   const [loading, setLoading] = useState(true);
@@ -126,18 +126,43 @@ export default function Pacientes() {
     load();
   }, [userProfile?.inquilino]);
 
-  // Handle URL ID pre-selection
+  // Handle URL ID pre-selection (supporting both query param '?id=' and pathname '/pacientes/:id/planes')
   useEffect(() => {
     if (!loading && pacientes.length > 0) {
-      const targetId = searchParams.get("id");
+      const pathParts = window.location.pathname.split("/pacientes/");
+      const idFromPath = pathParts[1] ? pathParts[1].split("/")[0] : null;
+      const targetId = idFromPath || searchParams.get("id");
+
       if (targetId) {
-        const found = pacientes.find(p => p.id === targetId);
+        const found = pacientes.find(p => 
+          p.id.toLowerCase() === targetId.toLowerCase() || 
+          p.nroDocumento?.toLowerCase() === targetId.toLowerCase()
+        );
         if (found) {
           setSelectedPatient(found);
         }
       }
     }
   }, [loading, pacientes, searchParams]);
+
+  // Handle action=new query parameter to automatically open the new patient form modal
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "new") {
+      handleOpenNew();
+      
+      // Clean query parameter after a small delay to prevent overriding the modal open state
+      const timer = setTimeout(() => {
+        const currentParams = new URLSearchParams(window.location.search);
+        if (currentParams.get("action") === "new") {
+          currentParams.delete("action");
+          setSearchParams(currentParams, { replace: true });
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams]);
 
   const reloadData = async () => {
     setLoading(true);
@@ -257,14 +282,16 @@ export default function Pacientes() {
       )}
 
       {open && (
-        <PatientForm
-          editData={editData}
-          onClose={() => setOpen(false)}
-          onSave={() => {
-            setOpen(false);
-            reloadData();
-          }}
-        />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-10 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full h-full md:max-w-6xl md:max-h-[90vh] overflow-hidden">
+            <PatientForm
+              initialData={editData}
+              onSubmit={handleSubmit}
+              onCancel={() => setOpen(false)}
+              onDelete={handleDelete}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

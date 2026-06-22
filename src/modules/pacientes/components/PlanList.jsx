@@ -11,6 +11,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditingPlan }) {
     const patientId = patient?.id;
     const [plans, setPlans] = useState([]);
+    const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
     const { userProfile } = useAuth();
@@ -24,7 +25,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     // Form fields
     const [formData, setFormData] = useState({
         nombre: '',
-        profesional: userProfile?.nombre || '',
+        profesional: userProfile?.nombreCompleto || `${userProfile?.nombre || ''} ${userProfile?.apellido || ''}`.trim() || '',
         vigencia: 30,
         observaciones: ''
     });
@@ -41,6 +42,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         try {
             const data = await getPlansByPatient(patientId);
             setPlans(data);
+
+            if (patientId) {
+                const q = query(collection(db, "pagos"), where("patientId", "==", patientId));
+                const snap = await getDocs(q);
+                const paymentsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setPayments(paymentsData);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -57,7 +65,10 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                 where("inquilino", "==", userProfile.inquilino)
             );
             const snap = await getDocs(q);
-            const profs = snap.docs.map(d => d.data().nombre).filter(n => !!n);
+            const profs = snap.docs.map(d => {
+                const data = d.data();
+                return data.nombreCompleto || `${data.nombre || ''} ${data.apellido || ''}`.trim() || data.displayName || data.email || '';
+            }).filter(n => !!n);
             setProfesionalesDropdown([...new Set(profs)]);
         } catch (e) {
             console.error(e);
@@ -107,11 +118,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         await BudgetPrintService.generatePDF(plan, patient, clinic, userProfile);
     };
 
+    const currentUserFullName = userProfile?.nombreCompleto || `${userProfile?.nombre || ''} ${userProfile?.apellido || ''}`.trim() || userProfile?.displayName || '';
+
     const openModal = (type) => {
         setModalType(type);
         setFormData({
             nombre: '',
-            profesional: userProfile?.nombre || (profesionalesDropdown.length > 0 ? profesionalesDropdown[0] : ''),
+            profesional: currentUserFullName || (profesionalesDropdown.length > 0 ? profesionalesDropdown[0] : ''),
             vigencia: 30,
             observaciones: ''
         });
@@ -155,13 +168,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                     <table className="w-full text-left table-auto">
                         <thead>
                             <tr className="bg-white border-b border-slate-100 uppercase text-[10px] font-black text-slate-400 tracking-widest">
-                                <th className="px-6 py-4">Nombre</th>
-                                <th className="px-6 py-4">Sucursal</th>
-                                <th className="px-6 py-4">Profesional</th>
-                                <th className="px-6 py-4">Fecha de creación</th>
-                                <th className="px-6 py-4 text-center">Válido hasta</th>
-                                <th className="px-6 py-4 text-right">Costo total</th>
-                                <th className="px-6 py-4 text-center">Acciones</th>
+                                <th className="px-3 py-3.5">Nombre</th>
+                                <th className="px-3 py-3.5">Sucursal</th>
+                                <th className="px-3 py-3.5">Profesional</th>
+                                <th className="px-3 py-3.5">Fecha de creación</th>
+                                <th className="px-3 py-3.5 text-center">Válido hasta</th>
+                                <th className="px-3 py-3.5 text-right">Costo total</th>
+                                <th className="px-3 py-3.5 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 text-[12px] font-bold text-slate-600">
@@ -175,22 +188,22 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
 
                                 return (
                                 <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onEdit(p)}>
-                                    <td className="px-6 py-4">
+                                    <td className="px-3 py-3.5">
                                         <div className="flex items-center gap-3">
                                             <div className={`w-2.5 h-2.5 rounded-full ${p.status === 'accepted' ? 'bg-[#8CC63F]' : 'bg-slate-300'}`} />
                                             <span className="uppercase text-slate-700">{p.title || p.nombre}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
-                                    <td className="px-6 py-4 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
-                                    <td className="px-6 py-4 align-middle">
+                                    <td className="px-3 py-3.5 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
+                                    <td className="px-3 py-3.5 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
+                                    <td className="px-3 py-3.5 align-middle">
                                         <div className="flex items-center gap-2 text-slate-500">
                                             <FiFileText className="text-slate-300"/> {createdAt.toLocaleDateString()}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-center text-slate-500">{validUntil.toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-3 py-3.5 text-center text-slate-500">{validUntil.toLocaleDateString()}</td>
+                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5">
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
@@ -237,14 +250,14 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                     <table className="w-full text-left table-auto">
                         <thead>
                             <tr className="bg-white border-b border-slate-100 uppercase text-[10px] font-black text-slate-400 tracking-widest">
-                                <th className="px-6 py-4">Nombre</th>
-                                <th className="px-6 py-4">Sucursal</th>
-                                <th className="px-6 py-4">Profesional</th>
-                                <th className="px-6 py-4 text-center">Fecha de inicio</th>
-                                <th className="px-6 py-4 text-center">Fecha finalización</th>
-                                <th className="px-6 py-4 text-right">Costo total</th>
-                                <th className="px-6 py-4 text-right">Pagado</th>
-                                <th className="px-6 py-4 text-center">Acciones</th>
+                                <th className="px-3 py-3.5">Nombre</th>
+                                <th className="px-3 py-3.5">Sucursal</th>
+                                <th className="px-3 py-3.5">Profesional</th>
+                                <th className="px-3 py-3.5 text-center">Fecha de inicio</th>
+                                <th className="px-3 py-3.5 text-center">Fecha finalización</th>
+                                <th className="px-3 py-3.5 text-right">Costo total</th>
+                                <th className="px-3 py-3.5 text-right">Pagado</th>
+                                <th className="px-3 py-3.5 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 text-[12px] font-bold text-slate-600">
@@ -254,19 +267,19 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                 const createdAt = p.date ? new Date(p.date) : new Date();
                                 return (
                                 <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onEdit(p)}>
-                                    <td className="px-6 py-4">
+                                    <td className="px-3 py-3.5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-2.5 h-2.5 rounded-full bg-[#8CC63F] shadow-[0_0_8px_rgba(140,198,63,0.5)]" />
                                             <span className="uppercase text-slate-700">{p.title || p.nombre}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
-                                    <td className="px-6 py-4 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
-                                    <td className="px-6 py-4 text-center text-slate-500">{createdAt.toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-center text-slate-300 text-[10px] uppercase font-black tracking-widest">Sin finalizar</td>
-                                    <td className="px-6 py-4 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
-                                    <td className="px-6 py-4 text-right font-black text-[#8CC63F] font-mono">$ 0</td>
-                                    <td className="px-6 py-4 text-center">
+                                    <td className="px-3 py-3.5 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
+                                    <td className="px-3 py-3.5 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
+                                    <td className="px-3 py-3.5 text-center text-slate-500">{createdAt.toLocaleDateString()}</td>
+                                    <td className="px-3 py-3.5 text-center text-slate-300 text-[10px] uppercase font-black tracking-widest">Sin finalizar</td>
+                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5 text-right font-black text-[#8CC63F] font-mono">$ {Number(payments.filter(pay => pay.planId === p.id).reduce((sum, pay) => sum + Number(pay.monto || 0), 0)).toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5 text-center">
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
@@ -331,8 +344,8 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                     onChange={(e) => setFormData({...formData, profesional: e.target.value})}
                                 >
                                     <option value="" disabled>Seleccione...</option>
-                                    <option value={userProfile?.nombre || 'Usuario Demo'}>{userProfile?.nombre || 'Usuario Demo'}</option>
-                                    {profesionalesDropdown.filter(p => p !== userProfile?.nombre).map(p => (
+                                    <option value={currentUserFullName || 'Usuario Demo'}>{currentUserFullName || 'Usuario Demo'}</option>
+                                    {profesionalesDropdown.filter(p => p !== currentUserFullName).map(p => (
                                         <option key={p} value={p}>{p}</option>
                                     ))}
                                 </select>

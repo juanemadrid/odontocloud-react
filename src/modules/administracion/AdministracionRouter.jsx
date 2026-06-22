@@ -8,6 +8,7 @@ import {
 // Sub-views
 import FacturacionHub from "./views/FacturacionHub";
 import Inventario from "../inventario/Inventario";
+import RipsGenerator from "../rips/RipsGenerator";
 
 const ADMIN_MENU = [
   { id: "facturacion", label: "Facturación", icon: <FiFileText /> },
@@ -100,9 +101,10 @@ export default function AdministracionRouter() {
             <div className="flex-1 h-full w-full overflow-y-auto custom-scrollbar p-6">
                 {activeTab === "facturacion" && <FacturacionHub />}
                 {activeTab === "inventario" && <Inventario />}
+                {activeTab === "rips" && <RipsGenerator />}
                 
                 {/* Placeholders for others */}
-                {!["facturacion", "inventario"].includes(activeTab) && (
+                {!["facturacion", "inventario", "rips"].includes(activeTab) && (
                     <div className="flex flex-col items-center justify-center h-full p-20 text-center animate-fadeIn">
                         <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-4xl text-blue-200 mb-6 border border-blue-100/50">
                             {ADMIN_MENU.find(m => m.id === activeTab)?.icon}

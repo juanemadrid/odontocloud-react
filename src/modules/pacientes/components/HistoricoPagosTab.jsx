@@ -1,14 +1,38 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
 import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRight, FiPrinter } from 'react-icons/fi';
 import { formatCurrency } from '../../../utils/formatters';
+import { useAuth } from '../../../context/AuthContext';
+import { ReceiptPrintService } from '../../../services/ReceiptPrintService';
 
 export default function HistoricoPagosTab({ patientId }) {
     const [pagos, setPagos] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
+    const { userProfile } = useAuth();
+
+    const handlePrint = async (pago) => {
+        try {
+            const patientSnap = await getDoc(doc(db, "pacientes", patientId));
+            if (!patientSnap.exists()) {
+                toast.error("No se pudo cargar la información del paciente");
+                return;
+            }
+            const patientData = { id: patientSnap.id, ...patientSnap.data() };
+
+            const clinic = userProfile?.tenant || {
+                nombre: userProfile?.tenantNombre || userProfile?.clinica || "Clínica",
+                inquilino: userProfile?.inquilino || userProfile?.tenantId
+            };
+
+            await ReceiptPrintService.generatePDF(pago, patientData, clinic, userProfile);
+        } catch (e) {
+            console.error("Error launching print:", e);
+            toast.error("Error al preparar la impresión");
+        }
+    };
 
     useEffect(() => {
         if (!patientId) return;
@@ -24,7 +48,10 @@ export default function HistoricoPagosTab({ patientId }) {
                 id: d.id,
                 ...d.data(),
                 fecha: d.data().fecha?.toDate() || new Date()
-            }));
+            }))
+            // Filter out 'SALDO A FAVOR' concept payments and voided ones
+            .filter(p => p.concepto !== "SALDO A FAVOR" && p.estado !== "Anulado");
+
             setPagos(data);
             setLoading(false);
         }, (error) => {
@@ -83,27 +110,27 @@ export default function HistoricoPagosTab({ patientId }) {
                  </div>
             </div>
 
-            {/* List */}
-            <div className="max-w-6xl mx-auto space-y-4">
+            {/* List - Compacted sizing & typography */}
+            <div className="max-w-6xl mx-auto space-y-2.5">
                 {pagos.map((pago) => (
-                    <div key={pago.id} className="bg-white rounded-[28px] border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl hover:shadow-slate-100 hover:-translate-y-1 transition-all duration-300 group">
+                    <div key={pago.id} className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg hover:shadow-slate-100/50 hover:-translate-y-0.5 transition-all duration-300 group">
                         
-                        <div className="flex items-center gap-6 flex-1">
-                            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
-                                <FiCreditCard size={22} />
+                        <div className="flex items-center gap-4 flex-1">
+                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
+                                <FiCreditCard size={16} />
                             </div>
                             
                             <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h4 className="font-black text-slate-800 text-[14px] uppercase tracking-tight">{pago.concepto || "ABONO GENERAL"}</h4>
-                                    <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">{pago.medio}</span>
+                                <div className="flex items-center gap-2.5 mb-0.5">
+                                    <h4 className="font-black text-slate-800 text-[12px] uppercase tracking-tight">{pago.concepto || "ABONO GENERAL"}</h4>
+                                    <span className="text-[8px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{pago.medio}</span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                                     <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+                                     <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                          <FiCalendar className="text-slate-200" />
                                          {pago.fecha ? pago.fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) : '---'}
                                      </div>
-                                     <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                     <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                          <FiActivity className="text-slate-200" />
                                          Registrado por: <span className="text-slate-600">{pago.registradoPor || 'Sistema'}</span>
                                      </div>
@@ -111,29 +138,29 @@ export default function HistoricoPagosTab({ patientId }) {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-10 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-50">
+                        <div className="flex items-center gap-6 w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0 border-slate-50">
                              <div className="text-right">
-                                  <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Valor Abono</div>
-                                  <div className="text-2xl font-black text-emerald-600 tracking-tighter">
-                                      <span className="text-sm font-bold text-emerald-200 mr-1">$</span>
+                                  <div className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] mb-0.5">Valor Abono</div>
+                                  <div className="text-lg font-black text-emerald-600 tracking-tighter">
+                                      <span className="text-xs font-bold text-emerald-200 mr-0.5">$</span>
                                       {formatCurrency(pago.monto || 0)}
                                   </div>
                              </div>
 
-                             <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-1.5">
                                   <button
-                                      onClick={() => window.print()}
+                                      onClick={() => handlePrint(pago)}
                                       title="Imprimir recibo"
-                                      className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                                      className="w-8 h-8 bg-slate-50 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
                                   >
-                                      <FiPrinter size={16} />
+                                      <FiPrinter size={13} />
                                   </button>
                                   <button
                                       onClick={() => handleDelete(pago.id)}
                                       title="Anular pago"
-                                      className="w-10 h-10 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                                      className="w-8 h-8 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
                                   >
-                                      <FiTrash2 size={16} />
+                                      <FiTrash2 size={13} />
                                   </button>
                              </div>
                         </div>
@@ -142,7 +169,7 @@ export default function HistoricoPagosTab({ patientId }) {
             </div>
 
             {/* Bottom Hint */}
-            <div className="mt-20 flex justify-center opacity-10">
+            <div className="mt-16 flex justify-center opacity-10">
                  <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>
                  <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>
                  <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>

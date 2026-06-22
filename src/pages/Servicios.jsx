@@ -20,28 +20,30 @@ export default function Servicios() {
 
     return (
         <div className="fade-in min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
-            {/* HERO SECTION - CLEAN & PREMIUM WHITE */}
-            <section className="relative pt-40 pb-10 px-6 overflow-hidden bg-white">
+            {/* HERO SECTION - PREMIUM DARK THEME */}
+            <section className="relative pt-48 pb-20 px-6 overflow-hidden bg-[#020617] text-white">
+                {/* Mesh Gradients */}
+                <div className="absolute inset-0 opacity-40 pointer-events-none">
+                    <div className="absolute top-[-30%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse duration-[10s]" />
+                    <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/15 rounded-full blur-[100px]" />
+                </div>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+
                 <div className="container mx-auto max-w-7xl relative z-10 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-6">
-                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                        <span className="text-blue-700 text-xs font-bold tracking-widest uppercase">Ecosistema Integral</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-sky-500/30 bg-sky-500/10 backdrop-blur-md mb-6">
+                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.6)]"></span>
+                        <span className="text-sky-200 text-xs font-bold tracking-widest uppercase">Ecosistema Integral</span>
                     </div>
 
-                    <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 text-slate-900 tracking-tight leading-tight">
+                    <h1 className="text-4xl md:text-6xl font-serif font-bold mb-6 text-white tracking-tight leading-tight drop-shadow-2xl">
                         Todo lo que tu clínica necesita <br />
-                        <span className="text-blue-600">en un solo lugar</span>
+                        <span className="text-gradient-gold">en un solo lugar</span>
                     </h1>
 
-                    <p className="text-slate-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-light">
+                    <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-light">
                         Olvídate de usar múltiples herramientas desconectadas. Centraliza tu operación con la suite más potente del mercado.
                     </p>
                 </div>
-
-                {/* Decorative Background Elements */}
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-                <div className="absolute -top-[20%] -left-[10%] w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-[120px] pointer-events-none"></div>
-                <div className="absolute top-[10%] -right-[5%] w-[400px] h-[400px] bg-indigo-100/50 rounded-full blur-[100px] pointer-events-none"></div>
             </section>
 
             {/* SERVICES GRID - SHARED COMPONENT */}

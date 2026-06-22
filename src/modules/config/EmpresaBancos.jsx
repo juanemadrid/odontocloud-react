@@ -23,10 +23,11 @@ function BancoEditor({ item, onBack, inquilino }) {
             try {
                 const snap = await getDocs(query(
                     collection(db, "metodos_pago"),
-                    where("inquilino", "==", inquilino),
-                    orderBy("nombre", "asc")
+                    where("inquilino", "==", inquilino)
                 ));
-                setMetodosPago(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+                setMetodosPago(list);
             } catch (e) { console.error(e); }
         };
         load();
@@ -190,9 +191,11 @@ export default function EmpresaBancos() {
         if (!inquilino) return;
         setLoading(true);
         try {
-            const q = query(collection(db, "bancos"), where("inquilino", "==", inquilino), orderBy("nombre", "asc"));
+            const q = query(collection(db, "bancos"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
-            setRows(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            list.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+            setRows(list);
         } catch (error) { console.error(error); } finally { setLoading(false); }
     };
 

@@ -154,11 +154,10 @@ export default function Odontograma({ embeddedPatient }) {
     const handleToothClick = (dienteId, zona) => {
         setActiveToothId(dienteId);
         
-        // Si el usuario hace clic en el cuerpo del diente (Completo)
-        // Pero tiene un filtro de superficie activo (ej: Mesial)
-        // Forzamos que se marque esa zona específica automáticamente
+        // Si el usuario tiene un filtro de superficie activo (ej: Mesial)
+        // Forzamos que se marque esa zona específica automáticamente en cualquier clic (diente o selector)
         let targetZona = zona;
-        if (zona === "Completo" && surfaceFilter !== "todas") {
+        if (surfaceFilter !== "todas") {
             const surfaceMap = {
                 'vestibular': 'top',
                 'oclusal': 'center',
@@ -695,8 +694,12 @@ export default function Odontograma({ embeddedPatient }) {
                                     <div className="text-[9px] text-slate-400">{item.zona}</div>
                                 </div>
                                 {!isReadOnly && (
-                                    <button onClick={() => handleDeleteItem(idx)} className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 transition-all flex-shrink-0">
-                                        <FiTrash2 size={12} />
+                                    <button 
+                                        onClick={() => handleDeleteItem(idx)} 
+                                        className="text-rose-400 hover:text-rose-600 hover:scale-110 active:scale-95 transition-all flex-shrink-0 p-1.5"
+                                        title="Eliminar del plan"
+                                    >
+                                        <FiTrash2 size={13} />
                                     </button>
                                 )}
                             </div>

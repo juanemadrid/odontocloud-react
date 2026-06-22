@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { FiHome, FiList, FiGrid, FiPrinter, FiDownload, FiPlus, FiSettings, FiPieChart, FiMenu, FiX, FiCalendar, FiClock, FiUser, FiMapPin } from "react-icons/fi";
 import { useAgenda } from "./hooks/useAgenda";
 import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from "../../hooks/usePermissions";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -15,6 +16,7 @@ import { sendConfirmation } from "../../services/WhatsAppService";
 
 export default function Agenda() {
     const { userProfile } = useAuth(); // NEW: Access clinic info
+    const { can } = usePermissions();
     const {
         selectedDate, setSelectedDate,
         viewMode, setViewMode,
@@ -51,6 +53,10 @@ export default function Agenda() {
     }, [appointments, selectedDate, doctors]);
 
     const handleSlotClick = (doctorId, time, dateOverride) => {
+        if (!can("Agenda", "Agenda", "crear")) {
+            toast.error("No tienes permisos para crear citas");
+            return;
+        }
         const [hh, mm] = time.split(":").map(Number);
         const start = dateOverride ? new Date(dateOverride) : new Date(selectedDate);
         start.setHours(hh, mm, 0, 0);
@@ -68,14 +74,26 @@ export default function Agenda() {
 
     const handleSave = async (data) => {
         if (editingApt) {
+            if (!can("Agenda", "Agenda", "editar")) {
+                toast.error("No tienes permisos para editar citas");
+                return;
+            }
             await updateAppointment(editingApt.id, data);
         } else {
+            if (!can("Agenda", "Agenda", "crear")) {
+                toast.error("No tienes permisos para crear citas");
+                return;
+            }
             await createAppointment(data);
         }
         setModalOpen(false);
     };
 
     const handleDelete = async () => {
+        if (!can("Agenda", "Agenda", "eliminar")) {
+            toast.error("No tienes permisos para eliminar citas");
+            return;
+        }
         if (editingApt && window.confirm("¿Seguro de eliminar esta cita?")) {
             await deleteAppointment(editingApt.id);
             setModalOpen(false);
@@ -405,16 +423,18 @@ export default function Agenda() {
                             >
                                 <FiDownload size={18} />
                             </button>
-                            <button 
-                                onClick={() => {
-                                    setEditingApt(null);
-                                    setSlotData(null);
-                                    setModalOpen(true);
-                                }}
-                                className="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-black text-[11px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
-                            >
-                                <FiPlus size={18} /> Nueva Cita
-                            </button>
+                            {can("Agenda", "Agenda", "crear") && (
+                                <button 
+                                    onClick={() => {
+                                        setEditingApt(null);
+                                        setSlotData(null);
+                                        setModalOpen(true);
+                                    }}
+                                    className="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-black text-[11px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+                                >
+                                    <FiPlus size={18} /> Nueva Cita
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -501,7 +521,13 @@ export default function Agenda() {
                                 chairs={chairs}
                                 sidebarVisible={sidebarVisible}
                                 onEventClick={handleEventClick}
-                                onUpdateStatus={(id, status) => updateAppointment(id, { status })}
+                                onUpdateStatus={(id, status) => {
+                                    if (!can("Agenda", "Agenda", "editar")) {
+                                        toast.error("No tienes permisos para editar citas");
+                                        return;
+                                    }
+                                    updateAppointment(id, { status });
+                                }}
                                 onWhatsApp={(apt) => {
                                     setEditingApt(apt);
                                     handleWhatsApp();

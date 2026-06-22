@@ -124,7 +124,7 @@ export default function EvolutionList({ patientId, onEdit, searchTerm }) {
                                       )}
 
                                       {/* Botones Flotantes (Azules como en la imagen) */}
-                                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="flex gap-1">
                                           <button 
                                               onClick={() => onEdit(evo)} 
                                               className="w-8 h-8 bg-[#379deb] hover:bg-blue-600 text-white rounded-md flex items-center justify-center transition-all shadow-sm"

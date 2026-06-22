@@ -2,17 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { getPatientFinancials } from '../../../services/billingService';
 import { 
     FiDollarSign, FiPlus, FiSearch, FiFileText, FiClock, 
-    FiCheckCircle, FiAlertCircle, FiTrendingUp, FiArrowRight, FiActivity
+    FiCheckCircle, FiAlertCircle, FiTrendingUp, FiArrowRight, FiActivity,
+    FiPrinter, FiTrash2
 } from "react-icons/fi";
 import AddCreditModal from './AddCreditModal';
 import { formatCurrency } from '../../../utils/formatters';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
+import { ReceiptPrintService } from '../../../services/ReceiptPrintService';
+import { db } from '../../../firebase/firebaseConfig';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export default function SaldoTab({ patient }) {
     const [financials, setFinancials] = useState(null);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
+    
+    // Void credit top-up state
+    const [voidModalOpen, setVoidModalOpen] = useState(false);
+    const [selectedPagoToVoid, setSelectedPagoToVoid] = useState(null);
+    const [voidReason, setVoidReason] = useState("");
 
+    const { userProfile } = useAuth();
+    const toast = useToast();
 
     const loadData = async () => {
         if (!patient?.id) return;
@@ -26,6 +39,48 @@ export default function SaldoTab({ patient }) {
         loadData();
     }, [patient?.id]);
 
+    const handlePrint = async (pago) => {
+        try {
+            const clinic = userProfile?.tenant || {
+                nombre: userProfile?.tenantNombre || userProfile?.clinica || "Clínica",
+                inquilino: userProfile?.inquilino || userProfile?.tenantId
+            };
+            await ReceiptPrintService.generatePDF(pago, patient, clinic, userProfile);
+        } catch (e) {
+            console.error("Error launching print:", e);
+            toast.error("Error al preparar la impresión");
+        }
+    };
+
+    const handleVoidClick = (pago) => {
+        setSelectedPagoToVoid(pago);
+        setVoidReason("");
+        setVoidModalOpen(true);
+    };
+
+    const handleConfirmVoid = async () => {
+        if (!voidReason.trim()) {
+            alert("El motivo de la anulación es obligatorio");
+            return;
+        }
+        try {
+            await updateDoc(doc(db, "pagos", selectedPagoToVoid.id), {
+                estado: "Anulado",
+                motivoAnulacion: voidReason.trim(),
+                anuladoPor: userProfile?.nombreCompleto || "Sistema",
+                fechaAnulacion: new Date().toISOString()
+            });
+            toast.success("Abono de saldo a favor anulado con éxito");
+            setVoidModalOpen(false);
+            setSelectedPagoToVoid(null);
+            setVoidReason("");
+            loadData();
+        } catch (e) {
+            console.error("Error voiding credit top-up:", e);
+            toast.error("Error al anular el saldo a favor");
+        }
+    };
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-20 opacity-30 animate-pulse">
             <FiActivity size={48} className="text-slate-400 mb-4" />
@@ -33,11 +88,14 @@ export default function SaldoTab({ patient }) {
         </div>
     );
 
-    const { totals, plans = [] } = financials;
-    const isDebtFree = totals.balance <= 0;
+    const { totals, pagos = [] } = financials;
 
-    const filteredPlans = plans.filter(p => 
-        (p.name || p.type || "Operatoria").toLowerCase().includes(searchQuery.toLowerCase())
+    const creditPayments = pagos.filter(p => p.concepto === "SALDO A FAVOR");
+
+    const filteredCredits = creditPayments.filter(p => 
+        (p.medio || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.notas || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.registradoPor || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -97,52 +155,79 @@ export default function SaldoTab({ patient }) {
                     </button>
                 </div>
 
-                {/* TABLE (Recibo de Caja Style) */}
+                {/* TABLE (Saldo a Favor History Style) */}
                 <div className="flex-1 overflow-auto custom-scrollbar p-6 pt-2">
                     <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
                         <table className="w-full text-left border-collapse min-w-[700px]">
                             <thead className="bg-slate-50/80 border-b border-slate-100">
                                 <tr>
-                                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre del Plan</th>
-                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Sucursal</th>
-                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Costo Total</th>
-                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Pagado</th>
-                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo</th>
+                                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medio de Pago</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas / Referencia</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Registrado Por</th>
+                                    <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor</th>
                                     <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredPlans.length > 0 ? (
-                                    filteredPlans.map(plan => {
-                                        const saldo = plan.costoTotal - plan.pagado;
+                            <tbody className="divide-y divide-slate-50 text-[12px] font-bold text-slate-600">
+                                {filteredCredits.length > 0 ? (
+                                    filteredCredits.map(pago => {
+                                        const dateStr = pago.fechaISO ? new Date(pago.fechaISO).toLocaleDateString('es-CO') : "—";
+                                        const isVoided = pago.estado === "Anulado";
                                         return (
-                                            <tr key={plan.id} className="hover:bg-slate-50/50 transition-colors group">
+                                            <tr key={pago.id} className={`transition-colors group ${isVoided ? 'bg-rose-50/10 hover:bg-rose-50/20' : 'hover:bg-slate-50/50'}`}>
                                                 <td className="py-5 px-8">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-                                                            <FiFileText size={14} />
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                                                            ${isVoided 
+                                                                ? 'bg-rose-50 text-rose-500' 
+                                                                : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}
+                                                        >
+                                                            <FiClock size={14} />
                                                         </div>
-                                                        <span className="text-[12px] font-black text-slate-700 uppercase tracking-tight">{plan.name || "Operatoria Gral."}</span>
+                                                        <span className={`font-mono ${isVoided ? 'text-rose-500/80 line-through' : 'text-slate-700'}`}>{dateStr}</span>
                                                     </div>
                                                 </td>
-                                                <td className="py-5 px-6 text-center">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{plan.sucursal || "Sede Principal"}</span>
+                                                <td className="py-5 px-6 uppercase text-[10px] text-slate-400 font-black">
+                                                    <span className={`px-3 py-1 rounded-full ${isVoided ? 'bg-rose-50 text-rose-600 border border-rose-100/50' : 'bg-slate-100 text-slate-600'}`}>{pago.medio}</span>
                                                 </td>
-                                                <td className="py-5 px-6 text-right">
-                                                    <span className="text-[12px] font-black text-slate-700">$ {formatCurrency(plan.costoTotal)}</span>
+                                                <td className={`py-5 px-6 uppercase ${isVoided ? 'text-rose-500/80 line-through' : 'text-slate-600'}`}>
+                                                    {pago.notes || pago.notas || "ABONO SALDO A FAVOR"}
+                                                    {isVoided && pago.motivoAnulacion && (
+                                                        <span className="block text-[8px] font-bold text-rose-400 normal-case tracking-normal mt-0.5" style={{ textDecoration: 'none' }}>
+                                                            Motivo: {pago.motivoAnulacion}
+                                                        </span>
+                                                    )}
                                                 </td>
-                                                <td className="py-5 px-6 text-right">
-                                                    <span className="text-[12px] font-black text-emerald-600">$ {formatCurrency(plan.pagado)}</span>
+                                                <td className={`py-5 px-6 uppercase ${isVoided ? 'text-rose-400/80' : 'text-slate-500'}`}>
+                                                    {pago.registradoPor || pago.profesional || "Sistema"}
                                                 </td>
-                                                <td className="py-5 px-6 text-right">
-                                                    <span className={`text-[12px] font-black ${saldo > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
-                                                        $ {formatCurrency(saldo)}
-                                                    </span>
+                                                <td className={`py-5 px-6 text-right font-black font-mono ${isVoided ? 'text-rose-400/80 line-through' : 'text-indigo-600'}`}>
+                                                    $ {formatCurrency(pago.monto || 0)}
                                                 </td>
                                                 <td className="py-5 px-8 text-center">
-                                                    <button className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90 mx-auto">
-                                                        <FiArrowRight size={14} />
-                                                    </button>
+                                                    {isVoided ? (
+                                                        <span className="inline-flex px-3 py-1 rounded-full text-[9px] font-black bg-rose-50 text-rose-600 border border-rose-100 uppercase tracking-widest">
+                                                            Anulado
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button
+                                                                onClick={() => handlePrint(pago)}
+                                                                title="Imprimir Recibo"
+                                                                className="w-8 h-8 bg-slate-50 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
+                                                            >
+                                                                <FiPrinter size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleVoidClick(pago)}
+                                                                title="Anular Abono"
+                                                                className="w-8 h-8 bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
+                                                            >
+                                                                <FiTrash2 size={13} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );
@@ -151,8 +236,8 @@ export default function SaldoTab({ patient }) {
                                     <tr>
                                         <td colSpan="6" className="py-20 text-center">
                                             <div className="flex flex-col items-center opacity-20">
-                                                <FiFileText size={48} className="mb-4" />
-                                                <p className="text-xs font-black uppercase tracking-widest">No hay planes de tratamiento financieros registrados</p>
+                                                <FiDollarSign size={48} className="mb-4" />
+                                                <p className="text-xs font-black uppercase tracking-widest">No hay saldos a favor registrados</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -181,6 +266,46 @@ export default function SaldoTab({ patient }) {
                 patient={patient} 
                 onUpdate={loadData}
             />
+
+            {/* Void Reason Modal */}
+            {voidModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fadeIn" onClick={() => { setVoidModalOpen(false); setSelectedPagoToVoid(null); }} />
+                    
+                    {/* Modal Content */}
+                    <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100 p-6 animate-zoomIn">
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-2">Anular Abono de Saldo a Favor</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Por favor, ingresa el motivo de la anulación para fines de auditoría.</p>
+                        
+                        <div className="space-y-4">
+                            <textarea
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[13px] font-semibold text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/5 focus:border-rose-300 transition-all h-28 resize-none placeholder:text-slate-200"
+                                placeholder="Escribe el motivo de la anulación..."
+                                value={voidReason}
+                                onChange={(e) => setVoidReason(e.target.value)}
+                            />
+                        </div>
+                        
+                        <div className="mt-8 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => { setVoidModalOpen(false); setSelectedPagoToVoid(null); setVoidReason(""); }}
+                                className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmVoid}
+                                className="flex-1 py-3 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all active:scale-95"
+                            >
+                                Confirmar Anulación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -218,4 +343,3 @@ function HUDCard({ label, value, icon: Icon, color, isCritical, badge }) {
         </div>
     );
 }
-

@@ -52,12 +52,11 @@ export default function HeroSection({ config = {}, onShowTrial }) {
             <div className="container relative z-10 mx-auto px-6 max-w-7xl flex flex-col items-center justify-center h-full pt-20">
 
                 <div className="text-center space-y-8 max-w-4xl mx-auto">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8 }}
-                        >
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                    >
                             {config.isMaster && (
                                 <div className="inline-flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 backdrop-blur-md mb-6 hover:bg-sky-500/20 transition-colors cursor-default mx-auto">
                                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-white text-[10px] font-bold shadow-[0_0_10px_rgba(14,165,233,0.5)]">
@@ -82,7 +81,6 @@ export default function HeroSection({ config = {}, onShowTrial }) {
                                 Optimiza cada aspecto de tu práctica con nuestra suite completa de herramientas de gestión. Desde la programación de citas hasta la facturación electrónica.
                             </p>
                         </motion.div>
-                    </AnimatePresence>
 
                     <div className="flex flex-wrap gap-4 pt-8 justify-center">
                         <motion.button
@@ -140,11 +138,21 @@ export default function HeroSection({ config = {}, onShowTrial }) {
                         </motion.button>
                     </div>
 
-                    <div className="pt-12 flex items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                        {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="flex items-center gap-2">
-                                <FiShield className="text-sky-400" size={20} />
-                                <span className="text-sm font-bold text-slate-300 hidden md:block">Seguro</span>
+                    <div className="pt-12 flex flex-wrap items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                        {(config.isMaster ? [
+                            { text: "Encriptación SSL", icon: <FiShield className="text-sky-400" size={20} /> },
+                            { text: "Copias de Seguridad", icon: <FiCheckCircle className="text-sky-400" size={20} /> },
+                            { text: "Cumple HIPAA/RGPD", icon: <FiShield className="text-sky-400" size={20} /> },
+                            { text: "Infraestructura Cloud", icon: <FiCheckCircle className="text-sky-400" size={20} /> }
+                        ] : [
+                            { text: "Odontólogos Certificados", icon: <FiUsers className="text-sky-400" size={20} /> },
+                            { text: "Instalaciones Seguras", icon: <FiShield className="text-sky-400" size={20} /> },
+                            { text: "Tecnología Avanzada", icon: <FiCheckCircle className="text-sky-400" size={20} /> },
+                            { text: "Atención Inmediata", icon: <FiClock className="text-sky-400" size={20} /> }
+                        ]).map((badge, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                                {badge.icon}
+                                <span className="text-sm font-bold text-slate-300 hidden md:block">{badge.text}</span>
                             </div>
                         ))}
                     </div>
@@ -152,14 +160,7 @@ export default function HeroSection({ config = {}, onShowTrial }) {
 
             </div>
 
-            <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute bottom-10 left-1/2 -translate-x-1/2 opacity-30 flex flex-col items-center gap-2 pointer-events-none"
-            >
-                <span className="text-[10px] text-white font-bold uppercase tracking-[0.3em]">Scroll</span>
-                <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-sky-500 to-transparent" />
-            </motion.div>
+
 
             <DocumentationModal
                 isOpen={showDocModal}

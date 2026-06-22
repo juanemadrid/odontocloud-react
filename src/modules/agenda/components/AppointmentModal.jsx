@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { sendConfirmation } from "../../../services/WhatsAppService";
 import { dispatchAutomationEvent } from "../../../services/AutomationService";
+import { usePermissions } from "../../../hooks/usePermissions";
 
 // Basic schema for appointment info
 const baseSchema = z.object({
@@ -68,6 +69,8 @@ export default function AppointmentModal({
     const toast = useToast();
     const navigate = useNavigate();
     const { userProfile } = useAuth();
+    const { can } = usePermissions();
+    const hasWritePermission = initialData?.id ? can("Agenda", "Agenda", "editar") : can("Agenda", "Agenda", "crear");
     const inquilino = userProfile?.inquilino;
     const [patientResults, setPatientResults] = useState([]);
     const [searching, setSearching] = useState(false);
@@ -206,8 +209,9 @@ export default function AppointmentModal({
         const pid = watch("pacienteId");
         if (!pid) return;
         // Detect dynamic dashboard prefix (e.g., /dashboard_admin, /dashboard_recepcion)
-        const pathParts = location.pathname.split('/').filter(Boolean);
-        const dashboardPrefix = pathParts.length > 0 ? `/${pathParts[0]}` : "/dashboard";
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const dbPart = pathParts.find(p => p.startsWith('dashboard'));
+        const dashboardPrefix = dbPart ? `/${dbPart}` : "/dashboard";
         navigate(`${dashboardPrefix}/pacientes?id=${pid}`);
     };
 
@@ -290,7 +294,12 @@ export default function AppointmentModal({
                             <FiCalendar size={22} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Gestión de Cita Médica</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Gestión de Cita Médica</h3>
+                                {!hasWritePermission && (
+                                    <span className="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-full text-[9px] font-black uppercase tracking-widest leading-none">Sólo Lectura</span>
+                                )}
+                            </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Planificación Dental Premium</p>
                         </div>
                     </div>
@@ -313,7 +322,7 @@ export default function AppointmentModal({
                             <div className="flex items-center justify-between px-1">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identidad del Paciente</label>
                                 <label className="flex items-center gap-2 cursor-pointer group">
-                                    <input type="checkbox" {...register("isNewPatient")} className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 h-4 w-4 transition-all" />
+                                    <input type="checkbox" {...register("isNewPatient")} disabled={!hasWritePermission} className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 h-4 w-4 transition-all" />
                                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight group-hover:text-blue-600 transition-colors">Nuevo</span>
                                 </label>
                             </div>
@@ -328,6 +337,7 @@ export default function AppointmentModal({
                                             <input
                                                 value={term}
                                                 onChange={e => { setTerm(e.target.value); if (e.target.value !== selectedPatientName) setValue("pacienteId", ""); }}
+                                                disabled={!hasWritePermission}
                                                 placeholder="BUSCAR POR NOMBRE O CC..."
                                                 className={`w-full bg-white border border-slate-200 rounded-[14px] pl-10 pr-4 py-3 text-[11px] font-bold text-slate-800 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all outline-none placeholder:text-slate-300 uppercase tracking-tight ${errors.pacienteId ? "border-red-500 ring-red-50" : "shadow-sm"}`}
                                             />
@@ -370,17 +380,17 @@ export default function AppointmentModal({
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombres *</label>
-                                            <input {...register("nombres")} placeholder="NOMBRES" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
+                                            <input {...register("nombres")} disabled={!hasWritePermission} placeholder="NOMBRES" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellidos *</label>
-                                            <input {...register("apellidos")} placeholder="APELLIDOS" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
+                                            <input {...register("apellidos")} disabled={!hasWritePermission} placeholder="APELLIDOS" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo Doc *</label>
-                                            <select {...register("tipoDocumento")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                            <select {...register("tipoDocumento")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                                 <option value="">TIPO...</option>
                                                 <option value="CC">CC - Cédula</option>
                                                 <option value="TI">TI - Tarjeta Id.</option>
@@ -392,17 +402,17 @@ export default function AppointmentModal({
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Documento *</label>
-                                            <input {...register("nroDocumento")} placeholder="DOCUMENTO" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
+                                            <input {...register("nroDocumento")} disabled={!hasWritePermission} placeholder="DOCUMENTO" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Celular *</label>
-                                            <input {...register("celular")} placeholder="CELULAR" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
+                                            <input {...register("celular")} disabled={!hasWritePermission} placeholder="CELULAR" className="bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase w-full shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Sexo *</label>
-                                            <select {...register("sexo")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                            <select {...register("sexo")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                                 <option value="">SEXO...</option>
                                                 <option value="M">Masculino</option>
                                                 <option value="F">Femenino</option>
@@ -412,7 +422,7 @@ export default function AppointmentModal({
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Nacimiento *</label>
-                                        <input type="date" {...register("fechaNacimiento")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" />
+                                        <input type="date" {...register("fechaNacimiento")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" />
                                     </div>
                                 </div>
                             )}
@@ -425,7 +435,7 @@ export default function AppointmentModal({
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Sede *</label>
-                                    <select {...register("sucursalId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                    <select {...register("sucursalId")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                         <option value="">ELIJA SUCURSAL...</option>
                                         {branches.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
                                     </select>
@@ -433,7 +443,7 @@ export default function AppointmentModal({
 
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Especialidad *</label>
-                                    <select {...register("especialidadId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                    <select {...register("especialidadId")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                         <option value="">ELIJA ESPECIALIDAD...</option>
                                         {/* ✅ FILTRADO POR SUCURSAL */}
                                         {specialties
@@ -464,7 +474,7 @@ export default function AppointmentModal({
 
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Espacio Clínico *</label>
-                                    <select {...register("consultorioId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                    <select {...register("consultorioId")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                         <option value="">ELIJA CONSULTORIO...</option>
                                         {chairs.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                     </select>
@@ -472,7 +482,7 @@ export default function AppointmentModal({
 
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Servicio / Procedimiento</label>
-                                    <select {...register("precioItemId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                    <select {...register("precioItemId")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                         <option value="">BUSCAR ÍTEM EN LISTA DE PRECIOS...</option>
                                         {priceList.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                                     </select>
@@ -481,7 +491,7 @@ export default function AppointmentModal({
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Duración *</label>
-                                        <select {...register("duracion", { valueAsNumber: true })} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                        <select {...register("duracion", { valueAsNumber: true })} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
                                             {[10, 15, 20, 25, 30, 45, 60, 75, 90, 105, 120].map(m => (
                                                 <option key={m} value={m}>{m} MIN</option>
                                             ))}
@@ -489,7 +499,7 @@ export default function AppointmentModal({
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
-                                        <input type="date" {...register("fecha")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" />
+                                        <input type="date" {...register("fecha")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" />
                                     </div>
                                 </div>
 
@@ -497,6 +507,7 @@ export default function AppointmentModal({
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Observaciones / Comentarios</label>
                                     <textarea 
                                         {...register("comentario")} 
+                                        disabled={!hasWritePermission}
                                         placeholder="NOTAS ADICIONALES SOBRE LA CITA..." 
                                         rows={3}
                                         className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all resize-none"
@@ -508,16 +519,16 @@ export default function AppointmentModal({
                             <div className="flex flex-col gap-5 bg-slate-50/50 p-5 rounded-2xl border border-dashed border-slate-200">
                                 <div className="flex items-center justify-between">
                                     <label className="flex items-center gap-3 cursor-pointer group">
-                                        <input type="checkbox" {...register("valoracion")} className="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-4.5 w-4.5 transition-all shadow-sm" />
+                                        <input type="checkbox" {...register("valoracion")} disabled={!hasWritePermission} className="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-4.5 w-4.5 transition-all shadow-sm" />
                                         <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight group-hover:text-emerald-600 transition-colors">Valoración</span>
                                     </label>
                                     <label className="flex items-center gap-3 cursor-pointer group">
-                                        <input type="checkbox" {...register("control")} className="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-4.5 w-4.5 transition-all shadow-sm" />
+                                        <input type="checkbox" {...register("control")} disabled={!hasWritePermission} className="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-4.5 w-4.5 transition-all shadow-sm" />
                                         <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight group-hover:text-emerald-600 transition-colors">Control Post</span>
                                     </label>
                                 </div>
                                 <label className="flex items-center gap-3 cursor-pointer group border-t border-slate-200 pt-4">
-                                    <input type="checkbox" {...register("enviarCorreo")} className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 h-4 w-4 transition-all" />
+                                    <input type="checkbox" {...register("enviarCorreo")} disabled={!hasWritePermission} className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 h-4 w-4 transition-all" />
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Enviar recordatorio vía email</span>
                                 </label>
                             </div>
@@ -599,7 +610,8 @@ export default function AppointmentModal({
                                                             setValue("hora", t);
                                                             setValue("fecha", columnDateStr);
                                                         }}
-                                                        className={`w-full max-w-[80px] py-1.5 text-[9px] font-black rounded-lg transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 active:scale-95' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 shadow-sm'}`}
+                                                        disabled={!hasWritePermission}
+                                                        className={`w-full max-w-[80px] py-1.5 text-[9px] font-black rounded-lg transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 active:scale-95' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 shadow-sm'} disabled:opacity-40 disabled:cursor-not-allowed`}
                                                     >
                                                         {t}
                                                     </button>
@@ -615,39 +627,41 @@ export default function AppointmentModal({
 
                 {/* ACTION BAR (OralDrive Styling) */}
                 <div className="px-10 py-6 bg-white border-t border-slate-100 flex items-center justify-between shrink-0">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (onDelete && initialData?.id) {
-                                onDelete(initialData.id);
-                            } else {
-                                onClose();
-                            }
-                        }}
-                        className="group px-8 py-4 rounded-2xl border-2 border-red-500 text-red-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center gap-3"
-                    >
-                        <span className="opacity-70 group-hover:opacity-100 transition-opacity">BORRAR</span>
-                        <span>CANCELAR CITA</span>
-                    </button>
-
-                    <div className="flex items-center gap-4">
+                    {initialData?.id ? (
+                        can("Agenda", "Agenda", "eliminar") && (
+                            <button
+                                type="button"
+                                onClick={() => onDelete && onDelete(initialData.id)}
+                                className="group px-8 py-4 rounded-2xl border-2 border-red-500 text-red-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center gap-3"
+                            >
+                                <span className="opacity-70 group-hover:opacity-100 transition-opacity">BORRAR</span>
+                                <span>CANCELAR CITA</span>
+                            </button>
+                        )
+                    ) : (
                         <button
                             type="button"
-                            className="px-8 py-4 rounded-2xl bg-slate-100 text-slate-600 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2"
+                            onClick={onClose}
+                            className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
                         >
-                            OTROS
+                            CANCELAR
                         </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            onClick={handleSubmit(onValidSubmit, onInvalidSubmit)}
-                            className="px-16 py-4 rounded-2xl bg-emerald-600 text-white font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-emerald-700 shadow-2xl shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 min-w-[240px] flex items-center justify-center gap-3"
-                        >
-                            {isSubmitting ? (
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : null}
-                            <span>{isSubmitting ? "GUARDANDO..." : "CONFIRMAR REGISTRO"}</span>
-                        </button>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                        {hasWritePermission && (
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                onClick={handleSubmit(onValidSubmit, onInvalidSubmit)}
+                                className="px-16 py-4 rounded-2xl bg-emerald-600 text-white font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-emerald-700 shadow-2xl shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 min-w-[240px] flex items-center justify-center gap-3"
+                            >
+                                {isSubmitting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : null}
+                                <span>{isSubmitting ? "GUARDANDO..." : "CONFIRMAR REGISTRO"}</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

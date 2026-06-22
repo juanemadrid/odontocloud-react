@@ -15,6 +15,7 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
     const toast = useToast();
     const [loading, setLoading] = useState(false);
     const [doctors, setDoctors] = useState([]);
+    const [paymentMethods, setPaymentMethods] = useState(['Efectivo', 'Tarjeta', 'Transferencia']);
     
     const { register, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm({
         defaultValues: {
@@ -42,9 +43,10 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
     };
 
     useEffect(() => {
-        const loadDoctors = async () => {
+        const loadModalData = async () => {
             if (!userProfile?.inquilino) return;
             try {
+                // Load doctors
                 const q = query(
                     collection(db, "usuarios"),
                     where("inquilino", "==", userProfile.inquilino),
@@ -56,12 +58,36 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                     id: d.id,
                     nombre: d.data().nombreCompleto || `${d.data().nombre || ''} ${d.data().apellido || ''}`.trim()
                 })));
+
+                // Load active payment methods
+                const qMetodos = query(
+                    collection(db, "metodos_pago"),
+                    where("inquilino", "==", userProfile.inquilino),
+                    where("activo", "==", true)
+                );
+                const snapMetodos = await getDocs(qMetodos);
+                if (!snapMetodos.empty) {
+                    const metodosList = snapMetodos.docs
+                        .map(d => d.data().nombre)
+                        .filter(name => (name || "").toLowerCase() !== "saldo a favor");
+                    
+                    if (metodosList.length > 0) {
+                        setPaymentMethods(metodosList);
+                        setValue("medio", metodosList[0]);
+                    } else {
+                        setPaymentMethods(['Efectivo', 'Tarjeta', 'Transferencia']);
+                        setValue("medio", "Efectivo");
+                    }
+                } else {
+                    setPaymentMethods(['Efectivo', 'Tarjeta', 'Transferencia']);
+                    setValue("medio", "Efectivo");
+                }
             } catch (err) {
-                console.error("Error loading doctors:", err);
+                console.error("Error loading credit modal data:", err);
             }
         };
-        if (isOpen) loadDoctors();
-    }, [isOpen, userProfile?.inquilino]);
+        if (isOpen) loadModalData();
+    }, [isOpen, userProfile?.inquilino, setValue]);
 
     const onSubmit = async (data) => {
         setLoading(true);
@@ -211,12 +237,12 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
                                         <FiCreditCard size={12} className="text-emerald-500" /> Medio de Pago
                                     </label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['Efectivo', 'Tarjeta', 'Transferencia'].map(m => (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {paymentMethods.map(m => (
                                             <button 
                                                 key={m}
                                                 type="button"
-                                                onClick={() => reset({ ...watch(), medio: m })}
+                                                onClick={() => setValue("medio", m)}
                                                 className={`py-3 px-4 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all
                                                     ${watch("medio") === m 
                                                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/20 translate-y-[-2px]' 

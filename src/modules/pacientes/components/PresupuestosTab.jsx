@@ -27,7 +27,8 @@ export default function PresupuestosTab({ patient: dbPatient }) {
     };
 
     const handleNew = () => {
-        setEditingPlan(null);
+        // NOTE: PlanList calls setEditingPlan({...}) before calling onNew(),
+        // so we must NOT reset editingPlan here.
         setMode('create');
     };
 

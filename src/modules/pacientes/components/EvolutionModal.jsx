@@ -1,24 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCheck } from 'react-icons/fi';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { FiX, FiCheck, FiTrash2 } from 'react-icons/fi';
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { getPlansByPatient } from '../../../services/planService';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from 'react-hook-form';
 import CIE10Search from './CIE10Search';
+import ClinicalAIAssistant from './ClinicalAIAssistant';
+
+// Helper function to automatically infer Scope (Ámbito), Purpose (Finalidad), and Diagnostic Code (CIE-10) based on selected treatments/procedures.
+const inferRIPSFields = (servicesList) => {
+    let inferredFinalidad = 'Terapéutico';
+    let inferredDx = { code: "K029", name: "Caries dental, no especificada" }; // Default to Caries
+
+    if (servicesList && servicesList.length > 0) {
+        const text = servicesList.map(s => (s.desc || s.procedimiento || s.nombre || '').toLowerCase()).join(' ');
+        
+        // Finalidad y Diagnóstico sugerido
+        if (text.includes("limpieza") || text.includes("profilaxis") || text.includes("flúor") || text.includes("fluor") || text.includes("sellante") || text.includes("prevencion") || text.includes("prevención")) {
+            inferredFinalidad = 'Preventivo';
+            inferredDx = { code: "Z012", name: "Examen odontológico" };
+        } else if (text.includes("diagnostico") || text.includes("diagnóstico") || text.includes("consulta") || text.includes("valoracion") || text.includes("valoración")) {
+            inferredFinalidad = 'Diagnóstico';
+            inferredDx = { code: "Z012", name: "Examen odontológico" };
+        } else if (text.includes("pulpitis") || text.includes("endodoncia") || text.includes("conducto")) {
+            inferredFinalidad = 'Terapéutico';
+            inferredDx = { code: "K040", name: "Pulpitis" };
+        } else if (text.includes("gingivitis") || text.includes("periodonc") || text.includes("encias") || text.includes("encías")) {
+            inferredFinalidad = 'Terapéutico';
+            inferredDx = { code: "K051", name: "Gingivitis crónica" };
+        } else if (text.includes("periodontitis")) {
+            inferredFinalidad = 'Terapéutico';
+            inferredDx = { code: "K053", name: "Periodontitis crónica" };
+        } else if (text.includes("exodoncia") || text.includes("extraccion") || text.includes("extracción") || text.includes("cirugia") || text.includes("cirugía")) {
+            inferredFinalidad = 'Terapéutico';
+            inferredDx = { code: "K029", name: "Caries dental, no especificada" };
+        }
+    }
+    return { finalidad: inferredFinalidad, dxPrincipal: inferredDx };
+};
 
 export default function EvolutionModal({ isOpen, onClose, patient, initialData = null }) {
     const { userProfile } = useAuth();
+    const esDoctor = userProfile?.esDoctor ||
+        userProfile?.rol === 'doctor' ||
+        userProfile?.rol === 'odontologo';
     const toast = useToast();
     
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('evolucion'); // 'evolucion' | 'nota'
+    const [showAIAssistant, setShowAIAssistant] = useState(false);
     const [doctors, setDoctors] = useState([]);
     const [planes, setPlanes] = useState([]);
     const [servicios, setServicios] = useState([]);
     const [plantillaDetails, setPlantillaDetails] = useState({});
     const [allChecked, setAllChecked] = useState(false);
+    const [inventarioMeds, setInventarioMeds] = useState([]);
 
     const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
         defaultValues: {
@@ -39,11 +77,80 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             horaFin: '',
             comentario: '',
             aplicaMedicamento: false,
+            detalleMedicamento: '',
             controlEsterilizacion: false,
+            medicamentos: [],
+            esterilizaciones: []
         }
     });
 
     const watchPlanId = watch("planId");
+
+    // Helper function to get formatted time
+    const getCurrentTimeFormatted = () => {
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    };
+
+    // Temporary states for multi-item additions
+    const [tempMedicamento, setTempMedicamento] = useState('');
+    const [tempVia, setTempVia] = useState('');
+    const [tempDosis, setTempDosis] = useState('1');
+    const [tempHora, setTempHora] = useState('');
+
+    const [tempCiclo, setTempCiclo] = useState('');
+    const [tempConcepto, setTempConcepto] = useState('');
+    const [tempCantidad, setTempCantidad] = useState(1);
+
+    const handleAddMedicamento = () => {
+        if (!tempMedicamento.trim()) return toast.error("Debe ingresar el nombre del medicamento");
+        if (!tempVia) return toast.error("Debe seleccionar la vía de administración");
+        if (!tempDosis) return toast.error("Debe seleccionar la dosis");
+
+        const currentMeds = watch("medicamentos") || [];
+        setValue("medicamentos", [...currentMeds, {
+            medicamento: tempMedicamento.trim(),
+            via: tempVia,
+            dosis: tempDosis,
+            hora: tempHora || getCurrentTimeFormatted()
+        }]);
+
+        setTempMedicamento('');
+        setTempVia('');
+        setTempDosis('1');
+        setTempHora(getCurrentTimeFormatted());
+    };
+
+    const handleRemoveMedicamento = (index) => {
+        const currentMeds = watch("medicamentos") || [];
+        setValue("medicamentos", currentMeds.filter((_, idx) => idx !== index));
+    };
+
+    const handleAddEsterilizacion = () => {
+        if (!tempCiclo.trim()) return toast.error("Debe ingresar el ciclo de esterilización");
+        if (!tempConcepto) return toast.error("Debe seleccionar el concepto");
+
+        const currentEsts = watch("esterilizaciones") || [];
+        setValue("esterilizaciones", [...currentEsts, {
+            ciclo: tempCiclo.trim(),
+            concepto: tempConcepto,
+            cantidad: parseInt(tempCantidad) || 1
+        }]);
+
+        setTempCiclo('');
+        setTempConcepto('');
+        setTempCantidad(1);
+    };
+
+    const handleRemoveEsterilizacion = (index) => {
+        const currentEsts = watch("esterilizaciones") || [];
+        setValue("esterilizaciones", currentEsts.filter((_, idx) => idx !== index));
+    };
     
     // Configurar estado inicial
     useEffect(() => {
@@ -52,14 +159,41 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             return;
         }
 
+        // Si el usuario es doctor, pre-rellenar su ID directamente en el reset
+        const esDoctor = userProfile?.esDoctor ||
+            userProfile?.rol === 'doctor' ||
+            userProfile?.rol === 'odontologo';
+        const autoDoctor = esDoctor && userProfile?.uid ? userProfile.uid : undefined;
+
+        const initialTime = getCurrentTimeFormatted();
+        setTempHora(initialTime);
+        setTempMedicamento('');
+        setTempVia('');
+        setTempDosis('1');
+        setTempCiclo('');
+        setTempConcepto('');
+        setTempCantidad(1);
+
         if (initialData) {
             const safeDate = initialData.date?.toDate ? initialData.date.toDate() : new Date(initialData.date || Date.now());
             reset({
                 ...initialData,
-                fecha: safeDate.toISOString().slice(0, 10)
+                fecha: safeDate.toISOString().slice(0, 10),
+                doctorId: initialData.doctorId || '',
+                medicamentos: initialData.medicamentos || [],
+                esterilizaciones: initialData.esterilizaciones || []
+            });
+        } else {
+            reset({
+                ambito: 'Ambulatorio',
+                finalidad: 'Diagnóstico',
+                fecha: new Date().toISOString().slice(0, 10),
+                doctorId: autoDoctor || '',
+                medicamentos: [],
+                esterilizaciones: []
             });
         }
-    }, [isOpen, initialData, reset]);
+    }, [isOpen, initialData, reset, userProfile]);
 
     // Fetch dependencies
     useEffect(() => {
@@ -67,11 +201,102 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
 
         const fetchData = async () => {
             try {
-                // Doctores (solo vinculados al paciente actual)
-                if (patient?.profesionales && Array.isArray(patient.profesionales)) {
-                    setDoctors(patient.profesionales);
-                } else {
-                    setDoctors([]);
+                // ─── Cargar doctores desde colección 'profesionales' (datos normalizados) ───
+                let loadedDoctors = [];
+                const inquilino = userProfile?.inquilino || patient?.inquilino;
+
+                if (inquilino) {
+                    try {
+                        // Primero intenta desde 'profesionales' (sincronizado por EmpresaUsuarios)
+                        const profQ = query(
+                            collection(db, 'profesionales'),
+                            where('inquilino', '==', inquilino),
+                            where('activo', '==', true)
+                        );
+                        const profSnap = await getDocs(profQ);
+                        if (!profSnap.empty) {
+                            loadedDoctors = profSnap.docs.map(d => {
+                                const data = d.data();
+                                return {
+                                    id: d.id,
+                                    nombre: data.nombreCompleto || data.nombre || data.displayName || '',
+                                    nombreCompleto: data.nombreCompleto || data.nombre || data.displayName || '',
+                                    email: data.correo || data.email || '',
+                                };
+                            });
+                        } else {
+                            // Fallback: buscar en 'usuarios' con esDoctor=true
+                            const usrQ = query(
+                                collection(db, 'usuarios'),
+                                where('inquilino', '==', inquilino),
+                                where('esDoctor', '==', true)
+                            );
+                            const usrSnap = await getDocs(usrQ);
+                            loadedDoctors = usrSnap.docs.map(d => {
+                                const data = d.data();
+                                return {
+                                    id: d.id,
+                                    nombre: data.nombreCompleto || `${data.nombre || ''} ${data.apellido || ''}`.trim() || data.displayName || data.email || d.id,
+                                    nombreCompleto: data.nombreCompleto || `${data.nombre || ''} ${data.apellido || ''}`.trim() || data.displayName || '',
+                                    email: data.correo || data.email || '',
+                                };
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Error cargando doctores desde Firestore:', e);
+                    }
+                }
+
+                // ─── Si el usuario logueado ES doctor, asegurar que aparezca y esté seleccionado ───
+                const esDoctor = userProfile?.esDoctor ||
+                    userProfile?.rol === 'doctor' ||
+                    userProfile?.rol === 'odontologo';
+
+                if (esDoctor && userProfile?.uid) {
+                    // Buscar por UID primero, luego por email (para el bypass de desarrollo)
+                    const byUid = loadedDoctors.find(
+                        d => d.id === userProfile.uid || d.uid === userProfile.uid
+                    );
+                    const byEmail = !byUid && userProfile.email
+                        ? loadedDoctors.find(d =>
+                            (d.email || d.correo || '').toLowerCase() === userProfile.email.toLowerCase()
+                          )
+                        : null;
+
+                    const myDoctorEntry = byUid || byEmail;
+
+                    if (myDoctorEntry) {
+                        // Encontrado en la lista → seleccionarlo por su ID real de Firestore
+                        setValue('doctorId', myDoctorEntry.id);
+                    } else {
+                        // No está en la lista → inyectarlo y seleccionarlo
+                        const myName = userProfile.nombreCompleto ||
+                            `${userProfile.nombre || ''} ${userProfile.apellido || ''}`.trim() ||
+                            userProfile.displayName ||
+                            userProfile.email || 'Doctor';
+                        const myEntry = { id: userProfile.uid, nombre: myName, nombreCompleto: myName, email: userProfile.email || '' };
+                        loadedDoctors = [myEntry, ...loadedDoctors];
+                        setValue('doctorId', userProfile.uid);
+                    }
+                }
+
+                setDoctors(loadedDoctors);
+
+                // Cargar medicamentos registrados de la clínica
+                try {
+                    if (userProfile?.inquilino) {
+                        const invQ = query(
+                            collection(db, "medicamentos"),
+                            where("inquilino", "==", userProfile.inquilino)
+                        );
+                        const invSnap = await getDocs(invQ);
+                        const invList = invSnap.docs
+                            .map(d => d.data().nombre || d.data().name || d.data().principio_activo)
+                            .filter(Boolean);
+                        setInventarioMeds(invList);
+                    }
+                } catch (e) {
+                    console.warn("Error cargando medicamentos para autocompletado:", e);
                 }
 
                 // Planes de tratamiento
@@ -112,6 +337,14 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                  });
                  setPlantillaDetails(initDetails);
                  setAllChecked(false);
+
+                 // Auto-inferir y pre-rellenar campos RIPS si es una evolución nueva
+                 if (!initialData) {
+                     const { finalidad, dxPrincipal } = inferRIPSFields(srvs);
+                     setValue('finalidad', finalidad);
+                     setValue('dxPrincipal', dxPrincipal);
+                     setValue('ambito', 'Ambulatorio'); // Valor estándar por defecto
+                 }
              } else {
                  setServicios([]);
                  setPlantillaDetails({});
@@ -119,7 +352,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
         };
 
         loadServicios();
-    }, [watchPlanId, planes]);
+    }, [watchPlanId, planes, initialData, setValue]);
 
     const onSubmit = async (data) => {
         console.log("EvolutionModal: onSubmit triggered", data);
@@ -183,11 +416,22 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
         }
     };
 
+    const handleApplyAI = (aiData) => {
+        let formattedComment = aiData.comentario || '';
+        if (aiData.treatment) {
+            formattedComment += `\n\nTratamiento: ${aiData.treatment}`;
+        }
+        if (aiData.prognosis) {
+            formattedComment += `\nPronóstico: ${aiData.prognosis}`;
+        }
+        setValue('comentario', formattedComment);
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-4xl flex flex-col h-full max-h-[90vh] overflow-hidden">
+            <div className={`bg-white rounded-[24px] shadow-2xl w-full flex flex-col h-full max-h-[90vh] overflow-hidden transition-all duration-300 ${showAIAssistant ? 'max-w-7xl' : 'max-w-4xl'}`}>
                 <div className="flex flex-col h-full">
                     {/* Header Custom Tabs like design */}
                     <div className="flex border-b border-slate-100/60 sticky top-0 bg-white z-10 shrink-0">
@@ -214,43 +458,50 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                     {/* COLUMNA IZQUIERDA (Oculta si es Nota Aclaratoria) */}
                     <div className={`flex-1 space-y-5 ${activeTab === 'nota' ? 'hidden' : 'block'}`}>
                         
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Seleccione doctor <span className="text-rose-500">*</span>
-                            </label>
-                            <select 
-                                {...register("doctorId")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-                            >
-                                <option value="">Seleccione...</option>
-                                {doctors.map(d => (
-                                    <option key={d.id} value={d.id}>
-                                        {`${d.nombre || d.nombres || ''} ${d.apellido || d.apellidos || ''}`.trim() || d.nombreCompleto}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Seleccione doctor <span className="text-rose-500">*</span>
+                                </label>
+                                <select 
+                                    {...register("doctorId")} 
+                                    value={watch("doctorId") || ""}
+                                    disabled={esDoctor}
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 disabled:bg-slate-50 disabled:text-slate-400"
+                                >
+                                    <option value="">Seleccione...</option>
+                                    {doctors.map(d => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.nombre || d.nombreCompleto || d.displayName || d.email || d.id}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Plan de tratamiento
-                            </label>
-                            <select 
-                                {...register("planId")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-                            >
-                                <option value="">Seleccione...</option>
-                                {planes.map(p => (
-                                    <option key={p.id} value={p.id}>{p.title || p.nombre || `Plan #${p.id.slice(-4)}`}</option>
-                                ))}
-                            </select>
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Plan de tratamiento
+                                </label>
+                                <select 
+                                    {...register("planId")} 
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                >
+                                    <option value="">Seleccione...</option>
+                                    {planes.map(p => (
+                                        <option key={p.id} value={p.id}>{p.title || p.nombre || `Plan #${p.id.slice(-4)}`}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         {/* Plantilla de Servicios Rica - Reemplazo del Antiguo Select Multiple */}
                         {watchPlanId && servicios.length > 0 && (
                             <div className="col-span-1 border border-slate-200 rounded-xl overflow-hidden bg-white mt-4">
                                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-                                    <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Plantilla del Tratamiento</h5>
+                                    <div>
+                                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Plantilla del Tratamiento</h5>
+                                        <p className="text-[8px] text-slate-400 font-bold mt-1">Marque los procedimientos que completó hoy y agregue observaciones si aplica.</p>
+                                    </div>
                                     <label className="flex items-center gap-2 cursor-pointer group">
                                         <div className="relative">
                                             <input 
@@ -323,44 +574,62 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             </div>
                         )}
 
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Ámbito realización del procedimiento
-                            </label>
-                            <select 
-                                {...register("ambito")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-                            >
-                                <option value="Ambulatorio">Ambulatorio</option>
-                                <option value="Hospitalario">Hospitalario</option>
-                                <option value="Urgencias">Urgencias</option>
-                            </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Ámbito realización
+                                </label>
+                                <select 
+                                    {...register("ambito")} 
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                >
+                                    <option value="Ambulatorio">Ambulatorio</option>
+                                    <option value="Hospitalario">Hospitalario</option>
+                                    <option value="Urgencias">Urgencias</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Finalidad del procedimiento
+                                </label>
+                                <select 
+                                    {...register("finalidad")} 
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                >
+                                    <option value="Diagnóstico">Diagnóstico</option>
+                                    <option value="Terapéutico">Terapéutico</option>
+                                    <option value="Preventivo">Preventivo</option>
+                                    <option value="Rehabilitación">Rehabilitación</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Finalidad del procedimiento
-                            </label>
-                            <select 
-                                {...register("finalidad")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-                            >
-                                <option value="Diagnóstico">Diagnóstico</option>
-                                <option value="Terapéutico">Terapéutico</option>
-                                <option value="Preventivo">Preventivo</option>
-                                <option value="Rehabilitación">Rehabilitación</option>
-                            </select>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Personal que atiende
+                                </label>
+                                <input 
+                                    type="text"
+                                    {...register("personalAtiende")} 
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 caret-slate-950"
+                                />
+                            </div>
 
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Personal que atiende
-                            </label>
-                            <input 
-                                type="text"
-                                {...register("personalAtiende")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 caret-slate-950"
-                            />
+                            <div>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                    Modalidad de atención <span className="text-rose-500">*</span>
+                                </label>
+                                <select 
+                                    {...register("modalidadAtencion")} 
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                >
+                                    <option value="Intramural">Intramural</option>
+                                    <option value="Extramural">Extramural</option>
+                                    <option value="Telemedicina">Telemedicina</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
@@ -368,22 +637,22 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Cód dx principal <span className="text-rose-500">*</span></label>
-                                    <CIE10Search onSelect={(item) => setValue('dxPrincipal', item)} />
+                                    <CIE10Search value={watch("dxPrincipal")} onSelect={(item) => setValue('dxPrincipal', item)} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Cód dx relacionado</label>
-                                    <CIE10Search onSelect={(item) => setValue('dxRelacionado', item)} />
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Cód dx relacionado (Opcional)</label>
+                                    <CIE10Search value={watch("dxRelacionado")} onSelect={(item) => setValue('dxRelacionado', item)} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Complicación</label>
-                                    <CIE10Search onSelect={(item) => setValue('complicacion', item)} />
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Complicación (Opcional)</label>
+                                    <CIE10Search value={watch("complicacion")} onSelect={(item) => setValue('complicacion', item)} />
                                 </div>
                             </div>
                         </div>
 
                         <div>
                             <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Forma de realización del acto quirúrgico
+                                Acto quirúrgico / Forma de cirugía (Opcional)
                             </label>
                             <select 
                                 {...register("formaCirugia")} 
@@ -395,24 +664,10 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             </select>
                         </div>
 
-                        <div>
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Modalidad de atención <span className="text-rose-500">*</span>
-                            </label>
-                            <select 
-                                {...register("modalidadAtencion")} 
-                                className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-                            >
-                                <option value="Intramural">Intramural</option>
-                                <option value="Extramural">Extramural</option>
-                                <option value="Telemedicina">Telemedicina</option>
-                            </select>
-                        </div>
-
                     </div>
 
                     {/* COLUMNA DERECHA (Siempre visible, pero expandida si es Nota) */}
-                    <div className={`flex-1 space-y-5 flex flex-col ${activeTab === 'nota' ? '' : 'border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8'}`}>
+                    <div className={`flex-1 space-y-5 ${activeTab === 'nota' ? '' : 'border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8'}`}>
                         
                         {/* Selector de doctor exclusivo para la vista Nota Aclaratoria */}
                         {activeTab === 'nota' && (
@@ -422,7 +677,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                 </label>
                                 <select 
                                     {...register("doctorId")} 
-                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                    value={watch("doctorId") || ""}
+                                    disabled={esDoctor}
+                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 disabled:bg-slate-50 disabled:text-slate-400"
                                 >
                                     <option value="">Seleccione...</option>
                                     {doctors.map(d => (
@@ -470,13 +727,29 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col min-h-[250px]">
-                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                Comentario <span className="text-rose-500">*</span>
-                            </label>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">
+                                    Comentario <span className="text-rose-500">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAIAssistant(!showAIAssistant)}
+                                    className={`px-3 py-1 rounded-none text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${
+                                        showAIAssistant 
+                                            ? 'bg-rose-100 text-rose-600 border border-rose-200 animate-pulse' 
+                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100'
+                                    }`}
+                                >
+                                    🎙️ {showAIAssistant ? "Ocultar Asistente IA" : "Asistente IA de Voz"}
+                                </button>
+                            </div>
+                            
+
+
                             <textarea 
                                 {...register("comentario")} 
-                                className="w-full flex-1 min-h-[150px] p-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 custom-scrollbar resize-none caret-slate-950"
+                                className="w-full h-36 p-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 custom-scrollbar resize-none caret-slate-950"
                                 placeholder="Escribe aquí los hallazgos subjetivos, objetivos y plan..."
                             />
                         </div>
@@ -491,16 +764,288 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-700 transition-colors">Aplica medicamento</span>
                                 </label>
 
-                                <label className="flex items-center gap-3 cursor-pointer group">
+                                {watch("aplicaMedicamento") && (
+                                    <div className="pl-0 md:pl-14 space-y-4 animate-fadeIn">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Medicamento correcto <span className="text-rose-500">*</span>
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    list="meds-sug"
+                                                    value={tempMedicamento}
+                                                    onChange={(e) => setTempMedicamento(e.target.value)}
+                                                    placeholder="Escriba o busque medicamento..."
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-[#8dc63f] focus:ring-1 focus:ring-[#8dc63f]/20 transition-all placeholder:text-slate-300 caret-slate-950"
+                                                />
+                                                <datalist id="meds-sug">
+                                                    {inventarioMeds.map((med, idx) => (
+                                                        <option key={`inv_sug_${idx}`} value={med} />
+                                                    ))}
+                                                </datalist>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Vía correcta <span className="text-rose-500">*</span>
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    list="via-sug"
+                                                    value={tempVia}
+                                                    onChange={(e) => setTempVia(e.target.value)}
+                                                    placeholder="Oral, Infiltración..."
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-[#8dc63f] focus:ring-1 focus:ring-[#8dc63f]/20 transition-all placeholder:text-slate-300 caret-slate-950"
+                                                />
+                                                <datalist id="via-sug">
+                                                    <option value="Oral" />
+                                                    <option value="Tópica" />
+                                                    <option value="Infiltración Local" />
+                                                    <option value="Sublingual" />
+                                                    <option value="Intramuscular" />
+                                                    <option value="Intravenosa" />
+                                                </datalist>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Dosis <span className="text-rose-500">*</span>
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    list="dosis-sug"
+                                                    value={tempDosis}
+                                                    onChange={(e) => setTempDosis(e.target.value)}
+                                                    placeholder="1 cartucho, cada 8h..."
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-[#8dc63f] focus:ring-1 focus:ring-[#8dc63f]/20 transition-all placeholder:text-slate-300 caret-slate-950"
+                                                />
+                                                <datalist id="dosis-sug">
+                                                    <option value="1 cartucho" />
+                                                    <option value="2 cartuchos" />
+                                                    <option value="1 tableta" />
+                                                    <option value="Cada 8 horas" />
+                                                    <option value="Cada 12 horas" />
+                                                    <option value="Dosis única" />
+                                                    <option value="Según dolor" />
+                                                </datalist>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Hora de aplicación
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    value={tempHora}
+                                                    onChange={(e) => setTempHora(e.target.value)}
+                                                    placeholder="hh:mm am/pm"
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            type="button" 
+                                            onClick={handleAddMedicamento}
+                                            className="h-10 px-6 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-[12px] font-black text-[11px] uppercase tracking-widest transition-all self-start shadow-md shadow-lime-500/10"
+                                        >
+                                            Agregar medicamento
+                                        </button>
+
+                                        {/* List Table for Medications */}
+                                        <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                                            <table className="w-full text-left table-fixed">
+                                                <thead className="bg-slate-50 border-b border-slate-100">
+                                                    <tr>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[35%]">Medicamento</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[15%]">Vía</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[20%]">Dosis</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[20%]">Hora</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider text-center w-[10%]">Acción</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                                                    {(watch("medicamentos") || []).length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="5" className="px-4 py-8 text-center text-slate-400 font-bold uppercase tracking-wider bg-slate-50/50">
+                                                                Ningún medicamento ha sido añadido
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        (watch("medicamentos") || []).map((m, idx) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50">
+                                                                <td className="px-2 py-2.5 truncate text-[11px]" title={m.medicamento}>{m.medicamento}</td>
+                                                                <td className="px-2 py-2.5 text-[11px]">{m.via}</td>
+                                                                <td className="px-2 py-2.5 text-[11px]">{m.dosis}</td>
+                                                                <td className="px-2 py-2.5 text-[11px]">{m.hora}</td>
+                                                                <td className="px-2 py-2.5 text-center">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => handleRemoveMedicamento(idx)}
+                                                                        className="text-rose-500 hover:text-rose-700 transition-colors p-1"
+                                                                    >
+                                                                        <FiTrash2 size={14} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <label className="flex items-center gap-3 cursor-pointer group pt-2">
                                     <div className="relative">
                                         <input type="checkbox" {...register("controlEsterilizacion")} className="sr-only peer" />
                                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8dc63f]"></div>
                                     </div>
                                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-700 transition-colors">Control de esterilización</span>
                                 </label>
+
+                                {watch("controlEsterilizacion") && (
+                                    <div className="pl-0 md:pl-14 space-y-4 animate-fadeIn">
+                                        <p className="text-[9px] text-slate-400 font-bold -mt-2 leading-relaxed">
+                                            Registre el ciclo del autoclave o equipo de esterilización utilizado para certificar la bioseguridad del instrumental.
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Ciclo de esterilización (ej. Autoclave)
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    list="ciclos-sug"
+                                                    value={tempCiclo}
+                                                    onChange={(e) => setTempCiclo(e.target.value)}
+                                                    placeholder="Buscar ciclo de esterilización..."
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Concepto / Resultado
+                                                </label>
+                                                <select 
+                                                    value={tempConcepto}
+                                                    onChange={(e) => setTempConcepto(e.target.value)}
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                                >
+                                                    <option value="">Seleccione...</option>
+                                                    <option value="Aprobado">Aprobado</option>
+                                                    <option value="Rechazado">Rechazado</option>
+                                                    <option value="En proceso">En proceso</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 whitespace-nowrap truncate h-4">
+                                                    Cantidad
+                                                </label>
+                                                <input 
+                                                    type="number"
+                                                    value={tempCantidad}
+                                                    onChange={(e) => setTempCantidad(parseInt(e.target.value) || 0)}
+                                                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            type="button" 
+                                            onClick={handleAddEsterilizacion}
+                                            className="h-10 px-6 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-[12px] font-black text-[11px] uppercase tracking-widest transition-all self-start shadow-md shadow-lime-500/10"
+                                        >
+                                            Agregar
+                                        </button>
+
+                                        {/* List Table for Sterilization Cycles */}
+                                        <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                                            <table className="w-full text-left table-fixed">
+                                                <thead className="bg-slate-50 border-b border-slate-100">
+                                                    <tr>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[50%]">Ciclo de esterilización</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[22%]">Concepto</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider w-[18%]">Cantidad</th>
+                                                        <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-wider text-center w-[10%]">Acción</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                                                    {(watch("esterilizaciones") || []).length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="4" className="px-4 py-8 text-center text-slate-400 font-bold uppercase tracking-wider bg-slate-50/50">
+                                                                No hay datos añadidos
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        (watch("esterilizaciones") || []).map((e, idx) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50">
+                                                                <td className="px-2 py-2.5 truncate text-[11px]" title={e.ciclo}>{e.ciclo}</td>
+                                                                <td className="px-2 py-2.5">
+                                                                    <span className={`inline-block px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                                                                        e.concepto === 'Aprobado' 
+                                                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                                            : e.concepto === 'Rechazado'
+                                                                            ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                                                                            : 'bg-amber-50 text-amber-600 border border-amber-100'
+                                                                    }`}>
+                                                                        {e.concepto}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-2 py-2.5 text-[11px]">{e.cantidad}</td>
+                                                                <td className="px-2 py-2.5 text-center">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => handleRemoveEsterilizacion(idx)}
+                                                                        className="text-rose-500 hover:text-rose-700 transition-colors p-1"
+                                                                    >
+                                                                        <FiTrash2 size={14} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+
+
+                                <datalist id="ciclos-sug">
+                                    <option value="Ciclo Autoclave #1 - 121°C (20 min)" />
+                                    <option value="Ciclo Autoclave #2 - 134°C (15 min)" />
+                                    <option value="Ciclo Autoclave Rápido - 134°C (4 min)" />
+                                    <option value="Ciclo Calor Seco - 180°C (60 min)" />
+                                    <option value="Cámara de Rayos UV" />
+                                </datalist>
                             </div>
                         )}
                     </div>
+                    
+                    {/* COLUMNA COPILOTO IA DE VOZ (SIDEBAR DEDICADO) */}
+                    {showAIAssistant && (
+                        <div className="w-full md:w-96 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-6 flex flex-col">
+                            <ClinicalAIAssistant 
+                                onApply={handleApplyAI} 
+                                onClose={() => setShowAIAssistant(false)} 
+                                doctors={doctors}
+                                planes={planes}
+                                setValue={setValue}
+                                watch={watch}
+                                onSubmitForm={handleSubmit(onSubmit)}
+                                activeTab={activeTab}
+                                setActiveTab={setActiveTab}
+                                plantillaDetails={plantillaDetails}
+                                setPlantillaDetails={setPlantillaDetails}
+                                servicios={servicios}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer Fixed */}

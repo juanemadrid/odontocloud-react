@@ -9,3 +9,10 @@ temp_conflict/
 tmp-slice/
 build_*.txt
 push_error.txt
+brain/
+scratch/
+measure_sprites.ps1
+scratch_test_models.mjs
+seed_planes.mjs
+test_ai_features.js
+test_clinical_flow.js

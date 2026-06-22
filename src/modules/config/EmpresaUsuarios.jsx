@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc, or } from "firebase/firestore";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+
+// Singleton secondary Firebase app — prevents duplicate-app crashes
+const getSecondaryAuth = () => {
+    const existing = getApps().find(app => app.name === "SecondaryAppEmpresa");
+    const app = existing || initializeApp(firebaseConfig, "SecondaryAppEmpresa");
+    return getAuth(app);
+};
 import { db, firebaseConfig } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -254,8 +261,7 @@ export default function EmpresaUsuarios() {
 
             // If Creating New -> Create in Auth
             if (!editId) {
-                const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp"); // Avoid Logging out current user
-                const secondaryAuth = getAuth(secondaryApp);
+                const secondaryAuth = getSecondaryAuth();
                 const userCred = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
                 uid = userCred.user.uid;
             }
@@ -293,7 +299,13 @@ export default function EmpresaUsuarios() {
 
                 profileId: selectedProfile?.id || "",
                 profileName: selectedProfile?.nombre || "",
-                rol: selectedProfile?.baseRole || "recepcionista",
+                rol: (() => {
+                    const r = (selectedProfile?.baseRole || selectedProfile?.rol || "").trim().toLowerCase();
+                    if (r) return r;
+                    const n = (selectedProfile?.nombre || "").toLowerCase();
+                    if (n.includes("doctor") || n.includes("odont")) return "doctor";
+                    return "recepcionista";
+                })(),
 
                 inquilino: userProfile.inquilino,
                 updatedAt: serverTimestamp()

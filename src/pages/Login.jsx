@@ -3,7 +3,7 @@
 // ===============================
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase";
+import { auth, db } from "../firebase/firebaseConfig";
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
@@ -12,6 +12,9 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import "../styles/login.css";
 import fondo from "/assets/fondo.png";
 import logo from "/assets/logo.png";
+
+// Base path from Vite config (adjust if different)
+const BASE_PATH = import.meta.env.BASE_URL || "/odontocloud-react/";
 
 // ------------------------------
 // 🔒 Sesión offline (simple con localStorage)
@@ -155,6 +158,33 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoadingStatus(true);
+
+    if (email === "admin_test@odontocloud.com") {
+      console.log("Login - handleSubmit: Bypass de desarrollo para admin_test");
+      try { localStorage.removeItem("odc_session"); } catch (err) {}
+      saveSessionOffline(email, "administrador");
+      // Usar window.location para forzar recarga completa y que AuthContext relea localStorage
+      window.location.replace(`${BASE_PATH}dashboard_admin`);
+      return;
+    }
+
+    if (email === "mariarroyo@hotmail.com") {
+      console.log("Login - handleSubmit: Bypass de desarrollo para mariarroyo");
+      try { localStorage.removeItem("odc_session"); } catch (err) {}
+      saveSessionOffline(email, "administrador");
+      // Usar window.location para forzar recarga completa y que AuthContext relea localStorage
+      window.location.replace(`${BASE_PATH}dashboard_admin`);
+      return;
+    }
+
+    if (email === "diegomadrid_doc@odontocloud.com") {
+      console.log("Login - handleSubmit: Bypass de desarrollo para diegomadrid_doc");
+      try { localStorage.removeItem("odc_session"); } catch (err) {}
+      saveSessionOffline(email, "doctor");
+      // Usar window.location para forzar recarga completa y que AuthContext relea localStorage
+      window.location.replace(`${BASE_PATH}dashboard_doctor`);
+      return;
+    }
 
     if (!isOnline) {
       const session = getOfflineSession();

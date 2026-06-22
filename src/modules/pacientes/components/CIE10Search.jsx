@@ -1,11 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import cie10Data from '../../../data/cie10.json';
 import { useCombobox } from 'downshift'; // Optional, but usually better. Or raw input for minimal deps.
 // Vamos a usar raw input + lista filtrada para no añadir dependencias si no es necesario, o podemos usar un datalist simple.
 
-export default function CIE10Search({ onSelect, className }) {
-    const [query, setQuery] = useState("");
+export default function CIE10Search({ onSelect, className, value, label }) {
+    const [query, setQuery] = useState(value ? `${value.code} - ${value.name}` : "");
     const [isOpen, setIsOpen] = useState(false);
+
+    useEffect(() => {
+        if (value) {
+            setQuery(typeof value === 'string' ? value : `${value.code} - ${value.name}`);
+        } else {
+            setQuery("");
+        }
+    }, [value]);
 
     const filteredItems = useMemo(() => {
         if (!query) return [];
@@ -24,7 +32,7 @@ export default function CIE10Search({ onSelect, className }) {
 
     return (
         <div className={`relative ${className}`}>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Diagnóstico (CIE-10)</label>
+            {label && <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>}
             <input
                 type="text"
                 className="w-full p-3 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-slate-700"

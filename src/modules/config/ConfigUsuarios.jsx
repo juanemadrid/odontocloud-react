@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc } from "firebase/firestore";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { db, firebaseConfig } from "../../firebase/firebaseConfig"; // Import config to create secondary app
 import { useAuth } from "../../context/AuthContext";
+
+// Singleton secondary Firebase app — prevents duplicate-app crashes
+const getSecondaryAuth = () => {
+    const existing = getApps().find(app => app.name === "SecondaryAppUsuarios");
+    const app = existing || initializeApp(firebaseConfig, "SecondaryAppUsuarios");
+    return getAuth(app);
+};
 
 export default function ConfigUsuarios() {
     const { userProfile } = useAuth();
@@ -119,12 +126,17 @@ export default function ConfigUsuarios() {
             }
             // ---------------------------------------------------------
 
-            const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-            const secondaryAuth = getAuth(secondaryApp);
+            const secondaryAuth = getSecondaryAuth();
 
             try {
                 const userCred = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
                 const uid = userCred.user.uid;
+
+                // Determine the role robustly: prefer baseRole from profile, fallback by name
+                const rolFromProfile = (selectedProfile.baseRole || selectedProfile.rol || "").trim().toLowerCase();
+                const rolByName = (selectedProfile.nombre || "").toLowerCase().includes("doctor") || 
+                                  (selectedProfile.nombre || "").toLowerCase().includes("odont") ? "doctor" : null;
+                const finalRol = rolFromProfile || rolByName || "recepcionista";
 
                 await setDoc(doc(db, "usuarios", uid), {
                     uid,
@@ -145,16 +157,17 @@ export default function ConfigUsuarios() {
                     genero: formData.genero,
                     fechaNacimiento: formData.fechaNacimiento,
 
-                    esDoctor: formData.esDoctor,
+                    esDoctor: formData.esDoctor || finalRol === "doctor",
                     sucursales: formData.sucursales,
 
                     // Profile Link
                     profileId: selectedProfile.id,
                     profileName: selectedProfile.nombre,
-                    rol: selectedProfile.baseRole || "recepcionista", // Fallback for old profiles
+                    rol: finalRol,
 
                     // TENANT ASSOCIATION
                     inquilino: userProfile?.inquilino || null,
+                    tenantId: userProfile?.inquilino || null,
                 });
 
                 alert("✅ Usuario creado exitosamente.");

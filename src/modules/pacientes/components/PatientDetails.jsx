@@ -15,7 +15,7 @@ import {
 import { 
     FiUser, FiEdit2, FiTarget, FiCamera, FiClipboard, FiActivity, 
     FiDollarSign, FiUsers, FiX, FiInfo, FiChevronRight, FiAlertCircle,
-    FiBriefcase, FiCalendar, FiTrendingUp, FiFileText, FiShield, FiCheck, FiTrash2, FiPlus
+    FiBriefcase, FiCalendar, FiTrendingUp, FiFileText, FiShield, FiCheck, FiTrash2, FiPlus, FiCpu
 } from "react-icons/fi";
 
 // Tabs Imports
@@ -36,6 +36,8 @@ import SaldoTab from "./SaldoTab";
 import PagoTab from "./PagoTab";
 import HistoricoPagosTab from "./HistoricoPagosTab";
 import HistoricoFacturasTab from "./HistoricoFacturasTab";
+import AIInsightsTab from "./AIInsightsTab";
+import HistoriaClinicaTab from "./HistoriaClinicaTab";
 
 const FormRow = ({ label, required, children, error, helpText }) => (
     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 py-3 border-b border-slate-100/50 last:border-0 hover:bg-slate-50/50 transition-colors px-4">
@@ -387,7 +389,22 @@ const SidebarSectionTitle = ({ children }) => (
 
 export default function PatientDetails({ initialData, onClose, onDelete }) {
     const [patient, setPatient] = useState(initialData || null);
-    const [activeTab, setActiveTab] = useState("datos");
+    // Default to "presu" (Presupuestos & planes) if the URL path ends with "/planes"
+    const pathEndsWithPlanes = window.location.pathname.toLowerCase().endsWith("/planes");
+    
+    // Support dynamic tab initialization and updates via URL queries (e.g. voice commands)
+    const searchParams = new URLSearchParams(window.location.search);
+    const queryTab = searchParams.get("tab");
+    const [activeTab, setActiveTab] = useState(queryTab || (pathEndsWithPlanes ? "presu" : "datos"));
+    
+    useEffect(() => {
+        const currentParams = new URLSearchParams(window.location.search);
+        const currentTab = currentParams.get("tab");
+        if (currentTab && currentTab !== activeTab) {
+            setActiveTab(currentTab);
+        }
+    }, [window.location.search, activeTab]);
+
     const [financials, setFinancials] = useState(null);
     const { userProfile } = useAuth();
     const toast = useToast();
@@ -538,7 +555,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
     if (!patient) return (<div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40"><div className="bg-white p-8 rounded-2xl"><p>Cargando datos del paciente...</p></div></div>);
 
-    const isFullHeightTab = ['odonto', 'perio', 'presu', 'hc'].includes(activeTab);
+    const isFullHeightTab = ['odonto', 'perio', 'presu', 'hc', 'ai_insights'].includes(activeTab);
     const isEditableTab = ['datos', 'mark', 'eps'].includes(activeTab);
 
     const getPageTitle = () => {
@@ -591,11 +608,17 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
                             <SidebarSectionTitle>Historia Clínica</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
+                                <SidebarButton icon={FiClipboard} label="Anamnesis / Antecedentes" active={activeTab === "anamnesis"} onClick={() => { if(activeTab === "anamnesis") { setActiveTab(""); setTimeout(() => setActiveTab("anamnesis"), 0); } else setActiveTab("anamnesis"); }} />
                                 <SidebarButton icon={FiClipboard} label="Doc. Clínicos" active={activeTab === "hc"} onClick={() => { if(activeTab === "hc") { setActiveTab(""); setTimeout(() => setActiveTab("hc"), 0); } else setActiveTab("hc"); }} />
                                 <SidebarButton icon={FiActivity} label="Odontogramas" active={activeTab === "odonto"} onClick={() => { if(activeTab === "odonto") { setActiveTab(""); setTimeout(() => setActiveTab("odonto"), 0); } else setActiveTab("odonto"); }} />
                                 <SidebarButton icon={FiActivity} label="Periodontogramas" active={activeTab === "perio"} onClick={() => { if(activeTab === "perio") { setActiveTab(""); setTimeout(() => setActiveTab("perio"), 0); } else setActiveTab("perio"); }} />
                                 <SidebarButton icon={FiFileText} label="Presupuestos & planes" active={activeTab === "presu"} onClick={() => { if(activeTab === "presu") { setActiveTab(""); setTimeout(() => setActiveTab("presu"), 0); } else setActiveTab("presu"); }} />
                                 <SidebarButton icon={FiActivity} label="Evoluciones & Remis" active={activeTab === "evo"} onClick={() => { if(activeTab === "evo") { setActiveTab(""); setTimeout(() => setActiveTab("evo"), 0); } else setActiveTab("evo"); }} />
+                            </div>
+
+                            <SidebarSectionTitle>Inteligencia Artificial</SidebarSectionTitle>
+                            <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
+                                <SidebarButton icon={FiCpu} label="Copiloto IA Insights" active={activeTab === "ai_insights"} onClick={() => { if(activeTab === "ai_insights") { setActiveTab(""); setTimeout(() => setActiveTab("ai_insights"), 0); } else setActiveTab("ai_insights"); }} />
                             </div>
 
                             <SidebarSectionTitle>Facturación</SidebarSectionTitle>
@@ -647,10 +670,12 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     {activeTab === "fact" && <FacturacionTab patient={patient} />}
                                     {activeTab === "crm" && <CrmTab patient={patient} />}
                                     
+                                    {activeTab === "anamnesis" && <HistoriaClinicaTab patientId={patient.id} />}
                                     {activeTab === "hc" && <HistoriaClinicaContainer patient={patient} />}
                                     {activeTab === "odonto" && <Odontograma embeddedPatient={patient} />}
                                     {activeTab === "perio" && <Periodontograma embeddedPatient={patient} />}
                                     {activeTab === "presu" && <PresupuestosTab patient={patient} />}
+                                    {activeTab === "ai_insights" && <AIInsightsTab patient={patient} />}
 
                                     {/* Elite Billing Section */}
                                     {activeTab === "saldo" && <SaldoTab patient={patient} />}

@@ -27,6 +27,9 @@ import EmpresaBancos from "./EmpresaBancos";
 import ConfigRecursosFisicos from "./ConfigRecursosFisicos";
 import EmpresaFormularioPacientes from "./EmpresaFormularioPacientes";
 import ConfigConsentimientos from "./ConfigConsentimientos";
+import ConfigCargas from "./ConfigCargas";
+import ConfigImpuestos from "./ConfigImpuestos";
+import ConfigCatalogoCuentas from "./ConfigCatalogoCuentas";
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -110,11 +113,11 @@ export default function ConfigRouter() {
             case "consentimientos":
                 return <ConfigConsentimientos />;
             case "cargas":
-                return <div className="p-10 text-slate-400 font-bold">Módulo Cargas Masivas</div>;
+                return <ConfigCargas />;
             case "impuestos":
-                return <div className="p-10 text-slate-400 font-bold">Configuración Impuestos</div>;
+                return <ConfigImpuestos />;
             case "catalogo-cuentas":
-                return <div className="p-10 text-slate-400 font-bold">Catálogo de Cuentas Contables</div>;
+                return <ConfigCatalogoCuentas />;
             case "suscripcion":
                 return <ConfigSuscripcion />;
             default:

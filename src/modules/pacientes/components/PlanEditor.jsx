@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../../context/ToastContext';
-import { createPlan, updatePlan } from '../../../services/planService';
+import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave } from 'react-icons/fi';
@@ -114,6 +114,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
     // Deletion Modal State
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, planId: null, planName: "" });
+    
+    // Convert to Plan Confirmation Modal
+    const [convertModal, setConvertModal] = useState(false);
 
     const openToothSelector = (item) => {
         setToothModal({
@@ -274,27 +277,57 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         return calculateSubtotal() - calculateDiscounts();
     };
 
-    const handleConvertToPlan = async () => {
+    const handleConvertToPlan = () => {
         if (!isEditing) {
             toast.error("Guarda el presupuesto antes de convertirlo");
             return;
         }
-        if (!window.confirm("¿Seguro que deseas convertir este presupuesto en un Plan de Tratamiento?")) return;
-        
+        setConvertModal(true);
+    };
+
+    const confirmConvertToPlan = async () => {
+        setConvertModal(false);
         setLoading(true);
         try {
-            await updatePlan(initialData.id, { 
+            const validItems = items.filter(i => i.desc?.trim() !== "");
+            if (validItems.length === 0) {
+                toast.error("Agrega al menos un tratamiento antes de convertir");
+                setLoading(false);
+                return;
+            }
+
+            const planPayload = {
+                patientId,
+                title: title || "Plan de Tratamiento",
+                items: validItems,
+                total: calculateTotal(),
+                subtotal: calculateSubtotal(),
+                totalDescuento: calculateDiscounts(),
                 type: 'plan',
                 status: 'accepted',
-                convertedFrom: initialData.id,
+                profesionalId: initialData?.profesionalId || "",
+                vigencia: initialData?.vigencia || 30,
+                observaciones: obs,
+                inquilino: inquilino || patient?.inquilino || "",
+                baseListId: baseListId || null,
                 convertedAt: new Date()
-            });
+            };
+
+            if (initialData?.id) {
+                // Plan ya guardado: actualizar
+                await updatePlan(initialData.id, planPayload);
+            } else {
+                // Plan nuevo (sin ID): crear directamente como plan
+                await createPlan(planPayload);
+            }
+
             toast.success("¡Convertido a Plan de Tratamiento!");
             onSaved?.();
         } catch (e) {
-            toast.error("Error al convertir");
+            console.error("Error al convertir:", e);
+            toast.error("Error al convertir el presupuesto");
         } finally {
-            setLoading(true); // Se queda cargando mientras recarga
+            setLoading(false);
         }
     };
 
@@ -702,6 +735,40 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all text-center"
                                 >
                                     NO, CONTINUAR EDITANDO
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmación: Convertir a Plan */}
+            {convertModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn border border-indigo-100">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mx-auto mb-6">
+                                <FiActivity size={36} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Convertir a Plan de Tratamiento?
+                            </h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+                                Este presupuesto se marcará como <strong>Plan de Tratamiento</strong> activo. El cambio es permanente y no se puede revertir desde aquí.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={confirmConvertToPlan}
+                                    disabled={loading}
+                                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    SÍ, CONVERTIR A PLAN
+                                </button>
+                                <button 
+                                    onClick={() => setConvertModal(false)}
+                                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                    CANCELAR
                                 </button>
                             </div>
                         </div>

@@ -5,6 +5,7 @@ import { FaShieldAlt } from "react-icons/fa";
 import { useToast } from "../../../context/ToastContext";
 import { saveAnamnesis, getAnamnesis } from "../../../services/clinicalService";
 import CIE10Search from "./CIE10Search";
+import VoiceInputButton from "./VoiceInputButton";
 
 export default function HistoriaClinicaTab({ patientId }) {
     const toast = useToast();
@@ -87,7 +88,15 @@ export default function HistoriaClinicaTab({ patientId }) {
 
                     {/* Motivo de Consulta - Priority */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Motivo de Consulta <span className="text-red-500">*</span></label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Motivo de Consulta <span className="text-red-500">*</span></label>
+                            <VoiceInputButton 
+                                onTranscript={(text) => {
+                                    const currentVal = watch("motivoConsulta") || "";
+                                    setValue("motivoConsulta", currentVal ? `${currentVal} ${text}` : text);
+                                }} 
+                            />
+                        </div>
                         <textarea
                             {...register("motivoConsulta", { required: true })}
                             className="w-full p-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-slate-700 resize-none"
@@ -98,7 +107,15 @@ export default function HistoriaClinicaTab({ patientId }) {
 
                     <div className="grid lg:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Antecedentes Médicos</label>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Antecedentes Médicos</label>
+                                <VoiceInputButton 
+                                    onTranscript={(text) => {
+                                        const currentVal = watch("antecedentes") || "";
+                                        setValue("antecedentes", currentVal ? `${currentVal} ${text}` : text);
+                                    }} 
+                                />
+                            </div>
                             <textarea
                                 {...register("antecedentes")}
                                 className="w-full p-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 resize-none h-32"
@@ -107,7 +124,15 @@ export default function HistoriaClinicaTab({ patientId }) {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Alergias</label>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Alergias</label>
+                                <VoiceInputButton 
+                                    onTranscript={(text) => {
+                                        const currentVal = watch("alergias") || "";
+                                        setValue("alergias", currentVal ? `${currentVal} ${text}` : text);
+                                    }} 
+                                />
+                            </div>
                             <textarea
                                 {...register("alergias")}
                                 className="w-full p-4 rounded-xl border border-red-100 bg-red-50/30 shadow-sm focus:ring-2 focus:ring-red-400 outline-none text-slate-700 resize-none h-32"
@@ -118,7 +143,15 @@ export default function HistoriaClinicaTab({ patientId }) {
 
                     <div className="grid lg:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Medicamentos Actuales</label>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Medicamentos Actuales</label>
+                                <VoiceInputButton 
+                                    onTranscript={(text) => {
+                                        const currentVal = watch("medicamentos") || "";
+                                        setValue("medicamentos", currentVal ? `${currentVal} ${text}` : text);
+                                    }} 
+                                />
+                            </div>
                             <textarea
                                 {...register("medicamentos")}
                                 className="w-full p-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 resize-none h-24"
@@ -127,7 +160,15 @@ export default function HistoriaClinicaTab({ patientId }) {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Otras Notas</label>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Otras Notas</label>
+                                <VoiceInputButton 
+                                    onTranscript={(text) => {
+                                        const currentVal = watch("notas") || "";
+                                        setValue("notas", currentVal ? `${currentVal} ${text}` : text);
+                                    }} 
+                                />
+                            </div>
                             <textarea
                                 {...register("notas")}
                                 className="w-full p-4 rounded-xl border border-yellow-100 bg-yellow-50/30 shadow-sm focus:ring-2 focus:ring-yellow-400 outline-none text-slate-700 resize-none h-24"

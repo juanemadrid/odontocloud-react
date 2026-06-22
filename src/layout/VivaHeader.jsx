@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/landing.css";
 import "../styles/inner.css";
+import "../styles/modern.css";
+
 
 // SVG Icons
 const IconPhone = () => (
@@ -29,9 +31,10 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
     const isDashboard = /dashboard|superadmin|admin_/.test(location.pathname.toLowerCase());
     if (isDashboard) return null;
 
-    // Close Menu on Route Change
+    // Close Menu and Reset Scroll state on Route Change
     useEffect(() => {
         setMobileMenuOpen(false);
+        setScrolled(false);
     }, [location]);
 
     // Handle Scroll
@@ -149,7 +152,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                         <img
                             src={config?.logo?.startsWith('/') ? `${import.meta.env.BASE_URL}${config.logo.slice(1)}` : (config?.logo || `${import.meta.env.BASE_URL}assets/logo.png`)}
                             alt="Logo"
-                            className={`h-10 md:h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${!isTransparent && 'brightness-0 opacity-80'}`}
+                            className={`h-10 md:h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${!isTransparent && 'opacity-90'}`}
                             onError={(e) => { e.target.style.display = 'none'; }}
                         />
                         <div className="flex flex-col justify-center">
@@ -172,7 +175,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                         <div className="flex items-center gap-6">
                             {(config?.isMaster ? [
                                 { name: 'Inicio', path: '/' },
-                                { name: 'Funcionalidades', path: '/#features' },
+                                { name: 'Funcionalidades', path: '/servicios' },
                                 { name: 'Planes', path: '/planes' },
                                 { name: 'FAQ', path: '/faq' }
                             ] : [

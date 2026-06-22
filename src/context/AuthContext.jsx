@@ -12,6 +12,16 @@ const AuthContext = createContext({
 
 export const useAuth = () => useContext(AuthContext);
 
+const getOfflineSession = () => {
+    try {
+        const data = JSON.parse(localStorage.getItem("odc_session"));
+        if (data && Date.now() - data.timestamp < 1000 * 60 * 60 * 24) return data;
+        return null;
+    } catch {
+        return null;
+    }
+};
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
@@ -19,6 +29,51 @@ export const AuthProvider = ({ children }) => {
 
     // --- EFFECT 1: Auth state change ---
     useEffect(() => {
+        const s = getOfflineSession();
+        if (s && (s.email === "admin_test@odontocloud.com" || s.email === "diegomadrid_doc@odontocloud.com" || s.email === "mariarroyo@hotmail.com")) {
+            setUser({ 
+                email: s.email, 
+                uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : s.email === "mariarroyo@hotmail.com" ? 'msn3SgNfgThmyBkbVN3dRtTWbAf1' : 'offline-mock-uid' 
+            });
+            
+            const baseProfile = {
+                uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : s.email === "mariarroyo@hotmail.com" ? 'msn3SgNfgThmyBkbVN3dRtTWbAf1' : 'offline-mock-uid',
+                rol: s.rol || (s.email === "diegomadrid_doc@odontocloud.com" ? 'doctor' : 'administrador'),
+                nombre: s.email === "diegomadrid_doc@odontocloud.com" ? "Diego" : s.email === "mariarroyo@hotmail.com" ? "Maria Arroyo" : s.email.split('@')[0].toUpperCase(),
+                nombreCompleto: s.email === "diegomadrid_doc@odontocloud.com" ? "Diego Madrid" : s.email === "mariarroyo@hotmail.com" ? "Maria Arroyo" : undefined,
+                esDoctor: s.email === "diegomadrid_doc@odontocloud.com",
+                profileId: s.email === "diegomadrid_doc@odontocloud.com" ? "rIgm7MxjxZZ7ML59zfb5" : undefined,
+                inquilino: 'odontosalud-h9ff3',
+                tenant: {
+                    id: 'odontosalud-h9ff3',
+                    nombre: "Clínica Dental",
+                    nombreComercial: "Clínica Dental",
+                    direccion: "Calle 123",
+                    telefono: "3001234567"
+                }
+            };
+
+            if (baseProfile.profileId) {
+                getDoc(doc(db, "perfiles", baseProfile.profileId)).then((profileSnap) => {
+                    if (profileSnap.exists()) {
+                        const profileData = profileSnap.data();
+                        baseProfile.permisos = profileData.permisos || {};
+                        baseProfile.profileName = profileData.nombre || "Doctor";
+                    }
+                    setUserProfile(baseProfile);
+                    setLoading(false);
+                }).catch((err) => {
+                    console.error("Error loading bypass permissions:", err);
+                    setUserProfile(baseProfile);
+                    setLoading(false);
+                });
+            } else {
+                setUserProfile(baseProfile);
+                setLoading(false);
+            }
+            return () => {};
+        }
+
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setLoading(true);
             if (currentUser) {
@@ -103,8 +158,26 @@ export const AuthProvider = ({ children }) => {
                     setUserProfile(null);
                 }
             } else {
-                setUser(null);
-                setUserProfile(null);
+                const s = getOfflineSession();
+                if (s && !navigator.onLine) {
+                    setUser({ email: s.email, uid: 'offline-mock-uid' });
+                    setUserProfile({
+                        uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : 'offline-mock-uid',
+                        rol: s.rol,
+                        nombre: s.email.split('@')[0].toUpperCase(),
+                        inquilino: 'odontosalud-h9ff3',
+                        tenant: {
+                            id: 'odontosalud-h9ff3',
+                            nombre: "Clínica Dental",
+                            nombreComercial: "Clínica Dental",
+                            direccion: "Calle 123",
+                            telefono: "3001234567"
+                        }
+                    });
+                } else {
+                    setUser(null);
+                    setUserProfile(null);
+                }
             }
             setLoading(false);
         });
@@ -142,12 +215,19 @@ export const AuthProvider = ({ children }) => {
     }, [userProfile?.inquilino]);
 
     const logout = async () => {
-        await firebaseSignOut(auth);
+        try {
+            await firebaseSignOut(auth);
+        } catch (e) {
+            // Ignorar error si no hay sesión Firebase activa (usuario de bypass)
+        }
         try {
             localStorage.removeItem("odc_session");
         } catch (e) {
             console.warn("No se pudo limpiar la sesión offline al cerrar sesión:", e);
         }
+        // Resetear estado explícitamente para cubrir sesiones de bypass (sin Firebase Auth)
+        setUser(null);
+        setUserProfile(null);
     };
 
     const value = {

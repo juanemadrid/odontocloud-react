@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
     FiHome, FiCalendar, FiUsers, FiFileText, FiBox,
@@ -9,6 +9,9 @@ import { useAuth } from "../context/AuthContext";
 
 import { usePermissions } from "../hooks/usePermissions";
 import CommandPalette from "../components/CommandPalette";
+import { FiMic, FiMicOff } from "react-icons/fi";
+import useSpeechRecognition from "../hooks/useSpeechRecognition";
+import { searchPatients } from "../services/patientService";
 
 export default function DashboardLayout({ children, title, subtitle, basePath = "/dashboard_admin" }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,6 +33,167 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
     const { can } = usePermissions();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Hands-Free Voice Assistant State
+    const [handsFreeActive, setHandsFreeActive] = useState(() => {
+        try {
+            return localStorage.getItem('oc_handsfree_voice') !== 'false';
+        } catch {
+            return true;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('oc_handsfree_voice', handsFreeActive);
+        } catch {}
+    }, [handsFreeActive]);
+
+    // Use our Speech Recognition hook in PERSISTENT mode
+    const {
+        isListening,
+        transcript,
+        startListening,
+        stopListening,
+        resetTranscript
+    } = useSpeechRecognition(true, true);
+
+    // Toggle speech engine depending on active state
+    useEffect(() => {
+        if (handsFreeActive) {
+            resetTranscript();
+            startListening();
+        } else {
+            stopListening();
+        }
+    }, [handsFreeActive, startListening, stopListening, resetTranscript]);
+
+    // Restart voice recognition when the window/tab gets focus or becomes visible
+    useEffect(() => {
+        const handleVisibilityOrFocus = () => {
+            if (handsFreeActive && document.visibilityState === 'visible') {
+                console.log("Tab became visible/focused. Restarting Vox Manos Libres...");
+                resetTranscript();
+                startListening();
+            }
+        };
+
+        window.addEventListener('focus', handleVisibilityOrFocus);
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+        return () => {
+            window.removeEventListener('focus', handleVisibilityOrFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+        };
+    }, [handsFreeActive, startListening, resetTranscript]);
+
+    const handleExecuteBackgroundVoiceCommand = async (rawText) => {
+        // Prevent executing commands if the user is focused on an input/textarea (typing or dictating locally)
+        const activeEl = document.activeElement;
+        const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.contentEditable === 'true');
+        if (isEditing) {
+            console.log("Ignored background command due to active input/editing focus.");
+            return false;
+        }
+
+        // Clean punctuation and strip accents/diacritics from speech engine
+        const text = (rawText || "")
+            .toString()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_~()?¿]/g, "") // Remove punctuation
+            .trim();
+
+        console.log("Executing background voice command (normalized):", text);
+
+        const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+
+        // A. General Navigation Commands
+        if (/(inicio|ir a inicio|ir al inicio)$/i.test(text)) {
+            navigate(safeBasePath);
+            return true;
+        }
+        if (/(agenda|ir a agenda|ir a la agenda|ir agenda)$/i.test(text)) {
+            navigate(`${safeBasePath}/agenda`);
+            return true;
+        }
+        if (/(pacientes|ir a pacientes|ir a los pacientes|ir pacientes)$/i.test(text)) {
+            navigate(`${safeBasePath}/pacientes`);
+            return true;
+        }
+        if (/(caja|ir a caja|ir a la caja|ir caja)$/i.test(text)) {
+            navigate(`${safeBasePath}/caja`);
+            return true;
+        }
+        if (/(administracion|ir a administracion|ir a la administracion|ir administracion)$/i.test(text)) {
+            navigate(`${safeBasePath}/administracion`);
+            return true;
+        }
+        if (/(reportes|ir a reportes|ir a los reportes|ir reportes)$/i.test(text)) {
+            navigate(`${safeBasePath}/reportes`);
+            return true;
+        }
+        if (/(configuracion|ir a configuracion|ir a la configuracion|ir configuracion)$/i.test(text)) {
+            navigate(`${safeBasePath}/config`);
+            return true;
+        }
+        if (/(crear paciente|nuevo paciente|crear nuevo paciente|registrar paciente)$/i.test(text)) {
+            navigate(`${safeBasePath}/pacientes?action=new`);
+            return true;
+        }
+
+        // B. Patient Details Specific Tab Navigation (pure accentless regexes)
+        const regexHistoria = /(iniciar historia de|iniciar historia clinica de|activar historia de|activar historia clinica de|historia de|historia clinica de|historial de|historial clinico de|abrir paciente|ver paciente|buscar paciente)\s+(.+)$/i;
+        const regexOdonto = /(abrir odontograma de|odontograma de|ver odontograma de|activar odontograma de)\s+(.+)$/i;
+        const regexEvo = /(abrir evoluciones de|evoluciones de|ver evoluciones de|evolucion de|evoluciones de|activar evoluciones de)\s+(.+)$/i;
+        const regexAI = /(abrir copiloto de|copiloto de|insights de|copiloto ia de|activar copiloto de)\s+(.+)$/i;
+
+        let match = null;
+        let tab = "anamnesis";
+
+        if ((match = text.match(regexHistoria))) {
+            tab = "anamnesis";
+        } else if ((match = text.match(regexOdonto))) {
+            tab = "odonto";
+        } else if ((match = text.match(regexEvo))) {
+            tab = "evo";
+        } else if ((match = text.match(regexAI))) {
+            tab = "ai_insights";
+        }
+
+        if (match) {
+            const nameToSearch = match[2].trim();
+            try {
+                const patients = await searchPatients(userProfile?.inquilino, nameToSearch.toUpperCase());
+                if (patients && patients.length > 0) {
+                    navigate(`${safeBasePath}/pacientes?id=${patients[0].id}&tab=${tab}`);
+                } else {
+                    console.log(`Background Voice lookup: No patient found matching "${nameToSearch}"`);
+                }
+            } catch (err) {
+                console.error("Error searching patients by background voice:", err);
+            }
+            return true;
+        }
+
+        return false;
+    };
+
+    // Watch for transcripts to process commands in real-time with an 800ms debounce
+    useEffect(() => {
+        if (!handsFreeActive || !transcript) return;
+
+        const timer = setTimeout(() => {
+            handleExecuteBackgroundVoiceCommand(transcript).then((processed) => {
+                if (processed) {
+                    resetTranscript();
+                }
+            });
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [transcript, handsFreeActive, resetTranscript]);
 
     // Calculate Trial Days
     const trialDaysRemaining = useMemo(() => {
@@ -75,6 +239,19 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
         { id: 'reportes', icon: FiPieChart, label: 'REPORTES' },
         { id: 'config', icon: FiSettings, label: 'CONFIGURACIÓN' }
     ];
+
+    const filteredNavItems = useMemo(() => {
+        return navItems.filter(item => {
+            if (item.id === 'Inicio') return true;
+            if (item.id === 'agenda') return can("Agenda", "Agenda", "consultar");
+            if (item.id === 'pacientes') return can("Pacientes", "Paciente", "consultar");
+            if (item.id === 'caja') return can("Caja", "Caja", "consultar");
+            if (item.id === 'administracion') return can("Administración", "Gestion Administración", "consultar");
+            if (item.id === 'reportes') return can("Reportes", "Gestion Reportes", "consultar");
+            if (item.id === 'config') return can("Configuración", "Gestion Configuración", "consultar");
+            return true;
+        });
+    }, [userProfile, can]);
 
     const handleNavClick = (id) => {
         setSidebarOpen(false);
@@ -177,7 +354,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                             <span className="whitespace-nowrap">Menú Principal</span>
                         </div>
                         
-                        {navItems.map((item) => {
+                        {filteredNavItems.map((item) => {
                             const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
                             const fullPath = item.id === 'Inicio' ? safeBasePath : `${safeBasePath}/${item.id}`;
                             const isActive = location.pathname === fullPath || (item.id !== 'Inicio' && location.pathname.startsWith(fullPath));
@@ -208,6 +385,48 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                             );
                         })}
                     </nav>
+
+                    {/* Hands-Free Voice Assistant Widget */}
+                    {collapsedDesktop ? (
+                        <div className="mb-4 flex justify-center">
+                            <button
+                                onClick={() => setHandsFreeActive(!handsFreeActive)}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
+                                    handsFreeActive && isListening 
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.2)]' 
+                                        : handsFreeActive 
+                                        ? 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                                        : 'bg-slate-50 border-slate-200 text-slate-400'
+                                }`}
+                                title={handsFreeActive ? "Vox Manos Libres: Activo" : "Vox Manos Libres: Inactivo"}
+                            >
+                                <FiMic size={18} className={handsFreeActive && isListening ? "animate-pulse" : ""} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mb-4 px-4">
+                            <div className="bg-indigo-50/60 border border-indigo-100/50 rounded-2xl p-3 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${handsFreeActive && isListening ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                                        <span className="text-[9px] font-black text-indigo-950 uppercase tracking-wider">Vox Manos Libres</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={handsFreeActive} 
+                                            onChange={(e) => setHandsFreeActive(e.target.checked)} 
+                                        />
+                                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                                <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest leading-normal">
+                                    {handsFreeActive && isListening ? "Escuchando fondo..." : "Asistente de voz inactivo"}
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* User Profile / Logout - Refined v2 */}
                     <div className="p-4 relative group/user mt-auto flex justify-center">

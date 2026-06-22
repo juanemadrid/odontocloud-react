@@ -51,6 +51,7 @@ import {
 
 
 import { useAuth } from "../context/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo from "/assets/logo.png";
 
@@ -643,22 +644,6 @@ function AdminMegaMenu({
     </>
   );
 }
-
-/* =============== NUEVO: Placeholder temporal para Planes =============== */
-function PlanesPlaceholder() {
-  return (
-    <div className="oc-main-content">
-      <div className="card">
-        <h3>Planes</h3>
-        <p className="oc-muted">
-          Vista de Planes integrada. En el siguiente paso reemplazamos este placeholder por el módulo real
-          (<code>modules/planes/Planes.jsx</code>) con creación/edición, estados y vínculo a facturación.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 /* =============== Componente de portada (Inicio) =============== */
 function Overview({
   t, companyName, companyLogo, userName, role, darkMode,
@@ -667,8 +652,197 @@ function Overview({
   metrics, metricsLoading,
   n8nState, n8nLoading, recent, recentLoading,
   onGoAgenda,
-  softwareLogo // NEW PROP
+  softwareLogo, // NEW PROP
+  isDoc,
+  currentDoctorId
 }) {
+  const navigate = useNavigate();
+
+  if (isDoc) {
+    // Filter appointments for this doctor
+    const docAppointments = todaysAppointments.filter(
+      (c) => c.doctorId === currentDoctorId
+    );
+
+    const completedCount = docAppointments.filter(
+      (c) => (c.estado || "").toLowerCase() === "completada"
+    ).length;
+
+    const enEsperaCount = docAppointments.filter(
+      (c) => (c.estado || "").toLowerCase() === "en espera"
+    ).length;
+
+    return (
+      <div className="space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Custom Welcome Banner for Doctor */}
+        <div className="bg-[#020617] rounded-[24px] md:rounded-[32px] p-6 md:p-10 relative overflow-hidden group shadow-[0_20px_60px_-10px_rgba(0,0,0,0.3)] border border-white/5">
+          {/* Mesh Gradient */}
+          <div className="absolute inset-0 opacity-60 pointer-events-none">
+            <div className="absolute top-[-40%] left-[-20%] w-[800px] h-[800px] bg-blue-600/30 rounded-full blur-[140px] animate-pulse duration-[12s]" />
+            <div className="absolute bottom-[-30%] right-[-10%] w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px]" />
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+          </div>
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 p-3 shadow-xl flex items-center justify-center">
+                <span className="text-3xl">🩺</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse" />
+                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Portal Clínico Activo</span>
+                </div>
+                <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight uppercase">
+                  Dr. {userName}
+                </h1>
+                <p className="text-slate-400 text-xs font-medium">
+                  {companyName} • Agenda y expedientes del día
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Doctor Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            title="Mis Citas de Hoy"
+            value={todaysLoading ? "..." : docAppointments.length}
+            icon={FiCalendar} color="blue"
+          />
+          <StatCard
+            title="Pacientes Atendidos"
+            value={todaysLoading ? "..." : completedCount}
+            icon={FiCheckCircle} color="green"
+          />
+          <StatCard
+            title="En Espera"
+            value={todaysLoading ? "..." : enEsperaCount}
+            icon={FiClock} color="purple"
+          />
+        </div>
+
+        {/* Doctor Main Dashboard Columns */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Timeline / Clinical Agenda */}
+          <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col min-h-[400px]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-extrabold text-slate-800 tracking-tight text-lg uppercase flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-blue-600 rounded-full" />
+                Mi Agenda Clínica de Hoy
+              </h3>
+              <button 
+                onClick={onGoAgenda} 
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-lg transition-all"
+              >
+                Ver Agenda Completa
+              </button>
+            </div>
+
+            {todaysLoading ? (
+              <div className="flex items-center justify-center flex-1 text-slate-400 text-sm">
+                Cargando agenda clínica...
+              </div>
+            ) : docAppointments.length === 0 ? (
+              <div className="text-slate-500 text-sm bg-slate-50 p-8 rounded-xl flex flex-col items-center justify-center text-center flex-1 border border-dashed border-slate-200">
+                <span className="text-4xl mb-3">📅</span>
+                <p className="font-bold text-slate-700">No tienes citas programadas para hoy</p>
+                <p className="text-xs text-slate-400 mt-1">Disfruta de tu día libre o busca pacientes en el panel lateral.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1">
+                {docAppointments.map((c) => (
+                  <div key={c.id} className="p-4 hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-extrabold bg-blue-50 text-blue-600 px-2 py-1 rounded-md tracking-wider">
+                          {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider
+                          ${(c.estado || "").toLowerCase() === "en espera" ? "bg-amber-100 text-amber-700 border border-amber-200" :
+                            (c.estado || "").toLowerCase() === "completada" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" :
+                            "bg-blue-100 text-blue-700 border border-blue-200"}
+                        `}>
+                          {c.estado}
+                        </span>
+                      </div>
+                      <div className="font-bold text-slate-800 text-sm uppercase">{c.pacienteNombre}</div>
+                      {c.motivo && <div className="text-xs text-slate-500 italic">Motivo: {c.motivo}</div>}
+                    </div>
+
+                    {/* Quick Access to Clinical Actions */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
+                        className="text-[10px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-all"
+                      >
+                        Historia Clínica
+                      </button>
+                      <button
+                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=odonto`)}
+                        className="text-[10px] font-black uppercase tracking-wider bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-all"
+                      >
+                        Odontograma
+                      </button>
+                      <button
+                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=evo`)}
+                        className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition-all shadow-sm"
+                      >
+                        Evolución
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions & Speech Recognition Tips */}
+          <div className="space-y-6">
+            {/* Vox Manos Libres widget for Doctors */}
+            <div className="bg-gradient-to-br from-indigo-900 to-slate-950 text-white rounded-2xl p-6 shadow-md border border-indigo-900/30 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-bl-[80px]" />
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300 mb-3 flex items-center gap-2">
+                🎤 Vox Manos Libres
+              </h4>
+              <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                Diseñado para cirujanos dentistas. Opera el historial clínico con tu voz para mantener tus manos estériles y libres de contaminación.
+              </p>
+              <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                <span className="text-[10px] font-black uppercase text-indigo-200 tracking-wider block">Comandos de Ejemplo:</span>
+                <div className="text-[11px] space-y-1.5 text-slate-300 font-mono">
+                  <div>• "historia de Carlos Restrepo"</div>
+                  <div>• "odontograma de Alberto Gomez"</div>
+                  <div>• "evoluciones de joshua"</div>
+                  <div>• "ir a agenda"</div>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase tracking-widest">
+                <span>Estado: Activo de fondo</span>
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+              </div>
+            </div>
+
+            {/* Motivational / Clinical Guidelines card */}
+            <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-3 flex items-center gap-2">
+                🩺 Notas de la Jornada
+              </h4>
+              <div className="space-y-3">
+                <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-xl text-xs text-amber-800 leading-relaxed">
+                  <strong>Recordatorio:</strong> Recuerda guardar cada evolución con tu firma. Las recetas y órdenes médicas se pueden dictar directamente con el botón de micrófono en el modal.
+                </div>
+                <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl text-xs text-blue-800 leading-relaxed">
+                  <strong>Planes de Tratamiento:</strong> Se han cargado 5 planes de tratamiento en tu inquilino para realizar pruebas clínicas.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Slender Pro v3.0 Compact Mesh HUD */}
@@ -869,6 +1043,7 @@ export default function Dashboard() {
 
   const t = (key) => MESSAGES[locale][key] || key;
   const { user, userProfile } = useAuth();
+  const { can } = usePermissions();
 
   const hasAccess = (feature) => {
     // 1. Super Admin always has access
@@ -907,6 +1082,30 @@ export default function Dashboard() {
   const companyName = isSuperAdmin ? "OdontoCloud Central" : (userProfile?.tenant?.name || "OdontoCloud");
   const companyLogo = isSuperAdmin ? null : (userProfile?.tenant?.logo || logo);
   const userName = userProfile?.nombre || user?.displayName || user?.email || "Usuario";
+
+  const isDoc = userProfile?.esDoctor || userProfile?.rol === "doctor" || userProfile?.rol === "odontologo";
+  const [currentDoctorId, setCurrentDoctorId] = useState(userProfile?.uid || null);
+
+  useEffect(() => {
+    const fetchDoctorId = async () => {
+      if (isDoc && userProfile?.inquilino && userProfile?.email) {
+        try {
+          const q = query(
+            collection(db, "profesionales"),
+            where("inquilino", "==", userProfile.inquilino),
+            where("correo", "==", userProfile.email)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            setCurrentDoctorId(snap.docs[0].id);
+          }
+        } catch (e) {
+          console.warn("Error al buscar doctor por email:", e);
+        }
+      }
+    };
+    fetchDoctorId();
+  }, [isDoc, userProfile]);
 
   useEffect(() => {
     // Legacy cleanup - We now use AuthContext userProfile
@@ -965,6 +1164,7 @@ export default function Dashboard() {
       pacienteNombre,
       estado,
       motivo: data.motivo || "",
+      doctorId: data.doctorId || "",
     };
   };
 
@@ -1225,7 +1425,7 @@ export default function Dashboard() {
 
     // 2) Detecciones por módulos
     const isPacPlanes = /\/pacientes\/[^/]+\/planes(\/|$)/.test(path); // SOLO planes dentro de pacientes
-    const isPac = path.includes("/pacientes") && !isPacPlanes;
+    const isPac = path.includes("/pacientes") || isPacPlanes;
     const isCaja = path.includes("/caja");
     const isAg = path.includes("/agenda");
     const isFact = path.includes("/facturacion");
@@ -1235,8 +1435,7 @@ export default function Dashboard() {
     const isFin = path.includes("/financiero"); // NUEVO
     const isAdm = path.includes("/administracion"); // NUEVO
 
-    if (isPacPlanes) setActiveModule("Planes");
-    else if (isPac) setActiveModule("Pacientes");
+    if (isPac) setActiveModule("Pacientes");
     else if (isFin) setActiveModule("Financiero");
     else if (isAdm) setActiveModule("Administración");
     else if (isCaja) setActiveModule("Caja");
@@ -1263,16 +1462,6 @@ export default function Dashboard() {
     }
   }, [location.pathname]);
 
-  // 🛡️ SECURITY GUARD: KICK SUPERADMIN OUT OF CLINICAL DASHBOARD
-  useEffect(() => {
-    const currentRol = (userProfile?.rol || "").trim().toLowerCase();
-    if (currentRol === "superadmin") {
-      console.warn("Dashboard - Superadmin detectado en zona clínica. Redirigiendo a /superadmin.");
-      navigate("/superadmin", { replace: true });
-    }
-  }, [userProfile?.rol, navigate]);
-
-
   /* =================== ✅ Rutas absolutas y helper go =================== */
   const basePath = useMemo(() => {
     const segs = location.pathname.split("/").filter(Boolean);
@@ -1289,6 +1478,39 @@ export default function Dashboard() {
     const same = location.pathname.toLowerCase() === target.toLowerCase();
     navigate(target, { replace: same });
   };
+
+  // 🛡️ SECURITY GUARD: KICK SUPERADMIN OUT OF CLINICAL DASHBOARD
+  useEffect(() => {
+    const currentRol = (userProfile?.rol || "").trim().toLowerCase();
+    if (currentRol === "superadmin") {
+      console.warn("Dashboard - Superadmin detectado en zona clínica. Redirigiendo a /superadmin.");
+      navigate("/superadmin", { replace: true });
+    }
+  }, [userProfile?.rol, navigate]);
+
+  // 🛡️ SECURITY GUARD: PREVENT USERS FROM ACCESSING RESTRICTED MODULES
+  useEffect(() => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes("/agenda") && !can("Agenda", "Agenda", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Agenda. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    } else if (path.includes("/pacientes") && !can("Pacientes", "Paciente", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Pacientes. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    } else if (path.includes("/caja") && !can("Caja", "Caja", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Caja. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    } else if (path.includes("/administracion") && !can("Administración", "Gestion Administración", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Administración. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    } else if (path.includes("/reportes") && !can("Reportes", "Gestion Reportes", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Reportes. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    } else if (path.includes("/config") && !can("Configuración", "Gestion Configuración", "consultar")) {
+      console.warn("Dashboard - Acceso denegado a Configuración. Redirigiendo...");
+      navigate(basePath || "/dashboard", { replace: true });
+    }
+  }, [userProfile, location.pathname, navigate, basePath, can]);
 
   /* ===== Contenido por módulo (controlado por activeModule) ===== */
   const renderModuleContent = () => {
@@ -1318,10 +1540,6 @@ export default function Dashboard() {
       case "Configuracion":
         // ⬇️ Si la URL es /config/:slug usamos el router; si no, la portada de config
         return <ConfigRouter />;
-
-      // ⬇️ NUEVO: ruta de Planes
-      case "Planes":
-        return <PlanesPlaceholder />;
 
       case "Inicio":
       default:
@@ -1363,6 +1581,8 @@ export default function Dashboard() {
             recent={recent}
             recentLoading={recentLoading}
             onGoAgenda={() => setActiveModule("Agenda")}
+            isDoc={isDoc}
+            currentDoctorId={currentDoctorId}
           />
         )}
     </DashboardLayout>

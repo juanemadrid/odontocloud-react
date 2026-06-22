@@ -51,16 +51,26 @@ export const getPatientFinancials = async (patientId) => {
 
     // Calculations
     const totalFacturado = facturas.reduce((acc, f) => acc + f.total, 0);
-    const totalPagado = pagos.reduce((acc, p) => acc + p.monto, 0);
     
-    // Credits (Saldo a Favor) - payments explicitly marked as credit advances
-    const totalSaldosAFavor = pagos
-        .filter(p => p.concepto === "SALDO A FAVOR")
+    // Total Pagado/Recaudado: sum of actual transactions (excluding internal credit usage to prevent double counting)
+    const totalPagado = pagos
+        .filter(p => (p.medio || "").toLowerCase() !== "saldo a favor" && p.estado !== "Anulado")
         .reduce((acc, p) => acc + p.monto, 0);
+    
+    // Credits (Saldo a Favor) - net available balance (total topped up minus total used)
+    const totalCredits = pagos
+        .filter(p => p.concepto === "SALDO A FAVOR" && p.estado !== "Anulado")
+        .reduce((acc, p) => acc + p.monto, 0);
+
+    const usedCredits = pagos
+        .filter(p => (p.medio || "").toLowerCase() === "saldo a favor" && p.estado !== "Anulado")
+        .reduce((acc, p) => acc + p.monto, 0);
+
+    const totalSaldosAFavor = Math.max(0, totalCredits - usedCredits);
 
     // Regular payments (abonos to treatment, not credit advances)
     const totalAbonosTratamiento = pagos
-        .filter(p => p.concepto !== "SALDO A FAVOR")
+        .filter(p => p.concepto !== "SALDO A FAVOR" && p.estado !== "Anulado")
         .reduce((acc, p) => acc + p.monto, 0);
 
     const facturasPagadas = facturas.filter((f) => ["pagada", "pagado", "paid"].includes(f.estado));
