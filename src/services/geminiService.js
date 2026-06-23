@@ -142,7 +142,7 @@ Transcripción del odontólogo:
 
     try {
         const contents = [{ parts: [{ text: prompt }] }];
-        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_REFINE);
+        const data = await fetchGeminiWithRetry(contents, apiKey, 3, MAX_TOKENS_REFINE);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             comentario: parsedData.comentario || '',
@@ -200,7 +200,7 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
     ];
 
     try {
-        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_REFINE);
+        const data = await fetchGeminiWithRetry(contents, apiKey, 3, MAX_TOKENS_REFINE);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             speechResponse: parsedData.speechResponse || 'Entendido, doctor.',
@@ -358,7 +358,7 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
     ];
 
     try {
-        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_GUIDED);
+        const data = await fetchGeminiWithRetry(contents, apiKey, 3, MAX_TOKENS_GUIDED);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             speechResponse: parsedData.speechResponse || 'Entendido.',
