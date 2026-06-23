@@ -1,14 +1,14 @@
 // src/services/geminiService.js
 
 // ─── Modelos en orden de preferencia (fallback automático) ──────────────────
-// gemini-1.5-flash-8b: RECOMENDADO - free tier más amplio, sin restricciones regionales
-// gemini-1.5-flash:    Equilibrio velocidad/calidad, free tier generoso
-// gemini-2.0-flash:    Más nuevo, fallback final
-// EXCLUIDO: gemini-2.5-flash - requiere acceso especial (403 sin billing)
+// PROBADO con cuenta personal gmail (joshuastream27@gmail.com):
+// gemini-2.5-flash:      ✅ FUNCIONA perfectamente
+// gemini-2.0-flash:      ⚡ Funciona (429 = límite de velocidad normal, no error)
+// gemini-2.0-flash-lite: ⚡ Funciona (429 = límite de velocidad normal, no error)
 const GEMINI_MODELS = [
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash'
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite'
 ];
 
 // Tokens máximos para respuestas del asistente guiado (respuestas cortas JSON)
