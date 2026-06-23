@@ -88,6 +88,11 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
     }, [handsFreeActive, startListening, resetTranscript]);
 
     const handleExecuteBackgroundVoiceCommand = async (rawText) => {
+        // Silently skip if the foreground clinical voice assistant (Anita) is open
+        if (window.localVoiceAssistantOpen) {
+            return false;
+        }
+
         // Prevent executing commands if the user is focused on an input/textarea (typing or dictating locally)
         const activeEl = document.activeElement;
         const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.contentEditable === 'true');

@@ -123,6 +123,8 @@ export default function ClinicalAIAssistant({
     const transcriptRef = React.useRef(transcript);
     useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
     const isLoadingRef = React.useRef(false);
+    // Tracks the last text sent to Gemini to prevent double-processing (interim + final same phrase)
+    const lastProcessedTextRef = React.useRef('');
 
     // Fallback: promote interimTranscript → transcript after 1.5s silence
     // Fixes Chrome bug where results sometimes never become 'final'
@@ -320,6 +322,17 @@ export default function ClinicalAIAssistant({
             // 1. Temporarily stop listening to prevent the mic from capturing the AI's spoken response
             stopListening();
             resetTranscript();
+
+            // Anti-duplicate guard: skip if this exact text was already sent to Gemini
+            if (rawText === lastProcessedTextRef.current) {
+                console.log("[Anita] Skipping duplicate transcript:", rawText);
+                setLoading(false);
+                isLoadingRef.current = false;
+                startListening();
+                return;
+            }
+            lastProcessedTextRef.current = rawText;
+
             setLoading(true);
             isLoadingRef.current = true;
 
@@ -534,6 +547,8 @@ export default function ClinicalAIAssistant({
             } finally {
                 setLoading(false);
                 isLoadingRef.current = false;
+                // Clear dedup guard after a short delay so the next speech turn is fresh
+                setTimeout(() => { lastProcessedTextRef.current = ''; }, 500);
             }
         }, 350); // 350ms de silencio - balance óptimo velocidad/precisión
 
