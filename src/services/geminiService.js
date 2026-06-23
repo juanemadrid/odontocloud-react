@@ -1,18 +1,26 @@
 // src/services/geminiService.js
 
 // ─── Modelos en orden de preferencia (fallback automático) ──────────────────
+// gemini-2.0-flash-lite: el más rápido del free tier (~1-2s por respuesta)
+// gemini-2.0-flash: equilibrio velocidad/calidad
+// gemini-2.5-flash: más potente pero más lento (último recurso)
 const GEMINI_MODELS = [
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-3.1-flash-lite'
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash'
 ];
+
+// Tokens máximos para respuestas del asistente guiado (respuestas cortas JSON)
+const MAX_TOKENS_GUIDED = 300;
+// Tokens máximos para análisis de notas clínicas (respuestas más largas)
+const MAX_TOKENS_REFINE = 500;
 
 /**
  * Realiza una petición a la API de Gemini con reintentos y fallback de modelo.
  * - Reintenta ante errores de cuota (429), servidor ocupado (503) o modelo no disponible (404).
  * - Usa backoff exponencial entre reintentos.
  */
-async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS.length) {
+async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS.length, maxTokens = MAX_TOKENS_GUIDED) {
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
     let lastError = null;
 
@@ -27,8 +35,8 @@ async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS
                 body: JSON.stringify({ 
                     contents,
                     generationConfig: {
-                        temperature: 0.1,
-                        maxOutputTokens: 600,
+                        temperature: 0,
+                        maxOutputTokens: maxTokens,
                         responseMimeType: "application/json"
                     }
                 })
@@ -131,7 +139,7 @@ Transcripción del odontólogo:
 
     try {
         const contents = [{ parts: [{ text: prompt }] }];
-        const data = await fetchGeminiWithRetry(contents, apiKey);
+        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_REFINE);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             comentario: parsedData.comentario || '',
@@ -189,7 +197,7 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
     ];
 
     try {
-        const data = await fetchGeminiWithRetry(contents, apiKey);
+        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_REFINE);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             speechResponse: parsedData.speechResponse || 'Entendido, doctor.',
@@ -327,6 +335,9 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
 }`;
     }
 
+    // Limitar el historial a los últimos 6 turnos para reducir tokens y mejorar velocidad
+    const recentHistory = history.slice(-6);
+
     const contents = [
         {
             role: 'user',
@@ -334,9 +345,9 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
         },
         {
             role: 'model',
-            parts: [{ text: 'Entendido. Estoy listo para guiar al doctor a través del formulario. Responderé únicamente con el formato JSON solicitado.' }]
+            parts: [{ text: 'Entendido. Responderé solo con el JSON solicitado.' }]
         },
-        ...history,
+        ...recentHistory,
         {
             role: 'user',
             parts: [{ text: rawText }]
@@ -344,7 +355,7 @@ Debes devolver obligatoriamente un objeto JSON válido con la siguiente estructu
     ];
 
     try {
-        const data = await fetchGeminiWithRetry(contents, apiKey);
+        const data = await fetchGeminiWithRetry(contents, apiKey, GEMINI_MODELS.length, MAX_TOKENS_GUIDED);
         const parsedData = JSON.parse(extractJsonText(data));
         return {
             speechResponse: parsedData.speechResponse || 'Entendido.',

@@ -132,7 +132,6 @@ export default function ClinicalAIAssistant({
         const flushTimer = setTimeout(() => {
             // Only flush if there's interim text but no new final text arrived, and we're not already processing
             const latestInterim = interimTranscriptRef.current.trim();
-            const latestFinal = transcriptRef.current.trim();
             if (latestInterim && !isLoadingRef.current) {
                 // Promote interim to final transcript so the debounce effect triggers
                 setTranscript(prev => {
@@ -143,7 +142,7 @@ export default function ClinicalAIAssistant({
                     return cleanPrev + ' ' + latestInterim;
                 });
             }
-        }, 1500);
+        }, 600); // 600ms: balance entre captura rápida y esperar fin de frase
         
         return () => clearTimeout(flushTimer);
     }, [interimTranscript, isConversational, setTranscript]);
@@ -261,10 +260,10 @@ export default function ClinicalAIAssistant({
                     utterance.voice = spanishVoice;
                 }
                 
-                // Safety fallback: if speech synthesis gets blocked or stuck, start listening after 5 seconds anyway
+                // Safety fallback: if speech synthesis gets blocked or stuck, start listening after 3 seconds anyway
                 const safetyTimer = setTimeout(() => {
                     startListening();
-                }, 5000);
+                }, 3000);
 
                 utterance.onstart = () => {
                     scrollToBottom();
@@ -492,12 +491,12 @@ export default function ClinicalAIAssistant({
                         utterance.voice = spanishVoice;
                     }
                     
-                    // Safety fallback: if response speech synthesis gets blocked, start listening after 6 seconds
+                    // Safety fallback: if response speech synthesis gets blocked, start listening after 4 seconds
                     const responseSafetyTimer = setTimeout(() => {
                         if (!(response.fieldToUpdate === 'submit' && response.extractedValue === true)) {
                             startListening();
                         }
-                    }, 6000);
+                    }, 4000);
 
                     utterance.onstart = () => {
                         scrollToBottom();
@@ -536,7 +535,7 @@ export default function ClinicalAIAssistant({
                 setLoading(false);
                 isLoadingRef.current = false;
             }
-        }, 800); // 800 ms de silencio (más ágil y rápido)
+        }, 350); // 350ms de silencio - balance óptimo velocidad/precisión
 
         return () => clearTimeout(timer);
     }, [transcript, isConversational, stopListening, startListening, resetTranscript]);
