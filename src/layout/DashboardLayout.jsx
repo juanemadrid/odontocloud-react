@@ -185,17 +185,24 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
         return false;
     };
 
-    // Watch for transcripts to process commands in real-time with an 800ms debounce
+    // Watch for transcripts to process commands in real-time with a 1.2s debounce
     useEffect(() => {
         if (!handsFreeActive || !transcript) return;
 
+        // Hard limit: if transcript exceeds 100 chars, it's likely ambient conversation.
+        // Reset immediately without trying to match any command.
+        if (transcript.trim().length > 100) {
+            resetTranscript();
+            return;
+        }
+
         const timer = setTimeout(() => {
             handleExecuteBackgroundVoiceCommand(transcript).then((processed) => {
-                if (processed) {
-                    resetTranscript();
-                }
+                // Always reset after attempting a command (matched or not)
+                // to prevent transcript accumulation from ambient speech
+                resetTranscript();
             });
-        }, 800);
+        }, 1200);
 
         return () => clearTimeout(timer);
     }, [transcript, handsFreeActive, resetTranscript]);
