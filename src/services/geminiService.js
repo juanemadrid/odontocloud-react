@@ -1,14 +1,11 @@
 // src/services/geminiService.js
 
 // ─── Modelos en orden de preferencia (fallback automático) ──────────────────
-// PROBADO con cuenta personal gmail (joshuastream27@gmail.com):
-// gemini-2.5-flash:      ✅ FUNCIONA perfectamente
-// gemini-2.0-flash:      ⚡ Funciona (429 = límite de velocidad normal, no error)
-// gemini-2.0-flash-lite: ⚡ Funciona (429 = límite de velocidad normal, no error)
+// PROBADO con cuenta joshuastream27@gmail.com:
+// gemini-2.5-flash: ✅ Único modelo disponible (limit: 20 RPM - respeta el retry-after)
+// gemini-2.0-flash / gemini-2.0-flash-lite: limit: 0 en esta cuenta (sin cuota)
 const GEMINI_MODELS = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite'
+    'gemini-2.5-flash'
 ];
 
 // Tokens máximos para respuestas del asistente guiado (respuestas JSON completas)
@@ -22,8 +19,16 @@ const MAX_TOKENS_REFINE = 1200;
  * - Reintenta ante errores de cuota (429), servidor ocupado (503) o modelo no disponible (404).
  * - Usa backoff exponencial entre reintentos.
  */
-async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS.length, maxTokens = MAX_TOKENS_GUIDED) {
+async function fetchGeminiWithRetry(contents, apiKey, maxRetries = 3, maxTokens = MAX_TOKENS_GUIDED) {
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+    // Extrae el tiempo de espera sugerido por Google del mensaje de error 429
+    const parseRetryAfter = (errMsg) => {
+        const match = errMsg?.match(/retry in ([\d.]+)s/i);
+        if (match) return Math.ceil(parseFloat(match[1]) * 1000); // ms
+        return 15000; // 15s por defecto si no se puede parsear
+    };
+
     let lastError = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -54,35 +59,23 @@ async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS
             const errMsg = errData?.error?.message || `HTTP ${response.status} - ${response.statusText}`;
             lastError = new Error(errMsg);
 
-            // Errores recuperables: alta demanda (503), límites de cuota (429) y modelo no soportado en la API Key (404)
+            // Errores recuperables: alta demanda (503), límites de cuota (429) y modelo no soportado (404)
             if (response.status === 503 || response.status === 429 || response.status === 404) {
                 console.warn(`[GeminiService] Intento ${attempt + 1}/${maxRetries} con modelo "${model}" falló (${response.status}): ${errMsg}.`);
                 
                 if (attempt + 1 < maxRetries) {
-                    const nextModel = GEMINI_MODELS[Math.min(attempt + 1, GEMINI_MODELS.length - 1)];
-                    if (nextModel === model) {
-                        // Solo aplicamos delay si el modelo es el mismo
-                        if (response.status === 429) {
-                            await delay(1000 * Math.pow(2, attempt));
-                        } else if (response.status !== 404) {
-                            await delay(200); // Pequeño delay de transición para 503
-                        }
-                    } else {
-                        // Cambiando a otro modelo de forma inmediata
-                        console.warn(`[GeminiService] Cambiando al modelo "${nextModel}" de forma inmediata sin demoras.`);
+                    if (response.status === 429) {
+                        // Esperar el tiempo exacto que Google recomienda
+                        const waitMs = parseRetryAfter(errMsg);
+                        console.warn(`[GeminiService] Esperando ${(waitMs/1000).toFixed(1)}s antes de reintentar...`);
+                        await delay(waitMs);
+                    } else if (response.status === 503) {
+                        await delay(2000);
                     }
+                    // 404: cambiar de modelo sin delay
                 }
                 continue;
             }
-
-            // ── Errores TERMINALES: no se reintenta ────────────────────────────────────
-            // 401: Key inválida | 403: Proyecto bloqueado o sin acceso al modelo
-            if (response.status === 401 || response.status === 403) {
-                console.error(`[GeminiService] Error terminal (${response.status}) con modelo "${model}": ${errMsg}`);
-                throw lastError;
-            }
-
-            // Errores recuperables: alta demanda (503), límites de cuota (429) y modelo no soportado (404)
 
         } catch (fetchError) {
             // Si ya lo lanzamos nosotros (error terminal), propagarlo directamente
