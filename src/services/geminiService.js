@@ -1,13 +1,14 @@
 // src/services/geminiService.js
 
 // ─── Modelos en orden de preferencia (fallback automático) ──────────────────
-// gemini-2.0-flash-lite: el más rápido del free tier (~1-2s por respuesta)
-// gemini-2.0-flash: equilibrio velocidad/calidad
-// gemini-2.5-flash: más potente pero más lento (último recurso)
+// gemini-1.5-flash-8b: RECOMENDADO - free tier más amplio, sin restricciones regionales
+// gemini-1.5-flash:    Equilibrio velocidad/calidad, free tier generoso
+// gemini-2.0-flash:    Más nuevo, fallback final
+// EXCLUIDO: gemini-2.5-flash - requiere acceso especial (403 sin billing)
 const GEMINI_MODELS = [
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash'
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash'
 ];
 
 // Tokens máximos para respuestas del asistente guiado (respuestas cortas JSON)
@@ -73,11 +74,19 @@ async function fetchGeminiWithRetry(contents, apiKey, maxRetries = GEMINI_MODELS
                 continue;
             }
 
-            // Errores no recuperables (401, 400 de clave inválida, etc.)
-            throw lastError;
+            // ── Errores TERMINALES: no se reintenta ────────────────────────────────────
+            // 401: Key inválida | 403: Proyecto bloqueado o sin acceso al modelo
+            if (response.status === 401 || response.status === 403) {
+                console.error(`[GeminiService] Error terminal (${response.status}) con modelo "${model}": ${errMsg}`);
+                throw lastError;
+            }
+
+            // Errores recuperables: alta demanda (503), límites de cuota (429) y modelo no soportado (404)
 
         } catch (fetchError) {
-            // Error de red puro
+            // Si ya lo lanzamos nosotros (error terminal), propagarlo directamente
+            if (fetchError === lastError) throw fetchError;
+            // Error de red puro (TypeError: failed to fetch)
             if (fetchError.name === 'TypeError') {
                 lastError = fetchError;
                 console.warn(`[GeminiService] Error de red en intento ${attempt + 1}/${maxRetries} con modelo "${model}".`);

@@ -537,11 +537,19 @@ export default function ClinicalAIAssistant({
                 }
             } catch (err) {
                 console.error("Error en asistente conversacional:", err);
-                const isCapacityError = err.message?.includes('high demand') || err.message?.includes('503') || err.message?.includes('unavailable') || err.message?.includes('no está disponible');
-                if (isCapacityError) {
-                    toast.warning("Anita está ocupada un momento. Hable nuevamente para reintentar.");
+                const msg = err.message || '';
+                const isCapacityError = msg.includes('high demand') || msg.includes('503') || msg.includes('unavailable') || msg.includes('no está disponible');
+                const isDenied = msg.includes('denied access') || msg.includes('Forbidden') || msg.includes('403');
+                const isQuotaZero = msg.includes('limit: 0') || msg.includes('quota') || msg.includes('429');
+                
+                if (isDenied) {
+                    toast.error('⛔ Tu proyecto de Google AI Studio no tiene acceso. Crea una nueva API Key en aistudio.google.com con una cuenta diferente.', { duration: 6000 });
+                } else if (isQuotaZero) {
+                    toast.warning('⏳ Límite de velocidad alcanzado. Espera unos segundos y vuelve a hablar.', { duration: 4000 });
+                } else if (isCapacityError) {
+                    toast.warning('Anita está ocupada un momento. Hable nuevamente para reintentar.');
                 } else {
-                    toast.error("Error al procesar con el asistente.");
+                    toast.error('Error al procesar con el asistente.');
                 }
                 startListening();
             } finally {
