@@ -28,7 +28,6 @@ import {
 } from "react-icons/fi";
 
 import RecentActivity from "../components/RecentActivity";
-import N8nStatus from "../components/N8nStatus";
 import SmartAlerts from "../components/dashboard/SmartAlerts";
 import SetupWizardWidget from "../components/dashboard/SetupWizardWidget";
 
@@ -79,7 +78,6 @@ const MESSAGES = {
     stats_revenueToday: "Facturación hoy",
     stats_waiting: "En espera",
     stats_currency: "COP",
-    n8n_title: "Automatizaciones (n8n)",
     recent_title: "Actividad reciente",
     recent_empty: "Sin actividad registrada.",
     loading: "Cargando...",
@@ -112,7 +110,6 @@ const MESSAGES = {
     stats_revenueToday: "Revenue today",
     stats_waiting: "In waiting room",
     stats_currency: "COP",
-    n8n_title: "Automations (n8n)",
     recent_title: "Recent activity",
     recent_empty: "No activity yet.",
     loading: "Loading...",
@@ -650,7 +647,7 @@ function Overview({
   weeklySeries, weekRangeLabel,
   todaysAppointments, todaysLoading,
   metrics, metricsLoading,
-  n8nState, n8nLoading, recent, recentLoading,
+  recent, recentLoading,
   onGoAgenda,
   softwareLogo, // NEW PROP
   isDoc,
@@ -1011,23 +1008,7 @@ function Overview({
           )}
         </div>
 
-        {/* Automation Card */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-[32px] border border-white shadow-[0_15px_60px_-15px_rgba(0,0,0,0.05)] p-8 transition-all duration-700 hover:shadow-[0_25px_80px_-20px_rgba(0,0,0,0.08)] group relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50/20 rounded-bl-[80px] -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-700" />
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-            <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.25em]">{t("n8n_title")}</h3>
-          </div>
-          {n8nLoading ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="relative z-10">
-              <N8nStatus status={n8nState} />
-            </div>
-          )}
-        </div>
+        {/* Automation Card - Removed n8n integration */}
       </div>
 
     </div >
@@ -1353,36 +1334,6 @@ export default function Dashboard() {
     loadRecent();
   }, []);
 
-  const [n8nState, setN8nState] = useState(null);
-  const [n8nLoading, setN8nLoading] = useState(true);
-  useEffect(() => {
-    const loadN8n = async () => {
-      try {
-        const ref = doc(db, "integraciones", "n8n");
-        const snap = await getDoc(ref);
-        setN8nState(
-          snap.exists()
-            ? {
-              connected: !!snap.data().connected,
-              flowsRunning: snap.data().flowsRunning || 0,
-              lastError: snap.data().lastError || null,
-            }
-            : { connected: false, flowsRunning: 0, lastError: null }
-        );
-      } catch (e) {
-        console.error("Error cargando estado n8n:", e);
-        setN8nState({
-          connected: false,
-          flowsRunning: 0,
-          lastError: "No se pudo leer el estado desde Firebase.",
-        });
-      } finally {
-        setN8nLoading(false);
-      }
-    };
-    loadN8n();
-  }, []);
-
   // Effect to re-run queries when userProfile loaded
   useEffect(() => {
     // Trigger re-fetch if inquilino changes or loads
@@ -1576,8 +1527,6 @@ export default function Dashboard() {
             todaysLoading={todaysLoading}
             metrics={metrics}
             metricsLoading={metricsLoading}
-            n8nState={n8nState}
-            n8nLoading={n8nLoading}
             recent={recent}
             recentLoading={recentLoading}
             onGoAgenda={() => setActiveModule("Agenda")}

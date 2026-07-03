@@ -374,24 +374,17 @@ export default function ReporteIA() {
 
                 </div>
 
-                {/* ── Alerta visual de configuración WhatsApp/n8n ──────── */}
+                {/* ── Alerta visual de configuración WhatsApp ──────── */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5">
                     <h4 className="text-xs font-black text-green-800 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <FiAlertTriangle size={12} /> Automatizaciones disponibles
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                    <div className="grid grid-cols-1 gap-3 text-[11px]">
                         <div className="flex items-start gap-2">
                             <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${import.meta.env.VITE_WA_TOKEN ? "bg-green-500" : "bg-slate-300"}`} />
                             <div>
                                 <p className="font-black text-slate-700">WhatsApp Business API</p>
                                 <p className="text-slate-500">{import.meta.env.VITE_WA_TOKEN ? "✅ Configurado" : "⚠️ Agregar VITE_WA_TOKEN en .env"}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${import.meta.env.VITE_N8N_WEBHOOK_URL ? "bg-green-500" : "bg-slate-300"}`} />
-                            <div>
-                                <p className="font-black text-slate-700">n8n Webhook</p>
-                                <p className="text-slate-500">{import.meta.env.VITE_N8N_WEBHOOK_URL ? "✅ Configurado" : "⚠️ Agregar VITE_N8N_WEBHOOK_URL en .env"}</p>
                             </div>
                         </div>
                     </div>
