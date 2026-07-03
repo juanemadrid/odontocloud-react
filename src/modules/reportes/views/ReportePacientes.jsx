@@ -97,6 +97,27 @@ export default function ReportePacientes() {
     );
   });
 
+  const exportCSV = () => {
+    if (filteredPacientes.length === 0) return;
+    const headers = ["Nombre", "Identificacion", "Telefono", "Email", "Fecha Registro", "Sucursal"];
+    const rows = filteredPacientes.map(p => [
+      `"${(p.nombre || p.nombreCompleto || "").replace(/"/g, "'")}"`,
+      p.identificacion || p.nroDocumento || "—",
+      p.telefono || p.celular || "—",
+      p.email || "—",
+      p.fechaCreacion?.toDate ? format(p.fechaCreacion.toDate(), "dd/MM/yyyy") : (p.fechaCreacion ? format(new Date(p.fechaCreacion), "dd/MM/yyyy") : "—"),
+      p.sucursal || "—"
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_pacientes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header and Actions */}
@@ -118,6 +139,7 @@ export default function ReportePacientes() {
             />
           </div>
           <button
+            onClick={exportCSV}
             className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-800 text-white hover:bg-slate-700 font-black text-[11px] uppercase tracking-[0.1em] transition-all shadow-lg shadow-slate-200"
           >
             <FiDownload size={16} />

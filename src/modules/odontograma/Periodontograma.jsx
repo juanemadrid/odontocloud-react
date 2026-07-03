@@ -344,19 +344,19 @@ const SiteInput = ({
     const isDeep = pd !== "" && pd >= 4;
 
     return (
-        <div className="flex flex-col items-center p-1 border-r last:border-0 border-slate-100 bg-white">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</span>
+        <div className="flex flex-col items-center p-2 border-r last:border-0 border-slate-200 bg-gradient-to-b from-white to-slate-50/30">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</span>
 
-            {/* PD Input */}
+            {/* PD Input - MEJORADO: Más grande y legible */}
             <input
                 data-tooth={tooth}
                 data-face={face}
                 data-index={index}
                 data-field="pd"
                 data-upper={isUpper}
-                className={`perio-input w-7 h-7 text-center text-xs font-black border rounded-lg outline-none transition-all
-                    ${isDeep ? 'bg-red-50 text-red-600 border-red-300 ring-2 ring-red-100' : 'border-slate-200 text-slate-700 bg-slate-50 focus:bg-white'} 
-                    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10`}
+                className={`perio-input w-11 h-11 text-center text-base font-black border-2 rounded-xl outline-none transition-all shadow-sm
+                    ${isDeep ? 'bg-red-50 text-red-700 border-red-400 ring-2 ring-red-200' : 'border-slate-300 text-slate-800 bg-white focus:bg-blue-50'} 
+                    focus:border-blue-500 focus:ring-4 focus:ring-blue-100 hover:border-slate-400`}
                 type="text"
                 inputMode="numeric"
                 placeholder="-"
@@ -366,14 +366,14 @@ const SiteInput = ({
                 title="Profundidad de Sondaje (mm)"
             />
 
-            {/* GM Input */}
+            {/* GM Input - MEJORADO: Más grande y visible */}
             <input
                 data-tooth={tooth}
                 data-face={face}
                 data-index={index}
                 data-field="gm"
                 data-upper={isUpper}
-                className="perio-input w-7 h-5 text-center text-[10px] font-bold border-b border-l border-r border-slate-200 rounded-b-lg outline-none text-slate-500 bg-slate-50/50 focus:bg-white focus:border-blue-400 transition-all mt-0.5"
+                className="perio-input w-11 h-8 text-center text-sm font-bold border-2 border-t-0 border-slate-300 rounded-b-xl outline-none text-slate-600 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all hover:border-slate-400 shadow-sm"
                 type="text"
                 placeholder="0"
                 value={gm}
@@ -382,30 +382,30 @@ const SiteInput = ({
                 title="Margen Gingival (mm)"
             />
 
-            {/* BOP (Bleeding) & Plaque Flags */}
-            <div className="flex gap-1 mt-1.5 mb-1">
+            {/* BOP (Bleeding) & Plaque Flags - MEJORADOS: Más grandes y táctiles */}
+            <div className="flex gap-2 mt-2 mb-2">
                 <button
                     type="button"
-                    className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center
-                        ${site.bleeding ? 'bg-rose-500 border-rose-600 shadow-sm scale-110' : 'bg-slate-50 border-slate-200 hover:border-rose-300'}`}
+                    className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center shadow-sm
+                        ${site.bleeding ? 'bg-rose-500 border-rose-600 shadow-rose-200 scale-110' : 'bg-white border-slate-300 hover:border-rose-400 hover:bg-rose-50'}`}
                     onClick={() => updateSite(tooth, face, index, 'bleeding', !site.bleeding)}
                     title="Sangrado al Sondaje (BOP)"
                 >
-                    {site.bleeding && <span className="w-1.5 h-1.5 bg-white rounded-full"></span>}
+                    {site.bleeding && <span className="w-2 h-2 bg-white rounded-full"></span>}
                 </button>
                 <button
                     type="button"
-                    className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center
-                        ${site.plaque ? 'bg-amber-400 border-amber-500 shadow-sm scale-110' : 'bg-slate-50 border-slate-200 hover:border-amber-300'}`}
+                    className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center shadow-sm
+                        ${site.plaque ? 'bg-amber-500 border-amber-600 shadow-amber-200 scale-110' : 'bg-white border-slate-300 hover:border-amber-400 hover:bg-amber-50'}`}
                     onClick={() => updateSite(tooth, face, index, 'plaque', !site.plaque)}
                     title="Placa Bacteriana"
                 >
-                    {site.plaque && <span className="w-1.5 h-1.5 bg-white rounded-full"></span>}
+                    {site.plaque && <span className="w-2 h-2 bg-white rounded-full"></span>}
                 </button>
             </div>
 
-            {/* CAL Display */}
-            <span className={`text-[10px] font-black mt-1 ${cal > 4 ? 'text-indigo-600' : cal !== "" ? 'text-slate-400' : 'text-slate-300'}`}>
+            {/* CAL Display - MEJORADO: Más visible */}
+            <span className={`text-sm font-black mt-1 px-2 py-0.5 rounded-lg ${cal > 4 ? 'text-indigo-700 bg-indigo-100' : cal !== "" ? 'text-slate-600 bg-slate-100' : 'text-slate-300 bg-slate-50'}`}>
                 {cal !== "" ? cal : "-"}
             </span>
         </div>
@@ -427,39 +427,41 @@ const ToothColumn = ({
     const isMolar = [18, 17, 16, 26, 27, 28, 48, 47, 46, 36, 37, 38].includes(tooth);
 
     return (
-        <div className="flex flex-col items-center bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-28 shrink-0 hover:border-slate-300 transition-all hover:shadow-md">
-            <div className="w-full bg-slate-50 text-center text-xs font-black py-1.5 text-slate-650 border-b border-slate-200 uppercase tracking-widest flex items-center justify-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-black">{tooth}</span>
+        <div className="flex flex-col items-center bg-white border-2 border-slate-200 rounded-3xl shadow-md overflow-hidden w-40 shrink-0 hover:border-indigo-300 transition-all hover:shadow-lg">
+            <div className="w-full bg-gradient-to-r from-slate-100 to-slate-50 text-center text-sm font-black py-2.5 text-slate-700 border-b-2 border-slate-200 uppercase tracking-widest flex items-center justify-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black shadow-sm">{tooth}</span>
             </div>
 
-            {/* Vestibular Row */}
-            <div className="w-full bg-blue-50/5 border-b border-slate-100 p-1">
-                <div className="text-[7.5px] font-black text-blue-500 uppercase tracking-wider text-center mb-0.5">Vestibular</div>
-                <div className="flex justify-around">
+            {/* Vestibular Row - MEJORADO */}
+            <div className="w-full bg-blue-50/50 border-b-2 border-slate-200 p-2">
+                <div className="text-[9px] font-black text-blue-600 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-1">
+                    <FiSun size={10} /> Vestibular
+                </div>
+                <div className="flex justify-around gap-1">
                     <SiteInput tooth={tooth} face={vFace} index={0} label="D" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                     <SiteInput tooth={tooth} face={vFace} index={1} label="C" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                     <SiteInput tooth={tooth} face={vFace} index={2} label="M" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                 </div>
             </div>
 
-            {/* Lingual / Palatal Row */}
-            <div className="w-full bg-amber-50/5 p-1 border-b border-slate-100">
-                <div className="text-[7.5px] font-black text-amber-600 uppercase tracking-wider text-center mb-0.5">
-                    {isUpper ? "Palatino" : "Lingual"}
+            {/* Lingual / Palatal Row - MEJORADO */}
+            <div className="w-full bg-amber-50/50 p-2 border-b-2 border-slate-200">
+                <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider text-center mb-2 flex items-center justify-center gap-1">
+                    <FiLayers size={10} /> {isUpper ? "Palatino" : "Lingual"}
                 </div>
-                <div className="flex justify-around">
+                <div className="flex justify-around gap-1">
                     <SiteInput tooth={tooth} face={lFace} index={0} label="M" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                     <SiteInput tooth={tooth} face={lFace} index={1} label="C" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                     <SiteInput tooth={tooth} face={lFace} index={2} label="D" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                 </div>
             </div>
 
-            {/* Meta Controls (Mobility & Furcation) */}
-            <div className="flex flex-col gap-1 p-2 w-full bg-slate-50/40 border-t border-slate-100 items-center">
+            {/* Meta Controls (Mobility & Furcation) - MEJORADO */}
+            <div className="flex flex-col gap-2 p-3 w-full bg-gradient-to-b from-slate-50 to-white border-t-2 border-slate-200 items-center">
                 <div className="flex items-center justify-between w-full">
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Movilidad</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Movilidad</label>
                     <select
-                        className="text-[9px] font-bold border border-slate-200 rounded-md bg-white p-0.5 text-slate-750 outline-none focus:border-blue-400"
+                        className="text-xs font-black border-2 border-slate-300 rounded-lg bg-white px-2 py-1 text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 hover:border-slate-400 shadow-sm"
                         value={periodonto[tooth]?.mobility || 0}
                         onChange={e => {
                             const val = Number(e.target.value);
@@ -479,10 +481,10 @@ const ToothColumn = ({
                 </div>
 
                 {isMolar && (
-                    <div className="flex items-center justify-between w-full mt-1 border-t border-slate-100/50 pt-1">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Furca</label>
+                    <div className="flex items-center justify-between w-full pt-2 border-t border-slate-200">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Furca</label>
                         <select
-                            className="text-[9px] font-bold border border-slate-200 rounded-md bg-white p-0.5 text-slate-750 outline-none focus:border-blue-400"
+                            className="text-xs font-black border-2 border-slate-300 rounded-lg bg-white px-2 py-1 text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 hover:border-slate-400 shadow-sm"
                             value={periodonto[tooth]?.furcation || 0}
                             onChange={e => {
                                 const val = Number(e.target.value);

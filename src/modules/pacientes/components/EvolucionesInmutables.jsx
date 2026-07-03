@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { collection, addDoc, updateDoc, doc, arrayUnion, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import Button from "../../../components/ui/Button";
+import { toast } from "sonner";
+import { useAuth } from "../../../contexts/AuthContext";
 
 // Helper to format date
 const formatDate = (iso) => {
@@ -10,6 +12,7 @@ const formatDate = (iso) => {
 };
 
 export default function EvolucionesInmutables({ pacienteId, evoluciones = [], onAdd }) {
+    const { user } = useAuth();
     const [newEvo, setNewEvo] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -18,36 +21,30 @@ export default function EvolucionesInmutables({ pacienteId, evoluciones = [], on
     const [clarificationText, setClarificationText] = useState("");
 
     const handleSave = async () => {
-        if (!newEvo.trim()) return alert("Escriba la evolución");
-        if (!pacienteId) return alert("Paciente no identificado");
+        if (!newEvo.trim()) return toast.error("Escriba la evolución antes de guardar.");
+        if (!pacienteId) return toast.error("Paciente no identificado. Recarga la página.");
 
         setLoading(true);
         try {
             const entry = {
                 content: newEvo,
                 createdAt: new Date().toISOString(),
-                author: "Usuario Actual", // TODO: Replace with actual logged-in user context
+                author: user?.displayName || user?.email || "Sistema",
                 type: "EVOLUCION",
                 clarifications: []
             };
 
-            // We use arrayUnion to append to the 'evoluciones' array in Firestore
-            // This is a simple approach. For strict immutability, a subcollection is better,
-            // but sticking to the current array structure for compatibility if needed.
-            // Assuming 'evoluciones' is the field name.
             const ref = doc(db, "pacientes", pacienteId);
             await updateDoc(ref, {
                 evoluciones: arrayUnion(entry)
             });
 
-            // Optimistic UI update or callback
             if (onAdd) onAdd(entry);
-
             setNewEvo("");
-            alert("Evolución guardada. NO podrá ser modificada.");
+            toast.success("Evolución guardada. No podrá ser modificada por motivos legales.");
         } catch (e) {
             console.error(e);
-            alert("Error al guardar");
+            toast.error("Error al guardar la evolución. Intente nuevamente.");
         } finally {
             setLoading(false);
         }
@@ -68,18 +65,17 @@ export default function EvolucionesInmutables({ pacienteId, evoluciones = [], on
         target.clarifications.push({
             note: clarificationText,
             createdAt: new Date().toISOString(),
-            author: "Usuario Actual"
+            author: user?.displayName || user?.email || "Sistema"
         });
 
         try {
             await updateDoc(doc(db, "pacientes", pacienteId), { evoluciones: updatedEvos });
             setClarifyingId(null);
             setClarificationText("");
-            // Refetch or parent update needed ideally
-            alert("Nota aclaratoria agregada.");
+            toast.success("Nota aclaratoria agregada correctamente.");
         } catch (e) {
             console.error(e);
-            alert("Error guardando nota");
+            toast.error("Error al guardar la nota aclaratoria.");
         }
     };
 

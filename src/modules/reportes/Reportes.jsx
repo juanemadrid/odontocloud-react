@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { FiPieChart, FiUsers, FiDollarSign, FiActivity, FiCpu } from "react-icons/fi";
+import { FiPieChart, FiUsers, FiDollarSign, FiActivity, FiCpu, FiZap } from "react-icons/fi";
 
 import Indicadores from "./views/Indicadores";
 import ReportePacientes from "./views/ReportePacientes";
 import ReporteFinanciero from "./views/ReporteFinanciero";
 import ReporteClinico from "./views/ReporteClinico";
 import ReporteSistema from "./views/ReporteSistema";
+import ReporteIA from "./views/ReporteIA";
 
 const MENU_ITEMS = [
   { id: "indicadores", label: "General & KPIs", icon: <FiPieChart /> },
@@ -13,6 +14,7 @@ const MENU_ITEMS = [
   { id: "financiero", label: "Depto. Financiero", icon: <FiDollarSign /> },
   { id: "clinico", label: "Eficiencia Clínica", icon: <FiActivity /> },
   { id: "sistema", label: "Logs de Plataforma", icon: <FiCpu /> },
+  { id: "ia", label: "Inteligencia IA", icon: <FiZap />, badge: "NEW" },
 ];
 
 export default function Reportes() {
@@ -68,6 +70,11 @@ export default function Reportes() {
                 >
                   <span className={`text-[16px] ${isActive ? "text-purple-600" : "text-slate-400"}`}>{item.icon}</span>
                   {item.label}
+                  {item.badge && (
+                    <span className="ml-auto text-[8px] font-black px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-600 uppercase tracking-widest">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -91,6 +98,7 @@ export default function Reportes() {
           {activeMenu === "financiero" && <ReporteFinanciero />}
           {activeMenu === "clinico" && <ReporteClinico />}
           {activeMenu === "sistema" && <ReporteSistema />}
+          {activeMenu === "ia" && <ReporteIA />}
         </div>
       </div>
     </div>

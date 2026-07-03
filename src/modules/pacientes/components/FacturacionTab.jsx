@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "../../../components/ui/Button";
+import { toast } from "sonner";
 
 export default function FacturacionTab({
     facturacion = {},
@@ -43,10 +44,10 @@ export default function FacturacionTab({
 
             {/* Actions */}
             <div className="flex gap-4 mb-6">
-                <Button variant="secondary" onClick={() => alert("Función de registrar pago rápido en desarrollo.")}>
+                <Button variant="secondary" onClick={() => toast.info("Para registrar pagos, use el módulo de Facturación → Recibos de Caja")}>
                     Registrar Copago / Abono
                 </Button>
-                <Button variant="secondary" onClick={() => alert("Generando RIPS...")}>
+                <Button variant="secondary" onClick={onGenerateRips}>
                     Generar RIPS (JSON)
                 </Button>
             </div>

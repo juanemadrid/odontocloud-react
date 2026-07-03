@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { FiCpu, FiSettings, FiExternalLink, FiFileText, FiAlertTriangle, FiBookOpen, FiClipboard, FiCheck, FiRefreshCw } from 'react-icons/fi';
+import { FiCpu, FiSettings, FiExternalLink, FiFileText, FiAlertTriangle, FiBookOpen, FiClipboard, FiCheck, FiRefreshCw, FiActivity } from 'react-icons/fi';
 import { getAnamnesis } from '../../../services/clinicalService';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { toast } from 'sonner';
+import { suggestTreatmentPlan, predictAbsenteeism } from '../../../services/intelligenceService';
+
+// Simple markdown renderer
+function MdBlock({ text }) {
+    if (!text) return null;
+    const html = text
+        .replace(/^## (.+)$/gm, '<h2 style="font-size:13px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 6px">$1</h2>')
+        .replace(/^### (.+)$/gm, '<h3 style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 4px">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^- (.+)$/gm, '<li style="margin-left:16px;margin-bottom:4px;font-size:12px;color:#334155;list-style:disc">$1</li>')
+        .replace(/\n/g, ' ');
+    return <div style={{ lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 export default function AIInsightsTab({ patient }) {
     const [apiKey, setApiKey] = useState('');
@@ -21,6 +34,14 @@ export default function AIInsightsTab({ patient }) {
     const [dxLoading, setDxLoading] = useState(false);
     const [dxResults, setDxResults] = useState([]);
 
+    // Treatment plan suggestion
+    const [planLoading, setPlanLoading] = useState(false);
+    const [planResult, setPlanResult] = useState('');
+
+    // Absenteeism prediction
+    const [riskData, setRiskData] = useState(null);
+    const [riskLoading, setRiskLoading] = useState(false);
+
     useEffect(() => {
         const storedKey = localStorage.getItem('odontovox_gemini_api_key');
         if (storedKey) {
@@ -29,6 +50,17 @@ export default function AIInsightsTab({ patient }) {
             setApiKey(import.meta.env.VITE_GEMINI_API_KEY);
         }
     }, []);
+
+    // Auto-load absenteeism risk on mount
+    useEffect(() => {
+        if (patient?.id && patient?.inquilino) {
+            setRiskLoading(true);
+            predictAbsenteeism(patient.id, patient.inquilino, null)
+                .then(setRiskData)
+                .catch(() => {})
+                .finally(() => setRiskLoading(false));
+        }
+    }, [patient?.id]);
 
     const handleSaveApiKey = (e) => {
         e.preventDefault();
@@ -196,6 +228,31 @@ export default function AIInsightsTab({ patient }) {
             }
         } finally {
             setDxLoading(false);
+        }
+    };
+
+    // 4. Treatment plan suggestion from odontogram
+    const handleSuggestTreatmentPlan = async () => {
+        const key = getEffectiveApiKey();
+        if (!key) { toast.error('Configure la API Key de Gemini.'); setShowSettings(true); return; }
+        setPlanLoading(true);
+        try {
+            // Fetch anamnesis and odontogram data
+            let anamnesisData = null;
+            let odontogramaData = null;
+            try { anamnesisData = await getAnamnesis(patient.id); } catch (_) {}
+            try {
+                const odoSnap = await getDocs(query(collection(db, 'odontogramas'), where('pacienteId', '==', patient.id), limit(1)));
+                if (!odoSnap.empty) odontogramaData = odoSnap.docs[0].data()?.dientes || odoSnap.docs[0].data();
+            } catch (_) {}
+
+            const result = await suggestTreatmentPlan(odontogramaData, anamnesisData, patient, key);
+            setPlanResult(result);
+            toast.success('Plan de tratamiento sugerido');
+        } catch (e) {
+            if (e.message !== 'API Key missing') toast.error('Error: ' + e.message);
+        } finally {
+            setPlanLoading(false);
         }
     };
 
@@ -416,6 +473,131 @@ export default function AIInsightsTab({ patient }) {
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* 4. Treatment Plan Suggestion from Odontogram */}
+                <div className="bg-white border border-slate-150 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span className="p-2 bg-violet-50 text-violet-600 rounded-lg"><FiActivity size={16} /></span>
+                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Plan de Tratamiento IA</h3>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                        Genera automáticamente un plan de tratamiento priorizado analizando el odontograma del paciente, su anamnesis y condiciones médicas registradas.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={handleSuggestTreatmentPlan}
+                        disabled={planLoading}
+                        className="py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md shadow-violet-500/10"
+                    >
+                        {planLoading ? (
+                            <>
+                                <FiRefreshCw className="animate-spin" />
+                                Analizando Odontograma...
+                            </>
+                        ) : (
+                            <>
+                                <FiActivity />
+                                Sugerir Plan de Tratamiento
+                            </>
+                        )}
+                    </button>
+
+                    {planResult && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2 max-h-[400px] overflow-y-auto custom-scrollbar animate-fadeIn space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                    <FiActivity className="text-violet-600" /> Plan Sugerido por IA
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(planResult)}
+                                    className="text-[9px] font-black text-violet-600 hover:underline uppercase tracking-widest"
+                                >
+                                    Copiar
+                                </button>
+                            </div>
+                            <div className="text-xs font-bold text-slate-700 leading-relaxed">
+                                <MdBlock text={planResult} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 5. Absenteeism Risk Prediction */}
+                <div className="bg-white border border-slate-150 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FiAlertTriangle size={16} /></span>
+                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Predicción de Ausentismo</h3>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                        Probabilidad de inasistencia del paciente calculada en base a su historial de citas, cancelaciones y comportamiento previo.
+                    </p>
+
+                    {riskLoading ? (
+                        <div className="py-8 flex flex-col items-center justify-center gap-3">
+                            <FiRefreshCw className="animate-spin text-amber-500" size={24} />
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analizando historial...</p>
+                        </div>
+                    ) : riskData ? (
+                        <div className="space-y-4 animate-fadeIn">
+                            {/* Risk Level Display */}
+                            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 flex items-center justify-between">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide ${
+                                            riskData.label === 'Alto' ? 'bg-red-100 text-red-700' :
+                                            riskData.label === 'Medio' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-green-100 text-green-700'
+                                        }`}>
+                                            Riesgo {riskData.label}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-bold">
+                                        {riskData.stats?.total || 0} citas históricas · {riskData.stats?.atendidas || 0} atendidas · {riskData.stats?.canceladas || 0} canceladas
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-black text-amber-600">{riskData.probability}%</div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Probabilidad</div>
+                                </div>
+                            </div>
+
+                            {/* Reasons */}
+                            {riskData.reasons && riskData.reasons.length > 0 && (
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                    <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3">Factores Identificados</h4>
+                                    <ul className="space-y-2">
+                                        {riskData.reasons.map((reason, idx) => (
+                                            <li key={idx} className="flex items-start gap-2 text-[11px] font-bold text-slate-600">
+                                                <span className="text-amber-500 mt-0.5">•</span>
+                                                {reason}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Recommendation */}
+                            {riskData.recommendation && (
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                                    <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        <FiCheck size={12} /> Recomendación
+                                    </h4>
+                                    <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
+                                        {riskData.recommendation}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="py-8 text-center">
+                            <p className="text-[11px] font-bold text-slate-400">No hay datos suficientes para calcular el riesgo.</p>
                         </div>
                     )}
                 </div>

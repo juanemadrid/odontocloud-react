@@ -91,6 +91,27 @@ export default function ReporteClinico() {
     );
   });
 
+  const exportCSV = () => {
+    if (filtered.length === 0) return;
+    const headers = ["Fecha", "Hora", "Paciente", "Procedimiento", "Doctor", "Estado"];
+    const rows = filtered.map(c => [
+      c.fecha || "—",
+      c.hora || "—",
+      `"${(c.nombrePaciente || "").replace(/"/g, "'")}"`,
+      `"${(c.motivo || "").replace(/"/g, "'")}"`,
+      `"${(c.dentista || "").replace(/"/g, "'")}"`,
+      c.estado || "Pendiente"
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_clinico_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header and Actions */}
@@ -112,6 +133,7 @@ export default function ReporteClinico() {
             />
           </div>
           <button
+            onClick={exportCSV}
             className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-800 text-white hover:bg-slate-700 font-black text-[11px] uppercase tracking-[0.1em] transition-all shadow-lg shadow-slate-200"
           >
             <FiDownload size={16} />

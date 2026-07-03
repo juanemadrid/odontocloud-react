@@ -472,7 +472,7 @@ export default function Odontograma({ embeddedPatient }) {
                                     <button
                                         onClick={() => handleEliminar(s.id)}
                                         title="Eliminar"
-                                        className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 opacity-0 group-hover:opacity-100 transition-all"
+                                        className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-all"
                                     >
                                         <FiTrash2 size={14} />
                                     </button>

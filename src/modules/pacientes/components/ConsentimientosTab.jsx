@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import Button from "../../../components/ui/Button";
+import { toast } from "sonner";
 
 export default function ConsentimientosTab({ paciente }) {
     const [view, setView] = useState("list"); // 'list', 'new'
@@ -104,8 +105,8 @@ export default function ConsentimientosTab({ paciente }) {
     };
 
     const handleSave = async () => {
-        if (!selectedTemplate) return alert("Seleccione una plantilla");
-        if (!hasSignature) return alert("El paciente debe firmar");
+        if (!selectedTemplate) return toast.error("Seleccione una plantilla de consentimiento.");
+        if (!hasSignature) return toast.error("El paciente debe firmar antes de guardar.");
 
         const canvas = canvasRef.current;
         const signatureData = canvas.toDataURL("image/png");
@@ -117,15 +118,15 @@ export default function ConsentimientosTab({ paciente }) {
                 templateId: selectedTemplate.id,
                 templateTitle: selectedTemplate.title,
                 contentSnapshot: previewContent,
-                signatureUrl: signatureData, // Storing base64 for simplicity in MVP. Ideally upload to Storage.
+                signatureUrl: signatureData,
                 createdAt: serverTimestamp()
             });
-            alert("Consentimiento guardado exitosamente");
+            toast.success("Consentimiento informado guardado exitosamente.");
             setView("list");
             loadHistory();
         } catch (e) {
             console.error(e);
-            alert("Error guardando consentimiento");
+            toast.error("Error al guardar el consentimiento. Intente nuevamente.");
         }
     };
 

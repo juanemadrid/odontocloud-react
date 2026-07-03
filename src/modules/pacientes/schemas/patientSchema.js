@@ -5,7 +5,12 @@ export const patientSchema = z.object({
 
     // 1. Identificación (SOLO CAMPOS CRÍTICOS OBLIGATORIOS)
     tipoDocumento: z.string().min(1, "El tipo de documento es obligatorio"),
-    nroDocumento: z.string().min(3, "El número de documento debe tener al menos 3 caracteres"),
+    nroDocumento: z.string()
+        .min(3, "El número de documento debe tener al menos 3 caracteres")
+        .refine((val) => {
+            const numeros = val.replace(/\D/g, '');
+            return numeros.length >= 6 && numeros.length <= 12;
+        }, "Documento debe tener entre 6 y 12 dígitos"),
     nroHistoria: z.string().optional(),
     nombres: z.string().min(2, "Los nombres son obligatorios"),
     apellidos: z.string().min(2, "Los apellidos son obligatorios"),
@@ -27,12 +32,28 @@ export const patientSchema = z.object({
     esExtranjero: z.boolean().default(false),
     permitePublicidad: z.boolean().default(true),
 
-    celular: z.string().min(7, "El celular debe tener al menos 7 dígitos"),
+    celular: z.string()
+        .min(7, "El celular debe tener al menos 7 dígitos")
+        .regex(/^\d+$/, "El celular solo debe contener números")
+        .refine((val) => {
+            // Validación para número colombiano: debe tener 10 dígitos y empezar con 3
+            const numeros = val.replace(/\D/g, '');
+            if (numeros.length === 10 && numeros.startsWith('3')) return true;
+            // Si no es colombiano, permitir mínimo 7 dígitos
+            return numeros.length >= 7;
+        }, "Celular colombiano debe tener 10 dígitos y empezar con 3"),
     prefijoCelular: z.string().optional(),
     telDomicilio: z.string().optional(),
     telOficina: z.string().optional(),
     extension: z.string().optional(),
-    email: z.string().email("El correo electrónico no es válido"),
+    email: z.string()
+        .min(1, "El correo electrónico es obligatorio")
+        .email("El correo electrónico no es válido")
+        .refine((val) => {
+            // Validación adicional: debe tener @ y punto después del @
+            const parts = val.split('@');
+            return parts.length === 2 && parts[1].includes('.');
+        }, "Formato de correo inválido"),
     ocupacion: z.string().min(2, "La ocupación es obligatoria"),
 
     // 3. Facturación y Responsables (TODO OPCIONAL)

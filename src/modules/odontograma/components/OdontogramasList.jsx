@@ -98,7 +98,7 @@ export default function OdontogramasList({ sesiones, onSelect, onCreate, onDelet
                                     </button>
                                     <button 
                                         onClick={() => onDelete(sesion.id)}
-                                        className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-600 hover:border-rose-100 transition-all opacity-0 group-hover:opacity-100"
+                                        className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-600 hover:border-rose-100 transition-all"
                                     >
                                         <FiTrash2 size={16} />
                                     </button>

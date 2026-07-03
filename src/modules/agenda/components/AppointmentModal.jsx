@@ -223,6 +223,26 @@ export default function AppointmentModal({
             const start = new Date(y, m - 1, d, hh, mm);
             const end = new Date(start.getTime() + data.duracion * 60000);
 
+            // ✅ VALIDACIÓN: Prevenir citas duplicadas en mismo horario
+            if (!data.id) { // Solo validar en citas nuevas, no al editar
+                const { collection: firestoreCollection, query: firestoreQuery, where, getDocs } = await import('firebase/firestore');
+                const { db } = await import('../../../firebase/firebaseConfig');
+                
+                const duplicateCheck = firestoreQuery(
+                    firestoreCollection(db, 'agenda'),
+                    where('inquilino', '==', inquilino),
+                    where('doctorId', '==', data.doctorId),
+                    where('fecha', '==', data.fecha),
+                    where('hora', '==', data.hora)
+                );
+                
+                const duplicateSnap = await getDocs(duplicateCheck);
+                if (!duplicateSnap.empty) {
+                    toast.error(`Ya existe una cita para ${data.doctor} el ${data.fecha} a las ${data.hora}. Elija otro horario.`);
+                    return;
+                }
+            }
+
             const payload = {
                 ...data,
                 start,
@@ -237,7 +257,7 @@ export default function AppointmentModal({
             await onSave(payload);
 
             // Dispatch automation event
-            dispatchAutomationEvent("APPOINTMENT_SAVED", {
+            dispatchAutomationEvent("APPOINTMENT_CREATED", {
                 ...payload,
                 inquilino,
                 operatorName: userProfile?.nombre || userProfile?.email
