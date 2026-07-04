@@ -24,7 +24,7 @@ import StatCard from "../components/shared/StatCard";
 import DashboardCharts from "../components/dashboard/DashboardCharts";
 import {
     FiHome, FiCalendar, FiUsers, FiFileText, FiBox,
-    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiDollarSign
+    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiDollarSign, FiZap, FiMic
 } from "react-icons/fi";
 
 import RecentActivity from "../components/RecentActivity";
@@ -669,54 +669,95 @@ function Overview({
       (c) => (c.estado || "").toLowerCase() === "en espera"
     ).length;
 
+    const pendienteCount = docAppointments.filter(
+      (c) => (c.estado || "").toLowerCase() === "pendiente"
+    ).length;
+
     return (
       <div className="space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Custom Welcome Banner for Doctor */}
-        <div className="bg-[#020617] rounded-[24px] md:rounded-[32px] p-6 md:p-10 relative overflow-hidden group shadow-[0_20px_60px_-10px_rgba(0,0,0,0.3)] border border-white/5">
-          {/* Mesh Gradient */}
-          <div className="absolute inset-0 opacity-60 pointer-events-none">
-            <div className="absolute top-[-40%] left-[-20%] w-[800px] h-[800px] bg-blue-600/30 rounded-full blur-[140px] animate-pulse duration-[12s]" />
-            <div className="absolute bottom-[-30%] right-[-10%] w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px]" />
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+        <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 rounded-[24px] md:rounded-[32px] p-6 md:p-10 relative overflow-hidden group shadow-[0_20px_60px_-10px_rgba(0,0,0,0.3)] border border-white/5">
+          {/* Animated Background */}
+          <div className="absolute inset-0 opacity-40 pointer-events-none">
+            <div className="absolute top-[-40%] left-[-20%] w-[800px] h-[800px] bg-blue-500/30 rounded-full blur-[140px] animate-pulse" style={{animationDuration: '8s'}} />
+            <div className="absolute bottom-[-30%] right-[-10%] w-[600px] h-[600px] bg-indigo-400/20 rounded-full blur-[120px] animate-pulse" style={{animationDuration: '12s', animationDelay: '2s'}} />
           </div>
+          
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 p-3 shadow-xl flex items-center justify-center">
-                <span className="text-3xl">🩺</span>
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 p-3 shadow-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <span className="text-4xl">🩺</span>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse" />
                   <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Portal Clínico Activo</span>
                 </div>
-                <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight uppercase">
+                <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
                   Dr. {userName}
                 </h1>
-                <p className="text-slate-400 text-xs font-medium">
-                  {companyName} • Agenda y expedientes del día
+                <p className="text-slate-300 text-sm font-medium">
+                  {companyName} • {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
+              </div>
+            </div>
+            
+            {/* Quick Stats in Banner */}
+            <div className="flex gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 min-w-[100px]">
+                <div className="text-3xl font-black text-white">{todaysLoading ? "..." : docAppointments.length}</div>
+                <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-1">Citas Hoy</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 min-w-[100px]">
+                <div className="text-3xl font-black text-emerald-400">{todaysLoading ? "..." : completedCount}</div>
+                <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-1">Atendidos</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Doctor Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            title="Mis Citas de Hoy"
-            value={todaysLoading ? "..." : docAppointments.length}
-            icon={FiCalendar} color="blue"
-          />
-          <StatCard
-            title="Pacientes Atendidos"
-            value={todaysLoading ? "..." : completedCount}
-            icon={FiCheckCircle} color="green"
-          />
-          <StatCard
-            title="En Espera"
-            value={todaysLoading ? "..." : enEsperaCount}
-            icon={FiClock} color="purple"
-          />
+        {/* Doctor Stats Cards - Mejorado con más detalle */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border-2 border-blue-100 p-5 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <FiCalendar className="text-blue-600" size={24} />
+              <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase tracking-wider">Hoy</span>
+            </div>
+            <div className="text-3xl font-black text-slate-800">{todaysLoading ? "..." : docAppointments.length}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Total Citas</div>
+          </div>
+
+          <div className="bg-white rounded-2xl border-2 border-emerald-100 p-5 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <FiCheckCircle className="text-emerald-600" size={24} />
+              <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-wider">✓</span>
+            </div>
+            <div className="text-3xl font-black text-emerald-600">{todaysLoading ? "..." : completedCount}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Atendidos</div>
+            {docAppointments.length > 0 && (
+              <div className="text-[10px] text-slate-400 mt-1">
+                {Math.round((completedCount / docAppointments.length) * 100)}% completado
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border-2 border-amber-100 p-5 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <FiClock className="text-amber-600" size={24} />
+              <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-full uppercase tracking-wider">⏳</span>
+            </div>
+            <div className="text-3xl font-black text-amber-600">{todaysLoading ? "..." : enEsperaCount}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">En Espera</div>
+          </div>
+
+          <div className="bg-white rounded-2xl border-2 border-indigo-100 p-5 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <FiActivity className="text-indigo-600" size={24} />
+              <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-wider">→</span>
+            </div>
+            <div className="text-3xl font-black text-indigo-600">{todaysLoading ? "..." : pendienteCount}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Pendientes</div>
+          </div>
         </div>
 
         {/* Doctor Main Dashboard Columns */}
@@ -725,67 +766,79 @@ function Overview({
           <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col min-h-[400px]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-extrabold text-slate-800 tracking-tight text-lg uppercase flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-blue-600 rounded-full" />
-                Mi Agenda Clínica de Hoy
+                <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
+                Mi Agenda Clínica
               </h3>
               <button 
                 onClick={onGoAgenda} 
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-lg transition-all"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-4 py-2 rounded-lg transition-all flex items-center gap-2"
               >
-                Ver Agenda Completa
+                <FiCalendar size={14} />
+                Ver Completa
               </button>
             </div>
 
             {todaysLoading ? (
               <div className="flex items-center justify-center flex-1 text-slate-400 text-sm">
-                Cargando agenda clínica...
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span>Cargando agenda clínica...</span>
+                </div>
               </div>
             ) : docAppointments.length === 0 ? (
               <div className="text-slate-500 text-sm bg-slate-50 p-8 rounded-xl flex flex-col items-center justify-center text-center flex-1 border border-dashed border-slate-200">
-                <span className="text-4xl mb-3">📅</span>
-                <p className="font-bold text-slate-700">No tienes citas programadas para hoy</p>
-                <p className="text-xs text-slate-400 mt-1">Disfruta de tu día libre o busca pacientes en el panel lateral.</p>
+                <span className="text-6xl mb-4">📅</span>
+                <p className="font-black text-slate-700 text-lg">No tienes citas programadas para hoy</p>
+                <p className="text-sm text-slate-400 mt-2 max-w-md">Disfruta de tu día libre o aprovecha para revisar expedientes pendientes.</p>
               </div>
             ) : (
-              <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1">
+              <div className="space-y-3 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
                 {docAppointments.map((c) => (
-                  <div key={c.id} className="p-4 hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-extrabold bg-blue-50 text-blue-600 px-2 py-1 rounded-md tracking-wider">
+                  <div key={c.id} className="p-4 hover:bg-slate-50 border-2 border-slate-100 hover:border-blue-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-sm font-black bg-blue-600 text-white px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
                           {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider
-                          ${(c.estado || "").toLowerCase() === "en espera" ? "bg-amber-100 text-amber-700 border border-amber-200" :
-                            (c.estado || "").toLowerCase() === "completada" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" :
-                            "bg-blue-100 text-blue-700 border border-blue-200"}
+                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border-2
+                          ${(c.estado || "").toLowerCase() === "en espera" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            (c.estado || "").toLowerCase() === "completada" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            "bg-blue-50 text-blue-700 border-blue-200"}
                         `}>
                           {c.estado}
                         </span>
+                        {c.consultorio && (
+                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
+                            📍 {c.consultorio}
+                          </span>
+                        )}
                       </div>
-                      <div className="font-bold text-slate-800 text-sm uppercase">{c.pacienteNombre}</div>
-                      {c.motivo && <div className="text-xs text-slate-500 italic">Motivo: {c.motivo}</div>}
+                      <div className="font-black text-slate-800 text-base">{c.pacienteNombre}</div>
+                      {c.motivo && <div className="text-xs text-slate-500 flex items-start gap-2"><span>💬</span><span className="italic">{c.motivo}</span></div>}
                     </div>
 
                     {/* Quick Access to Clinical Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
                         className="text-[10px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-all"
+                        title="Ver Historia Clínica"
                       >
-                        Historia Clínica
+                        📋 Historia
                       </button>
                       <button
                         onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=odonto`)}
                         className="text-[10px] font-black uppercase tracking-wider bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-all"
+                        title="Ver Odontograma"
                       >
-                        Odontograma
+                        🦷 Odontograma
                       </button>
                       <button
                         onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=evo`)}
                         className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition-all shadow-sm"
+                        title="Registrar Evolución"
                       >
-                        Evolución
+                        ✍️ Evolución
                       </button>
                     </div>
                   </div>
@@ -794,10 +847,108 @@ function Overview({
             )}
           </div>
 
-          {/* Quick Actions & Speech Recognition Tips */}
-          <div className="space-y-6">
-            {/* Vox Manos Libres widget for Doctors */}
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-950 text-white rounded-2xl p-6 shadow-md border border-indigo-900/30 relative overflow-hidden group">
+          {/* Quick Actions Panel */}
+          <div className="space-y-4">
+            {/* Voice Assistant Card */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <FiMic size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm uppercase tracking-wider">Anita VOX</h4>
+                    <p className="text-[10px] text-indigo-100">Asistente de Voz</p>
+                  </div>
+                </div>
+                <p className="text-xs text-indigo-100 mb-4 leading-relaxed">
+                  Dicta tus evoluciones clínicas manos libres mientras atiendes al paciente.
+                </p>
+                <button className="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-sm">
+                  Activar Micrófono
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="font-black text-slate-800 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                <FiZap className="text-blue-600" size={16} />
+                Accesos Rápidos
+              </h4>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => navigate('/dashboard/pacientes')}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
+                >
+                  <span className="text-sm font-bold text-slate-700">Buscar Paciente</span>
+                  <FiUsers className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
+                </button>
+                <button 
+                  onClick={() => navigate('/dashboard/agenda')}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
+                >
+                  <span className="text-sm font-bold text-slate-700">Mi Agenda Completa</span>
+                  <FiCalendar className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
+                </button>
+                <button 
+                  onClick={() => navigate('/dashboard/reportes')}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
+                >
+                  <span className="text-sm font-bold text-slate-700">Mis Estadísticas</span>
+                  <FiPieChart className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Tips Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+              <h4 className="font-black text-slate-800 text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                💡 Tip del Día
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Usa el <strong>Portal del Paciente</strong> para que tus pacientes vean sus citas, planes y pagos desde casa. Reduce llamadas y mejora la experiencia.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Row: Recent Activity for Doctor */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-extrabold text-slate-800 tracking-tight text-lg uppercase flex items-center gap-2 mb-6">
+            <span className="w-1.5 h-5 bg-emerald-600 rounded-full" />
+            Actividad Reciente
+          </h3>
+          {recentLoading ? (
+            <div className="text-center py-8 text-slate-400">Cargando...</div>
+          ) : recent.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <span className="text-4xl mb-3 block">📝</span>
+              <p>No hay actividad registrada aún</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recent.slice(0, 5).map((act, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200">
+                  <div className={`w-2 h-2 rounded-full ${
+                    act.type === 'appointment' ? 'bg-blue-500' :
+                    act.type === 'evolution' ? 'bg-emerald-500' :
+                    'bg-slate-400'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{act.description}</p>
+                    <p className="text-xs text-slate-400">{act.timestamp}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    );
+  }
               <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-bl-[80px]" />
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300 mb-3 flex items-center gap-2">
                 🎤 Vox Manos Libres
