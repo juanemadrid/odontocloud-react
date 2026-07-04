@@ -22,23 +22,33 @@ const MAX_TOKENS_REFINE = 2000;
 async function fetchGeminiWithRetry(contents, apiKey, maxRetries = 3, maxTokens = MAX_TOKENS_GUIDED) {
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-    // Extrae el tiempo de espera sugerido por Google del mensaje de error 429
     const parseRetryAfter = (errMsg) => {
         const match = errMsg?.match(/retry in ([\d.]+)s/i);
-        if (match) return Math.ceil(parseFloat(match[1]) * 1000); // ms
-        return 15000; // 15s por defecto si no se puede parsear
+        if (match) return Math.ceil(parseFloat(match[1]) * 1000);
+        return 15000;
     };
+
+    // Detectar tipo de key: AQ. = OAuth Bearer, AIzaSy = API key clásica
+    const isOAuthKey = apiKey.startsWith('AQ.');
 
     let lastError = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         const model = GEMINI_MODELS[Math.min(attempt, GEMINI_MODELS.length - 1)];
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        
+        // URL y headers según tipo de key
+        const url = isOAuthKey
+            ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+            : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        
+        const headers = isOAuthKey
+            ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }
+            : { 'Content-Type': 'application/json' };
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ 
                     contents,
                     generationConfig: {
