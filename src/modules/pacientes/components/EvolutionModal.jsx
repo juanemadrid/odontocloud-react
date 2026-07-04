@@ -430,8 +430,8 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-            <div className={`bg-white rounded-[24px] shadow-2xl w-full flex flex-col h-full max-h-[90vh] overflow-hidden transition-all duration-300 ${showAIAssistant ? 'max-w-7xl' : 'max-w-4xl'}`}>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 md:p-10 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+            <div className={`bg-white sm:rounded-[24px] rounded-t-[24px] shadow-2xl w-full flex flex-col h-[95vh] sm:h-full sm:max-h-[90vh] overflow-hidden transition-all duration-300 ${showAIAssistant ? 'max-w-7xl' : 'max-w-4xl'}`}>
                 <div className="flex flex-col h-full">
                     {/* Header Custom Tabs like design */}
                     <div className="flex border-b border-slate-100/60 sticky top-0 bg-white z-10 shrink-0">
@@ -453,10 +453,10 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                     </div>
                     
                     {/* Body Form Content (Scrollable) */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 flex flex-col md:flex-row gap-8">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 md:p-8 flex flex-col lg:flex-row gap-6">
                     
                     {/* COLUMNA IZQUIERDA (Oculta si es Nota Aclaratoria) */}
-                    <div className={`flex-1 space-y-5 ${activeTab === 'nota' ? 'hidden' : 'block'}`}>
+                    <div className={`flex-1 space-y-4 ${activeTab === 'nota' ? 'hidden' : 'block'}`}>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -1049,15 +1049,15 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                 </div>
 
                 {/* Footer Fixed */}
-                <div className="p-6 border-t border-slate-100/60 bg-white shrink-0 flex justify-end gap-6 items-center">
-                    <button type="button" onClick={onClose} disabled={saving} className="font-black text-[12px] uppercase tracking-widest text-[#4aa5c8] hover:text-[#3285a3] transition-colors">
+                <div className="p-4 sm:p-6 border-t border-slate-100/60 bg-white shrink-0 flex justify-between sm:justify-end gap-3 sm:gap-6 items-center">
+                    <button type="button" onClick={onClose} disabled={saving} className="flex-1 sm:flex-none py-3 px-4 border-2 border-slate-200 rounded-xl font-black text-[12px] uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-colors text-center">
                         Cerrar
                     </button>
                     <button 
                         type="button"
                         onClick={handleSubmit(onSubmit)}
                         disabled={saving} 
-                        className="px-10 py-3 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-[12px] font-black text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-lime-500/20"
+                        className="flex-1 sm:flex-none px-8 sm:px-10 py-3 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-xl font-black text-[13px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-lime-500/20"
                     >
                         {saving ? "Guardando..." : "Guardar"}
                     </button>

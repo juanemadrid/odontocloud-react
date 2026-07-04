@@ -78,28 +78,28 @@ export default function EvolutionList({ patientId, onEdit, searchTerm }) {
                  Historial
              </h3>
 
-             <div className="space-y-6">
+             <div className="space-y-4">
                  {filtered.map((evo) => {
                      const isRemission = evo.type === 'remission';
                      
                      return (
-                         <div key={evo.id} className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col gap-4 relative group hover:border-blue-200 hover:shadow-lg hover:shadow-slate-100 transition-all">
+                         <div key={evo.id} className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-6 flex flex-col gap-3 relative group hover:border-blue-200 hover:shadow-lg hover:shadow-slate-100 transition-all">
                               
-                              <div className="flex justify-between items-start">
-                                  <div className="flex-1">
-                                      {/* Título: Paciente (Doctor) */}
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                      {/* Título: Doctor */}
                                       <h4 className="text-[13px] font-black text-slate-800 mb-1 flex items-center gap-2">
-                                          <FiUser size={14} className="text-blue-500" />
-                                          <span>Profesional: {evo.profesional || 'No especificado'}</span>
+                                          <FiUser size={14} className="text-blue-500 shrink-0" />
+                                          <span className="truncate">Profesional: {evo.profesional || 'No especificado'}</span>
                                       </h4>
                                       
                                       {/* Fecha e Información secundaria */}
-                                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                          {evo.date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric' })} - {evo.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex flex-wrap items-center gap-2">
+                                          <span>{evo.date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric' })} - {evo.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                                           {evo.treatment && (
                                               <>
                                                  <span className="text-slate-300">|</span>
-                                                 <span className="text-emerald-500 truncate max-w-[200px]">{evo.treatment}</span>
+                                                 <span className="text-emerald-500 truncate max-w-[180px] sm:max-w-[250px]">{evo.treatment}</span>
                                               </>
                                           )}
                                       </div>
@@ -111,19 +111,19 @@ export default function EvolutionList({ patientId, onEdit, searchTerm }) {
                                   </div>
 
                                   {/* Acciones e Indicadores */}
-                                  <div className="flex items-center gap-3 shrink-0 ml-4">
-                                      {/* Badges Evolución o Remisión */}
+                                  <div className="flex items-center gap-2 shrink-0 sm:ml-4">
+                                      {/* Badge tipo */}
                                       {isRemission ? (
-                                          <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-md uppercase tracking-wider">
+                                          <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
                                               Remisión
                                           </span>
                                       ) : (
-                                          <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-3 py-1 rounded-md uppercase tracking-wider">
+                                          <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
                                               Evolución
                                           </span>
                                       )}
 
-                                      {/* Botones Flotantes (Azules como en la imagen) */}
+                                      {/* Botones */}
                                       <div className="flex gap-1">
                                           <button 
                                               onClick={() => onEdit(evo)} 
