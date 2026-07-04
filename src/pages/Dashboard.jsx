@@ -949,47 +949,6 @@ function Overview({
       </div>
     );
   }
-              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-bl-[80px]" />
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300 mb-3 flex items-center gap-2">
-                🎤 Vox Manos Libres
-              </h4>
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                Diseñado para cirujanos dentistas. Opera el historial clínico con tu voz para mantener tus manos estériles y libres de contaminación.
-              </p>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
-                <span className="text-[10px] font-black uppercase text-indigo-200 tracking-wider block">Comandos de Ejemplo:</span>
-                <div className="text-[11px] space-y-1.5 text-slate-300 font-mono">
-                  <div>• "historia de Carlos Restrepo"</div>
-                  <div>• "odontograma de Alberto Gomez"</div>
-                  <div>• "evoluciones de joshua"</div>
-                  <div>• "ir a agenda"</div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase tracking-widest">
-                <span>Estado: Activo de fondo</span>
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-              </div>
-            </div>
-
-            {/* Motivational / Clinical Guidelines card */}
-            <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-3 flex items-center gap-2">
-                🩺 Notas de la Jornada
-              </h4>
-              <div className="space-y-3">
-                <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-xl text-xs text-amber-800 leading-relaxed">
-                  <strong>Recordatorio:</strong> Recuerda guardar cada evolución con tu firma. Las recetas y órdenes médicas se pueden dictar directamente con el botón de micrófono en el modal.
-                </div>
-                <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl text-xs text-blue-800 leading-relaxed">
-                  <strong>Planes de Tratamiento:</strong> Se han cargado 5 planes de tratamiento en tu inquilino para realizar pruebas clínicas.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
