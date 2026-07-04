@@ -827,14 +827,10 @@ export default function Periodontograma({ embeddedPatient }) {
                         <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Arcada Superior (Maxilar)</h4>
                     </div>
                     
-                    <div className="overflow-x-auto pb-4 custom-scrollbar">
-                        <div className="w-[1972px] flex flex-col gap-3 p-1">
-                            {/* Vestibular Graph */}
-                            <div className="text-[9px] font-black text-blue-500 uppercase tracking-widest pl-2">Perfil Vestibular</div>
-                            <PeriodontogramaChart teeth={TEETH_UPPER} face="v" isUpper={true} periodonto={periodonto} />
-
-                            {/* Tooth Cards */}
-                            <div className="flex gap-3 my-2 w-[1972px] shrink-0">
+                    <div className="w-full">
+                        <div className="flex flex-col gap-3 p-1">
+                            {/* Tooth Cards en GRID responsive sin scroll horizontal */}
+                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-3 w-full">
                                 {TEETH_UPPER.map(t => (
                                     <ToothColumn 
                                         key={t} 
@@ -848,10 +844,6 @@ export default function Periodontograma({ embeddedPatient }) {
                                     />
                                 ))}
                             </div>
-
-                            {/* Palatal Graph */}
-                            <div className="text-[9px] font-black text-amber-600 uppercase tracking-widest pl-2 mt-2">Perfil Palatino</div>
-                            <PeriodontogramaChart teeth={TEETH_UPPER} face="l" isUpper={true} periodonto={periodonto} />
                         </div>
                     </div>
                 </div>
@@ -863,14 +855,10 @@ export default function Periodontograma({ embeddedPatient }) {
                         <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Arcada Inferior (Mandíbula)</h4>
                     </div>
 
-                    <div className="overflow-x-auto pb-4 custom-scrollbar">
-                        <div className="w-[1972px] flex flex-col gap-3 p-1">
-                            {/* Vestibular Graph */}
-                            <div className="text-[9px] font-black text-blue-500 uppercase tracking-widest pl-2">Perfil Vestibular</div>
-                            <PeriodontogramaChart teeth={TEETH_LOWER} face="v" isUpper={false} periodonto={periodonto} />
-
-                            {/* Tooth Cards */}
-                            <div className="flex gap-3 my-2 w-[1972px] shrink-0">
+                    <div className="w-full">
+                        <div className="flex flex-col gap-3 p-1">
+                            {/* Tooth Cards en GRID responsive sin scroll horizontal */}
+                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-3 w-full">
                                 {TEETH_LOWER.map(t => (
                                     <ToothColumn 
                                         key={t} 
@@ -884,10 +872,6 @@ export default function Periodontograma({ embeddedPatient }) {
                                     />
                                 ))}
                             </div>
-
-                            {/* Lingual Graph */}
-                            <div className="text-[9px] font-black text-amber-600 uppercase tracking-widest pl-2 mt-2">Perfil Lingual</div>
-                            <PeriodontogramaChart teeth={TEETH_LOWER} face="l" isUpper={false} periodonto={periodonto} />
                         </div>
                     </div>
                 </div>
