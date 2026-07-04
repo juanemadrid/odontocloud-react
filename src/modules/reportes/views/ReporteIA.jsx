@@ -11,6 +11,7 @@ import {
 import { dispatchAutomationEvent, AUTOMATION_EVENTS } from "../../../services/AutomationService";
 import { FiCpu, FiRefreshCw, FiAlertTriangle, FiUsers, FiTrendingUp, FiPackage, FiSettings, FiExternalLink, FiCheck } from "react-icons/fi";
 import { toast } from "sonner";
+import { getGeminiApiKey, saveGeminiApiKey } from "../../../services/geminiKeyService";
 
 // ─── Renderer de Markdown simple ─────────────────────────────────────────────
 function MarkdownBlock({ text }) {
@@ -63,10 +64,12 @@ export default function ReporteIA() {
     const [initialLoaded, setInitialLoaded] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem("odontovox_gemini_api_key");
-        if (stored) setApiKey(stored);
-        else if (import.meta.env.VITE_GEMINI_API_KEY) setApiKey(import.meta.env.VITE_GEMINI_API_KEY);
-    }, []);
+        const loadKey = async () => {
+            const key = await getGeminiApiKey(userProfile?.inquilino);
+            if (key) setApiKey(key);
+        };
+        loadKey();
+    }, [userProfile?.inquilino]);
 
     // Carga inicial automática (datos sin IA)
     useEffect(() => {
@@ -241,7 +244,15 @@ export default function ReporteIA() {
                             className="flex-1 h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-indigo-400"
                         />
                         <button
-                            onClick={() => { localStorage.setItem("odontovox_gemini_api_key", apiKey); toast.success("API Key guardada"); setShowSettings(false); }}
+                            onClick={async () => { 
+                                try {
+                                    await saveGeminiApiKey(userProfile?.inquilino, apiKey);
+                                    toast.success("API Key guardada para toda la clínica"); 
+                                    setShowSettings(false); 
+                                } catch(e) {
+                                    toast.error("Error al guardar: " + e.message);
+                                }
+                            }}
                             className="h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-black uppercase tracking-widest"
                         >
                             Guardar

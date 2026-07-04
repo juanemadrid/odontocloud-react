@@ -7,6 +7,7 @@ import useSpeechRecognition from '../../../hooks/useSpeechRecognition';
 import { refineClinicalNotes, chatGuidedAssistant } from '../../../services/geminiService';
 import { toast } from 'sonner';
 import { useAuth } from '../../../context/AuthContext';
+import { getGeminiApiKey, saveGeminiApiKey } from '../../../services/geminiKeyService';
 
 const getSpanishVoice = () => {
     if (!window.speechSynthesis) return null;
@@ -171,15 +172,14 @@ export default function ClinicalAIAssistant({
         };
     }, []);
 
-    // Cargar la API key desde localStorage o variables de entorno de Vite
+    // Cargar la API key desde Firestore (admin) o fallback a localStorage/env
     useEffect(() => {
-        const storedKey = localStorage.getItem('odontovox_gemini_api_key');
-        if (storedKey) {
-            setApiKey(storedKey);
-        } else if (import.meta.env.VITE_GEMINI_API_KEY) {
-            setApiKey(import.meta.env.VITE_GEMINI_API_KEY);
-        }
-    }, []);
+        const loadKey = async () => {
+            const key = await getGeminiApiKey(userProfile?.inquilino);
+            if (key) setApiKey(key);
+        };
+        loadKey();
+    }, [userProfile?.inquilino]);
 
     useEffect(() => {
         if (speechError) {
@@ -565,11 +565,15 @@ export default function ClinicalAIAssistant({
         return () => clearTimeout(timer);
     }, [transcript, isConversational, stopListening, startListening, resetTranscript]);
 
-    const handleSaveApiKey = (e) => {
+    const handleSaveApiKey = async (e) => {
         e.preventDefault();
-        localStorage.setItem('odontovox_gemini_api_key', apiKey.trim());
-        toast.success('Clave API de Gemini guardada correctamente');
-        setShowSettings(false);
+        try {
+            await saveGeminiApiKey(userProfile?.inquilino, apiKey.trim());
+            toast.success('Clave API guardada para toda la clínica');
+            setShowSettings(false);
+        } catch (err) {
+            toast.error('Error al guardar: ' + err.message);
+        }
     };
 
     const handleToggleListen = () => {
