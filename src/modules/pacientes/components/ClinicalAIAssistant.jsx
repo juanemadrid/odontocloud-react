@@ -324,10 +324,9 @@ export default function ClinicalAIAssistant({
             resetTranscript();
 
             // Anti-duplicate guard: skip if this exact text was already sent to Gemini
+            // Solo bloquea si el texto es IDÉNTICO y fue procesado hace menos de 3 segundos
             if (rawText === lastProcessedTextRef.current) {
-                console.log("[Anita] Skipping duplicate transcript:", rawText);
-                setLoading(false);
-                isLoadingRef.current = false;
+                console.log("[Anita] Texto duplicado ignorado:", rawText);
                 startListening();
                 return;
             }
@@ -539,24 +538,27 @@ export default function ClinicalAIAssistant({
                 console.error("Error en asistente conversacional:", err);
                 const msg = err.message || '';
                 const isCapacityError = msg.includes('high demand') || msg.includes('503') || msg.includes('unavailable') || msg.includes('no está disponible');
-                const isDenied = msg.includes('denied access') || msg.includes('Forbidden') || msg.includes('403');
-                const isQuotaZero = msg.includes('limit: 0') || msg.includes('quota') || msg.includes('429');
+                const isDenied = msg.includes('denied access') || msg.includes('Forbidden') || msg.includes('403') || msg.includes('API_KEY_INVALID') || msg.includes('invalid');
+                const isQuotaZero = msg.includes('limit: 0') || msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+                const isJsonError = err instanceof SyntaxError || msg.includes('JSON') || msg.includes('Unexpected token');
                 
                 if (isDenied) {
-                    toast.error('⛔ Tu proyecto de Google AI Studio no tiene acceso. Crea una nueva API Key en aistudio.google.com con una cuenta diferente.', { duration: 6000 });
+                    toast.error('⛔ API Key inválida o sin acceso. Ve a Ajustes y verifica tu clave de Gemini.', { duration: 6000 });
                 } else if (isQuotaZero) {
                     toast.warning('⏳ Límite de velocidad alcanzado. Espera unos segundos y vuelve a hablar.', { duration: 4000 });
                 } else if (isCapacityError) {
                     toast.warning('Anita está ocupada un momento. Hable nuevamente para reintentar.');
+                } else if (isJsonError) {
+                    toast.error('Error al interpretar respuesta de Gemini. Intenta hablar de nuevo.', { duration: 4000 });
                 } else {
-                    toast.error('Error al procesar con el asistente.');
+                    toast.error(`Error: ${msg || 'No se pudo conectar con el asistente.'}`, { duration: 5000 });
                 }
                 startListening();
             } finally {
                 setLoading(false);
                 isLoadingRef.current = false;
-                // Clear dedup guard after a short delay so the next speech turn is fresh
-                setTimeout(() => { lastProcessedTextRef.current = ''; }, 500);
+                // Limpiar guard de deduplicación después de 2s para evitar bloquear el siguiente turno
+                setTimeout(() => { lastProcessedTextRef.current = ''; }, 2000);
             }
         }, 350); // 350ms de silencio - balance óptimo velocidad/precisión
 

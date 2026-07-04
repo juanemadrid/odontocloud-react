@@ -9,10 +9,10 @@ const GEMINI_MODELS = [
 ];
 
 // Tokens máximos para respuestas del asistente guiado (respuestas JSON completas)
-// gemini-2.5-flash es más verboso - necesita más tokens para no truncar el JSON
-const MAX_TOKENS_GUIDED = 800;
+// gemini-2.5-flash puede necesitar más tokens con planes largos
+const MAX_TOKENS_GUIDED = 1200;
 // Tokens máximos para análisis de notas clínicas (respuestas más largas)
-const MAX_TOKENS_REFINE = 1200;
+const MAX_TOKENS_REFINE = 2000;
 
 /**
  * Realiza una petición a la API de Gemini con reintentos y fallback de modelo.
