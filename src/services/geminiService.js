@@ -28,21 +28,22 @@ async function fetchGeminiWithRetry(contents, apiKey, maxRetries = 3, maxTokens 
         return 15000;
     };
 
-    // Detectar tipo de key: AQ. = OAuth Bearer, AIzaSy = API key clásica
-    const isOAuthKey = apiKey.startsWith('AQ.');
+    // Detectar tipo de key:
+    // - AQ. = nuevo formato Auth Key → header x-goog-api-key
+    // - AIzaSy = key clásica → query param ?key=
+    const isAuthKey = apiKey.startsWith('AQ.');
 
     let lastError = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         const model = GEMINI_MODELS[Math.min(attempt, GEMINI_MODELS.length - 1)];
         
-        // URL y headers según tipo de key
-        const url = isOAuthKey
+        const url = isAuthKey
             ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
             : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         
-        const headers = isOAuthKey
-            ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }
+        const headers = isAuthKey
+            ? { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }
             : { 'Content-Type': 'application/json' };
 
         try {
