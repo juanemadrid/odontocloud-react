@@ -104,9 +104,9 @@ export default function Agenda() {
         if (!editingApt) return;
         try {
             const res = await sendConfirmation(editingApt);
-            alert("✅ " + res.message);
+            toast.success(res.message);
         } catch (e) {
-            alert("❌ " + e.message);
+            toast.error(e.message);
         }
     };
 

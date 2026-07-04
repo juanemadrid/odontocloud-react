@@ -11,6 +11,7 @@ import {
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { FiActivity, FiCalendar, FiChevronRight, FiDownload, FiSearch, FiFileText } from 'react-icons/fi';
+import { toast } from "sonner";
 
 export default function RipsGenerator() {
     const { userProfile } = useAuth();
@@ -96,7 +97,7 @@ export default function RipsGenerator() {
                 .filter(f => !inquilino || f.inquilino === inquilino);
 
             if (facturas.length === 0) {
-                alert("No se encontraron facturas en el rango seleccionado.");
+                toast.error("No se encontraron facturas en el rango seleccionado.");
                 setLoading(false);
                 return;
             }
@@ -135,7 +136,7 @@ export default function RipsGenerator() {
             }
 
             if (facturas.length === 0) {
-                alert("No se encontraron facturas que coincidan con los filtros aplicados.");
+                toast.error("No se encontraron facturas que coincidan con los filtros aplicados.");
                 setLoading(false);
                 return;
             }

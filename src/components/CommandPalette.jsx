@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { searchPatients } from "../services/patientService";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
+import { toast } from "sonner";
 
 export default function CommandPalette() {
     const [isOpen, setIsOpen] = useState(false);
@@ -215,7 +216,7 @@ export default function CommandPalette() {
                     navigate(`${basePath}/pacientes?id=${patients[0].id}&tab=${tab}`);
                     setIsOpen(false);
                 } else {
-                    alert(`No se encontró paciente con el nombre: "${nameToSearch}"`);
+                    toast.error(`No se encontró paciente con el nombre: "${nameToSearch}"`);
                 }
             } catch (err) {
                 console.error("Error searching patients by voice:", err);

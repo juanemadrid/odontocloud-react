@@ -18,6 +18,7 @@ import {
   FiAlertTriangle, FiMinus, FiSave, FiX, 
   FiArrowLeft, FiCamera, FiImage, FiCheck 
 } from "react-icons/fi";
+import { toast } from "sonner";
 
 const UnidadBadge = ({ unidad }) => {
   const colors = {
@@ -149,7 +150,7 @@ export default function Inventario() {
       setForm(prev => ({ ...prev, imagen: url }));
     } catch (error) {
       console.error("Error al subir imagen:", error);
-      alert("No se pudo subir la imagen.");
+      toast.error("No se pudo subir la imagen.");
     } finally {
       setIsUploading(false);
     }
@@ -158,11 +159,11 @@ export default function Inventario() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.nombre.trim()) {
-      alert("El nombre es obligatorio");
+      toast.error("El nombre es obligatorio");
       return;
     }
     if (!form.categoria) {
-      alert("Debe seleccionar una Categoría");
+      toast.error("Debe seleccionar una Categoría");
       return;
     }
 
@@ -189,7 +190,7 @@ export default function Inventario() {
       setForm(initialFormState);
     } catch (e) {
       console.error(e);
-      alert("Error al guardar: " + e.message);
+      toast.error("Error al guardar: " + e.message);
     }
   };
 
@@ -198,7 +199,7 @@ export default function Inventario() {
     try {
       await deleteDoc(doc(db, "inventario", id));
     } catch (e) {
-      alert("Error al eliminar");
+      toast.error("Error al eliminar");
     }
   };
 
