@@ -169,6 +169,7 @@ export default function ConfigUsuarios() {
                     fechaNacimiento: formData.fechaNacimiento,
 
                     esDoctor: formData.esDoctor || finalRol === "doctor",
+                    especialidades: formData.esDoctor ? (formData.especialidades || []) : [],
                     sucursales: formData.sucursales,
 
                     // Profile Link
@@ -186,7 +187,7 @@ export default function ConfigUsuarios() {
                 setFormData({
                     nombre: "", apellido: "", email: "", tipoDocumento: "CC", numeroDocumento: "",
                     telefonoMovil: "", telefonoFijo: "", direccion: "", genero: "Femenino", fechaNacimiento: "",
-                    esDoctor: false, profileId: "", sucursales: [], username: "", password: ""
+                    esDoctor: false, especialidades: [], profileId: "", sucursales: [], username: "", password: ""
                 });
                 loadData();
             } catch (inner) {

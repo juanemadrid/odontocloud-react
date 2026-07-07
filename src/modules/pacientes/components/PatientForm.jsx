@@ -77,6 +77,9 @@ export default function PatientForm({
     const [fotoPreview, setFotoPreview] = useState(initialData?.fotoUrl || "");
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [cameraStream, setCameraStream] = useState(null);
+    // Datos para campo "Remitido por"
+    const [usuariosRemision, setUsuariosRemision] = useState([]);
+    const [pacientesRemision, setPacientesRemision] = useState([]);
     const videoRef = React.useRef(null);
     const canvasRef = React.useRef(null);
 
@@ -209,10 +212,29 @@ export default function PatientForm({
             }
         };
 
+        const loadRemisionData = async () => {
+            if (!inquilino) return;
+            try {
+                const [uSnap, pSnap] = await Promise.all([
+                    getDocs(query(collection(db, "usuarios"), where("inquilino", "==", inquilino))),
+                    getDocs(query(collection(db, "pacientes"), where("inquilino", "==", inquilino)))
+                ]);
+                const usuarios = uSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+                const pacientes = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => (a.nombreCompleto || a.nombre || "").localeCompare(b.nombreCompleto || b.nombre || ""));
+                setUsuariosRemision(usuarios);
+                setPacientesRemision(pacientes);
+            } catch (e) {
+                console.error("Error loading remision data:", e);
+            }
+        };
+
         loadPlanes();
         loadProfesionales();
         loadEps();
         loadSucursales();
+        loadRemisionData();
     }, [inquilino]);
 
     const {
@@ -697,13 +719,44 @@ export default function PatientForm({
                                     <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña publicitaria" />
                                 </FormRow>
                                 <FormRow label="Remitido por">
-                                    <div className="flex gap-2">
-                                        <select {...register("remitidoPorType")} className="form-input text-sm w-32 bg-slate-50 font-medium">
-                                            <option value="Libre">Libre</option>
-                                            <option value="Paciente">Paciente</option>
-                                            <option value="Usuario">Usuario</option>
-                                        </select>
-                                        <input {...register("remitidoPorValue")} className="form-input text-sm flex-1" placeholder="Nombre completo" />
+                                    <div className="flex flex-col gap-2 w-full">
+                                        <div className="flex gap-2">
+                                            <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
+                                                <option value="Libre">Libre</option>
+                                                <option value="Paciente">Paciente</option>
+                                                <option value="Usuario">Usuario</option>
+                                            </select>
+                                            {/* Libre: texto libre */}
+                                            {watch("remitidoPorType") === "Libre" && (
+                                                <input
+                                                    {...register("remitidoPorValue")}
+                                                    className="form-input text-sm flex-1"
+                                                    placeholder="Nombre de quien refiere"
+                                                />
+                                            )}
+                                            {/* Paciente: dropdown de pacientes */}
+                                            {watch("remitidoPorType") === "Paciente" && (
+                                                <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                                    <option value="">Seleccione un paciente...</option>
+                                                    {pacientesRemision.map(p => (
+                                                        <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
+                                                            {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                            {/* Usuario: dropdown de usuarios */}
+                                            {watch("remitidoPorType") === "Usuario" && (
+                                                <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                                    <option value="">Seleccione un usuario...</option>
+                                                    {usuariosRemision.map(u => (
+                                                        <option key={u.id} value={`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}>
+                                                            {`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </div>
                                     </div>
                                 </FormRow>
                             </div>
