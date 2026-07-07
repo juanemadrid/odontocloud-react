@@ -500,14 +500,6 @@ export default function AppointmentModal({
                                     </select>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Servicio / Procedimiento</label>
-                                    <select {...register("precioItemId")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
-                                        <option value="">BUSCAR ÍTEM EN LISTA DE PRECIOS...</option>
-                                        {priceList.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                                    </select>
-                                </div>
-
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Duración *</label>

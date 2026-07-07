@@ -17,6 +17,22 @@ import {
     SEXOS, ESTADOS_CIVILES, ESTRATOS, ZONAS_RESIDENCIALES, PARENTESCOS, MEDIOS_CONOCIMIENTO
 } from "../constants/patientConstants";
 
+const CIUDADES_COLOMBIA = [
+    "Abejorral", "Acacías", "Aguachica", "Agustín Codazzi", "Anapoima", "Andes", "Apartadó", "Aracataca", "Arauca", "Armenia",
+    "Baranoa", "Barbosa", "Barrancabermeja", "Barranquilla", "Bello", "Bogotá D.C.", "Bucaramanga", "Buenaventura", "Buga",
+    "Cajicá", "Calarcá", "Caldas", "Cali", "Candelaria", "Carepa", "Cartagena", "Cartago", "Caucasia", "Cereté", "Chía",
+    "Chigorodó", "Chiquinquirá", "Ciénaga", "Cota", "Cúcuta", "Dosquebradas", "Duitama", "El Bagre", "El Carmen de Viboral",
+    "Envigado", "Espinal", "Facatativá", "Florencia", "Floridablanca", "Fundación", "Funza", "Fusagasugá", "Garzón", "Girardot",
+    "Girón", "Granada", "Honda", "Ibagué", "Ipiales", "Itagüí", "Jamundí", "La Ceja", "La Dorada", "La Estrella", "La Mesa",
+    "Lorica", "Madrid", "Magangué", "Maicao", "Malambo", "Manizales", "Marinilla", "Medellín", "Melgar", "Mitú", "Montelíbano",
+    "Montería", "Mosquera", "Neiva", "Ocaña", "Paipa", "Palmira", "Pamplona", "Pasto", "Pereira", "Pitalito", "Planeta Rica",
+    "Plato", "Popayán", "Puerto Asís", "Puerto Berrío", "Puerto Boyacá", "Puerto Carreño", "Puerto Colombia", "Quibdó",
+    "Riohacha", "Rionegro", "Sabanalarga", "Sabaneta", "Sahagún", "San Andrés", "San Gil", "Santa Marta", "Santa Rosa de Cabal",
+    "Santander de Quilichao", "Saravena", "Sevilla", "Sibaté", "Sincelejo", "Soacha", "Socorro", "Sogamoso", "Soledad", "Sonsón",
+    "Sopó", "Tibú", "Tierralta", "Tuluá", "Tumaco", "Tunja", "Turbaco", "Turbo", "Valledupar", "Villa del Rosario", "Villavicencio",
+    "Villeta", "Yopal", "Yumbo", "Zipaquirá"
+].sort();
+
 const FormRow = ({ label, required, children, error, helpText }) => (
     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 py-3 border-b border-slate-100/50 last:border-0 hover:bg-slate-50/50 transition-colors px-4">
         <label className={`w-full md:w-60 shrink-0 text-[13px] font-bold md:text-right flex items-center justify-start md:justify-end gap-1 ${error ? 'text-rose-500' : 'text-slate-600'}`}>
@@ -437,7 +453,7 @@ export default function PatientForm({
                                 </FormRow>
 
                                 <FormRow label="Nombre completo">
-                                    <input value={watch("nombreCompleto")?.toUpperCase() || ""} readOnly className="form-input text-sm w-full bg-slate-50 text-slate-600 font-bold border-transparent" placeholder="Calculado automáticamente..." />
+                                    <input value={watch("nombreCompleto") || ""} readOnly className="form-input text-sm w-full bg-slate-50 text-slate-600 font-bold border-transparent" placeholder="Calculado automáticamente..." />
                                 </FormRow>
 
                                 <FormRow label="Sexo" required error={errors.sexo}>
@@ -468,7 +484,10 @@ export default function PatientForm({
                                 </FormRow>
 
                                 <FormRow label="Ciudad de nacimiento">
-                                    <input {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Bogotá" />
+                                    <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
+                                        <option value="">Seleccione...</option>
+                                        {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
                                 </FormRow>
 
                                 <FormRow label="Fecha de Nacimiento" required error={errors.fechaNacimiento}>
@@ -491,7 +510,10 @@ export default function PatientForm({
                                 </FormRow>
 
                                 <FormRow label="Ciudad de domicilio" required error={errors.ciudadDomicilio}>
-                                    <input {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Medellín" />
+                                    <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
+                                        <option value="">Seleccione...</option>
+                                        {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
                                 </FormRow>
 
                                 <FormRow label="Barrio" required error={errors.barrio}>
@@ -630,7 +652,7 @@ export default function PatientForm({
                                             onFocus={() => setShowEpsSuggestions(true)}
                                             onBlur={() => setTimeout(() => setShowEpsSuggestions(false), 200)}
                                             placeholder="Escriba el nombre..."
-                                            className="form-input text-sm w-full md:w-64 uppercase"
+                                            className="form-input text-sm w-full md:w-64"
                                         />
                                         {loadingEps && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
                                         {showEpsSuggestions && filteredEps.length > 0 && (
