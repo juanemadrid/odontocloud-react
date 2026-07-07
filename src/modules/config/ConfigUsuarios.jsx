@@ -17,8 +17,7 @@ export default function ConfigUsuarios() {
     const [users, setUsers] = useState([]);
     const [rolesDisponibles, setRolesDisponibles] = useState([]);
     const [sucursales, setSucursales] = useState([]);
-
-
+    const [especialidades, setEspecialidades] = useState([]);
 
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -40,6 +39,7 @@ export default function ConfigUsuarios() {
 
         // Enterprise Info
         esDoctor: false, // Checkbox "Es doctor"
+        especialidades: [], // Array de IDs de especialidades
         profileId: "", // "Tipo de perfil"
         sucursales: [], // IDs selected
 
@@ -60,15 +60,17 @@ export default function ConfigUsuarios() {
                 usersQuery = query(collection(db, "usuarios"), where("inquilino", "==", userProfile.inquilino));
             }
 
-            const [uSnap, pSnap, sSnap] = await Promise.all([
+            const [uSnap, pSnap, sSnap, eSnap] = await Promise.all([
                 getDocs(usersQuery),
                 getDocs(query(collection(db, "perfiles"), orderBy("nombre"))),
-                getDocs(query(collection(db, "sucursales"), orderBy("nombre"))) // Corrected collection name
+                getDocs(query(collection(db, "sucursales"), orderBy("nombre"))),
+                getDocs(query(collection(db, "especialidades"), where("inquilino", "==", userProfile.inquilino), orderBy("nombre")))
             ]);
 
             setUsers(uSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             setRolesDisponibles(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             setSucursales(sSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setEspecialidades(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (e) {
             console.error(e);
         } finally {
@@ -86,6 +88,15 @@ export default function ConfigUsuarios() {
             const current = prev.sucursales || [];
             if (current.includes(id)) return { ...prev, sucursales: current.filter(x => x !== id) };
             return { ...prev, sucursales: [...current, id] };
+        });
+    };
+
+    // Handle Specialty Selection
+    const toggleEspecialidad = (id) => {
+        setFormData(prev => {
+            const current = prev.especialidades || [];
+            if (current.includes(id)) return { ...prev, especialidades: current.filter(x => x !== id) };
+            return { ...prev, especialidades: [...current, id] };
         });
     };
 
@@ -314,6 +325,33 @@ export default function ConfigUsuarios() {
                                         <span className="text-sm font-bold text-slate-700">¿Es doctor? (Aparecerá en agenda)</span>
                                     </label>
                                 </div>
+
+                                {/* Especialidades (solo si es doctor) */}
+                                {formData.esDoctor && (
+                                    <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                                        <label className="label mb-2 block">Especialidades del doctor *</label>
+                                        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 max-h-40 overflow-y-auto">
+                                            {especialidades.length === 0 ? (
+                                                <p className="text-xs text-slate-400 p-2">No hay especialidades creadas. Cree especialidades en Config → Empresa → Especialidades.</p>
+                                            ) : (
+                                                <div className="grid gap-2">
+                                                    {especialidades.map(esp => (
+                                                        <label key={esp.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-white transition-colors ${formData.especialidades?.includes(esp.id) ? "bg-white shadow-sm border border-indigo-100" : ""}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData.especialidades?.includes(esp.id)}
+                                                                onChange={() => toggleEspecialidad(esp.id)}
+                                                                className="w-4 h-4 accent-indigo-600"
+                                                            />
+                                                            <span className="text-sm text-slate-700">{esp.nombre}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-1">Seleccione las especialidades que el doctor puede atender.</p>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Profile Type */}
