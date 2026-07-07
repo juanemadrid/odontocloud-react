@@ -1,31 +1,86 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiHash, FiUsers } from "react-icons/fi";
+import { collection, getDocs, deleteDoc, doc, query, where, orderBy } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
+import { toast } from "sonner";
 import Input from "../../components/ui/Input";
 
 import ConfigConsecutivosForm from "./ConfigConsecutivosForm";
 
 export default function ConfigConsecutivos() {
+    const { userProfile } = useAuth();
     const [searchTerm, setSearchTerm] = useState("");
     const [showForm, setShowForm] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [consecutivos, setConsecutivos] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Mock Data based on screenshot
-    const [consecutivos, setConsecutivos] = useState([
-        { id: 1, nombre: "Principal", enUso: true, usuarios: ["Admin", "User1"] },
-        // Add more mock data if needed for demo
-    ]);
+    useEffect(() => {
+        loadConsecutivos();
+    }, [userProfile?.inquilino]);
+
+    const loadConsecutivos = async () => {
+        if (!userProfile?.inquilino) return;
+        
+        setLoading(true);
+        try {
+            const q = query(
+                collection(db, "consecutivos"),
+                where("inquilino", "==", userProfile.inquilino),
+                orderBy("nombre", "asc")
+            );
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setConsecutivos(data);
+        } catch (error) {
+            console.error("Error cargando consecutivos:", error);
+            toast.error("Error al cargar consecutivos");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEdit = (item) => {
+        setEditingItem(item);
+        setShowForm(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("¿Está seguro de eliminar este consecutivo?")) return;
+        
+        try {
+            await deleteDoc(doc(db, "consecutivos", id));
+            toast.success("Consecutivo eliminado");
+            loadConsecutivos();
+        } catch (error) {
+            console.error("Error eliminando consecutivo:", error);
+            toast.error("Error al eliminar: " + error.message);
+        }
+    };
+
+    const handleCloseForm = () => {
+        setShowForm(false);
+        setEditingItem(null);
+        loadConsecutivos();
+    };
+
+    const filteredData = consecutivos.filter(item => 
+        item.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     if (showForm) {
         return (
             <div className="p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="max-w-4xl mx-auto">
                     <button
-                        onClick={() => setShowForm(false)}
+                        onClick={handleCloseForm}
                         className="mb-6 text-slate-400 hover:text-blue-600 font-bold uppercase tracking-widest text-xs flex items-center gap-2 transition-colors"
                     >
                         ← Volver a la lista
                     </button>
-                    <ConfigConsecutivosForm onClose={() => setShowForm(false)} />
+                    <ConfigConsecutivosForm onClose={handleCloseForm} initialData={editingItem} />
                 </div>
             </div>
         );
@@ -90,35 +145,50 @@ export default function ConfigConsecutivos() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {consecutivos.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="py-6 px-8">
-                                        <div className="font-bold text-slate-700">{item.nombre}</div>
-                                    </td>
-                                    <td className="py-6 px-8 text-center">
-                                        <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${item.enUso ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-500'}`}>
-                                            {item.enUso ? "En uso" : "No usado"}
-                                        </span>
-                                    </td>
-                                    <td className="py-6 px-8 flex justify-center">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
-                                            <FiUsers size={18} />
-                                        </div>
-                                    </td>
-                                    <td className="py-6 px-8">
-                                        <div className="flex items-center justify-end gap-3 opacity-100 transition-opacity">
-                                            <button className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-blue-200">
-                                                <FiEdit2 size={18} />
-                                            </button>
-                                            <button className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-red-200">
-                                                <FiTrash2 size={18} />
-                                            </button>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="4" className="py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4">
+                                            <div className="w-12 h-12 border-4 border-lime-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Cargando...</p>
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-                            {/* Empty State */}
-                            {consecutivos.length === 0 && (
+                            ) : filteredData.length > 0 ? (
+                                filteredData.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="py-6 px-8">
+                                            <div className="font-bold text-slate-700">{item.nombre}</div>
+                                        </td>
+                                        <td className="py-6 px-8 text-center">
+                                            <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-green-50 text-green-600">
+                                                Disponible
+                                            </span>
+                                        </td>
+                                        <td className="py-6 px-8 flex justify-center">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
+                                                <FiUsers size={18} />
+                                            </div>
+                                        </td>
+                                        <td className="py-6 px-8">
+                                            <div className="flex items-center justify-end gap-3 opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => handleEdit(item)}
+                                                    className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-blue-200"
+                                                >
+                                                    <FiEdit2 size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-red-200"
+                                                >
+                                                    <FiTrash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr>
                                     <td colSpan="4" className="py-20 text-center">
                                         <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
@@ -136,7 +206,7 @@ export default function ConfigConsecutivos() {
 
                 {/* Footer Pagination (optional/placeholder) */}
                 <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-400">Mostrando {consecutivos.length} resultados</span>
+                    <span className="text-xs font-bold text-slate-400">Mostrando {filteredData.length} resultado{filteredData.length !== 1 ? 's' : ''}</span>
                     <div className="flex gap-2">
                         {/* Pagination buttons placeholder */}
                     </div>

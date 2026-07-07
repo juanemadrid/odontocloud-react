@@ -1,9 +1,14 @@
 
 import React, { useState, useEffect } from "react";
 import { FiSave, FiX, FiCheck } from "react-icons/fi";
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
+import { toast } from "sonner";
 import Input from "../../components/ui/Input";
 
 export default function ConfigConsecutivosForm({ onClose, initialData = null }) {
+    const { userProfile } = useAuth();
     const [formData, setFormData] = useState({
         nombre: "",
         contReciboCaja: 0,
@@ -52,15 +57,48 @@ export default function ConfigConsecutivosForm({ onClose, initialData = null }) 
 
     useEffect(() => {
         if (initialData) {
-            setFormData(initialData);
+            setFormData({ ...formData, ...initialData });
         }
     }, [initialData]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Saving consecutivo:", formData);
-        // Here you would call an API/Firebase to save
-        onClose();
+        
+        if (!formData.nombre.trim()) {
+            toast.error("El nombre es obligatorio");
+            return;
+        }
+
+        if (!userProfile?.inquilino) {
+            toast.error("No se pudo identificar el inquilino");
+            return;
+        }
+
+        try {
+            const payload = {
+                ...formData,
+                inquilino: userProfile.inquilino,
+                actualizado: serverTimestamp(),
+            };
+
+            if (initialData?.id) {
+                // Actualizar existente
+                await updateDoc(doc(db, "consecutivos", initialData.id), payload);
+                toast.success("Consecutivo actualizado correctamente");
+            } else {
+                // Crear nuevo
+                await addDoc(collection(db, "consecutivos"), {
+                    ...payload,
+                    creado: serverTimestamp(),
+                });
+                toast.success("Consecutivo creado correctamente");
+            }
+            
+            onClose();
+        } catch (error) {
+            console.error("Error al guardar consecutivo:", error);
+            toast.error("Error al guardar: " + error.message);
+        }
     };
 
     const ToggleSwitch = ({ label, checked, onChange }) => (

@@ -93,18 +93,36 @@ function SucursalEditor({ item, onBack, inquilino }) {
     const [searchTermSucSelected, setSearchTermSucSelected] = useState("");
 
     const handleSave = async () => {
-        if (!form.nombre.trim()) return alert("Nombre obligatorio");
+        // Validar campos obligatorios
+        if (!form.nombre.trim()) return alert("El nombre es obligatorio");
+        if (!form.telefono.trim()) return alert("El teléfono fijo es obligatorio");
+        if (!form.celular.trim()) return alert("El celular es obligatorio");
+        if (!form.ciudad) return alert("La ciudad es obligatoria");
+        if (!form.direccion.trim()) return alert("La dirección es obligatoria");
+        if (!form.email.trim()) return alert("El correo electrónico es obligatorio");
+        
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(form.email)) return alert("El correo electrónico no es válido");
+        
+        if (!form.consecutivoId) return alert("Debe seleccionar un consecutivo");
+        if (!form.listaPrecioId) return alert("Debe seleccionar una lista de precios");
+        if (selectedAlmacenesIds.length === 0) return alert("Debe seleccionar al menos un almacén");
+        
         try {
             const payload = { ...form, inquilino, almacenesIds: selectedAlmacenesIds, actualizado: new Date() };
             if (item?.id) {
                 await updateDoc(doc(db, "sucursales", item.id), payload);
-                alert("Actualizada");
+                alert("Sucursal actualizada correctamente");
             } else {
                 await addDoc(collection(db, "sucursales"), { ...payload, creado: new Date() });
-                alert("Creada");
+                alert("Sucursal creada correctamente");
             }
             onBack();
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+            alert("Error al guardar la sucursal: " + e.message);
+        }
     };
 
     return (
