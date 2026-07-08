@@ -23,6 +23,7 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
             valor: "",
             valorDisplay: "", // Added for masking
             medio: "Efectivo",
+            referencia: "",
             doctor: "",
             observaciones: ""
         }
@@ -41,6 +42,12 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
         setValue("valor", numValue);
         setValue("valorDisplay", formatCurrency(numValue));
     };
+
+    const METHODS_REQUIRING_REFERENCE = ["Transferencia", "Cheque", "Consignación", "Nequi", "Daviplata", "PSE"];
+    const watchMedio = watch("medio");
+    const requiresReference = METHODS_REQUIRING_REFERENCE.some(m => 
+        watchMedio?.toLowerCase().includes(m.toLowerCase())
+    );
 
     useEffect(() => {
         const loadModalData = async () => {
@@ -101,6 +108,7 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                 patientNombre: derivePatientName(),
                 monto: Number(data.valor) || 0,
                 medio: data.medio || "Efectivo",
+                referencia: data.referencia || null,
                 concepto: "SALDO A FAVOR",
                 profesional: data.doctor || userProfile?.nombreCompleto || "Sistema",
                 notas: data.observaciones || "",
@@ -242,7 +250,10 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                                             <button 
                                                 key={m}
                                                 type="button"
-                                                onClick={() => setValue("medio", m)}
+                                                onClick={() => {
+                                                    setValue("medio", m);
+                                                    setValue("referencia", ""); // Reset reference when method changes
+                                                }}
                                                 className={`py-3 px-4 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all
                                                     ${watch("medio") === m 
                                                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/20 translate-y-[-2px]' 
@@ -253,6 +264,21 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                                         ))}
                                     </div>
                                 </div>
+
+                                {requiresReference && (
+                                    <div className="space-y-2 animate-fadeIn">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            Número de Referencia / Comprobante *
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            placeholder="EJ: 0012345678..."
+                                            {...register("referencia", { required: requiresReference })}
+                                            className={"w-full bg-amber-50 border rounded-2xl p-4 text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:ring-4 transition-all caret-slate-950 " + (errors.referencia ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-400' : 'border-amber-200 focus:ring-amber-500/5 focus:border-amber-300')}
+                                        />
+                                        {errors.referencia && <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest mt-1 ml-1">La referencia es obligatoria</p>}
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">

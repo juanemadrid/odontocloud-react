@@ -194,7 +194,7 @@ export default function ConfigCatalogoCuentas() {
     );
 
     return (
-        <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 text-left">
+        <div className="space-y-10 p-2 md:p-8 text-left">
 
             {/* Context Panel & General Config */}
             <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">

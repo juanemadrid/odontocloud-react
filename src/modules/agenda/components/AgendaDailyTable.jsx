@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { FiClock, FiUser, FiHome, FiActivity, FiSearch, FiFilter, FiChevronDown, FiCalendar, FiSmartphone, FiEdit2 } from 'react-icons/fi';
 
 const APPOINTMENT_STATUSES = [
@@ -14,25 +15,48 @@ const APPOINTMENT_STATUSES = [
 
 function StatusSelector({ currentStatus, onChange }) {
     const [open, setOpen] = useState(false);
+    const buttonRef = useRef(null);
+    const [dropdownStyle, setDropdownStyle] = useState({});
+
+    useEffect(() => {
+        if (open && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setDropdownStyle({
+                position: 'fixed',
+                top: rect.bottom + 4,
+                left: rect.left,
+                width: '160px',
+                zIndex: 99999,
+            });
+        }
+    }, [open]);
+
     const status = APPOINTMENT_STATUSES.find(s => s.id === currentStatus) || APPOINTMENT_STATUSES[0];
+    const isCancelled = currentStatus === 'cancelled';
 
     return (
         <div className="relative">
             <button
-                onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-                className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-tight transition-all active:scale-95 ${status.color} min-w-[100px]`}
+                ref={buttonRef}
+                onClick={(e) => { e.stopPropagation(); if (!isCancelled) setOpen(!open); }}
+                disabled={isCancelled}
+                className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-tight transition-all ${isCancelled ? 'opacity-80 cursor-not-allowed' : 'active:scale-95 cursor-pointer'} ${status.color} min-w-[100px]`}
             >
                 <span>{status.label}</span>
-                <FiChevronDown className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+                {!isCancelled && <FiChevronDown className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />}
             </button>
 
-            {open && (
+            {open && ReactDOM.createPortal(
                 <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-40 bg-white shadow-xl rounded-xl border border-slate-100 py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="fixed inset-0 z-[99998]" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+                    <div 
+                        style={dropdownStyle}
+                        className="bg-white shadow-xl rounded-xl border border-slate-100 py-1 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
                         {APPOINTMENT_STATUSES.map((s) => (
                             <button
                                 key={s.id}
+                                type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onChange(s.id);
@@ -45,7 +69,8 @@ function StatusSelector({ currentStatus, onChange }) {
                             </button>
                         ))}
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     );

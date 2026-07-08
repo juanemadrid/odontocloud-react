@@ -12,6 +12,7 @@ import AgendaDailyTable from "./components/AgendaDailyTable";
 import AgendaSidebar from "./components/AgendaSidebar";
 import AppointmentModal from "./components/AppointmentModal";
 import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal";
 import { sendConfirmation } from "../../services/WhatsAppService";
 
 export default function Agenda() {
@@ -31,6 +32,8 @@ export default function Agenda() {
     const [editingApt, setEditingApt] = useState(null);
     const [slotData, setSlotData] = useState(null);
     const [sidebarVisible, setSidebarVisible] = useState(true);
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [cancellingAptId, setCancellingAptId] = useState(null);
 
     // --- Metrics Calculation ---
     const occupancyPercentage = useMemo(() => {
@@ -89,14 +92,27 @@ export default function Agenda() {
         setModalOpen(false);
     };
 
-    const handleDelete = async () => {
+    const handleDelete = async (id, skipConfirm = false) => {
         if (!can("Agenda", "Agenda", "eliminar")) {
             toast.error("No tienes permisos para eliminar citas");
             return;
         }
-        if (editingApt && window.confirm("¿Seguro de eliminar esta cita?")) {
-            await deleteAppointment(editingApt.id);
-            setModalOpen(false);
+        const targetId = typeof id === "string" ? id : editingApt?.id;
+        console.log("handleDelete called. id parameter:", id, "targetId:", targetId, "skipConfirm:", skipConfirm);
+        if (!targetId) {
+            toast.error("No se encontró el ID de la cita a eliminar");
+            return;
+        }
+
+        if (skipConfirm || window.confirm("¿Está seguro que quiere eliminar esta cita?")) {
+            try {
+                await deleteAppointment(targetId);
+                toast.success("Cita eliminada correctamente");
+                setModalOpen(false);
+            } catch (error) {
+                console.error("Error deleting appointment:", error);
+                toast.error("Error al eliminar cita: " + error.message);
+            }
         }
     };
 
@@ -521,12 +537,22 @@ export default function Agenda() {
                                 chairs={chairs}
                                 sidebarVisible={sidebarVisible}
                                 onEventClick={handleEventClick}
-                                onUpdateStatus={(id, status) => {
+                                onUpdateStatus={async (id, status) => {
                                     if (!can("Agenda", "Agenda", "editar")) {
                                         toast.error("No tienes permisos para editar citas");
                                         return;
                                     }
-                                    updateAppointment(id, { status });
+                                    if (status === 'cancelled') {
+                                        setCancellingAptId(id);
+                                        setCancelModalOpen(true);
+                                    } else {
+                                        try {
+                                            await updateAppointment(id, { status });
+                                            toast.success("Estado de cita actualizado");
+                                        } catch (err) {
+                                            toast.error("Error al actualizar estado: " + err.message);
+                                        }
+                                    }
                                 }}
                                 onWhatsApp={(apt) => {
                                     setEditingApt(apt);
@@ -553,6 +579,49 @@ export default function Agenda() {
                 onSave={handleSave}
                 onDelete={handleDelete}
             />
+
+            <Modal
+                isOpen={cancelModalOpen}
+                onClose={() => { setCancelModalOpen(false); setCancellingAptId(null); }}
+                title="Confirmar Cancelación de Cita"
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button
+                            variant="secondary"
+                            onClick={() => { setCancelModalOpen(false); setCancellingAptId(null); }}
+                        >
+                            No, Conservar
+                        </Button>
+                        <Button
+                            variant="danger"
+                            onClick={async () => {
+                                if (cancellingAptId) {
+                                    try {
+                                        await updateAppointment(cancellingAptId, { 
+                                            status: 'cancelled',
+                                            estado: 'CANCELADO'
+                                        });
+                                        toast.success("Cita cancelada correctamente");
+                                    } catch (err) {
+                                        toast.error("Error al cancelar cita: " + err.message);
+                                    }
+                                }
+                                setCancelModalOpen(false);
+                                setCancellingAptId(null);
+                            }}
+                        >
+                            Sí, Cancelar
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="py-2">
+                    <p className="text-slate-600 text-sm font-semibold text-center leading-relaxed">
+                        ¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el espacio en la agenda para que otros pacientes puedan programar citas en este horario.
+                    </p>
+                </div>
+            </Modal>
         </div>
     );
 }

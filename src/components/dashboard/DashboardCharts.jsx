@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip
 } from "recharts";
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -18,6 +18,30 @@ const CustomTooltip = ({ active, payload, label }) => {
         );
     }
     return null;
+};
+
+const ChartWrapper = ({ children }) => {
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (!entries || entries.length === 0) return;
+            const { width, height } = entries[0].contentRect;
+            setDimensions({ width, height });
+        });
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    return (
+        <div ref={containerRef} className="w-full h-full relative">
+            {dimensions.width > 0 && dimensions.height > 0 ? (
+                React.cloneElement(children, { width: dimensions.width, height: dimensions.height })
+            ) : null}
+        </div>
+    );
 };
 
 export default function DashboardCharts({ data, title, period }) {
@@ -47,7 +71,7 @@ export default function DashboardCharts({ data, title, period }) {
                 </div>
             </div>
 
-            <div className="flex-1 w-full min-h-[180px]">
+            <div className="w-full h-[200px]">
                 {isEmpty ? (
                     <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-100 rounded-[24px] bg-slate-50/30">
                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-3">
@@ -56,7 +80,7 @@ export default function DashboardCharts({ data, title, period }) {
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">Esperando registros</p>
                     </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartWrapper>
                         <AreaChart data={safeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -92,7 +116,7 @@ export default function DashboardCharts({ data, title, period }) {
                                 activeDot={{ r: 5, strokeWidth: 0, fill: '#1E40AF' }}
                             />
                         </AreaChart>
-                    </ResponsiveContainer>
+                    </ChartWrapper>
                 )}
             </div>
         </div>

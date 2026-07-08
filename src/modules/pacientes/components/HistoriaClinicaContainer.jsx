@@ -7,16 +7,19 @@ import {
     FiEye, 
     FiEdit2, 
     FiTrash2, 
-    FiDownload 
+    FiDownload,
+    FiPenTool
 } from "react-icons/fi";
-import { collection, query, onSnapshot, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, doc, deleteDoc, setDoc } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
+import { useAuth } from "../../../context/AuthContext";
 import { getAnamnesis } from "../../../services/clinicalService";
 import DocClinicoModal from "./DocClinicoModal";
 
 export default function HistoriaClinicaContainer({ patient }) {
     const toast = useToast();
+    const { userProfile } = useAuth();
     const [documents, setDocuments] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedDocType, setSelectedDocType] = useState("");
@@ -29,6 +32,27 @@ export default function HistoriaClinicaContainer({ patient }) {
     const [filterProf, setFilterProf] = useState("");
     const [filterTrans, setFilterTrans] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+
+    const handleSignPrescription = async (docObj) => {
+        if (!window.confirm("¿Desea firmar digitalmente todos los medicamentos de esta receta?")) return;
+        try {
+            const updatedItems = (docObj.recetaItems || []).map(item => ({
+                ...item,
+                doctorSignature: userProfile?.nombreCompleto || userProfile?.nombre || "Doctor",
+                signedAt: new Date().toISOString(),
+                signedBy: userProfile?.uid
+            }));
+            
+            await setDoc(doc(db, `pacientes/${patient.id}/docClis`, docObj.id), {
+                recetaItems: updatedItems
+            }, { merge: true });
+            
+            toast.success("Receta firmada digitalmente");
+        } catch (err) {
+            console.error("Error signing prescription", err);
+            toast.error("Error al firmar la receta");
+        }
+    };
 
     // Real-time synchronization of clinical documents
     useEffect(() => {
@@ -1038,6 +1062,19 @@ export default function HistoriaClinicaContainer({ patient }) {
                                                     <button onClick={() => handleEditDoc(doc)} className="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-600 rounded flex items-center justify-center transition-colors" title="Editar">
                                                         <FiEdit2 size={12} strokeWidth={3} />
                                                     </button>
+                                                    {doc.tipoDocumento === "Receta" && (
+                                                        <button 
+                                                            onClick={() => handleSignPrescription(doc)} 
+                                                            className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                                                                (doc.recetaItems || []).length > 0 && (doc.recetaItems || []).every(item => item.doctorSignature)
+                                                                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                                                                    : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-600'
+                                                            }`} 
+                                                            title="Firmar Receta completa"
+                                                        >
+                                                            <FiPenTool size={12} strokeWidth={3} />
+                                                        </button>
+                                                    )}
                                                     <button onClick={() => handleDeleteDoc(doc.id)} className="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-600 rounded flex items-center justify-center transition-colors" title="Eliminar">
                                                         <FiTrash2 size={12} strokeWidth={3} />
                                                     </button>

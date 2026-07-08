@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { FiClock } from "react-icons/fi";
 
 const START_HOUR = 6;
-const END_HOUR = 20;
+const END_HOUR = 22;
 
 function DroppableSlot({ id, children, onClick, active }) {
     const { setNodeRef, isOver } = useDroppable({ id });
@@ -151,13 +151,19 @@ export default function AgendaWeeklyView({
 
                     {/* Time Column */}
                     <div className="w-16 shrink-0 border-r border-slate-100 bg-slate-50/30 relative z-20">
-                        {timeSlots.map((time) => (
-                            <div key={time} className="h-[60px] border-b border-slate-50/50 flex items-start justify-center pt-1 group">
-                                <span className="text-[9px] font-black text-slate-400 bg-white border border-slate-100 px-1.5 py-0.5 rounded-full shadow-sm font-mono translate-y-[-50%]">
-                                    {time}
-                                </span>
-                            </div>
-                        ))}
+                        {timeSlots.map((time) => {
+                                const [hh, mm] = time.split(':').map(Number);
+                                const ampm = hh >= 12 ? 'PM' : 'AM';
+                                const h12 = hh % 12 || 12;
+                                const label = `${h12}:${String(mm).padStart(2, '0')} ${ampm}`;
+                                return (
+                                    <div key={time} className="h-[60px] border-b border-slate-50/50 flex items-start justify-center pt-1 group">
+                                        <span className="text-[9px] font-black text-slate-400 bg-white border border-slate-100 px-1.5 py-0.5 rounded-full shadow-sm font-mono translate-y-[-50%]">
+                                            {label}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                     </div>
 
                     {/* Day Columns */}
@@ -193,6 +199,7 @@ export default function AgendaWeeklyView({
                                 {appointments
                                     .filter(apt => {
                                         if (!apt.start) return false;
+                                        if (apt.status === 'cancelled' || ['cancelada', 'cancelado'].includes((apt.estado || '').toLowerCase())) return false;
                                         const aptDate = new Date(apt.start);
                                         return aptDate.toDateString() === dayDate.toDateString();
                                     })

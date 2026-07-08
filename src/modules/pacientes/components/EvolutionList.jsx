@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
-import { FiActivity, FiClock, FiEdit3, FiTrash2, FiUser, FiArrowRight } from 'react-icons/fi';
+import { useAuth } from '../../../context/AuthContext';
+import { FiActivity, FiClock, FiEdit3, FiTrash2, FiUser, FiArrowRight, FiPenTool, FiCheck } from 'react-icons/fi';
 
 export default function EvolutionList({ patientId, onEdit, searchTerm }) {
+    const { userProfile } = useAuth();
     const [evolutions, setEvolutions] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
@@ -33,6 +35,25 @@ export default function EvolutionList({ patientId, onEdit, searchTerm }) {
 
         return () => unsubscribe();
     }, [patientId]);
+
+    const handleSignEvolution = async (evoObj) => {
+        if (!window.confirm("¿Desea firmar digitalmente esta evolución?")) return;
+        try {
+            const signatureData = {
+                signature: userProfile?.nombreCompleto || userProfile?.nombre || "Doctor",
+                signedAt: new Date().toISOString(),
+                signedBy: userProfile?.uid
+            };
+            await updateDoc(doc(db, "clinical_evolutions", evoObj.id), {
+                doctorSignature: signatureData,
+                updatedAt: serverTimestamp()
+            });
+            toast.success("Evolución firmada correctamente");
+        } catch (error) {
+            console.error("Error signing evolution:", error);
+            toast.error("Error al firmar la evolución");
+        }
+    };
 
     const handleDelete = async (id) => {
         if (!window.confirm("¿Seguro que deseas eliminar esta evolución?")) return;
@@ -125,6 +146,19 @@ export default function EvolutionList({ patientId, onEdit, searchTerm }) {
 
                                       {/* Botones */}
                                       <div className="flex gap-1">
+                                          {evo.doctorSignature?.signature ? (
+                                              <span className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center border border-emerald-100 shadow-sm" title={`Firmado por: ${evo.doctorSignature.signature}`}>
+                                                  <FiCheck size={14} />
+                                              </span>
+                                          ) : (
+                                              <button 
+                                                  onClick={() => handleSignEvolution(evo)} 
+                                                  className="w-8 h-8 bg-indigo-50 text-indigo-600 hover:bg-[#4f46e5] hover:text-white rounded-md flex items-center justify-center transition-all border border-indigo-200 shadow-sm"
+                                                  title="Firmar Evolución"
+                                              >
+                                                  <FiPenTool size={14} />
+                                              </button>
+                                          )}
                                           <button 
                                               onClick={() => onEdit(evo)} 
                                               className="w-8 h-8 bg-[#379deb] hover:bg-blue-600 text-white rounded-md flex items-center justify-center transition-all shadow-sm"

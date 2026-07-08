@@ -7,16 +7,31 @@ import { FiCheckCircle, FiArrowRight, FiSettings, FiAlertCircle } from "react-ic
 
 const CHECKS = [
     { id: "tenant", label: "Datos Clínica", check: async (db, inq) => {
-        const snap = await getDoc(doc(db, "tenants", inq));
-        return snap.exists() && !!snap.data().nombre;
+        const docRef = doc(db, "tenants", inq);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return false;
+        const data = snap.data();
+        return !!(data.nit && (data.nombreComercial || data.name) && (data.telefono || data.phone));
     }},
     { id: "sucursales", label: "Sedes", check: async (db, inq) => {
         const snap = await getDocs(query(collection(db, "sucursales"), where("inquilino", "==", inq)));
         return !snap.empty;
     }},
+    { id: "recursos-fisicos", label: "Consultorios", check: async (db, inq) => {
+        const snap = await getDocs(collection(db, "tenants", inq, "recursos_fisicos"));
+        return !snap.empty;
+    }},
+    { id: "especialidades", label: "Especialidades", check: async (db, inq) => {
+        const snap = await getDocs(query(collection(db, "especialidades"), where("inquilino", "==", inq)));
+        return !snap.empty;
+    }},
     { id: "usuarios", label: "Doctores", check: async (db, inq) => {
         const snap = await getDocs(query(collection(db, "usuarios"), where("inquilino", "==", inq)));
-        return snap.size > 0;
+        return snap.size > 1;
+    }},
+    { id: "listas-precios", label: "Lista Precios", check: async (db, inq) => {
+        const snap = await getDocs(query(collection(db, "listas_precios"), where("inquilino", "==", inq)));
+        return !snap.empty;
     }},
     { id: "consecutivos", label: "Facturación", check: async (db, inq) => {
         const snap = await getDocs(query(collection(db, "consecutivos"), where("inquilino", "==", inq)));

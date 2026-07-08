@@ -208,7 +208,7 @@ export default function ConfigCargas() {
     };
 
     return (
-        <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 text-left">
+        <div className="space-y-10 p-2 md:p-8 text-left">
 
             {/* Warning Overlay (The Slender Pro Glassmorphism) */}
             {showWarning && (

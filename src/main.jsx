@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { HelmetProvider } from 'react-helmet-async';
 import App from './App'
 import './index.css'
+import './styles/theme.css'
 import './styles/global.css'
 
 import { ToastProvider } from './context/ToastContext'

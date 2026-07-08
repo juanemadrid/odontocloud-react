@@ -121,6 +121,7 @@ export default function MonthView({ date, appointments, onDateClick }) {
 
         // More robust filtering: check if appointment falls on this day
         return appointments.filter(a => {
+            if (a.status === 'cancelled' || ['cancelada', 'cancelado'].includes((a.estado || '').toLowerCase())) return false;
             const aStart = a.start.getTime();
             // Create start/end for comparison based on cellDate
             const cellStart = new Date(cellDate); cellStart.setHours(0, 0, 0, 0);

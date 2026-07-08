@@ -167,14 +167,14 @@ export default function WebCms() {
     };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center h-screen bg-slate-50">
-            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center justify-center h-full min-h-[500px] py-20 bg-white/50 rounded-[32px] border border-slate-100">
+            <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
             <p className="mt-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">Cargando Editor...</p>
         </div>
     );
 
     return (
-        <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
+        <div className="flex h-[calc(100vh-170px)] min-h-[550px] overflow-hidden bg-[#F8FAFC] rounded-[32px] border border-slate-200/50">
 
             {/* EDITOR PANEL (Left) */}
             <div className="w-[450px] h-full bg-white border-r border-slate-200/60 shadow-[20px_0_60px_rgba(0,0,0,0.02)] flex flex-col z-50 overflow-hidden">

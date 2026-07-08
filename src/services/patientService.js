@@ -109,19 +109,42 @@ export const searchPatients = async (inquilino, searchTerm) => {
     if (!term) return [];
 
     try {
-        const q = query(
+        const isNumeric = /^\d+$/.test(term);
+        let snap;
+        
+        // 1. Si es numérico, intentamos buscar directamente por número de documento exacto
+        if (isNumeric) {
+            const qDoc = query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("nroDocumento", "==", searchTerm.trim())
+            );
+            snap = await getDocs(qDoc);
+            if (!snap.empty) {
+                return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            }
+        }
+
+        // 2. Intentamos buscar por prefijo de nombre completo indexado en Firestore
+        const qName = query(
             collection(db, "pacientes"),
             where("inquilino", "==", inquilino),
             where("nombreCompletoLower", ">=", term),
             where("nombreCompletoLower", "<=", term + "\uf8ff"),
             limit(20)
         );
-        const snap = await getDocs(q);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        snap = await getDocs(qName);
+        
+        if (!snap.empty) {
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        // Forzar fallback si no se encontraron coincidencias exactas o de prefijo
+        throw new Error("No prefix match found");
     } catch (err) {
-        console.warn("searchPatients: Composite index might be missing. Using client-side fallback.", err);
+        console.log("searchPatients: usando búsqueda client-side (índice Firestore no configurado).");
         try {
-            // Fallback: Fetch all patients for this inquilino (usually fast for a single tenant)
+            // 3. Fallback de cliente: descarga todos los pacientes del inquilino y filtra en memoria
             const qFallback = query(
                 collection(db, "pacientes"),
                 where("inquilino", "==", inquilino)
@@ -129,10 +152,12 @@ export const searchPatients = async (inquilino, searchTerm) => {
             const snap = await getDocs(qFallback);
             const allPatients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            // Client-side filtering with robust fallback for missing nombreCompletoLower
             return allPatients.filter(p => {
                 const nameLower = p.nombreCompletoLower || normalize(p.nombreCompleto || p.paciente || "");
-                return nameLower && nameLower.includes(term);
+                const docLower = p.documentoLower || normalize(p.nroDocumento || p.documento || "");
+                const cellLower = normalize(p.celular || p.celularPaciente || "");
+                
+                return nameLower.includes(term) || docLower.includes(term) || cellLower.includes(term);
             }).slice(0, 20);
         } catch (fallbackErr) {
             console.error("Critical error in searchPatients fallback:", fallbackErr);

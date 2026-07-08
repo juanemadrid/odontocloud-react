@@ -185,6 +185,7 @@ export default function AgendaGrid({
                             <div className="relative z-10 w-full h-full p-[1px]">
                                 {appointments
                                     .filter(a => {
+                                        if (a.status === 'cancelled' || ['cancelada', 'cancelado'].includes((a.estado || '').toLowerCase())) return false;
                                         if (effectiveResources.length === 1 && effectiveResources[0].id === 'general') return true;
                                         return a.doctorId === res.id || (!a.doctorId && !res.id);
                                     })

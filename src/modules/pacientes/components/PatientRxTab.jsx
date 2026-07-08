@@ -4,7 +4,8 @@ import { setDoc, doc, serverTimestamp, collection, query, where, getDocs } from 
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
-import { FiPlus, FiSearch, FiFileText, FiImage, FiTrash2, FiDownload, FiUploadCloud } from "react-icons/fi";
+import { FiPlus, FiSearch, FiFileText, FiImage, FiTrash2, FiDownload, FiUploadCloud, FiEdit } from "react-icons/fi";
+
 
 export default function PatientRxTab({ patient, onUpdate }) {
     const toast = useToast();
@@ -12,6 +13,7 @@ export default function PatientRxTab({ patient, onUpdate }) {
     const [viewMode, setViewMode] = useState("list"); // 'list' | 'form'
     const [uploading, setUploading] = useState(false);
     const [filter, setFilter] = useState("");
+    const [editingImage, setEditingImage] = useState(null);
     
     // Form States
     const [selectedFile, setSelectedFile] = useState(null);
@@ -70,48 +72,80 @@ export default function PatientRxTab({ patient, onUpdate }) {
 
     const handleSaveFile = async (e) => {
         e.preventDefault();
-        if (!selectedFile) return toast.error("Debe cargar un archivo");
+        if (!selectedFile && !editingImage) return toast.error("Debe cargar un archivo");
         if (!nombreVisible.trim()) return toast.error("El nombre es requerido");
         if (!profesionalResp.trim()) return toast.error("El profesional es requerido");
 
         setUploading(true);
         const storage = getStorage();
         try {
-            const safe = (selectedFile.name || "archivo").replace(/\s+/g, "_");
-            const path = `pacientes/${patient.id}/rx/${Date.now()}_${safe}`;
-            const sref = ref(storage, path);
+            let url, path;
+            
+            if (editingImage) {
+                // Edición: mantener URL y path si no se cambió el archivo
+                url = editingImage.url;
+                path = editingImage.path;
+                
+                if (selectedFile) {
+                    // Si se cambió el archivo, eliminar el anterior y subir el nuevo
+                    await deleteObject(ref(storage, editingImage.path)).catch(console.warn);
+                    
+                    const safe = (selectedFile.name || "archivo").replace(/\s+/g, "_");
+                    path = `pacientes/${patient.id}/rx/${Date.now()}_${safe}`;
+                    const sref = ref(storage, path);
+                    
+                    await uploadBytes(sref, selectedFile, { contentType: selectedFile.type });
+                    url = await getDownloadURL(sref);
+                }
+            } else {
+                // Creación: subir nuevo archivo
+                const safe = (selectedFile.name || "archivo").replace(/\s+/g, "_");
+                path = `pacientes/${patient.id}/rx/${Date.now()}_${safe}`;
+                const sref = ref(storage, path);
 
-            await uploadBytes(sref, selectedFile, { contentType: selectedFile.type });
-            const url = await getDownloadURL(sref);
+                await uploadBytes(sref, selectedFile, { contentType: selectedFile.type });
+                url = await getDownloadURL(sref);
+            }
 
-            const newItem = {
+            const itemData = {
                 url,
-                name: selectedFile.name,
+                name: selectedFile ? selectedFile.name : editingImage.name,
                 title: nombreVisible,
                 descripcion,
                 profesional: profesionalResp,
                 creador: userProfile?.nombre || "Usuario",
                 fechaAsocISO: fechaAsoc,
                 path,
-                type: selectedFile.type,
-                size: selectedFile.size,
-                uploadedAtMS: Date.now(),
-                uploadedAtISO: new Date().toISOString()
+                type: selectedFile ? selectedFile.type : editingImage.type,
+                size: selectedFile ? selectedFile.size : editingImage.size,
+                uploadedAtMS: editingImage ? editingImage.uploadedAtMS : Date.now(),
+                uploadedAtISO: editingImage ? editingImage.uploadedAtISO : new Date().toISOString()
             };
 
-            const updatedList = [...(patient.rxImagenes || []), newItem];
+            let updatedList;
+            if (editingImage) {
+                // Actualizar el elemento existente
+                updatedList = (patient.rxImagenes || []).map(img => 
+                    img.path === editingImage.path ? itemData : img
+                );
+            } else {
+                // Agregar nuevo elemento
+                updatedList = [...(patient.rxImagenes || []), itemData];
+            }
+
             await setDoc(doc(db, "pacientes", patient.id), {
                 rxImagenes: updatedList,
                 actualizado: serverTimestamp()
             }, { merge: true });
             onUpdate && onUpdate({ ...patient, rxImagenes: updatedList });
-            toast.success("Archivo guardado correctamente");
+            toast.success(editingImage ? "Archivo actualizado correctamente" : "Archivo guardado correctamente");
             
             // reset form and return to list
             setSelectedFile(null);
             setNombreVisible("");
             setDescripcion("");
             setProfesionalResp("");
+            setEditingImage(null);
             setViewMode("list");
         } catch (err) {
             console.error(err);
@@ -148,11 +182,20 @@ export default function PatientRxTab({ patient, onUpdate }) {
             <div className="p-4 md:p-8 animate-fadeIn flex flex-col h-full min-h-0 bg-slate-50/50">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setViewMode("list")} className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest">&larr; Volver</button>
-                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Nuevo archivo</h2>
+                        <button onClick={() => {
+                            setViewMode("list");
+                            setEditingImage(null);
+                            setSelectedFile(null);
+                            setNombreVisible("");
+                            setDescripcion("");
+                            setProfesionalResp("");
+                        }} className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest">&larr; Volver</button>
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight">
+                            {editingImage ? "Editar archivo" : "Nuevo archivo"}
+                        </h2>
                     </div>
                     <button type="submit" form="rxForm" disabled={uploading} className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-full font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50">
-                        {uploading ? "Guardando..." : "Guardar"}
+                        {uploading ? "Guardando..." : editingImage ? "Actualizar" : "Guardar"}
                     </button>
                 </div>
 
@@ -176,6 +219,11 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                     <FiUploadCloud size={32} className="text-slate-400 group-hover:text-blue-500 mb-2" />
                                     {selectedFile ? (
                                         <p className="text-sm font-bold text-blue-600">{selectedFile.name}</p>
+                                    ) : editingImage ? (
+                                        <>
+                                            <p className="text-sm font-bold text-slate-600">Archivo actual: {editingImage.name}</p>
+                                            <p className="text-xs text-slate-400 font-medium">Click para cambiar archivo (opcional)</p>
+                                        </>
                                     ) : (
                                         <>
                                             <p className="text-sm font-bold text-slate-600">Arrastra o click para cargar la foto.</p>
@@ -289,7 +337,21 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                         <td className="py-4 px-6 text-sm text-slate-600 truncate max-w-xs" title={img.descripcion}>{img.descripcion || '---'}</td>
                                         <td className="py-4 px-6 text-sm font-medium text-slate-500">{img.fechaAsocISO || new Date(img.uploadedAtMS).toLocaleDateString()}</td>
                                         <td className="py-4 px-6 text-center">
-                                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-center gap-2 transition-opacity">
+                                                <button 
+                                                    className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-colors"
+                                                    onClick={() => {
+                                                        setEditingImage(img);
+                                                        setNombreVisible(img.title || '');
+                                                        setDescripcion(img.descripcion || '');
+                                                        setProfesionalResp(img.profesional || '');
+                                                        setFechaAsoc(img.fechaAsocISO || img.uploadedAtISO?.split("T")[0] || new Date().toISOString().split("T")[0]);
+                                                        setViewMode("form");
+                                                    }}
+                                                    title="Editar"
+                                                >
+                                                    <FiEdit size={14} />
+                                                </button>
                                                 <a href={img.url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
                                                     <FiDownload size={14} />
                                                 </a>

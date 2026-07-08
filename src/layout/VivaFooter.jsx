@@ -4,6 +4,8 @@ import { FiFacebook, FiInstagram, FiLinkedin, FiMail, FiPhone, FiMapPin } from '
 
 export default function VivaFooter({ config }) {
     const isMaster = config?.isMaster;
+    const slug = config?.slug;
+    const clinicBase = slug ? `/c/${slug}` : "";
 
     return (
         <footer className="bg-[var(--viva-blue)] text-white pt-24 pb-12 overflow-hidden relative font-sans">
@@ -17,7 +19,7 @@ export default function VivaFooter({ config }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 mb-20">
                     {/* Brand Column (Span 4) */}
                     <div className="lg:col-span-4 space-y-8">
-                        <Link to={isMaster ? "/" : `/c/${config?.slug}`} className="flex items-center gap-4 group">
+                        <Link to={isMaster ? "/" : (clinicBase || "/")} className="flex items-center gap-4 group">
                             {((config?.logo && !config.logo.includes('logo.png')) || isMaster) && (
                                 <img
                                     src={config?.logo?.startsWith('/') ? `${import.meta.env.BASE_URL}${config.logo.slice(1)}` : (config?.logo || `${import.meta.env.BASE_URL}assets/logo.png`)}
@@ -56,19 +58,19 @@ export default function VivaFooter({ config }) {
                     <div className="lg:col-span-2 lg:col-start-6">
                         <h4 className="text-sm font-bold mb-8 text-white uppercase tracking-widest">{isMaster ? "Solución" : "Menú"}</h4>
                         <ul className="space-y-4 text-slate-400">
-                            <li><Link to={isMaster ? "/servicios" : `/c/${config?.slug}/servicios`} className="hover:text-sky-400 transition-colors text-sm font-medium">{isMaster ? "Funcionalidades" : "Servicios"}</Link></li>
-                            {isMaster && <li><Link to="/planes" className="hover:text-sky-400 transition-colors text-sm font-medium">Planes y Precios</Link></li>}
-                            <li><Link to={isMaster ? "/faq" : `/c/${config?.slug}/faq`} className="hover:text-sky-400 transition-colors text-sm font-medium">Preguntas Frecuentes</Link></li>
-                            {isMaster && <li><Link to="/login" className="hover:text-sky-400 transition-colors text-sm font-medium">Acceso Clientes</Link></li>}
-                            {!isMaster && <li><Link to={`/c/${config?.slug}/portal`} className="hover:text-sky-400 transition-colors text-sm font-medium">Portal Pacientes</Link></li>}
+                             <li><Link to={isMaster ? "/servicios" : `${clinicBase}/servicios`} className="hover:text-sky-400 transition-colors text-sm font-medium">{isMaster ? "Funcionalidades" : "Servicios"}</Link></li>
+                             {isMaster && <li><Link to="/planes" className="hover:text-sky-400 transition-colors text-sm font-medium">Planes y Precios</Link></li>}
+                             <li><Link to={isMaster ? "/faq" : `${clinicBase}/faq`} className="hover:text-sky-400 transition-colors text-sm font-medium">Preguntas Frecuentes</Link></li>
+                             {isMaster && <li><Link to="/login" className="hover:text-sky-400 transition-colors text-sm font-medium">Acceso Clientes</Link></li>}
+                             {!isMaster && <li><Link to={`${clinicBase}/portal`} className="hover:text-sky-400 transition-colors text-sm font-medium">Portal Pacientes</Link></li>}
                         </ul>
                     </div>
 
                     <div className="lg:col-span-2">
                         <h4 className="text-sm font-bold mb-8 text-white uppercase tracking-widest">Legal & Soporte</h4>
                         <ul className="space-y-4 text-slate-400">
-                            {!isMaster && <li><Link to={`/c/${config?.slug}/nosotros`} className="hover:text-sky-400 transition-colors text-sm font-medium">Sobre Nosotros</Link></li>}
-                            <li><Link to={isMaster ? "/soporte" : (config?.supportUrl || `/c/${config?.slug}/faq`)} className="hover:text-sky-400 transition-colors text-sm font-medium">{isMaster ? "Centro de Ayuda" : "Soporte"}</Link></li>
+                             {!isMaster && <li><Link to={`${clinicBase}/nosotros`} className="hover:text-sky-400 transition-colors text-sm font-medium">Sobre Nosotros</Link></li>}
+                             <li><Link to={isMaster ? "/soporte" : (config?.supportUrl || `${clinicBase}/faq`)} className="hover:text-sky-400 transition-colors text-sm font-medium">{isMaster ? "Centro de Ayuda" : "Soporte"}</Link></li>
                             {/* Fixed broken documentation link */}
                             {isMaster && <li><a href="https://docs.odontocloud.pro" target="_blank" rel="noopener noreferrer" className="hover:text-sky-400 transition-colors text-sm font-medium">Documentación API</a></li>}
                             <li><Link to={config?.privacyUrl || "/privacidad"} className="hover:text-sky-400 transition-colors text-sm font-medium">Política de Privacidad</Link></li>

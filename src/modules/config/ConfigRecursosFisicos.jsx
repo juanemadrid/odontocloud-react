@@ -132,7 +132,7 @@ export default function ConfigRecursosFisicos() {
     );
 
     return (
-        <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="space-y-10 p-2 md:p-8">
 
             {/* Toolbar Premium */}
             <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
@@ -211,7 +211,7 @@ export default function ConfigRecursosFisicos() {
                                             </span>
                                         </td>
                                         <td className="px-8 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-all duration-500 translate-x-4 group-hover/row:translate-x-0">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => handleOpenModal(item)}
                                                     className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100 transition-all active:scale-90"

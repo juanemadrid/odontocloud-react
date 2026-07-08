@@ -10,7 +10,7 @@ import { uploadImage } from "../../services/FirebaseStorageService";
 export default function ConfigEmpresa() {
     const { userProfile } = useAuth();
     const toast = useToast();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
@@ -41,8 +41,12 @@ export default function ConfigEmpresa() {
     });
 
     useEffect(() => {
-        if (userProfile?.inquilino) {
-            loadData();
+        if (userProfile) {
+            if (userProfile.inquilino) {
+                loadData();
+            } else {
+                setLoading(false);
+            }
         }
     }, [userProfile]);
 
@@ -157,7 +161,7 @@ export default function ConfigEmpresa() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-32">
+        <div className="max-w-5xl mx-auto p-2 md:p-8 pb-32">
 
             {/* Header */}
             <div className="flex items-center gap-6 mb-10">

@@ -3,6 +3,7 @@ import { FiHome, FiSave, FiClipboard, FiCheckCircle, FiInfo, FiArrowLeft } from 
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 // Premium Toggle Switch Component (iOS Style)
 const Toggle = ({ checked, onChange }) => (
@@ -124,6 +125,8 @@ export default function EmpresaFormularioPacientes() {
 
     const [config, setConfig] = useState({});
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const toast = useToast();
 
     useEffect(() => {
         const load = async () => {
@@ -145,22 +148,39 @@ export default function EmpresaFormularioPacientes() {
     }, [inquilino]);
 
     const handleChange = (key, type, val) => {
-        setConfig(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                [type]: val
+        // Find if the field is norma in SECTIONS to determine default required
+        let isNorma = false;
+        for (const section of SECTIONS) {
+            const f = section.fields.find(field => field.key === key);
+            if (f) {
+                isNorma = !!f.norma;
+                break;
             }
-        }));
+        }
+
+        setConfig(prev => {
+            const current = prev[key] || { visible: true, required: isNorma };
+            return {
+                ...prev,
+                [key]: {
+                    ...current,
+                    [type]: val
+                }
+            };
+        });
     };
 
     const handleSave = async () => {
         if (!inquilino) return;
+        setSaving(true);
         try {
             await setDoc(doc(db, "tenants", inquilino, "config", "formulario_pacientes"), config);
-            // Professional notification logic could be added here
+            toast.success("Configuración guardada correctamente");
         } catch (e) {
             console.error(e);
+            toast.error("Error al guardar la configuración");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -184,10 +204,16 @@ export default function EmpresaFormularioPacientes() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleSave}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95 group/save"
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95 group/save disabled:opacity-50"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/save:animate-shimmer" />
-                            <FiSave className="text-lg" /> Guardar
+                            {saving ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <FiSave className="text-lg" />
+                            )}
+                            {saving ? "Guardando..." : "Guardar"}
                         </button>
                     </div>
                 </div>
@@ -224,7 +250,10 @@ export default function EmpresaFormularioPacientes() {
 
                                 <div className="divide-y divide-slate-50/50">
                                     {section.fields.map((field) => {
-                                        const fieldConfig = config[field.key] || { visible: false, required: false };
+                                        const fieldConfig = {
+                                            visible: config[field.key]?.visible ?? true,
+                                            required: config[field.key]?.required ?? !!field.norma
+                                        };
                                         return (
                                             <div key={field.key} className="px-8 py-4 grid grid-cols-12 items-center hover:bg-slate-50/50 transition-all group/row">
                                                 <div className="col-span-6 flex items-center gap-3">
@@ -266,10 +295,15 @@ export default function EmpresaFormularioPacientes() {
             <div className="fixed bottom-8 right-8 z-50">
                 <button
                     onClick={handleSave}
-                    className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 transition-all active:scale-90 group/float relative overflow-hidden"
+                    disabled={saving}
+                    className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 transition-all active:scale-90 group/float relative overflow-hidden disabled:opacity-50"
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/float:animate-shimmer" />
-                    <FiSave size={24} />
+                    {saving ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <FiSave size={24} />
+                    )}
                 </button>
             </div>
         </div>

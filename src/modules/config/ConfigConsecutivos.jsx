@@ -28,11 +28,12 @@ export default function ConfigConsecutivos() {
         try {
             const q = query(
                 collection(db, "consecutivos"),
-                where("inquilino", "==", userProfile.inquilino),
-                orderBy("nombre", "asc")
+                where("inquilino", "==", userProfile.inquilino)
             );
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort locally to avoid Firestore composite index requirement
+            data.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", undefined, { sensitivity: "base" }));
             setConsecutivos(data);
         } catch (error) {
             console.error("Error cargando consecutivos:", error);
@@ -72,7 +73,7 @@ export default function ConfigConsecutivos() {
 
     if (showForm) {
         return (
-            <div className="p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="p-2 md:p-8">
                 <div className="max-w-4xl mx-auto">
                     <button
                         onClick={handleCloseForm}
@@ -87,7 +88,7 @@ export default function ConfigConsecutivos() {
     }
 
     return (
-        <div className="p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="p-2 md:p-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-6">

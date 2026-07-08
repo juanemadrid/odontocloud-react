@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
-import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRight, FiPrinter } from 'react-icons/fi';
+import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRight, FiPrinter, FiX } from 'react-icons/fi';
 import { formatCurrency } from '../../../utils/formatters';
 import { useAuth } from '../../../context/AuthContext';
 import { ReceiptPrintService } from '../../../services/ReceiptPrintService';
@@ -12,6 +12,11 @@ export default function HistoricoPagosTab({ patientId }) {
     const [loading, setLoading] = useState(true);
     const toast = useToast();
     const { userProfile } = useAuth();
+
+    // Void modal state
+    const [voidModal, setVoidModal] = useState({ open: false, pago: null });
+    const [voidReason, setVoidReason] = useState("");
+    const [voiding, setVoiding] = useState(false);
 
     const handlePrint = async (pago) => {
         try {
@@ -49,8 +54,8 @@ export default function HistoricoPagosTab({ patientId }) {
                 ...d.data(),
                 fecha: d.data().fecha?.toDate() || new Date()
             }))
-            // Filter out 'SALDO A FAVOR' concept payments and voided ones
-            .filter(p => p.concepto !== "SALDO A FAVOR" && p.estado !== "Anulado");
+            // Filter out 'SALDO A FAVOR' concept payments, but show voided ones with indicator
+            .filter(p => p.concepto !== "SALDO A FAVOR");
 
             setPagos(data);
             setLoading(false);
@@ -62,13 +67,33 @@ export default function HistoricoPagosTab({ patientId }) {
         return () => unsubscribe();
     }, [patientId]);
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("¿Seguro que deseas anular este pago?")) return;
+    const handleDelete = (pago) => {
+        setVoidReason("");
+        setVoidModal({ open: true, pago });
+    };
+
+    const handleConfirmVoid = async () => {
+        if (!voidReason.trim()) {
+            toast.error("El motivo de la anulación es obligatorio");
+            return;
+        }
+        setVoiding(true);
         try {
-            await deleteDoc(doc(db, "pagos", id));
-            toast.success("Pago anulado");
+            await updateDoc(doc(db, "pagos", voidModal.pago.id), {
+                estado: "Anulado",
+                motivoAnulacion: voidReason.trim(),
+                anuladoPor: userProfile?.nombreCompleto || userProfile?.nombre || "Sistema",
+                fechaAnulacion: new Date().toISOString(),
+                updatedAt: serverTimestamp()
+            });
+            toast.success("Pago anulado correctamente");
+            setVoidModal({ open: false, pago: null });
+            setVoidReason("");
         } catch (error) {
-            toast.error("Error al anular");
+            console.error("Error voiding payment:", error);
+            toast.error("Error al anular el pago");
+        } finally {
+            setVoiding(false);
         }
     };
 
@@ -155,25 +180,78 @@ export default function HistoricoPagosTab({ patientId }) {
                                   >
                                       <FiPrinter size={13} />
                                   </button>
-                                  <button
-                                      onClick={() => handleDelete(pago.id)}
-                                      title="Anular pago"
-                                      className="w-8 h-8 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
-                                  >
-                                      <FiTrash2 size={13} />
-                                  </button>
+                                  {pago.estado === "Anulado" ? (
+                                      <span className="px-3 py-1 rounded-full text-[9px] font-black bg-rose-50 text-rose-600 border border-rose-100 uppercase tracking-widest">
+                                          Anulado
+                                      </span>
+                                  ) : (
+                                      <button
+                                          onClick={() => handleDelete(pago)}
+                                          title="Anular pago"
+                                          className="w-8 h-8 bg-slate-50 text-slate-300 hover:bg-rose-600 hover:text-white rounded-lg flex items-center justify-center transition-all shadow-sm"
+                                      >
+                                          <FiTrash2 size={13} />
+                                      </button>
+                                  )}
                              </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Bottom Hint */}
-            <div className="mt-16 flex justify-center opacity-10">
-                 <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>
-                 <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>
-                 <div className="w-2 h-2 bg-slate-300 rounded-full mx-1"></div>
-            </div>
+            {/* Void Reason Modal */}
+            {voidModal.open && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !voiding && setVoidModal({ open: false, pago: null })} />
+                    <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl border border-slate-100 p-8 animate-fadeIn">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Anular Pago</h3>
+                            <button onClick={() => !voiding && setVoidModal({ open: false, pago: null })} className="text-slate-300 hover:text-slate-600 transition-colors">
+                                <FiX size={20} />
+                            </button>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                            Pago: <span className="text-slate-700">{voidModal.pago?.concepto}</span>
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">
+                            Monto: <span className="text-rose-600 font-black">{formatCurrency(voidModal.pago?.monto || 0)}</span>
+                        </p>
+
+                        <div className="space-y-3">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                Motivo de anulación <span className="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                autoFocus
+                                rows={4}
+                                placeholder="Describe el motivo de la anulación para el registro de auditoría..."
+                                value={voidReason}
+                                onChange={(e) => setVoidReason(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-semibold text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/5 focus:border-rose-300 transition-all resize-none placeholder:text-slate-200 custom-scrollbar"
+                            />
+                        </div>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => { setVoidModal({ open: false, pago: null }); setVoidReason(""); }}
+                                disabled={voiding}
+                                className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmVoid}
+                                disabled={voiding || !voidReason.trim()}
+                                className="flex-1 py-3 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {voiding ? "Anulando..." : "Confirmar Anulación"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -21,7 +21,7 @@ const STEPS = [
             const snap = await getDoc(docRef);
             if (!snap.exists()) return false;
             const data = snap.data();
-            return !!(data.nit && data.nombreComercial && data.telefono);
+            return !!(data.nit && (data.nombreComercial || data.name) && (data.telefono || data.phone));
         }
     },
     {
@@ -43,8 +43,7 @@ const STEPS = [
         icon: FiMonitor,
         path: "/dashboard/config/recursos-fisicos",
         check: async (db, inquilino) => {
-            const q = query(collection(db, "consultorios"), where("inquilino", "==", inquilino));
-            const snap = await getDocs(q);
+            const snap = await getDocs(collection(db, "tenants", inquilino, "recursos_fisicos"));
             return !snap.empty;
         }
     },
@@ -79,7 +78,7 @@ const STEPS = [
         icon: FiList,
         path: "/dashboard/config/listas-precios",
         check: async (db, inquilino) => {
-            const q = query(collection(db, "precios"), where("inquilino", "==", inquilino));
+            const q = query(collection(db, "listas_precios"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
             return !snap.empty;
         }
@@ -142,7 +141,7 @@ export default function ConfigAssistant() {
     const progressPercentage = Math.round((stats.completed / stats.total) * 100);
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-32">
+        <div className="max-w-4xl mx-auto p-4 md:p-10 pb-32">
             
             {/* Header con Progreso */}
             <div className="bg-white rounded-[40px] border border-slate-200/60 shadow-[0_20px_50px_rgba(0,0,0,0.04)] p-10 mb-10 relative overflow-hidden">

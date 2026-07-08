@@ -36,10 +36,17 @@ export default function PagoTab({ patient }) {
     // Checkout form state
     const [abonoInput, setAbonoInput] = useState("");
     const [method, setMethod] = useState("Efectivo");
+    const [reference, setReference] = useState("");
     const [concept, setConcept] = useState("ABONO A TRATAMIENTO");
     const [profesional, setProfesional] = useState(userProfile?.nombreCompleto || "");
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // Payment methods that require a reference number
+    const METHODS_REQUIRING_REFERENCE = ["Transferencia", "Cheque", "Consignación", "Nequi", "Daviplata", "PSE"];
+    const requiresReference = METHODS_REQUIRING_REFERENCE.some(m => 
+        method?.toLowerCase().includes(m.toLowerCase())
+    );
 
     const loadData = async () => {
         if (!patient?.id) return;
@@ -199,8 +206,8 @@ export default function PagoTab({ patient }) {
         }
 
         let maxAllowed = selectedTotal;
-        if (method === "Saldo a favor" && availableCredit < maxAllowed) {
-            maxAllowed = availableCredit;
+        if (method === "Saldo a favor") {
+            maxAllowed = Math.min(availableCredit, selectedTotal);
         }
 
         if (numValue > maxAllowed) {
@@ -226,20 +233,25 @@ export default function PagoTab({ patient }) {
 
     const handleMethodChange = (newMethod) => {
         setMethod(newMethod);
+        setReference(""); // Reset reference when method changes
         if (newMethod === "Saldo a favor") {
-            if (selectedTotal > availableCredit) {
-                setAbonoInput(availableCredit.toString());
-                toast.info(`Monto ajustado al saldo a favor disponible: ${formatCurrency(availableCredit)}`);
+            // Apply only the minimum needed: min(availableCredit, selectedTotal)
+            const maxToApply = Math.min(availableCredit, selectedTotal);
+            if (maxToApply > 0) {
+                setAbonoInput(maxToApply.toString());
+                if (maxToApply < selectedTotal) {
+                    toast.info(`Saldo a favor disponible: ${formatCurrency(maxToApply)} — se ajustará el pago.`);
+                }
             }
         }
     };
 
     // Reactive validator to cap payment when item selection or payment method changes
     useEffect(() => {
-        if (method === "Saldo a favor" && selectedTotal > availableCredit) {
-            if (abonoInput === "" || Number(abonoInput) > availableCredit) {
-                setAbonoInput(availableCredit.toString());
-            }
+        if (method === "Saldo a favor") {
+            // Always apply only the minimum needed: min(availableCredit, selectedTotal)
+            const maxToApply = Math.min(availableCredit, selectedTotal);
+            setAbonoInput(maxToApply > 0 ? maxToApply.toString() : "");
         }
     }, [selectedItemIds, method, selectedTotal, availableCredit]);
 
@@ -259,6 +271,7 @@ export default function PagoTab({ patient }) {
                 patientNombre: patient.nombreCompleto,
                 monto: paymentAmount,
                 medio: method,
+                referencia: reference || null,
                 concepto: concept,
                 profesional,
                 notas: notes,
@@ -310,6 +323,7 @@ export default function PagoTab({ patient }) {
             toast.success("Pago registrado exitosamente");
             setAbonoInput("");
             setNotes("");
+            setReference("");
             setSelectedPlan(null);
 
             await loadData();
@@ -536,16 +550,19 @@ export default function PagoTab({ patient }) {
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="0"
+                                            disabled={method === "Saldo a favor"}
                                             value={abonoInput === "" ? "" : Number(abonoInput).toLocaleString('es-CO')}
                                             onChange={(e) => {
                                                 const cleanVal = e.target.value.replace(/\D/g, '');
                                                 handleAbonoInputChange(cleanVal);
                                             }}
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-10 text-[13px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all text-right font-mono"
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-10 text-[13px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all text-right font-mono disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                        Deje en cero o vacío para pagar el total seleccionado.
+                                        {method === "Saldo a favor" 
+                                            ? "Cobro ajustado automáticamente al saldo a favor aplicable."
+                                            : "Deje en cero o vacío para pagar el total seleccionado."}
                                     </p>
                                 </div>
 
@@ -574,6 +591,23 @@ export default function PagoTab({ patient }) {
                                         <option value="Saldo a favor">SALDO A FAVOR ({formatCurrency(availableCredit)})</option>
                                     </select>
                                 </div>
+
+                                {/* Reference field — shown when payment method requires it */}
+                                {requiresReference && (
+                                    <div className="space-y-2 animate-fadeIn">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Número de Referencia / Comprobante <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            required
+                                            placeholder="Ej: 0012345678..."
+                                            value={reference}
+                                            onChange={(e) => setReference(e.target.value.toUpperCase())}
+                                            className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[12px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 transition-all placeholder:text-amber-300 caret-slate-950"
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Profesional / Responsable</label>
@@ -717,6 +751,21 @@ export default function PagoTab({ patient }) {
                                                 />
                                             </div>
                                         </div>
+                                        {requiresReference && (
+                                            <div className="md:col-span-2 animate-fadeIn">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">
+                                                    Número de Referencia / Comprobante <span className="text-rose-500">*</span>
+                                                </label>
+                                                <input 
+                                                    type="text"
+                                                    required
+                                                    placeholder="EJ: 0012345678..."
+                                                    value={reference}
+                                                    onChange={(e) => setReference(e.target.value.toUpperCase())}
+                                                    className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 transition-all placeholder:text-amber-300 caret-slate-950"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="md:col-span-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Notas Adicionales / Referencia</label>
                                             <div className="relative">

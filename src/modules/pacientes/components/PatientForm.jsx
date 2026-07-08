@@ -7,6 +7,7 @@ import {
 } from "react-icons/fi";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
@@ -82,6 +83,104 @@ export default function PatientForm({
     const [pacientesRemision, setPacientesRemision] = useState([]);
     const videoRef = React.useRef(null);
     const canvasRef = React.useRef(null);
+
+    const [formConfig, setFormConfig] = useState(null);
+
+    useEffect(() => {
+        const loadFormConfig = async () => {
+            if (!inquilino) return;
+            try {
+                const docSnap = await getDoc(doc(db, "tenants", inquilino, "config", "formulario_pacientes"));
+                if (docSnap.exists()) {
+                    setFormConfig(docSnap.data());
+                }
+            } catch (e) {
+                console.error("Error loading patient form config:", e);
+            }
+        };
+        loadFormConfig();
+    }, [inquilino]);
+
+    const isVisible = (key) => {
+        if (!formConfig) return true;
+        return formConfig[key]?.visible !== false;
+    };
+
+    const isRequired = (key, defaultRequired = false) => {
+        if (!formConfig) return defaultRequired;
+        return formConfig[key]?.required === true;
+    };
+
+    const dynamicSchema = useMemo(() => {
+        if (!formConfig) return patientSchema;
+
+        let shape = { ...patientSchema.shape };
+
+        const keyMapping = {
+            paisNacimiento: "paisNacimiento",
+            ciudadNacimiento: "ciudadNacimiento",
+            sexo: "sexo",
+            estadoCivil: "estadoCivil",
+            fechaNacimiento: "fechaNacimiento",
+            paisDomicilio: "paisDomicilio",
+            ciudadDomicilio: "ciudadDomicilio",
+            barrioDomicilio: "barrio",
+            lugarResidencia: "lugarResidencia",
+            estrato: "estrato",
+            zonaResidencial: "zonaResidencial",
+            esExtranjero: "esExtranjero",
+            permitePublicidad: "permitePublicidad",
+            celular: "celular",
+            telefonoDomicilio: "telDomicilio",
+            telefonoOficina: "telOficina",
+            extension: "extension",
+            correoElectronico: "email",
+            ocupacion: "ocupacion",
+            respNombre: "nombreResponsable",
+            respParentesco: "parentesco",
+            respCelular: "celularResponsable",
+            respTelefono: "telefonoResponsable",
+            respCorreo: "emailResponsable",
+            acompNombre: "nombreAcompanante",
+            acompTelefono: "telefonoAcompanante",
+            convenioBeneficio: "convenioBeneficio",
+            convenioPago: "convenioPago",
+            comoNosConocio: "comoConocio",
+            campana: "campania",
+            remitidoPor: "remitidoPorValue",
+            asesorComercial: "asesorComercialValue",
+            tipoVinculacion: "tipoVinculacion",
+            nombreEps: "nombreEps",
+            polizaSalud: "polizaSalud",
+            profesionales: "profesionalId",
+            nota: "notas"
+        };
+
+        if (!shape.numeroDentadura) shape.numeroDentadura = z.string().optional();
+        if (!shape.rh) shape.rh = z.string().optional();
+        if (!shape.orientacionSexual) shape.orientacionSexual = z.string().optional();
+        if (!shape.lugarExpedicion) shape.lugarExpedicion = z.string().optional();
+        if (!shape.soat) shape.soat = z.string().optional();
+        if (!shape.tipoPaciente) shape.tipoPaciente = z.string().optional();
+        if (!shape.cuentaContable) shape.cuentaContable = z.string().optional();
+
+        Object.entries(keyMapping).forEach(([configKey, schemaKey]) => {
+            const fieldConfig = formConfig[configKey];
+            if (!shape[schemaKey]) return;
+
+            if (fieldConfig) {
+                if (fieldConfig.visible === false) {
+                    shape[schemaKey] = z.any().optional().nullable().or(z.literal(""));
+                } else if (fieldConfig.required === false) {
+                    shape[schemaKey] = shape[schemaKey].optional().or(z.literal("")).or(z.any());
+                } else {
+                    shape[schemaKey] = z.string().min(1, `El campo es obligatorio`);
+                }
+            }
+        });
+
+        return z.object(shape);
+    }, [formConfig]);
 
     // Camera Handlers
     const startCamera = async () => {
@@ -254,7 +353,7 @@ export default function PatientForm({
             permitePublicidad: initialData?.permitePublicidad ?? true,
             multiplesResponsables: initialData?.multiplesResponsables || false,
         },
-        resolver: zodResolver(patientSchema)
+        resolver: zodResolver(dynamicSchema)
     });
 
     useEffect(() => {
@@ -459,12 +558,14 @@ export default function PatientForm({
                                     <input {...register("nroHistoria")} className="form-input text-sm w-full md:w-64" placeholder="Nro. historia paciente" />
                                 </FormRow>
 
-                                <FormRow label="Fecha de ingreso">
-                                    <div className="relative w-full md:w-64">
-                                        <input {...register("fechaIngreso")} readOnly className="form-input text-sm w-full bg-slate-50/50 cursor-not-allowed" />
-                                        <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                    </div>
-                                </FormRow>
+                                {isVisible("fechaIngreso") && (
+                                    <FormRow label="Fecha de ingreso" required={isRequired("fechaIngreso")} error={errors.fechaIngreso}>
+                                        <div className="relative w-full md:w-64">
+                                            <input {...register("fechaIngreso")} readOnly className="form-input text-sm w-full bg-slate-50/50 cursor-not-allowed" />
+                                            <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                        </div>
+                                    </FormRow>
+                                )}
 
                                 <FormRow label="Nombres" required error={errors.nombres}>
                                     <input {...register("nombres")} className="form-input text-sm w-full" placeholder="Nombres paciente" />
@@ -478,334 +579,423 @@ export default function PatientForm({
                                     <input value={watch("nombreCompleto") || ""} readOnly className="form-input text-sm w-full bg-slate-50 text-slate-600 font-bold border-transparent" placeholder="Calculado automáticamente..." />
                                 </FormRow>
 
-                                <FormRow label="Sexo" required error={errors.sexo}>
-                                    <select {...register("sexo")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {SEXOS.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </FormRow>
+                                {isVisible("sexo") && (
+                                    <FormRow label="Sexo" required={isRequired("sexo", true)} error={errors.sexo}>
+                                        <select {...register("sexo")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {SEXOS.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="Estado civil" required error={errors.estadoCivil}>
-                                    <select {...register("estadoCivil")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {ESTADOS_CIVILES.map(ec => <option key={ec} value={ec}>{ec}</option>)}
-                                    </select>
-                                </FormRow>
+                                {isVisible("estadoCivil") && (
+                                    <FormRow label="Estado civil" required={isRequired("estadoCivil", true)} error={errors.estadoCivil}>
+                                        <select {...register("estadoCivil")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {ESTADOS_CIVILES.map(ec => <option key={ec} value={ec}>{ec}</option>)}
+                                        </select>
+                                    </FormRow>
+                                )}
                             </div>
 
                             <SectionTitle num="2" title="Información de Contacto" />
                             <div className="pl-0 md:pl-4 space-y-1">
-                                <FormRow label="País de nacimiento" required error={errors.paisNacimiento}>
-                                    <select {...register("paisNacimiento")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {PAISES.map(p => {
-                                            const label = typeof p === 'object' ? p.pais : p;
-                                            return <option key={label} value={label}>{label}</option>;
-                                        })}
-                                    </select>
-                                </FormRow>
+                                {isVisible("paisNacimiento") && (
+                                    <FormRow label="País de nacimiento" required={isRequired("paisNacimiento", true)} error={errors.paisNacimiento}>
+                                        <select {...register("paisNacimiento")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {PAISES.map(p => {
+                                                const label = typeof p === 'object' ? p.pais : p;
+                                                return <option key={label} value={label}>{label}</option>;
+                                            })}
+                                        </select>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="Ciudad de nacimiento">
-                                    <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </FormRow>
+                                {isVisible("ciudadNacimiento") && (
+                                    <FormRow label="Ciudad de nacimiento" required={isRequired("ciudadNacimiento")} error={errors.ciudadNacimiento}>
+                                        <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="Fecha de Nacimiento" required error={errors.fechaNacimiento}>
-                                    <div className="flex gap-4">
-                                        <input type="date" {...register("fechaNacimiento")} className="form-input text-sm w-full md:w-48" />
-                                        <div className="px-4 py-2 bg-slate-100 rounded-lg text-sm text-slate-700 font-bold flex items-center shadow-inner">
-                                            Edad: {age || "---"}
+                                {isVisible("fechaNacimiento") && (
+                                    <FormRow label="Fecha de Nacimiento" required={isRequired("fechaNacimiento", true)} error={errors.fechaNacimiento}>
+                                        <div className="flex gap-4">
+                                            <input type="date" {...register("fechaNacimiento")} className="form-input text-sm w-full md:w-48" />
+                                            <div className="px-4 py-2 bg-slate-100 rounded-lg text-sm text-slate-700 font-bold flex items-center shadow-inner">
+                                                Edad: {age || "---"}
+                                            </div>
                                         </div>
-                                    </div>
-                                </FormRow>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="País de domicilio" required error={errors.paisDomicilio}>
-                                    <select {...register("paisDomicilio")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {PAISES.map(p => {
-                                            const label = typeof p === 'object' ? p.pais : p;
-                                            return <option key={label} value={label}>{label}</option>;
-                                        })}
-                                    </select>
-                                </FormRow>
-
-                                <FormRow label="Ciudad de domicilio" required error={errors.ciudadDomicilio}>
-                                    <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </FormRow>
-
-                                <FormRow label="Barrio" required error={errors.barrio}>
-                                    <input {...register("barrio")} className="form-input text-sm w-full md:w-64" placeholder="Barrio del paciente" />
-                                </FormRow>
-
-                                <FormRow label="Lugar de residencia" required error={errors.lugarResidencia}>
-                                    <input {...register("lugarResidencia")} className="form-input text-sm w-full" placeholder="Dirección completa" />
-                                </FormRow>
-
-                                <FormRow label="Configuración Domicilio">
-                                    <div className="flex gap-4 items-center">
-                                        <select {...register("estrato")} className="form-input text-sm w-32">
-                                            <option value="">Estrato</option>
-                                            {ESTRATOS.map(e => <option key={e} value={e}>{e}</option>)}
+                                {isVisible("paisDomicilio") && (
+                                    <FormRow label="País de domicilio" required={isRequired("paisDomicilio", true)} error={errors.paisDomicilio}>
+                                        <select {...register("paisDomicilio")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {PAISES.map(p => {
+                                                const label = typeof p === 'object' ? p.pais : p;
+                                                return <option key={label} value={label}>{label}</option>;
+                                            })}
                                         </select>
-                                        <select {...register("zonaResidencial")} className="form-input text-sm w-40">
-                                            <option value="">Zona Residencial</option>
-                                            {ZONAS_RESIDENCIALES.map(z => <option key={z} value={z}>{z}</option>)}
-                                        </select>
-                                    </div>
-                                </FormRow>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="Celular" required error={errors.celular}>
-                                    <div className="flex items-center gap-0 w-full max-w-sm">
-                                        {/* Prefijo compacto con dropdown de búsqueda */}
-                                        <div className="relative shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setShowPrefijoDrop(v => !v); setPrefijoSearch(""); }}
-                                                className="h-9 px-2.5 rounded-l-lg border border-r-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1 transition-colors whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                            >
-                                                {watch("prefijoCelular") || "+57"}
-                                                <svg className="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                            </button>
-                                            {/* Hidden input para react-hook-form */}
-                                            <input type="hidden" {...register("prefijoCelular")} />
-                                            {showPrefijoDrop && (
-                                                <div
-                                                    className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden"
-                                                    style={{ minWidth: "200px" }}
-                                                    onMouseDown={e => e.stopPropagation()}
-                                                >
-                                                    {/* Buscador dentro del dropdown */}
-                                                    <div className="px-2 pt-2 pb-1 border-b border-slate-100">
-                                                        <input
-                                                            autoFocus
-                                                            type="text"
-                                                            value={prefijoSearch}
-                                                            onChange={e => setPrefijoSearch(e.target.value)}
-                                                            placeholder="Buscar país o prefijo..."
-                                                            className="w-full h-7 px-2 text-[11px] font-bold border border-slate-200 rounded-md outline-none focus:border-blue-400 bg-slate-50"
-                                                        />
-                                                    </div>
-                                                    <div className="max-h-52 overflow-y-auto custom-scrollbar">
-                                                        {PREFIJOS_TELEFONICOS
-                                                            .filter(p =>
-                                                                !prefijoSearch ||
-                                                                p.pais.toLowerCase().includes(prefijoSearch.toLowerCase()) ||
-                                                                p.prefijo.includes(prefijoSearch)
-                                                            )
-                                                            .map(p => (
-                                                                <button
-                                                                    key={`${p.pais}-${p.prefijo}`}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setValue("prefijoCelular", p.prefijo);
-                                                                        setShowPrefijoDrop(false);
-                                                                    }}
-                                                                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-blue-50 transition-colors group"
-                                                                >
-                                                                    <span className="text-[11px] font-semibold text-slate-600 group-hover:text-blue-700">{p.pais}</span>
-                                                                    <span className="text-[11px] font-black text-slate-800 group-hover:text-blue-700 ml-2">{p.prefijo}</span>
-                                                                </button>
-                                                            ))
-                                                        }
-                                                    </div>
-                                                </div>
+                                {isVisible("ciudadDomicilio") && (
+                                    <FormRow label="Ciudad de domicilio" required={isRequired("ciudadDomicilio", true)} error={errors.ciudadDomicilio}>
+                                        <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
+                                            <option value="">Seleccione...</option>
+                                            {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </FormRow>
+                                )}
+
+                                {isVisible("barrioDomicilio") && (
+                                    <FormRow label="Barrio" required={isRequired("barrioDomicilio", true)} error={errors.barrio}>
+                                        <input {...register("barrio")} className="form-input text-sm w-full md:w-64" placeholder="Barrio del paciente" />
+                                    </FormRow>
+                                )}
+
+                                {isVisible("lugarResidencia") && (
+                                    <FormRow label="Lugar de residencia" required={isRequired("lugarResidencia", true)} error={errors.lugarResidencia}>
+                                        <input {...register("lugarResidencia")} className="form-input text-sm w-full" placeholder="Dirección completa" />
+                                    </FormRow>
+                                )}
+
+                                {(isVisible("estrato") || isVisible("zonaResidencial")) && (
+                                    <FormRow label="Configuración Domicilio">
+                                        <div className="flex gap-4 items-center">
+                                            {isVisible("estrato") && (
+                                                <select {...register("estrato")} className="form-input text-sm w-32">
+                                                    <option value="">Estrato</option>
+                                                    {ESTRATOS.map(e => <option key={e} value={e}>{e}</option>)}
+                                                </select>
+                                            )}
+                                            {isVisible("zonaResidencial") && (
+                                                <select {...register("zonaResidencial")} className="form-input text-sm w-40">
+                                                    <option value="">Zona Residencial</option>
+                                                    {ZONAS_RESIDENCIALES.map(z => <option key={z} value={z}>{z}</option>)}
+                                                </select>
                                             )}
                                         </div>
-                                        {/* Input del número */}
-                                        <input
-                                            {...register("celular")}
-                                            autoComplete="off"
-                                            className="form-input text-sm flex-1 rounded-l-none border-l-0 focus:z-10"
-                                            placeholder="Número de celular"
-                                            onFocus={() => setShowPrefijoDrop(false)}
-                                        />
-                                    </div>
-                                </FormRow>
+                                    </FormRow>
+                                )}
 
-                                <FormRow label="Teléfonos Secundarios">
-                                    <div className="flex gap-2 w-full">
-                                        <input {...register("telDomicilio")} className="form-input text-sm flex-1" placeholder="Tel. domicilio" />
-                                        <input {...register("telOficina")} className="form-input text-sm flex-1" placeholder="Tel. oficina" />
-                                        <input {...register("extension")} className="form-input text-sm w-24" placeholder="Ext #" />
-                                    </div>
-                                </FormRow>
-
-                                <FormRow label="Correo Electrónico" required error={errors.email}>
-                                    <input {...register("email")} className="form-input text-sm w-full" placeholder="Correo electrónico del paciente" />
-                                </FormRow>
-
-                                <FormRow label="Ocupación" required error={errors.ocupacion}>
-                                    <input {...register("ocupacion")} className="form-input text-sm w-full md:w-64" placeholder="Ocupación del paciente" />
-                                </FormRow>
-
-                                <FormRow label="Opciones Adicionales">
-                                    <div className="flex gap-8 items-center py-2">
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className="relative">
-                                                <input type="checkbox" {...register("esExtranjero")} className="sr-only" />
-                                                <div className={`w-8 h-5 rounded-full transition-all ${watch("esExtranjero") ? 'bg-blue-600' : 'bg-slate-200'}`} />
-                                                <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("esExtranjero") ? 'translate-x-3' : ''}`} />
+                                {isVisible("celular") && (
+                                    <FormRow label="Celular" required={isRequired("celular", true)} error={errors.celular}>
+                                        <div className="flex items-center gap-0 w-full max-w-sm">
+                                            <div className="relative shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowPrefijoDrop(v => !v); setPrefijoSearch(""); }}
+                                                    className="h-9 px-2.5 rounded-l-lg border border-r-0 border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1 transition-colors whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                                >
+                                                    {watch("prefijoCelular") || "+57"}
+                                                    <svg className="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                                <input type="hidden" {...register("prefijoCelular")} />
+                                                {showPrefijoDrop && (
+                                                    <div
+                                                        className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden"
+                                                        style={{ minWidth: "200px" }}
+                                                        onMouseDown={e => e.stopPropagation()}
+                                                    >
+                                                        <div className="px-2 pt-2 pb-1 border-b border-slate-100">
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                value={prefijoSearch}
+                                                                onChange={e => setPrefijoSearch(e.target.value)}
+                                                                placeholder="Buscar país o prefijo..."
+                                                                className="w-full h-7 px-2 text-[11px] font-bold border border-slate-200 rounded-md outline-none focus:border-blue-400 bg-slate-50"
+                                                            />
+                                                        </div>
+                                                        <div className="max-h-52 overflow-y-auto custom-scrollbar">
+                                                            {PREFIJOS_TELEFONICOS
+                                                                .filter(p =>
+                                                                    !prefijoSearch ||
+                                                                    p.pais.toLowerCase().includes(prefijoSearch.toLowerCase()) ||
+                                                                    p.prefijo.includes(prefijoSearch)
+                                                                )
+                                                                .map(p => (
+                                                                    <button
+                                                                        key={`${p.pais}-${p.prefijo}`}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setValue("prefijoCelular", p.prefijo);
+                                                                            setShowPrefijoDrop(false);
+                                                                        }}
+                                                                        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-blue-50 transition-colors group"
+                                                                    >
+                                                                        <span className="text-[11px] font-semibold text-slate-600 group-hover:text-blue-700">{p.pais}</span>
+                                                                        <span className="text-[11px] font-black text-slate-800 group-hover:text-blue-700 ml-2">{p.prefijo}</span>
+                                                                    </button>
+                                                                ))
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="text-[13px] font-semibold text-slate-600">¿Es extranjero?</span>
-                                        </label>
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className="relative">
-                                                <input type="checkbox" {...register("permitePublicidad")} className="sr-only" />
-                                                <div className={`w-8 h-5 rounded-full transition-all ${watch("permitePublicidad") ? 'bg-blue-600' : 'bg-slate-200'}`} />
-                                                <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("permitePublicidad") ? 'translate-x-3' : ''}`} />
-                                            </div>
-                                            <span className="text-[13px] font-semibold text-slate-600">¿Permitir publicidad?</span>
-                                        </label>
-                                    </div>
-                                </FormRow>
+                                            <input
+                                                {...register("celular")}
+                                                autoComplete="off"
+                                                className="form-input text-sm flex-1 rounded-l-none border-l-0 focus:z-10"
+                                                placeholder="Número de celular"
+                                                onFocus={() => setShowPrefijoDrop(false)}
+                                            />
+                                        </div>
+                                    </FormRow>
+                                )}
+
+                                {(isVisible("telefonoDomicilio") || isVisible("telefonoOficina") || isVisible("extension")) && (
+                                    <FormRow label="Teléfonos Secundarios">
+                                        <div className="flex gap-2 w-full">
+                                            {isVisible("telefonoDomicilio") && <input {...register("telDomicilio")} className="form-input text-sm flex-1" placeholder="Tel. domicilio" />}
+                                            {isVisible("telefonoOficina") && <input {...register("telOficina")} className="form-input text-sm flex-1" placeholder="Tel. oficina" />}
+                                            {isVisible("extension") && <input {...register("extension")} className="form-input text-sm w-24" placeholder="Ext #" />}
+                                        </div>
+                                    </FormRow>
+                                )}
+
+                                {isVisible("correoElectronico") && (
+                                    <FormRow label="Correo Electrónico" required={isRequired("correoElectronico", true)} error={errors.email}>
+                                        <input {...register("email")} className="form-input text-sm w-full" placeholder="Correo electrónico del paciente" />
+                                    </FormRow>
+                                )}
+
+                                {isVisible("ocupacion") && (
+                                    <FormRow label="Ocupación" required={isRequired("ocupacion", true)} error={errors.ocupacion}>
+                                        <input {...register("ocupacion")} className="form-input text-sm w-full md:w-64" placeholder="Ocupación del paciente" />
+                                    </FormRow>
+                                )}
+
+                                {(isVisible("esExtranjero") || isVisible("permitePublicidad")) && (
+                                    <FormRow label="Opciones Adicionales">
+                                        <div className="flex gap-8 items-center py-2">
+                                            {isVisible("esExtranjero") && (
+                                                <label className="flex items-center gap-3 cursor-pointer group">
+                                                    <div className="relative">
+                                                        <input type="checkbox" {...register("esExtranjero")} className="sr-only" />
+                                                        <div className={`w-8 h-5 rounded-full transition-all ${watch("esExtranjero") ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                                                        <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("esExtranjero") ? 'translate-x-3' : ''}`} />
+                                                    </div>
+                                                    <span className="text-[13px] font-semibold text-slate-600">¿Es extranjero?</span>
+                                                </label>
+                                            )}
+                                            {isVisible("permitePublicidad") && (
+                                                <label className="flex items-center gap-3 cursor-pointer group">
+                                                    <div className="relative">
+                                                        <input type="checkbox" {...register("permitePublicidad")} className="sr-only" />
+                                                        <div className={`w-8 h-5 rounded-full transition-all ${watch("permitePublicidad") ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                                                        <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("permitePublicidad") ? 'translate-x-3' : ''}`} />
+                                                    </div>
+                                                    <span className="text-[13px] font-semibold text-slate-600">¿Permitir publicidad?</span>
+                                                </label>
+                                            )}
+                                        </div>
+                                    </FormRow>
+                                )}
                             </div>
 
-                            <SectionTitle num="3" title="EPS y Aseguramiento" />
-                            <div className="pl-0 md:pl-4 space-y-1">
-                                <FormRow label="Nombre de la EPS" required error={errors.nombreEps}>
-                                    <div className="relative">
-                                        <input 
-                                            {...register("nombreEps")} 
-                                            onFocus={() => setShowEpsSuggestions(true)}
-                                            onBlur={() => setTimeout(() => setShowEpsSuggestions(false), 200)}
-                                            placeholder="Escriba el nombre..."
-                                            className="form-input text-sm w-full md:w-64"
-                                        />
-                                        {loadingEps && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
-                                        {showEpsSuggestions && filteredEps.length > 0 && (
-                                            <div className="absolute z-50 w-full md:w-80 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
-                                                {filteredEps.map(eps => (
-                                                    <button key={eps} type="button" onClick={() => setValue("nombreEps", eps)} className="w-full px-4 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 text-slate-700 transition-colors">
-                                                        {eps}
-                                                    </button>
-                                                ))}
+                            {(isVisible("nombreEps") || isVisible("tipoVinculacion") || isVisible("polizaSalud") || isVisible("convenioBeneficio") || isVisible("convenioPago")) && (
+                                <>
+                                    <SectionTitle num="3" title="EPS y Aseguramiento" />
+                                    <div className="pl-0 md:pl-4 space-y-1">
+                                        {isVisible("nombreEps") && (
+                                            <FormRow label="Nombre de la EPS" required={isRequired("nombreEps", true)} error={errors.nombreEps}>
+                                                <div className="relative">
+                                                    <input 
+                                                        {...register("nombreEps")} 
+                                                        onFocus={() => setShowEpsSuggestions(true)}
+                                                        onBlur={() => setTimeout(() => setShowEpsSuggestions(false), 200)}
+                                                        placeholder="Escriba el nombre..."
+                                                        className="form-input text-sm w-full md:w-64"
+                                                    />
+                                                    {loadingEps && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
+                                                    {showEpsSuggestions && filteredEps.length > 0 && (
+                                                        <div className="absolute z-50 w-full md:w-80 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
+                                                            {filteredEps.map(eps => (
+                                                                <button key={eps} type="button" onClick={() => setValue("nombreEps", eps)} className="w-full px-4 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 text-slate-700 transition-colors">
+                                                                    {eps}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </FormRow>
+                                        )}
+                                        {isVisible("tipoVinculacion") && (
+                                            <FormRow label="Tipo de Vinculación" required={isRequired("tipoVinculacion", true)} error={errors.tipoVinculacion}>
+                                                <select {...register("tipoVinculacion")} className="form-input text-sm w-full md:w-64">
+                                                    <option value="">Seleccione tipo...</option>
+                                                    {TIPOS_VINCULACION.map(v => <option key={v} value={v}>{v}</option>)}
+                                                </select>
+                                            </FormRow>
+                                        )}
+
+                                        {isVisible("polizaSalud") && (
+                                            <FormRow label="Póliza de Salud">
+                                                <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-64" placeholder="Número de contrato o póliza" />
+                                            </FormRow>
+                                        )}
+
+                                        {isVisible("convenioBeneficio") && (
+                                            <FormRow label="Convenio / Beneficio">
+                                                <input {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Ecopetrol" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("convenioPago") && (
+                                            <FormRow label="Convenio de Pago">
+                                                <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
+                                            </FormRow>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            {(isVisible("comoNosConocio") || isVisible("campana") || isVisible("remitidoPor")) && (
+                                <>
+                                    <SectionTitle num="4" title="Estrategia de Mercadeo" />
+                                    <div className="pl-0 md:pl-4 space-y-1">
+                                        {isVisible("comoNosConocio") && (
+                                            <FormRow label="¿Cómo nos conoció?">
+                                                <select {...register("comoConocio")} className="form-input text-sm w-full md:w-64">
+                                                    <option value="">Seleccione...</option>
+                                                    {MEDIOS_CONOCIMIENTO.map(m => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                            </FormRow>
+                                        )}
+                                        {isVisible("campana") && (
+                                            <FormRow label="Campaña Relacionada">
+                                                <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña publicitaria" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("remitidoPor") && (
+                                            <FormRow label="Remitido por">
+                                                <div className="flex flex-col gap-2 w-full">
+                                                    <div className="flex gap-2">
+                                                        <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
+                                                            <option value="Libre">Libre</option>
+                                                            <option value="Paciente">Paciente</option>
+                                                            <option value="Usuario">Usuario</option>
+                                                        </select>
+                                                        {watch("remitidoPorType") === "Libre" && (
+                                                            <input
+                                                                {...register("remitidoPorValue")}
+                                                                className="form-input text-sm flex-1"
+                                                                placeholder="Nombre de quien refiere"
+                                                            />
+                                                        )}
+                                                        {watch("remitidoPorType") === "Paciente" && (
+                                                            <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                                                <option value="">Seleccione un paciente...</option>
+                                                                {pacientesRemision.map(p => (
+                                                                    <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
+                                                                        {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        )}
+                                                        {watch("remitidoPorType") === "Usuario" && (
+                                                            <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                                                <option value="">Seleccione un usuario...</option>
+                                                                {usuariosRemision.map(u => (
+                                                                    <option key={u.id} value={`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}>
+                                                                        {`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </FormRow>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            {(isVisible("respNombre") || isVisible("respParentesco") || isVisible("respCelular") || isVisible("respTelefono") || isVisible("respCorreo") || isVisible("acompNombre") || isVisible("acompTelefono")) && (
+                                <>
+                                    <SectionTitle num="5" title="Responsable y Acompañante" />
+                                    <div className="pl-0 md:pl-4 space-y-1">
+                                        {isVisible("respNombre") && (
+                                            <FormRow label="Nombre Responsable" error={errors.nombreResponsable}>
+                                                <input {...register("nombreResponsable")} className="form-input text-sm w-full" placeholder="Nombre completo del responsable" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("respParentesco") && (
+                                            <FormRow label="Parentesco">
+                                                <select {...register("parentesco")} className="form-input text-sm w-full md:w-64">
+                                                    <option value="">Seleccione...</option>
+                                                    {PARENTESCOS.map(p => <option key={p} value={p}>{p}</option>)}
+                                                </select>
+                                            </FormRow>
+                                        )}
+                                        {isVisible("respCelular") && (
+                                            <FormRow label="Celular Responsable" error={errors.celularResponsable}>
+                                                <input {...register("celularResponsable")} className="form-input text-sm w-full md:w-64" placeholder="Celular" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("respTelefono") && (
+                                            <FormRow label="Teléfono Responsable" error={errors.telefonoResponsable}>
+                                                <input {...register("telefonoResponsable")} className="form-input text-sm w-full md:w-64" placeholder="Teléfono" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("respCorreo") && (
+                                            <FormRow label="Correo Responsable" error={errors.emailResponsable}>
+                                                <input {...register("emailResponsable")} className="form-input text-sm w-full" placeholder="Correo electrónico del responsable" />
+                                            </FormRow>
+                                        )}
+
+                                        {(isVisible("acompNombre") || isVisible("acompTelefono")) && (
+                                            <div className="my-4 border-t border-slate-100" />
+                                        )}
+
+                                        {isVisible("acompNombre") && (
+                                            <FormRow label="Nombre Acompañante" error={errors.nombreAcompanante}>
+                                                <input {...register("nombreAcompanante")} className="form-input text-sm w-full" placeholder="Nombre completo del acompañante" />
+                                            </FormRow>
+                                        )}
+                                        {isVisible("acompTelefono") && (
+                                            <FormRow label="Teléfono Acompañante" error={errors.telefonoAcompanante}>
+                                                <input {...register("telefonoAcompanante")} className="form-input text-sm w-full md:w-64" placeholder="Teléfono" />
+                                            </FormRow>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            {(isVisible("alertas") || isVisible("nota")) && (
+                                <>
+                                    <SectionTitle num="6" title="Alertas y Notas Clínicas" />
+                                    <div className="pl-0 md:pl-4 space-y-4">
+                                        {isVisible("alertas") && (
+                                            <div className="border border-rose-200/50 bg-rose-50/10 rounded-2xl p-6">
+                                                <label className="flex items-center gap-2 text-rose-600 font-bold mb-3"><FiAlertCircle /> ALERTA MÉDICA</label>
+                                                <textarea 
+                                                    {...register("alertas")} 
+                                                    className="w-full h-24 p-4 border border-rose-200 rounded-xl focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 text-sm text-slate-800 shadow-inner" 
+                                                    placeholder="Escribe alergias o condiciones médicas críticas aquí..."
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        {isVisible("nota") && (
+                                            <div className="border border-slate-200/50 bg-slate-50/30 rounded-2xl p-6">
+                                                <label className="flex items-center gap-2 text-slate-600 font-bold mb-3 text-[13px]">Notas Administrativas</label>
+                                                <textarea 
+                                                    {...register("notas")} 
+                                                    className="w-full h-32 p-4 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm text-slate-700 shadow-inner" 
+                                                    placeholder="Observaciones adicionales, seguimiento administrativo..."
+                                                />
                                             </div>
                                         )}
                                     </div>
-                                </FormRow>
-                                <FormRow label="Tipo de Vinculación" required error={errors.tipoVinculacion}>
-                                    <select {...register("tipoVinculacion")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione tipo...</option>
-                                        {TIPOS_VINCULACION.map(v => <option key={v} value={v}>{v}</option>)}
-                                    </select>
-                                </FormRow>
-
-                                <FormRow label="Póliza de Salud">
-                                    <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-64" placeholder="Número de contrato o póliza" />
-                                </FormRow>
-
-                                <FormRow label="Convenio / Beneficio">
-                                    <input {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Ecopetrol" />
-                                </FormRow>
-                                <FormRow label="Convenio de Pago">
-                                    <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
-                                </FormRow>
-                            </div>
-
-                            <SectionTitle num="4" title="Estrategia de Mercadeo" />
-                            <div className="pl-0 md:pl-4 space-y-1">
-                                <FormRow label="¿Cómo nos conoció?">
-                                    <select {...register("comoConocio")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {MEDIOS_CONOCIMIENTO.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
-                                </FormRow>
-                                <FormRow label="Campaña Relacionada">
-                                    <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña publicitaria" />
-                                </FormRow>
-                                <FormRow label="Remitido por">
-                                    <div className="flex flex-col gap-2 w-full">
-                                        <div className="flex gap-2">
-                                            <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
-                                                <option value="Libre">Libre</option>
-                                                <option value="Paciente">Paciente</option>
-                                                <option value="Usuario">Usuario</option>
-                                            </select>
-                                            {/* Libre: texto libre */}
-                                            {watch("remitidoPorType") === "Libre" && (
-                                                <input
-                                                    {...register("remitidoPorValue")}
-                                                    className="form-input text-sm flex-1"
-                                                    placeholder="Nombre de quien refiere"
-                                                />
-                                            )}
-                                            {/* Paciente: dropdown de pacientes */}
-                                            {watch("remitidoPorType") === "Paciente" && (
-                                                <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
-                                                    <option value="">Seleccione un paciente...</option>
-                                                    {pacientesRemision.map(p => (
-                                                        <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
-                                                            {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            )}
-                                            {/* Usuario: dropdown de usuarios */}
-                                            {watch("remitidoPorType") === "Usuario" && (
-                                                <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
-                                                    <option value="">Seleccione un usuario...</option>
-                                                    {usuariosRemision.map(u => (
-                                                        <option key={u.id} value={`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}>
-                                                            {`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            )}
-                                        </div>
-                                    </div>
-                                </FormRow>
-                            </div>
-
-                             <SectionTitle num="5" title="Responsable y Acompañante" />
-                            <div className="pl-0 md:pl-4 space-y-1">
-                                <FormRow label="Nombre Responsable" error={errors.nombreResponsable}>
-                                    <input {...register("nombreResponsable")} className="form-input text-sm w-full" placeholder="Nombre completo del responsable" />
-                                </FormRow>
-                                <FormRow label="Parentesco">
-                                    <select {...register("parentesco")} className="form-input text-sm w-full md:w-64">
-                                        <option value="">Seleccione...</option>
-                                        {PARENTESCOS.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
-                                </FormRow>
-                                <FormRow label="Celular Responsable" error={errors.celularResponsable}>
-                                    <input {...register("celularResponsable")} className="form-input text-sm w-full md:w-64" placeholder="Celular" />
-                                </FormRow>
-
-                                <div className="my-4 border-t border-slate-100" />
-
-                                <FormRow label="Nombre Acompañante" error={errors.nombreAcompanante}>
-                                    <input {...register("nombreAcompanante")} className="form-input text-sm w-full" placeholder="Nombre completo del acompañante" />
-                                </FormRow>
-                                <FormRow label="Teléfono Acompañante" error={errors.telefonoAcompanante}>
-                                    <input {...register("telefonoAcompanante")} className="form-input text-sm w-full md:w-64" placeholder="Teléfono" />
-                                </FormRow>
-                            </div>
-
-                            <SectionTitle num="6" title="Alertas y Notas Clínicas" />
-                            <div className="pl-0 md:pl-4 space-y-4">
-                                <div className="border border-rose-200/50 bg-rose-50/10 rounded-2xl p-6">
-                                    <label className="flex items-center gap-2 text-rose-600 font-bold mb-3"><FiAlertCircle /> ALERTA MÉDICA</label>
-                                    <textarea 
-                                        {...register("alertas")} 
-                                        className="w-full h-24 p-4 border border-rose-200 rounded-xl focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 text-sm text-slate-800 shadow-inner" 
-                                        placeholder="Escribe alergias o condiciones médicas críticas aquí..."
-                                    />
-                                </div>
-                                
-                                <div className="border border-slate-200/50 bg-slate-50/30 rounded-2xl p-6">
-                                    <label className="flex items-center gap-2 text-slate-600 font-bold mb-3 text-[13px]">Notas Administrativas</label>
-                                    <textarea 
-                                        {...register("notas")} 
-                                        className="w-full h-32 p-4 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm text-slate-700 shadow-inner" 
-                                        placeholder="Observaciones adicionales, seguimiento administrativo..."
-                                    />
-                                </div>
-                            </div>
+                                </>
+                            )}
                         </div>
 
                         {/* RIGHT COLUMN - FLOATING PHOTO PANEL */}
@@ -860,20 +1050,24 @@ export default function PatientForm({
                                                 {planes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Profesional Responsable</label>
-                                            <select {...register("profesionalId")} className="form-input text-xs w-full">
-                                                <option value="">Ninguno asignado</option>
-                                                {profesionales.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sede de atención</label>
-                                            <select {...register("sede")} className="form-input text-xs w-full">
-                                                <option value="">Ninguna asignada</option>
-                                                {sucursales.map(s => <option key={s.id} value={s.nombre}>{s.nombre}</option>)}
-                                            </select>
-                                        </div>
+                                        {isVisible("profesionales") && (
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Profesional Responsable</label>
+                                                <select {...register("profesionalId")} className="form-input text-xs w-full">
+                                                    <option value="">Ninguno asignado</option>
+                                                    {profesionales.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
+                                        {isVisible("sucursales") && (
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sede de atención</label>
+                                                <select {...register("sede")} className="form-input text-xs w-full">
+                                                    <option value="">Ninguna asignada</option>
+                                                    {sucursales.map(s => <option key={s.id} value={s.nombre}>{s.nombre}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

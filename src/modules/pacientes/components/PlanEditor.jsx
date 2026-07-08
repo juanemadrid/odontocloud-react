@@ -3,7 +3,7 @@ import { useToast } from '../../../context/ToastContext';
 import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
-import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle } from 'react-icons/fi';
 import { useFormContext } from 'react-hook-form';
 import { useAuth } from '../../../context/AuthContext';
 import ProcedureAdditionModal from './ProcedureAdditionModal';
@@ -23,12 +23,15 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         email: watchPatient("email") || dbPatient?.email
     };
 
-    const isEditing = !!initialData;
+    const isEditing = !!initialData?.id;
     const patientId = patient?.id;
     const toast = useToast();
     const [loading, setLoading] = useState(false);
     const [title, setTitle] = useState(initialData?.title || "Presupuesto Integral de Tratamiento");
     const [baseListId, setBaseListId] = useState(null);
+
+    const [evolutions, setEvolutions] = useState([]);
+    const [payments, setPayments] = useState([]);
 
     const inquilino = userProfile?.inquilino;
     const [planes, setPlanes] = useState([]);
@@ -58,6 +61,94 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         fetchPlanes();
     }, [inquilino]);
 
+    useEffect(() => {
+        const fetchEvolutionsAndPayments = async () => {
+            if (!patientId) return;
+            try {
+                // 1. Fetch clinical evolutions
+                const evoSnap = await getDocs(query(
+                    collection(db, "clinical_evolutions"),
+                    where("patientId", "==", patientId)
+                ));
+                setEvolutions(evoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+                // 2. Fetch payments if this plan has an ID
+                if (initialData?.id) {
+                    const paySnap = await getDocs(query(
+                        collection(db, "pagos"),
+                        where("patientId", "==", patientId),
+                        where("planId", "==", initialData.id)
+                    ));
+                    setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== "Anulado"));
+                }
+            } catch (err) {
+                console.error("Error fetching clinical data for plan editor:", err);
+            }
+        };
+        fetchEvolutionsAndPayments();
+    }, [patientId, initialData?.id]);
+
+    const isItemRealized = (itemId) => {
+        return evolutions.some(evo => 
+            evo.planId === initialData?.id && 
+            evo.plantillaItems?.[itemId]?.checked === true
+        );
+    };
+
+    const paidMap = React.useMemo(() => {
+        const map = {};
+        (items || []).forEach(it => {
+            map[it.id] = 0;
+        });
+        
+        const oldPayments = [];
+        const newPayments = [];
+        payments.forEach(p => {
+            if (p.itemPayments && p.itemPayments.length > 0) {
+                newPayments.push(p);
+            } else {
+                oldPayments.push(p);
+            }
+        });
+
+        // 1. Process explicit item payments
+        newPayments.forEach(p => {
+            p.itemPayments.forEach(ip => {
+                if (map[ip.itemId] !== undefined) {
+                    map[ip.itemId] += Number(ip.monto || 0);
+                }
+            });
+        });
+
+        // 2. Process legacy payments
+        oldPayments.forEach(p => {
+            let remaining = Number(p.monto || 0);
+            for (let i = 0; i < (items || []).length; i++) {
+                if (remaining <= 0) break;
+                const it = (items || [])[i];
+                const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                const currentPaid = map[it.id] || 0;
+                const currentSaldo = Math.max(0, totalCost - currentPaid);
+                if (currentSaldo > 0) {
+                    const allocated = Math.min(currentSaldo, remaining);
+                    map[it.id] = (map[it.id] || 0) + allocated;
+                    remaining -= allocated;
+                }
+            }
+        });
+
+        return map;
+    }, [payments, items]);
+
+    const hasRealizedDebt = React.useMemo(() => {
+        if (!initialData?.id) return false;
+        return (items || []).some(item => {
+            const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+            const paid = paidMap[item.id] || 0;
+            return isItemRealized(item.id) && (totalCost - paid) > 0;
+        });
+    }, [items, paidMap, evolutions]);
+
     const cargarCombo = async (plan) => {
         setLoadingPlanItems(true);
         try {
@@ -78,7 +169,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 qty: Number(it.cantidad || 1),
                 descuento: Number(it.descuento || 0),
                 dientes: it.dientes || "",
-                line_obs: it.line_obs || ""
+                line_obs: it.line_obs || "",
+                permite_descuento: it.permite_descuento !== undefined ? it.permite_descuento : true,
+                max_desc: it.max_desc !== undefined ? Number(it.max_desc) : 100
             }));
 
             setItems([...items, ...newItems]);
@@ -245,7 +338,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             ...i,
             desc: proc.nombre || proc.label,
             amount: proc.precio || proc.value || 0,
-            code: proc.codigo || ""
+            code: proc.codigo || "",
+            permite_descuento: proc.permite_descuento !== undefined ? proc.permite_descuento : true,
+            max_desc: proc.max_desc !== undefined ? Number(proc.max_desc) : 100
         } : i));
         setSearchResults([]);
         setShowResults(false);
@@ -262,6 +357,23 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const updateItem = (id, field, val) => {
+        if (field === 'descuento') {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                const permiteDesc = item.permite_descuento !== undefined ? item.permite_descuento : true;
+                if (!permiteDesc && Number(val) > 0) {
+                    toast.error(`Este procedimiento ("${item.desc}") no permite descuentos.`);
+                    return;
+                }
+
+                const maxDescPercent = item.max_desc !== undefined ? Number(item.max_desc) : 100;
+                const maxDiscountVal = (item.amount * item.qty) * (maxDescPercent / 100);
+                if (Number(val) > maxDiscountVal) {
+                    toast.error(`El descuento máximo para "${item.desc}" es del ${maxDescPercent}% ($${maxDiscountVal.toLocaleString('es-CO')})`);
+                    return;
+                }
+            }
+        }
         setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
     };
 
@@ -289,7 +401,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         setConvertModal(false);
         setLoading(true);
         try {
-            const validItems = items.filter(i => i.desc?.trim() !== "");
+            const validItems = items.filter(i => (i.desc || "").trim() !== "");
             if (validItems.length === 0) {
                 toast.error("Agrega al menos un tratamiento antes de convertir");
                 setLoading(false);
@@ -337,7 +449,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             return;
         }
 
-        const validItems = items.filter(i => i.desc.trim() !== "");
+        const validItems = items.filter(i => (i.desc || "").trim() !== "");
         if (validItems.length === 0) {
             toast.error("Agrega al menos un tratamiento");
             return;
@@ -371,6 +483,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             onSaved?.();
         } catch (error) {
             console.error("Error saving plan:", error);
+            toast.error(`Error al guardar: ${error.message || 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -493,41 +606,65 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
             {/* Main Area: The Invoice Editor */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-32">
-                <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
-                    
-                    {/* Header Table Stylized */}
-                    <div className="bg-slate-50/50 px-6 py-4 flex items-center justify-between border-b border-slate-100">
-                         <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                                  <FiFileText size={14} />
-                              </div>
-                              <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Detalle de Procedimientos & Costos</h5>
-                         </div>
-                    </div>
+                <div className="max-w-6xl mx-auto space-y-4">
+                    {hasRealizedDebt && (
+                        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex items-center gap-4 text-rose-800 shrink-0 animate-fadeIn shadow-sm">
+                            <FiAlertCircle size={24} className="text-rose-500 shrink-0 animate-bounce" />
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-widest leading-none text-rose-600 mb-1">Paciente tiene deuda activa</p>
+                                <p className="text-[10px] font-bold text-rose-500/80 uppercase tracking-wider leading-normal">
+                                    Este presupuesto contiene procedimientos completados en la evolución clínica que aún no han sido cancelados.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
+                        
+                        {/* Header Table Stylized */}
+                        <div className="bg-slate-50/50 px-6 py-4 flex items-center justify-between border-b border-slate-100">
+                             <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400">
+                                      <FiFileText size={14} />
+                                  </div>
+                                  <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Detalle de Procedimientos & Costos</h5>
+                             </div>
+                        </div>
 
-                    <table className="w-full text-left table-fixed">
-                        <thead>
-                            <tr className="bg-white border-b border-slate-50">
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-10">#</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-1/3">Tratamiento / Descripción</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-16">Cant.</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Dientes</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Valor Unit.</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Subtotal</th>
-                                <th className="px-4 py-3 w-12"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {items.map((item, index) => (
-                                <tr key={item.id} className="group hover:bg-slate-50/5 transition-colors">
-                                    <td className="px-4 py-3 text-[10px] font-black text-slate-300 text-center">{index + 1}</td>
-                                    <td className="px-4 py-3 align-middle">
-                                        <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight">
-                                            {item.code && <span className="text-indigo-400 mr-2 text-[9px] font-mono">{item.code}</span>}
-                                            {item.desc}
-                                        </div>
-                                    </td>
+                        <table className="w-full text-left table-fixed">
+                            <thead>
+                                <tr className="bg-white border-b border-slate-50">
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-10">#</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-1/3">Tratamiento / Descripción</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-16">Cant.</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Dientes</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Valor Unit.</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Subtotal</th>
+                                    <th className="px-4 py-3 w-12"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {items.map((item, index) => (
+                                    <tr key={item.id} className="group hover:bg-slate-50/5 transition-colors">
+                                        <td className="px-4 py-3 text-[10px] font-black text-slate-300 text-center">{index + 1}</td>
+                                        <td className="px-4 py-3 align-middle">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight">
+                                                    {item.code && <span className="text-indigo-400 mr-2 text-[9px] font-mono">{item.code}</span>}
+                                                    {item.desc}
+                                                </div>
+                                                {isItemRealized(item.id) && (
+                                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[8px] font-black uppercase tracking-widest ml-1 animate-fadeIn">
+                                                        ✓ REALIZADO
+                                                    </span>
+                                                )}
+                                                {isItemRealized(item.id) && (Math.max(0, (Number(item.amount) * Number(item.qty)) - (item.descuento || 0) - (paidMap[item.id] || 0))) > 0 && (
+                                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[8px] font-black uppercase tracking-widest ml-1 animate-pulse">
+                                                        ⚠️ DEUDA: ${(Math.max(0, (Number(item.amount) * Number(item.qty)) - (item.descuento || 0) - (paidMap[item.id] || 0))).toLocaleString('es-CO')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
                                     <td className="px-4 py-3 align-middle text-center">
                                         <input
                                             type="number"
@@ -657,6 +794,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                     </div>
                 </div>
             </div>
+        </div>
 
             {/* Modal de Planes */}
             {showPlanesModal && (

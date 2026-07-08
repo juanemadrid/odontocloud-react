@@ -71,14 +71,14 @@ export default function AppointmentModal({
     const { userProfile } = useAuth();
     const { can } = usePermissions();
     const hasWritePermission = initialData?.id ? can("Agenda", "Agenda", "editar") : can("Agenda", "Agenda", "crear");
-    const inquilino = userProfile?.inquilino;
-    const [patientResults, setPatientResults] = useState([]);
+    const inquilino = userProfile?.inquilino;    const [patientResults, setPatientResults] = useState([]);
     const [searching, setSearching] = useState(false);
     const [term, setTerm] = useState("");
     const [selectedPatientPhone, setSelectedPatientPhone] = useState("");
     const searchInputWrapperRef = useRef(null);
     const [dropdownStyle, setDropdownStyle] = useState({});
-
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+ 
     const { control, register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(appointmentSchema),
         defaultValues: {
@@ -93,18 +93,20 @@ export default function AppointmentModal({
             precioItemId: "",
             fecha: "",
             hora: "",
+            status: "confirmed",
             valoracion: false,
             control: false,
             enviarCorreo: true
         }
     });
-
+ 
     const isNew = watch("isNewPatient");
     const selectedPatientName = watch("pacienteNombre");
-
+ 
     useEffect(() => {
         if (isOpen && initialData) {
-            let f = "", h = "";
+            setIsConfirmingDelete(false);
+            let f = "", h = "";;
             if (initialData.start) {
                 const y = initialData.start.getFullYear();
                 const m = String(initialData.start.getMonth() + 1).padStart(2, '0');
@@ -156,7 +158,14 @@ export default function AppointmentModal({
             }
             setSearching(true);
             try {
-                const results = await searchPatients(inquilino, term);
+                const raw = await searchPatients(inquilino, term);
+                // Deduplicate by patient id to avoid React duplicate key warnings
+                const seen = new Set();
+                const results = raw.filter(p => {
+                    if (seen.has(p.id)) return false;
+                    seen.add(p.id);
+                    return true;
+                });
                 setPatientResults(results);
             } catch (e) {
                 console.error("Search error:", e);
@@ -223,28 +232,357 @@ export default function AppointmentModal({
             const start = new Date(y, m - 1, d, hh, mm);
             const end = new Date(start.getTime() + data.duracion * 60000);
 
-            // ✅ VALIDACIÓN: Prevenir citas duplicadas en mismo horario
-            if (!data.id) { // Solo validar en citas nuevas, no al editar
-                const { collection: firestoreCollection, query: firestoreQuery, where, getDocs } = await import('firebase/firestore');
-                const { db } = await import('../../../firebase/firebaseConfig');
+            // Import Firebase Firestore dynamically
+            const { collection: firestoreCollection, query: firestoreQuery, where, getDocs } = await import('firebase/firestore');
+            const { db } = await import('../../../firebase/firebaseConfig');
+
+            // Si la cita se está guardando como cancelada, no requiere validación de horarios ni solapamientos
+            const isCancelled = data.status === 'cancelled';
+
+            // Helper robusto: detecta citas canceladas sin importar capitalización ni idioma
+            const esCitaCancelada = (cita) => {
+                const s = (cita.status || '').toLowerCase();
+                const e = (cita.estado || '').toLowerCase();
+                return s === 'cancelled' || s === 'cancelado' || s === 'cancelada' ||
+                       e === 'cancelado' || e === 'cancelada' || e === 'cancelled';
+            };
+
+            if (!isCancelled) {
+                // 1. ✅ VALIDACIÓN DE DISPONIBILIDAD DEL DOCTOR (Horarios Predefinidos, Aperturas, No Disponibles)
+                if (data.doctorId) {
+                const docId = data.doctorId;
                 
-                const duplicateCheck = firestoreQuery(
-                    firestoreCollection(db, 'agenda'),
-                    where('inquilino', '==', inquilino),
-                    where('doctorId', '==', data.doctorId),
-                    where('fecha', '==', data.fecha),
-                    where('hora', '==', data.hora)
-                );
-                
-                const duplicateSnap = await getDocs(duplicateCheck);
-                if (!duplicateSnap.empty) {
-                    toast.error(`Ya existe una cita para ${data.doctor} el ${data.fecha} a las ${data.hora}. Elija otro horario.`);
-                    return;
+                // Fetch doctor schedule configurations in real-time
+                const [predSnap, openSnap, unavailSnap] = await Promise.all([
+                    getDocs(firestoreCollection(db, "usuarios", docId, "horarios_predefinidos")),
+                    getDocs(firestoreCollection(db, "usuarios", docId, "agenda_abierta")),
+                    getDocs(firestoreCollection(db, "usuarios", docId, "no_disponibles"))
+                ]);
+
+                const predefined = predSnap.docs.map(doc => doc.data());
+                const openAgenda = openSnap.docs.map(doc => doc.data());
+                const unavailable = unavailSnap.docs.map(doc => doc.data());
+
+                const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                const dayName = days[start.getDay()];
+
+                const parseTimeToMinutes = (timeStr) => {
+                    if (!timeStr) return 0;
+                    const match12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                    if (match12) {
+                        let [_, hStr, mStr, ampm] = match12;
+                        let h = parseInt(hStr, 10);
+                        const m = parseInt(mStr, 10);
+                        if (ampm.toUpperCase() === "PM" && h < 12) h += 12;
+                        if (ampm.toUpperCase() === "AM" && h === 12) h = 0;
+                        return h * 60 + m;
+                    }
+                    const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+                    if (match24) {
+                        return parseInt(match24[1], 10) * 60 + parseInt(match24[2], 10);
+                    }
+                    return 0;
+                };
+
+                const apptStartMin = hh * 60 + mm;
+                const apptEndMin = apptStartMin + data.duracion;
+
+                // Check unavailable slots first
+                for (const slot of unavailable) {
+                    if (slot.fecha === data.fecha && slot.active !== false) {
+                        const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                        const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                        if (apptStartMin < slotEndMin && apptEndMin > slotStartMin) {
+                            const motivoStr = slot.motivo ? ` por motivo de: "${slot.motivo}"` : "";
+                            toast.error(`El doctor no está disponible en este horario${motivoStr}.`);
+                            return;
+                        }
+                    }
+                }
+
+                // Solo validar disponibilidad si el doctor tiene horarios configurados (opt-in)
+                // Si no tiene ningún horario configurado, se permite cualquier hora
+                const hasScheduleConfig = predefined.length > 0 || openAgenda.length > 0;
+
+                // ✅ EXCEPCIÓN: Si existe una cita cancelada del mismo doctor, mismo consultorio,
+                // misma fecha y misma hora, significa que el slot fue previamente validado como válido.
+                // Permitir la nueva cita sin restricción de asignación de consultorio.
+                let hasFreedSlotFromCancellation = false;
+                if (hasScheduleConfig && data.consultorioId) {
+                    const cancelledQuery = firestoreQuery(
+                        firestoreCollection(db, 'citas'),
+                        where('inquilino', '==', inquilino),
+                        where('doctorId', '==', data.doctorId),
+                        where('consultorioId', '==', data.consultorioId),
+                        where('fecha', '==', data.fecha),
+                        where('horaInicio', '==', data.hora)
+                    );
+                    const cancelledSnap = await getDocs(cancelledQuery);
+                    hasFreedSlotFromCancellation = cancelledSnap.docs.some(d => {
+                        const c = d.data();
+                        return esCitaCancelada(c);
+                    });
+                }
+
+                if (hasScheduleConfig && !hasFreedSlotFromCancellation) {
+                    let isAvailable = false;
+
+                    // Check open agenda custom dates
+                    for (const slot of openAgenda) {
+                        if (slot.fecha === data.fecha && slot.active !== false) {
+                            const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                            const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                            if (apptStartMin >= slotStartMin && apptEndMin <= slotEndMin) {
+                                isAvailable = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Check predefined weekly schedule slots
+                    if (!isAvailable) {
+                        const compareDays = (d1, d2) => {
+                            if (!d1 || !d2) return false;
+                            return d1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") ===
+                                   d2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        };
+
+                        for (const slot of predefined) {
+                            if (compareDays(slot.dia, dayName) && slot.activo !== false) {
+                                const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                                const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                                if (apptStartMin >= slotStartMin && apptEndMin <= slotEndMin) {
+                                    // Time matches predefined slot. Check physical resource:
+                                    if (slot.recursoId === "todos" || slot.recursoId === data.consultorioId) {
+                                        isAvailable = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!isAvailable) {
+                        let hasPredefinedTimeButWrongResource = false;
+                        let scheduledResourceName = "";
+                        
+                        const compareDays = (d1, d2) => {
+                            if (!d1 || !d2) return false;
+                            return d1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") ===
+                                   d2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        };
+
+                        for (const slot of predefined) {
+                            if (compareDays(slot.dia, dayName) && slot.activo !== false) {
+                                const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                                const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                                if (apptStartMin >= slotStartMin && apptEndMin <= slotEndMin) {
+                                    hasPredefinedTimeButWrongResource = true;
+                                    scheduledResourceName = slot.recursoNombre || "otro consultorio";
+                                    break;
+                                }
+                            }
+                        }
+
+                        const doctorName = doctors.find(d => d.id === data.doctorId)?.nombreCompleto || 
+                                          `${doctors.find(d => d.id === data.doctorId)?.nombre || ''} ${doctors.find(d => d.id === data.doctorId)?.apellido || ''}`.trim() || 
+                                          'El doctor';
+
+                        if (hasPredefinedTimeButWrongResource) {
+                            toast.error(`${doctorName} no está programado para atender en este consultorio en ese horario. Está asignado a: ${scheduledResourceName}.`);
+                        } else {
+                            const endTimeStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+                            toast.error(`${doctorName} no tiene agenda habilitada para el día ${dayName} en el horario de ${data.hora} a ${endTimeStr}.`);
+                        }
+                        return;
+                    }
                 }
             }
 
+            // 1.5 ✅ VALIDACIÓN DE DISPONIBILIDAD DEL CONSULTORIO (Recurso Físico)
+            if (data.consultorioId) {
+                const resId = data.consultorioId;
+                
+                // Fetch consultorio schedule configurations in real-time
+                const [resPredSnap, resOpenSnap, resUnavailSnap] = await Promise.all([
+                    getDocs(firestoreCollection(db, "tenants", inquilino, "recursos_fisicos", resId, "horarios_predefinidos")),
+                    getDocs(firestoreCollection(db, "tenants", inquilino, "recursos_fisicos", resId, "agenda_abierta")),
+                    getDocs(firestoreCollection(db, "tenants", inquilino, "recursos_fisicos", resId, "no_disponibles"))
+                ]);
+
+                const resPredefined = resPredSnap.docs.map(doc => doc.data());
+                const resOpenAgenda = resOpenSnap.docs.map(doc => doc.data());
+                const resUnavailable = resUnavailSnap.docs.map(doc => doc.data());
+
+                const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                const dayName = days[start.getDay()];
+
+                const parseTimeToMinutes = (timeStr) => {
+                    if (!timeStr) return 0;
+                    const match12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                    if (match12) {
+                        let [_, hStr, mStr, ampm] = match12;
+                        let h = parseInt(hStr, 10);
+                        const m = parseInt(mStr, 10);
+                        if (ampm.toUpperCase() === "PM" && h < 12) h += 12;
+                        if (ampm.toUpperCase() === "AM" && h === 12) h = 0;
+                        return h * 60 + m;
+                    }
+                    const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+                    if (match24) {
+                        return parseInt(match24[1], 10) * 60 + parseInt(match24[2], 10);
+                    }
+                    return 0;
+                };
+
+                const apptStartMin = hh * 60 + mm;
+                const apptEndMin = apptStartMin + data.duracion;
+
+                // Check unavailable slots first
+                for (const slot of resUnavailable) {
+                    if (slot.fecha === data.fecha && slot.active !== false) {
+                        const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                        const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                        if (apptStartMin < slotEndMin && apptEndMin > slotStartMin) {
+                            const motivoStr = slot.motivo ? ` por motivo de: "${slot.motivo}"` : "";
+                            toast.error(`El consultorio no está disponible en este horario${motivoStr}.`);
+                            return;
+                        }
+                    }
+                }
+
+                // If schedules are configured, check availability
+                if (resPredefined.length > 0 || resOpenAgenda.length > 0) {
+                    let isResAvailable = false;
+
+                    // Check open agenda
+                    for (const slot of resOpenAgenda) {
+                        if (slot.fecha === data.fecha && slot.active !== false) {
+                            const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                            const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                            if (apptStartMin >= slotStartMin && apptEndMin <= slotEndMin) {
+                                isResAvailable = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Check predefined slots
+                    if (!isResAvailable) {
+                        const compareDays = (d1, d2) => {
+                            if (!d1 || !d2) return false;
+                            return d1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") ===
+                                   d2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        };
+
+                        for (const slot of resPredefined) {
+                            if (compareDays(slot.dia, dayName) && slot.activo !== false) {
+                                const slotStartMin = parseTimeToMinutes(slot.horaInicio);
+                                const slotEndMin = parseTimeToMinutes(slot.horaFin);
+                                if (apptStartMin >= slotStartMin && apptEndMin <= slotEndMin) {
+                                    isResAvailable = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!isResAvailable) {
+                        const consultorioName = chairs.find(c => c.id === resId)?.nombre || 'el consultorio seleccionado';
+                        const endTimeStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+                        toast.error(`${consultorioName} no tiene horario de atención habilitado para el día ${dayName} de ${data.hora} a ${endTimeStr}.`);
+                        return;
+                    }
+                }
+            }
+
+            // 2. ✅ VALIDACIÓN: Prevenir solapamiento con otras citas del mismo Doctor o del mismo Consultorio
+            const nuevaInicio = start.getTime();
+            const nuevaFin = end.getTime();
+            
+            // Obtener todas las citas del doctor en esa fecha
+            const doctorCheck = firestoreQuery(
+                firestoreCollection(db, 'citas'),
+                where('inquilino', '==', inquilino),
+                where('doctorId', '==', data.doctorId),
+                where('fecha', '==', data.fecha)
+            );
+            
+            const doctorSnap = await getDocs(doctorCheck);
+            
+
+            // Verificar solapamiento de horarios con citas del doctor
+            for (const docSnap of doctorSnap.docs) {
+                if (data.id && docSnap.id === data.id) continue; // Excluir la cita actual que se está editando
+                
+                const citaExistente = docSnap.data();
+                if (esCitaCancelada(citaExistente)) continue;
+                
+                const [citaHh, citaMm] = (citaExistente.horaInicio || "00:00").split(":").map(Number);
+                const citaInicio = new Date(start);
+                citaInicio.setHours(citaHh, citaMm, 0, 0);
+                const citaFin = new Date(citaInicio.getTime() + (citaExistente.duracion || 30) * 60000);
+                
+                if (nuevaInicio < citaFin.getTime() && nuevaFin > citaInicio.getTime()) {
+                    const doctorName = doctors.find(d => d.id === data.doctorId)?.nombreCompleto || 
+                                      `${doctors.find(d => d.id === data.doctorId)?.nombre || ''} ${doctors.find(d => d.id === data.doctorId)?.apellido || ''}`.trim() || 
+                                      'el doctor seleccionado';
+                    const horaFinExistente = `${String(citaFin.getHours()).padStart(2, '0')}:${String(citaFin.getMinutes()).padStart(2, '0')}`;
+                    toast.error(`${doctorName} ya tiene una cita programada desde las ${citaExistente.horaInicio} hasta las ${horaFinExistente}.`);
+                    return;
+                }
+            }
+            
+            // Obtener todas las citas del consultorio en esa fecha
+            const consultorioCheck = firestoreQuery(
+                firestoreCollection(db, 'citas'),
+                where('inquilino', '==', inquilino),
+                where('consultorioId', '==', data.consultorioId),
+                where('fecha', '==', data.fecha)
+            );
+            
+            const consultorioSnap = await getDocs(consultorioCheck);
+            
+            // Verificar solapamiento de horarios con citas del consultorio
+            for (const docSnap of consultorioSnap.docs) {
+                if (data.id && docSnap.id === data.id) continue; // Excluir la cita actual que se está editando
+                
+                const citaExistente = docSnap.data();
+                if (esCitaCancelada(citaExistente)) continue;
+                
+                const [citaHh, citaMm] = (citaExistente.horaInicio || "00:00").split(":").map(Number);
+                const citaInicio = new Date(start);
+                citaInicio.setHours(citaHh, citaMm, 0, 0);
+                const citaFin = new Date(citaInicio.getTime() + (citaExistente.duracion || 30) * 60000);
+                
+                if (nuevaInicio < citaFin.getTime() && nuevaFin > citaInicio.getTime()) {
+                    const consultorioName = chairs.find(c => c.id === data.consultorioId)?.nombre || 'el consultorio seleccionado';
+                    const horaFinExistente = `${String(citaFin.getHours()).padStart(2, '0')}:${String(citaFin.getMinutes()).padStart(2, '0')}`;
+                    toast.error(`${consultorioName} está ocupado por otra cita desde las ${citaExistente.horaInicio} hasta las ${horaFinExistente}.`);
+                    return;
+                }
+            }
+            }
+
+            const statusMap = {
+                'pending': 'SIN CONFIRMAR',
+                'confirmed': 'CONFIRMADA',
+                'attended': 'ATENDIDO',
+                'urgencia': 'URGENCIA',
+                'sin-cont-web': 'SIN CONT. WEB',
+                'no-show': 'NO ASISTE',
+                'cancelled': 'CANCELADO',
+                'waiting': 'EN ESPERA'
+            };
+            const finalStatus = (data.status === 'cancelled' && initialData?.start && new Date(initialData.start).getTime() !== start.getTime()) 
+                ? 'confirmed' 
+                : (data.status || 'confirmed');
+            const finalEstado = statusMap[finalStatus] || 'CONFIRMADA';
+
             const payload = {
                 ...data,
+                status: finalStatus,
+                estado: finalEstado,
                 start,
                 end,
                 doctor: doctors.find(d => d.id === data.doctorId) ? `${doctors.find(d => d.id === data.doctorId).nombre || ''} ${doctors.find(d => d.id === data.doctorId).apellido || ''}`.trim() || doctors.find(d => d.id === data.doctorId).nombreCompleto : "Doctor",
@@ -525,6 +863,26 @@ export default function AppointmentModal({
                                         className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 placeholder:text-slate-300 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all resize-none"
                                     />
                                 </div>
+
+                                {initialData?.id && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado de la Cita</label>
+                                        <select 
+                                            {...register("status")} 
+                                            disabled={!hasWritePermission} 
+                                            className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none"
+                                        >
+                                            <option value="pending">Sin Confirmar</option>
+                                            <option value="confirmed">Confirmada</option>
+                                            <option value="attended">Atendido</option>
+                                            <option value="urgencia">Urgencia</option>
+                                            <option value="sin-cont-web">Sin Cont. WEB</option>
+                                            <option value="no-show">No asiste</option>
+                                            <option value="cancelled">Cancelado</option>
+                                            <option value="waiting">En espera</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             {/* COMPONENTES DE ESTADO / ACTUALIDAD */}
@@ -612,23 +970,44 @@ export default function AppointmentModal({
                                             </div>
                                         </div>
                                         <div className="p-2 space-y-1.5 flex flex-col items-center">
-                                            {['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'].map(t => {
-                                                const isSelected = isSameDay && watch("hora") === t;
-                                                return (
-                                                    <button
-                                                        key={t}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setValue("hora", t);
-                                                            setValue("fecha", columnDateStr);
-                                                        }}
-                                                        disabled={!hasWritePermission}
-                                                        className={`w-full max-w-[80px] py-1.5 text-[9px] font-black rounded-lg transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 active:scale-95' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 shadow-sm'} disabled:opacity-40 disabled:cursor-not-allowed`}
-                                                    >
-                                                        {t}
-                                                    </button>
-                                                );
-                                            })}
+                                        {(() => {
+                                                // Generar slots de 07:00 a 21:30 cada 30 minutos
+                                                const slots = [];
+                                                for (let h = 7; h <= 21; h++) {
+                                                    for (let m = 0; m < 60; m += 30) {
+                                                        if (h === 21 && m > 30) break;
+                                                        const hh = String(h).padStart(2, '0');
+                                                        const mm = String(m).padStart(2, '0');
+                                                        slots.push(`${hh}:${mm}`);
+                                                    }
+                                                }
+
+                                                // Formatear a AM/PM para mostrar
+                                                const fmt12 = (t) => {
+                                                    const [hh, mm] = t.split(':').map(Number);
+                                                    const ampm = hh >= 12 ? 'PM' : 'AM';
+                                                    const h12 = hh % 12 || 12;
+                                                    return `${h12}:${String(mm).padStart(2, '0')} ${ampm}`;
+                                                };
+
+                                                return slots.map(t => {
+                                                    const isSelected = isSameDay && watch("hora") === t;
+                                                    return (
+                                                        <button
+                                                            key={t}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setValue("hora", t);
+                                                                setValue("fecha", columnDateStr);
+                                                            }}
+                                                            disabled={!hasWritePermission}
+                                                            className={`w-full max-w-[80px] py-1.5 text-[9px] font-black rounded-lg transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 active:scale-95' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 shadow-sm'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                                                        >
+                                                            {fmt12(t)}
+                                                        </button>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 );
@@ -639,43 +1018,89 @@ export default function AppointmentModal({
 
                 {/* ACTION BAR (OralDrive Styling) */}
                 <div className="px-10 py-6 bg-white border-t border-slate-100 flex items-center justify-between shrink-0">
-                    {initialData?.id ? (
-                        can("Agenda", "Agenda", "eliminar") && (
-                            <button
-                                type="button"
-                                onClick={() => onDelete && onDelete(initialData.id)}
-                                className="group px-8 py-4 rounded-2xl border-2 border-red-500 text-red-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center gap-3"
-                            >
-                                <span className="opacity-70 group-hover:opacity-100 transition-opacity">BORRAR</span>
-                                <span>CANCELAR CITA</span>
-                            </button>
-                        )
+                    {isConfirmingDelete ? (
+                        <div className="flex items-center justify-between w-full bg-red-50 border border-red-100 rounded-2xl p-4 transition-all duration-300 animate-fadeIn">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-red-500 text-white rounded-xl">
+                                    <svg className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[12px] font-extrabold text-red-800 uppercase tracking-wider">¿Está seguro que quiere eliminar esta cita?</p>
+                                    <p className="text-[11px] text-red-600 font-semibold mt-0.5">Esta acción es permanente y no se puede deshacer.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsConfirmingDelete(false)}
+                                    className="px-6 py-3 rounded-xl border border-slate-200 text-slate-500 font-extrabold text-[10px] uppercase tracking-wider hover:bg-white transition-all active:scale-95"
+                                >
+                                    No, Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        console.log("Confirm delete click. onDelete is defined:", !!onDelete, "initialData.id:", initialData?.id);
+                                        if (onDelete) onDelete(initialData.id, true);
+                                    }}
+                                    className="px-6 py-3 rounded-xl bg-red-600 text-white font-extrabold text-[10px] uppercase tracking-wider hover:bg-red-700 hover:shadow-lg hover:shadow-red-100 transition-all active:scale-95"
+                                >
+                                    Sí, Eliminar
+                                </button>
+                            </div>
+                        </div>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
-                        >
-                            CANCELAR
-                        </button>
-                    )}
+                        <>
+                            {initialData?.id ? (
+                                <div className="flex items-center gap-4">
+                                    {can("Agenda", "Agenda", "eliminar") && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsConfirmingDelete(true)}
+                                            className="group px-8 py-4 rounded-2xl border-2 border-red-500 text-red-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center gap-3"
+                                        >
+                                            <span>ELIMINAR CITA</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
+                                    >
+                                        CERRAR
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
+                                >
+                                    CANCELAR
+                                </button>
+                            )}
 
-                    <div className="flex items-center gap-4">
-                        {hasWritePermission && (
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                onClick={handleSubmit(onValidSubmit, onInvalidSubmit)}
-                                className="px-16 py-4 rounded-2xl bg-emerald-600 text-white font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-emerald-700 shadow-2xl shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 min-w-[240px] flex items-center justify-center gap-3"
-                            >
-                                {isSubmitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : null}
-                                <span>{isSubmitting ? "GUARDANDO..." : "CONFIRMAR REGISTRO"}</span>
-                            </button>
-                        )}
-                    </div>
+                            <div className="flex items-center gap-4">
+                                {hasWritePermission && (
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        onClick={handleSubmit(onValidSubmit, onInvalidSubmit)}
+                                        className="px-16 py-4 rounded-2xl bg-emerald-600 text-white font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-emerald-700 shadow-2xl shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 min-w-[240px] flex items-center justify-center gap-3"
+                                    >
+                                        {isSubmitting ? (
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : null}
+                                        <span>{isSubmitting ? "GUARDANDO..." : "CONFIRMAR REGISTRO"}</span>
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
+
             </div>
         </div>,
         document.body

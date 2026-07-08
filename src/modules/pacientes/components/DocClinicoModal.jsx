@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCheck, FiSave, FiPlus, FiTrash2, FiSearch, FiBox, FiList } from 'react-icons/fi';
+import { FiX, FiCheck, FiSave, FiPlus, FiTrash2, FiSearch, FiBox, FiList, FiPenTool } from 'react-icons/fi';
+
 import { collection, doc, setDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
@@ -368,6 +369,62 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
     const [prescripcionDuracionValor, setPrescripcionDuracionValor] = useState("");
     const [prescripcionDuracionUnidad, setPrescripcionDuracionUnidad] = useState("Días");
     const [prescripcionCantidad, setPrescripcionCantidad] = useState("");
+
+    // Auto-calculate quantity when frequency or duration changes
+    const calculateQuantity = (frecuencia, duracion, frecUnidad, durUnidad) => {
+        if (frecUnidad === "Única dosis" || durUnidad === "Única vez") {
+            return "1";
+        }
+        
+        const freq = parseFloat(frecuencia);
+        const dur = parseFloat(duracion);
+        
+        if (isNaN(freq) || isNaN(dur) || freq <= 0 || dur <= 0) return "";
+        
+        let dailyDoses = 1;
+        if (frecUnidad === "Horas") {
+            dailyDoses = 24 / freq;
+        } else if (frecUnidad === "Días") {
+            dailyDoses = 1 / freq;
+        } else if (frecUnidad === "Semanas") {
+            dailyDoses = 1 / (freq * 7);
+        } else if (frecUnidad === "Con las comidas" || frecUnidad === "Antes de dormir") {
+            dailyDoses = isNaN(freq) ? 3 : freq;
+        }
+        
+        let durationDays = 1;
+        if (durUnidad === "Días") {
+            durationDays = dur;
+        } else if (durUnidad === "Semanas") {
+            durationDays = dur * 7;
+        } else if (durUnidad === "Meses") {
+            durationDays = dur * 30;
+        }
+        
+        const totalQuantity = Math.ceil(dailyDoses * durationDays);
+        return totalQuantity.toString();
+    };
+
+    // Effect to auto-calculate quantity
+    React.useEffect(() => {
+        const needsFreqValue = !["Única dosis", "Con las comidas", "Antes de dormir"].includes(prescripcionFrecuenciaUnidad);
+        const needsDurValue = !["Única vez"].includes(prescripcionDuracionUnidad);
+        
+        const freqOk = !needsFreqValue || prescripcionFrecuenciaValor;
+        const durOk = !needsDurValue || prescripcionDuracionValor;
+        
+        if (freqOk && durOk) {
+            const autoQuantity = calculateQuantity(
+                prescripcionFrecuenciaValor, 
+                prescripcionDuracionValor,
+                prescripcionFrecuenciaUnidad,
+                prescripcionDuracionUnidad
+            );
+            if (autoQuantity) {
+                setPrescripcionCantidad(autoQuantity);
+            }
+        }
+    }, [prescripcionFrecuenciaValor, prescripcionDuracionValor, prescripcionFrecuenciaUnidad, prescripcionDuracionUnidad]);
     const [prescripcionRecomendacion, setPrescripcionRecomendacion] = useState("");
 
     // Load active treatment plans with date and status indicators (loads all, preserving duplicates)
@@ -523,7 +580,8 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
             toast.error("Debe seleccionar un medicamento válido");
             return;
         }
-        if (!prescripcionDosisValor.trim() || !prescripcionFrecuenciaValor.trim() || !prescripcionCantidad.trim()) {
+        const needsFreqValue = !["Única dosis", "Con las comidas", "Antes de dormir"].includes(prescripcionFrecuenciaUnidad);
+        if (!prescripcionDosisValor.trim() || (needsFreqValue && !prescripcionFrecuenciaValor.trim()) || !prescripcionCantidad.trim()) {
             toast.error("Complete dosis, frecuencia y cantidad");
             return;
         }
@@ -533,7 +591,9 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
             codigo: selectedMed.cum || "",
             principioActivo: selectedMed.principioActivo || "",
             dosis: `${prescripcionDosisValor} ${prescripcionDosisUnidad}`.trim(),
-            frecuencia: `Cada ${prescripcionFrecuenciaValor} ${prescripcionFrecuenciaUnidad}`,
+            frecuencia: needsFreqValue 
+                ? `Cada ${prescripcionFrecuenciaValor} ${prescripcionFrecuenciaUnidad}`
+                : prescripcionFrecuenciaUnidad,
             viaAdministracion: prescripcionVia,
             duracion: prescripcionDuracionValor ? `${prescripcionDuracionValor} ${prescripcionDuracionUnidad}` : "Única vez",
             cantidad: prescripcionCantidad,
@@ -770,7 +830,7 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Duración</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Cant</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Marca</th>
-                                            {!isViewOnly && <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Acciones</th>}
+                                            <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -782,8 +842,15 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                             </tr>
                                         ) : (
                                             recetaItems.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
-                                                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider">{item.tipo}</span></td>
+                                                <tr key={idx} className={`hover:bg-slate-50/30 transition-colors ${item.doctorSignature ? 'bg-green-50/50 border-l-4 border-green-400' : ''}`}>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider">{item.tipo}</span>
+                                                            {item.doctorSignature && (
+                                                                <span className="px-2 py-0.5 rounded bg-green-50 text-green-600 text-[8px] font-bold uppercase tracking-wider">Firmado</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                     <td className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">{item.codigo}</td>
                                                     <td className="px-4 py-3 text-xs font-bold text-slate-700 uppercase tracking-tight">{item.principioActivo}</td>
                                                     <td className="px-4 py-3 text-xs text-slate-600">{item.dosis}</td>
@@ -792,18 +859,57 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                                     <td className="px-4 py-3 text-xs text-slate-500">{item.duracion}</td>
                                                     <td className="px-4 py-3 text-xs font-black text-slate-800 text-center">{item.cantidad}</td>
                                                     <td className="px-4 py-3 text-xs text-slate-500 uppercase">{item.marca || "-"}</td>
-                                                    {!isViewOnly && (
-                                                        <td className="px-4 py-3 text-right">
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
                                                             <button 
                                                                 type="button"
-                                                                onClick={() => handleRemoveItem(idx)}
-                                                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                                                title="Eliminar ítem"
+                                                                onClick={async () => {
+                                                                    const updatedItems = [...recetaItems];
+                                                                    updatedItems[idx] = { 
+                                                                        ...item, 
+                                                                        doctorSignature: userProfile?.nombreCompleto || userProfile?.nombre || "Doctor",
+                                                                        signedAt: new Date().toISOString(),
+                                                                        signedBy: userProfile?.uid
+                                                                    };
+                                                                    setRecetaItems(updatedItems);
+                                                                    
+                                                                    // Si ya está guardado en base de datos, guardar firma inmediatamente
+                                                                    if (initialData?.id) {
+                                                                        try {
+                                                                            await setDoc(doc(db, `pacientes/${patient.id}/docClis`, initialData.id), {
+                                                                                recetaItems: updatedItems
+                                                                            }, { merge: true });
+                                                                            toast.success("Receta firmada en base de datos");
+                                                                        } catch (e) {
+                                                                            console.error(e);
+                                                                            toast.error("Error al guardar firma");
+                                                                        }
+                                                                    } else {
+                                                                        toast.success("Receta firmada por el doctor");
+                                                                    }
+                                                                }}
+                                                                className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                title="Firmar receta"
+                                                                disabled={item.doctorSignature}
                                                             >
-                                                                <FiTrash2 size={14} />
+                                                                {item.doctorSignature ? (
+                                                                    <FiCheck size={14} className="text-green-600" />
+                                                                ) : (
+                                                                    <FiPenTool size={14} />
+                                                                )}
                                                             </button>
-                                                        </td>
-                                                    )}
+                                                            {!isViewOnly && (
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveItem(idx)}
+                                                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                    title="Eliminar ítem"
+                                                                >
+                                                                    <FiTrash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))
                                         )}
@@ -1026,14 +1132,24 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
 
                             {/* Cantidad */}
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Cantidad *</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="Ej: 15"
-                                    value={prescripcionCantidad} 
-                                    onChange={e => setPrescripcionCantidad(e.target.value)} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 placeholder:text-slate-350"
-                                />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                                    Cantidad * 
+                                    <span className="text-[8px] text-indigo-500 font-bold ml-1">(Auto-calculado)</span>
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        placeholder="Se calcula automáticamente..."
+                                        value={prescripcionCantidad} 
+                                        onChange={e => setPrescripcionCantidad(e.target.value)} 
+                                        className="w-full bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2 text-xs font-bold text-indigo-700 outline-none focus:bg-white focus:border-blue-500 placeholder:text-indigo-300"
+                                    />
+                                    {prescripcionCantidad && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-indigo-500 font-black">
+                                            AUTO
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Recomendación */}

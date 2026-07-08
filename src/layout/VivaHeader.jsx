@@ -26,6 +26,8 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
     const [scrolled, setScrolled] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const location = useLocation();
+    const slug = config?.slug;
+    const clinicBase = slug ? `/c/${slug}` : "";
 
     // FAIL-SAFE: Never render on dashboard/superadmin routes
     const isDashboard = /dashboard|superadmin|admin_/.test(location.pathname.toLowerCase());
@@ -114,7 +116,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                         <div className="flex items-center gap-3">
                             {!config?.isMaster ? (
                                 <>
-                                    <Link to={isPreview ? "#" : `/c/${config?.slug}/portal`} className="text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-500">Portal Pacientes</Link>
+                                    <Link to={isPreview ? "#" : `${clinicBase}/portal`} className="text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-500">Portal Pacientes</Link>
                                 </>
                             ) : null}
 
@@ -179,11 +181,11 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                                 { name: 'Planes', path: '/planes' },
                                 { name: 'FAQ', path: '/faq' }
                             ] : [
-                                { name: 'Inicio', path: `/c/${config?.slug}` },
-                                { name: 'Sobre Nosotros', path: `/c/${config?.slug}/nosotros` },
-                                { name: 'Servicios', path: `/c/${config?.slug}/servicios` },
-                                { name: 'Sedes', path: `/c/${config?.slug}/sedes` },
-                                { name: 'Portal', path: `/c/${config?.slug}/portal` }
+                                { name: 'Inicio', path: clinicBase || '/' },
+                                { name: 'Sobre Nosotros', path: `${clinicBase}/nosotros` },
+                                { name: 'Servicios', path: `${clinicBase}/servicios` },
+                                { name: 'Sedes', path: `${clinicBase}/sedes` },
+                                { name: 'Portal', path: `${clinicBase}/portal` }
                             ]).map((item) => {
                                 if (item.isMasterOnly && !config?.isMaster) return null;
                                 const isActive = item.path === '/'
@@ -245,10 +247,10 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                 <div className={`lg:hidden absolute top-full left-0 w-full glass-premium-light border-t border-white/50 shadow-2xl transition-all duration-300 origin-top overflow-hidden ${mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="viva-container flex flex-col p-6 gap-2">
                         {[
-                            { name: 'Inicio', path: config?.isMaster ? '/' : `/c/${config?.slug}` },
-                            { name: 'Funcionalidades', path: config?.isMaster ? '/servicios' : `/c/${config?.slug}/servicios` },
+                            { name: 'Inicio', path: config?.isMaster ? '/' : (clinicBase || '/') },
+                            { name: 'Funcionalidades', path: config?.isMaster ? '/servicios' : `${clinicBase}/servicios` },
                             { name: 'Planes', path: '/planes', isMasterOnly: true },
-                            { name: 'FAQ', path: config?.isMaster ? '/faq' : `/c/${config?.slug}/faq` }
+                            { name: 'FAQ', path: config?.isMaster ? '/faq' : `${clinicBase}/faq` }
                         ].map((item) => {
                             if (item.isMasterOnly && !config?.isMaster) return null;
                             return (

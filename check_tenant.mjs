@@ -1,78 +1,45 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, where, addDoc, setDoc } from "firebase/firestore";
-import { firebaseConfig } from "./src/firebase/firebaseConfig.js";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 
-// Initialize Firebase (using the same config as the app)
+const firebaseConfig = {
+  apiKey: "AIzaSyC70mGCRrjE8iOap8iTHuid8HEuyadue8Y",
+  authDomain: "odontocloud-d92ac.firebaseapp.com",
+  projectId: "odontocloud-d92ac",
+  storageBucket: "odontocloud-d92ac.firebasestorage.app",
+  messagingSenderId: "267020714981",
+  appId: "1:267020714981:web:a44416ea83aa1d1172650c",
+  measurementId: "G-ZMCC5CFY0C",
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-async function checkTenants() {
-    console.log("🔍 Checking Tenants in Firestore...");
-
+async function checkSchedules() {
+    console.log("🔍 Querying Doctor Schedules and No-Disponibles...");
     try {
-        const tenantsRef = collection(db, "tenants");
-        const snap = await getDocs(tenantsRef);
+        const doctorId = "omvrGLsmJDNTNCXG2ApWrGTPjyt2";
+        
+        console.log("--- Horarios Predefinidos ---");
+        const predSnap = await getDocs(collection(db, "usuarios", doctorId, "horarios_predefinidos"));
+        predSnap.forEach(doc => {
+            console.log(`- ID: ${doc.id} | Dia: ${doc.data().dia} | Start: ${doc.data().horaInicio} | End: ${doc.data().horaFin} | Active: ${doc.data().activo} | Recurso: ${doc.data().recursoNombre}`);
+        });
 
-        if (snap.empty) {
-            console.log("❌ No tenants found in 'tenants' collection.");
-        } else {
-            console.log(`✅ Found ${snap.size} tenants.`);
-            let found = false;
-            snap.forEach(doc => {
-                const data = doc.data();
-                console.log(`- ID: ${doc.id} | Name: ${data.name} | Slug: ${data.slug}`);
-                if (data.slug === 'juanemadrid') found = true;
-            });
+        console.log("--- Agenda Abierta ---");
+        const openSnap = await getDocs(collection(db, "usuarios", doctorId, "agenda_abierta"));
+        openSnap.forEach(doc => {
+            console.log(`- ID: ${doc.id} | Fecha: ${doc.data().fecha} | Start: ${doc.data().horaInicio} | End: ${doc.data().horaFin} | Active: ${doc.data().active}`);
+        });
 
-            if (found) {
-                console.log("✅ Tenant 'juanemadrid' EXISTS.");
-            } else {
-                console.log("❌ Tenant 'juanemadrid' DOES NOT EXIST.");
-                await createTestTenant();
-            }
-        }
+        console.log("--- No Disponibles ---");
+        const unavailSnap = await getDocs(collection(db, "usuarios", doctorId, "no_disponibles"));
+        unavailSnap.forEach(doc => {
+            console.log(`- ID: ${doc.id} | Fecha: ${doc.data().fecha} | Start: ${doc.data().horaInicio} | End: ${doc.data().horaFin} | Active: ${doc.data().active} | Motivo: ${doc.data().motivo}`);
+        });
+
     } catch (e) {
-        console.error("Error checking tenants:", e);
+        console.error("Error in querying schedules:", e);
     }
 }
 
-async function createTestTenant() {
-    console.log("🛠️ Creating Test Tenant 'Juan Madrid'...");
-    try {
-        // 1. Create Tenant
-        const tenantData = {
-            name: "Juan Madrid Odontología",
-            slug: "juanemadrid",
-            email: "juan@odonto.com",
-            plan: "pro",
-            active: true
-        };
-        const tenantRef = await addDoc(collection(db, "tenants"), tenantData);
-        console.log("✅ Tenant created with ID:", tenantRef.id);
-
-        // 2. Create Website Config
-        const configData = {
-            name: "Juan Madrid Odontología",
-            domain: "juanemadrid.odontocloud.com",
-            primaryColor: "#4f46e5", // Indigo
-            accentColor: "#ec4899", // Pink
-            heroTitle: "Tu Sonrisa, Nuestra Pasión",
-            heroSubtitle: "Odontología especializada al alcance de todos.",
-            mission: "Nuestra misión es brindar atención odontológica integral con calidez y profesionalismo.",
-            vision: "Ser la clínica líder en transformación de sonrisas.",
-            services: [
-                { title: "Ortodoncia", desc: "Brackets y alineadores.", icon: "🦷" },
-                { title: "Implantes", desc: "Recupera tu sonrisa.", icon: "🔩" },
-                { title: "Diseño", desc: "Estética dental.", icon: "✨" }
-            ],
-            contactPhone: "3001234567"
-        };
-        await setDoc(doc(db, "website_config", tenantRef.id), configData);
-        console.log("✅ Website Config created for ID:", tenantRef.id);
-
-    } catch (e) {
-        console.error("Error creating test tenant:", e);
-    }
-}
-
-checkTenants();
+checkSchedules();
