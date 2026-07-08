@@ -219,14 +219,17 @@ export default function Pacientes() {
   };
 
   const handleDelete = async (patient) => {
-    // El modal de confirmación ya se maneja dentro de PatientDetails
     try {
       await deletePatient(patient.id);
       toast.success("Paciente eliminado correctamente");
       reloadData();
     } catch (err) {
-      console.error(err);
-      toast.error("Error al eliminar el paciente");
+      console.error("Error eliminando paciente:", err?.code, err?.message, err);
+      if (err?.code === "permission-denied") {
+        toast.error("No tienes permisos para eliminar pacientes. Verifica las reglas de Firestore.");
+      } else {
+        toast.error(`Error al eliminar el paciente: ${err?.message || "Error desconocido"}`);
+      }
     }
   };
 

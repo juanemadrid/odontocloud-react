@@ -102,7 +102,11 @@ export default function useSpeechRecognition(persistent = false, isGlobal = fals
             };
 
             recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    console.error('Speech recognition error:', event.error);
+                } else {
+                    console.log('Speech recognition event:', event.error);
+                }
                 
                 // En modo persistente evitamos apagar el estado visual/UI si es un error recuperable (silencio o aborto por el navegador)
                 const isRecoverable = event.error === 'no-speech' || event.error === 'aborted';
