@@ -662,15 +662,24 @@ function Overview({
     );
 
     const completedCount = docAppointments.filter(
-      (c) => (c.estado || "").toLowerCase() === "completada"
+      (c) => {
+        const est = (c.estado || "").toLowerCase();
+        return est === "completada" || est === "atendido";
+      }
     ).length;
 
     const enEsperaCount = docAppointments.filter(
-      (c) => (c.estado || "").toLowerCase() === "en espera"
+      (c) => {
+        const est = (c.estado || "").toLowerCase();
+        return est === "en espera" || est === "waiting";
+      }
     ).length;
 
     const pendienteCount = docAppointments.filter(
-      (c) => (c.estado || "").toLowerCase() === "pendiente"
+      (c) => {
+        const est = (c.estado || "").toLowerCase();
+        return est === "pendiente" || est === "programada" || est === "confirmada" || est === "sin confirmar" || est === "pending" || est === "confirmed" || est === "sin-confirmar";
+      }
     ).length;
 
     return (
@@ -801,8 +810,8 @@ function Overview({
                           {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border-2
-                          ${(c.estado || "").toLowerCase() === "en espera" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                            (c.estado || "").toLowerCase() === "completada" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          ${((c.estado || "").toLowerCase() === "en espera" || (c.estado || "").toLowerCase() === "waiting") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            ((c.estado || "").toLowerCase() === "completada" || (c.estado || "").toLowerCase() === "atendido") ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                             "bg-blue-50 text-blue-700 border-blue-200"}
                         `}>
                           {c.estado}
@@ -1273,7 +1282,10 @@ export default function Dashboard() {
         (a, b) => a.fecha.getTime() - b.fecha.getTime()
       );
       const enEsperaCount = rows.filter(
-        (r) => String(r.estado).toLowerCase().trim() === "en espera"
+        (r) => {
+          const est = String(r.estado).toLowerCase().trim();
+          return est === "en espera" || est === "waiting";
+        }
       ).length;
       setTodaysAppointments(rows);
       setMetrics((m) => ({ ...m, citasHoy: rows.length, enEspera: enEsperaCount }));

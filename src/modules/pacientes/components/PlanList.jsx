@@ -108,7 +108,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
             inquilino: userProfile?.inquilino || userProfile?.tenantId || userProfile?.tenant?.id
         };
 
-        if (!clinic.inquilino && !clinic.id) {
+        if (!clinic.inquilino && !clinic.id && !clinic.nombre) {
             console.error("Clinic identification failed:", { userProfile });
             toast.error("Datos de clínica incompletos. Por favor contacte soporte.");
             return;

@@ -53,17 +53,16 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
         const loadModalData = async () => {
             if (!userProfile?.inquilino) return;
             try {
-                // Load doctors
+                // Load doctors from profesionales
                 const q = query(
-                    collection(db, "usuarios"),
+                    collection(db, "profesionales"),
                     where("inquilino", "==", userProfile.inquilino),
-                    where("esDoctor", "==", true),
                     where("activo", "==", true)
                 );
                 const snap = await getDocs(q);
                 setDoctors(snap.docs.map(d => ({
                     id: d.id,
-                    nombre: d.data().nombreCompleto || `${d.data().nombre || ''} ${d.data().apellido || ''}`.trim()
+                    nombre: d.data().nombreCompleto || d.data().nombre || ""
                 })));
 
                 // Load active payment methods
@@ -146,10 +145,10 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fadeIn" onClick={onClose} />
             
             {/* Modal Content */}
-            <div className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-zoomIn border border-slate-100">
+            <div className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-zoomIn border border-slate-100 max-h-[90vh] flex flex-col">
                 
                 {/* Header Elite */}
-                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                     <div>
                         <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Adicionar saldo a favor</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Captura de ingresos adelantados para tratamientos</p>
@@ -159,7 +158,8 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-8">
+                <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="space-y-10">
                         
                         {/* Section 1: Datos Generales */}
@@ -294,9 +294,10 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
                         </div>
 
                     </div>
+                </div>
 
                     {/* Footer Actions */}
-                    <div className="mt-12 flex gap-4">
+                    <div className="p-8 border-t border-slate-100 flex gap-4 shrink-0 bg-slate-50/50">
                         <button 
                             type="button"
                             onClick={onClose}

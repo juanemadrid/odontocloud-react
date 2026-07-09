@@ -21,7 +21,6 @@ import {
 // Tabs Imports
 import HistoriaClinicaContainer from "./HistoriaClinicaContainer";
 import EvolucionesTab from "./EvolucionesTab";
-import CrmTab from "./CrmTab";
 import PresupuestosTab from "./PresupuestosTab";
 import FacturacionTab from "./FacturacionTab";
 import ConsentimientosTab from "./ConsentimientosTab";
@@ -595,6 +594,26 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         }
     };
 
+    // For EPS / Marketing tabs: bypass Zod validation and merge only the changed fields
+    const handlePartialSave = async () => {
+        const allValues = methods.getValues();
+        try {
+            import("../../../services/patientService").then(async ({ createOrUpdatePatient }) => {
+                try {
+                    await createOrUpdatePatient(userProfile.inquilino, allValues, false, fotoFile);
+                    toast.success("Información guardada correctamente ✅");
+                    methods.reset(allValues);
+                } catch(e) {
+                    console.error("Error saving partial form:", e);
+                    toast.error("Hubo un error al guardar");
+                }
+            });
+        } catch(e) {
+            toast.error("Hubo un error al guardar");
+        }
+    };
+
+
     // Calculate age automatically just in case
     const birthDate = methods.watch("fechaNacimiento");
     useEffect(() => {
@@ -667,7 +686,6 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                 <SidebarButton icon={FiUsers} label="Beneficiarios convenio" active={activeTab === "conv"} onClick={() => { if(activeTab === "conv") { setActiveTab(""); setTimeout(() => setActiveTab("conv"), 0); } else setActiveTab("conv"); }} />
                                 <SidebarButton icon={FiBriefcase} label="Profesionales" active={activeTab === "pro"} onClick={() => { if(activeTab === "pro") { setActiveTab(""); setTimeout(() => setActiveTab("pro"), 0); } else setActiveTab("pro"); }} />
                                 <SidebarButton icon={FiCamera} label="Rx / Imágenes / Doc" active={activeTab === "rx"} onClick={() => { if(activeTab === "rx") { setActiveTab(""); setTimeout(() => setActiveTab("rx"), 0); } else setActiveTab("rx"); }} />
-                                <SidebarButton icon={FiTarget} label="CRM" active={activeTab === "crm"} onClick={() => { if(activeTab === "crm") { setActiveTab(""); setTimeout(() => setActiveTab("crm"), 0); } else setActiveTab("crm"); }} />
                             </div>
 
                             <SidebarSectionTitle>Historia Clínica</SidebarSectionTitle>
@@ -715,9 +733,16 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                                 <span className="text-slate-500 lowercase">{getPageTitle()}</span>
                                             </div>
                                         </div>
-                                        <button type="submit" className="px-8 py-2 bg-[#8CC63F] text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] active:scale-95 transition-all flex items-center gap-2">
-                                            <FiCheck size={14} /> Guardar
-                                        </button>
+                                        {/* Use partial save (no Zod validation) for eps/mark; full submit for datos */}
+                                        {activeTab === 'datos' ? (
+                                            <button type="submit" className="px-8 py-2 bg-[#8CC63F] text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] active:scale-95 transition-all flex items-center gap-2">
+                                                <FiCheck size={14} /> Guardar
+                                            </button>
+                                        ) : (
+                                            <button type="button" onClick={handlePartialSave} className="px-8 py-2 bg-[#8CC63F] text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] active:scale-95 transition-all flex items-center gap-2">
+                                                <FiCheck size={14} /> Guardar
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/20">
                                         {activeTab === "datos" && <FormDatosPersonales patient={patient} photoState={{isCameraActive, fotoPreview, startCamera, stopCamera, takePhoto, onFotoChange, videoRef, canvasRef}} />}
@@ -732,7 +757,6 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     {activeTab === "conv" && <BeneficiariosTab patient={patient} onUpdate={setPatient} onSwitchTab={setActiveTab} />}
                                     {activeTab === "pro" && <ProfesionalesTab patient={patient} onUpdate={setPatient} />}
                                     {activeTab === "fact" && <FacturacionTab patient={patient} />}
-                                    {activeTab === "crm" && <CrmTab patient={patient} />}
                                     
                                     {activeTab === "anamnesis" && <HistoriaClinicaTab patientId={patient.id} />}
                                     {activeTab === "hc" && <HistoriaClinicaContainer patient={patient} />}

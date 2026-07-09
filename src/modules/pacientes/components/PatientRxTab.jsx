@@ -4,16 +4,26 @@ import { setDoc, doc, serverTimestamp, collection, query, where, getDocs } from 
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
-import { FiPlus, FiSearch, FiFileText, FiImage, FiTrash2, FiDownload, FiUploadCloud, FiEdit } from "react-icons/fi";
+import { FiPlus, FiSearch, FiFileText, FiImage, FiTrash2, FiDownload, FiUploadCloud, FiEdit, FiEye, FiX } from "react-icons/fi";
 
 
 export default function PatientRxTab({ patient, onUpdate }) {
     const toast = useToast();
-    const { userProfile } = useAuth();
+    const { userProfile, user } = useAuth();
+    // Robust display name: tries all possible fields in the user profile before falling back to email
+    const currentUserName = userProfile?.nombre 
+        || userProfile?.nombreCompleto 
+        || userProfile?.nombres 
+        || userProfile?.displayName 
+        || user?.displayName 
+        || user?.email 
+        || "Usuario";
     const [viewMode, setViewMode] = useState("list"); // 'list' | 'form'
     const [uploading, setUploading] = useState(false);
     const [filter, setFilter] = useState("");
     const [editingImage, setEditingImage] = useState(null);
+    const [previewItem, setPreviewItem] = useState(null);
+    const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
     
     // Form States
     const [selectedFile, setSelectedFile] = useState(null);
@@ -31,9 +41,8 @@ export default function PatientRxTab({ patient, onUpdate }) {
             if (!userProfile?.inquilino) return;
             try {
                 const q = query(
-                    collection(db, "usuarios"),
+                    collection(db, "profesionales"),
                     where("inquilino", "==", userProfile.inquilino),
-                    where("esDoctor", "==", true),
                     where("activo", "==", true)
                 );
                 const s = await getDocs(q);
@@ -41,7 +50,7 @@ export default function PatientRxTab({ patient, onUpdate }) {
                     const d = doc.data();
                     return { 
                         id: doc.id, 
-                        nombreCompleto: d.nombreCompleto || `${d.nombre || ''} ${d.apellido || ''}`.trim(),
+                        nombreCompleto: d.nombreCompleto || d.nombre || "",
                         ...d
                     };
                 });
@@ -88,7 +97,13 @@ export default function PatientRxTab({ patient, onUpdate }) {
                 
                 if (selectedFile) {
                     // Si se cambió el archivo, eliminar el anterior y subir el nuevo
-                    await deleteObject(ref(storage, editingImage.path)).catch(console.warn);
+                    if (editingImage.path) {
+                        try {
+                            await deleteObject(ref(storage, editingImage.path));
+                        } catch (err) {
+                            console.warn("Could not delete old file in Storage:", err);
+                        }
+                    }
                     
                     const safe = (selectedFile.name || "archivo").replace(/\s+/g, "_");
                     path = `pacientes/${patient.id}/rx/${Date.now()}_${safe}`;
@@ -113,7 +128,7 @@ export default function PatientRxTab({ patient, onUpdate }) {
                 title: nombreVisible,
                 descripcion,
                 profesional: profesionalResp,
-                creador: userProfile?.nombre || "Usuario",
+                creador: currentUserName,
                 fechaAsocISO: fechaAsoc,
                 path,
                 type: selectedFile ? selectedFile.type : editingImage.type,
@@ -155,24 +170,36 @@ export default function PatientRxTab({ patient, onUpdate }) {
         }
     };
 
-    const handleDelete = async (item) => {
-        if (!window.confirm(`¿Seguro que deseas eliminar "${item.title}"?`)) return;
+    const handleDelete = (item) => {
+        setDeleteConfirmItem(item);
+    };
 
+    const executeDelete = async (item) => {
         const currentList = patient.rxImagenes || [];
-        const newList = currentList.filter(x => x.path !== item.path);
+        // Filter by both path and url to guarantee clean removal even if path is missing/empty
+        const newList = currentList.filter(x => x.path !== item.path && x.url !== item.url);
 
         try {
+            // First update Firestore so the document is immediately removed in the UI
             await setDoc(doc(db, "pacientes", patient.id), {
                 rxImagenes: newList,
                 actualizado: serverTimestamp()
             }, { merge: true });
 
-            const storage = getStorage();
-            await deleteObject(ref(storage, item.path)).catch(console.warn);
-
             onUpdate && onUpdate({ ...patient, rxImagenes: newList });
             toast.success("Archivo eliminado");
+
+            // Attempt to delete from Storage asynchronously, without blocking the user
+            if (item.path) {
+                try {
+                    const storage = getStorage();
+                    await deleteObject(ref(storage, item.path));
+                } catch (storageErr) {
+                    console.warn("Storage binary deletion failed or was bypassed:", storageErr);
+                }
+            }
         } catch (e) {
+            console.error("Firestore document deletion failed:", e);
             toast.error("Error al borrar el archivo");
         }
     };
@@ -208,7 +235,7 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mt-3">Usuario creador</label>
                             </div>
                             <div className="md:col-span-9">
-                                <input type="text" readOnly value={userProfile?.nombre || ""} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-4 text-sm font-medium text-slate-500 cursor-not-allowed" />
+                                <input type="text" readOnly value={currentUserName} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-4 text-sm font-medium text-slate-500 cursor-not-allowed" />
                             </div>
 
                             <div className="md:col-span-3 text-right">
@@ -339,6 +366,13 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                         <td className="py-4 px-6 text-center">
                                             <div className="flex items-center justify-center gap-2 transition-opacity">
                                                 <button 
+                                                    className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-colors"
+                                                    onClick={() => setPreviewItem(img)}
+                                                    title="Visualizar"
+                                                >
+                                                    <FiEye size={14} />
+                                                </button>
+                                                <button 
                                                     className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-colors"
                                                     onClick={() => {
                                                         setEditingImage(img);
@@ -352,12 +386,13 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                                 >
                                                     <FiEdit size={14} />
                                                 </button>
-                                                <a href={img.url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
+                                                <a href={img.url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors" title="Descargar">
                                                     <FiDownload size={14} />
                                                 </a>
                                                 <button 
                                                     className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
                                                     onClick={() => handleDelete(img)}
+                                                    title="Eliminar"
                                                 >
                                                     <FiTrash2 size={14} />
                                                 </button>
@@ -377,6 +412,107 @@ export default function PatientRxTab({ patient, onUpdate }) {
                 </div>
 
             </div>
+
+            {/* PREVIEW MODAL */}
+            {previewItem && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setPreviewItem(null)} />
+                    <div className="relative w-full max-w-4xl bg-white rounded-[32px] shadow-2xl overflow-hidden animate-zoomIn border border-slate-100 flex flex-col max-h-[90vh] z-10">
+                        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">{previewItem.title}</h3>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                    {previewItem.profesional ? `Asociado a: ${previewItem.profesional}` : ''} • {previewItem.fechaAsocISO || new Date(previewItem.uploadedAtMS).toLocaleDateString()}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a 
+                                    href={previewItem.url} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-md shadow-blue-500/10"
+                                    title="Descargar"
+                                >
+                                    <FiDownload size={12} /> Descargar
+                                </a>
+                                <button 
+                                    onClick={() => setPreviewItem(null)} 
+                                    className="w-9 h-9 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"
+                                >
+                                    <FiX size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-auto bg-slate-900 flex items-center justify-center p-6 min-h-[300px] custom-scrollbar">
+                            {previewItem.type?.startsWith('image/') ? (
+                                <img 
+                                    src={previewItem.url} 
+                                    alt={previewItem.title} 
+                                    className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl border border-slate-800 bg-slate-950" 
+                                />
+                            ) : previewItem.type === 'application/pdf' ? (
+                                <iframe 
+                                    src={previewItem.url} 
+                                    title={previewItem.title} 
+                                    className="w-full h-[70vh] rounded-xl border border-slate-800 bg-white"
+                                />
+                            ) : (
+                                <div className="text-center p-12 max-w-md bg-slate-950 border border-slate-800 rounded-[24px]">
+                                    <FiFileText size={48} className="text-indigo-400 mx-auto mb-4" />
+                                    <h4 className="text-white text-sm font-black uppercase tracking-wider mb-2">Archivo No Previsualizable</h4>
+                                    <p className="text-slate-400 text-xs font-medium mb-6">Este tipo de archivo ({previewItem.type || 'documento'}) no se puede previsualizar directamente. Por favor descárguelo para abrirlo.</p>
+                                    <a 
+                                        href={previewItem.url} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                                    >
+                                        <FiDownload size={14} /> Descargar Archivo
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            {deleteConfirmItem && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setDeleteConfirmItem(null)} />
+                    <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 overflow-hidden animate-zoomIn border border-slate-100 text-center z-10">
+                        <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6 shadow-sm">
+                            <FiTrash2 />
+                        </div>
+                        
+                        <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">¿Confirmar eliminación?</h3>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed mb-8">
+                            ¿Seguro que deseas eliminar el archivo <span className="font-bold text-slate-800">"{deleteConfirmItem.title}"</span>? Esta acción no se puede deshacer.
+                        </p>
+                        
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={() => setDeleteConfirmItem(null)}
+                                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    const itemToDelete = deleteConfirmItem;
+                                    setDeleteConfirmItem(null);
+                                    executeDelete(itemToDelete);
+                                }}
+                                className="flex-1 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-600/20 transition-all active:scale-95"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

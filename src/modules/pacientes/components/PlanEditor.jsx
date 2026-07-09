@@ -30,6 +30,10 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const [title, setTitle] = useState(initialData?.title || "Presupuesto Integral de Tratamiento");
     const [baseListId, setBaseListId] = useState(null);
 
+    // Items state
+    const [items, setItems] = useState(initialData?.items || []);
+    const [obs, setObs] = useState(initialData?.observaciones || "");
+
     const [evolutions, setEvolutions] = useState([]);
     const [payments, setPayments] = useState([]);
 
@@ -189,10 +193,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         setItems([...items, ...newStagedItems]);
         toast.success(`${newStagedItems.length} servicios cargados con éxito`);
     };
-
-    // Items state
-    const [items, setItems] = useState(initialData?.items || []);
-    const [obs, setObs] = useState(initialData?.observaciones || "");
 
     // UI state for search
     const [activeSearchId, setActiveSearchId] = useState(null);
@@ -390,8 +390,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const handleConvertToPlan = () => {
-        if (!isEditing) {
-            toast.error("Guarda el presupuesto antes de convertirlo");
+        const validItems = items.filter(i => (i.desc || "").trim() !== "");
+        if (!title.trim()) {
+            toast.error("Ingresa un título para el presupuesto antes de convertir");
+            return;
+        }
+        if (validItems.length === 0) {
+            toast.error("Agrega al menos un tratamiento antes de convertir");
             return;
         }
         setConvertModal(true);
@@ -402,11 +407,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         setLoading(true);
         try {
             const validItems = items.filter(i => (i.desc || "").trim() !== "");
-            if (validItems.length === 0) {
-                toast.error("Agrega al menos un tratamiento antes de convertir");
-                setLoading(false);
-                return;
-            }
 
             const planPayload = {
                 patientId,
@@ -426,14 +426,14 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             };
 
             if (initialData?.id) {
-                // Plan ya guardado: actualizar
+                // Plan ya guardado: actualizar tipo a 'plan'
                 await updatePlan(initialData.id, planPayload);
             } else {
-                // Plan nuevo (sin ID): crear directamente como plan
+                // Plan nuevo (sin ID aún): crear directamente como plan de tratamiento
                 await createPlan(planPayload);
             }
 
-            toast.success("¡Convertido a Plan de Tratamiento!");
+            toast.success("¡Convertido a Plan de Tratamiento exitosamente!");
             onSaved?.();
         } catch (e) {
             console.error("Error al convertir:", e);
@@ -508,8 +508,19 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const handlePrint = async () => {
-        if (!userProfile?.tenant) {
-            toast.error("Error: Información de clínica no disponible");
+        // Build clinic object with robust fallbacks — same pattern as PlanList
+        const clinic = userProfile?.tenant || {
+            nombre: userProfile?.tenantNombre || userProfile?.clinica || userProfile?.inquilino || "Clínica",
+            nombreComercial: userProfile?.tenantNombre || userProfile?.clinica || "Clínica",
+            id: userProfile?.inquilino || userProfile?.tenantId,
+            inquilino: userProfile?.inquilino || userProfile?.tenantId,
+            nit: userProfile?.nit || "---",
+            direccion: userProfile?.direccion || "---",
+            telefono: userProfile?.telefono || "---"
+        };
+
+        if (!clinic.inquilino && !clinic.id && !clinic.nombre) {
+            toast.error("Error: Información de clínica no disponible. Configure el tenant en Administración.");
             return;
         }
 
@@ -521,11 +532,11 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             total: calculateTotal(),
             date: initialData?.date || new Date(),
             type: initialData?.type || "presupuesto",
-            profesional: initialData?.profesional || userProfile.nombre,
+            profesional: initialData?.profesional || userProfile?.nombre || userProfile?.nombreCompleto || "",
             observaciones: obs
         };
 
-        await BudgetPrintService.generatePDF(planData, patient, userProfile.tenant, userProfile);
+        await BudgetPrintService.generatePDF(planData, patient, clinic, userProfile);
     };
 
     return (
@@ -566,43 +577,51 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="hidden lg:flex flex-col items-end px-6 border-r border-slate-100">
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Inversión Final Sugerida</span>
-                        <h4 className="text-xl font-black text-indigo-600 tracking-tighter leading-none">
-                            <span className="text-xs mr-1 font-bold text-slate-400">$</span>
+                <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                    {/* Investment total — compact inline */}
+                    <div className="hidden xl:flex flex-col items-end px-4 border-r border-slate-100">
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Total</span>
+                        <h4 className="text-lg font-black text-indigo-600 tracking-tighter leading-none">
+                            <span className="text-xs mr-0.5 font-bold text-slate-400">$</span>
                             {calculateTotal().toLocaleString('es-CO')}
                         </h4>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <button onClick={handlePrint} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Imprimir">
-                             <FiPrinter size={20} />
-                        </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        {isEditing && (initialData?.type || 'presupuesto') === 'presupuesto' && (
+                    {/* Print icon */}
+                    <button onClick={handlePrint} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all shrink-0" title="Imprimir">
+                         <FiPrinter size={18} />
+                    </button>
+
+                    {/* Action buttons — compact */}
+                    <div className="flex items-center gap-1.5 w-full md:w-auto">
+                        {(initialData?.type || 'presupuesto') === 'presupuesto' && (
                             <button 
                                 onClick={handleConvertToPlan}
-                                className="flex-1 md:flex-none px-5 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 border border-indigo-100"
+                                disabled={loading}
+                                title="Convertir este presupuesto a Plan de Tratamiento activo"
+                                className="shrink-0 px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center gap-1.5 border border-indigo-100 disabled:opacity-50 whitespace-nowrap"
                             >
-                                <FiActivity size={14} /> Convertir a Plan
+                                <FiActivity size={13} /> Convertir a Plan
                             </button>
                         )}
                         <button 
                             onClick={() => setDeleteModal({ isOpen: true, planId: initialData?.id, planName: title })} 
                             disabled={loading} 
-                            className="flex-1 md:flex-none px-5 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-rose-100"
+                            className="shrink-0 px-3 py-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-rose-100 whitespace-nowrap"
                         >
-                            <FiTrash2 size={14} /> {isEditing ? "Eliminar" : "Descartar"}
+                            <FiTrash2 size={13} /> {isEditing ? "Eliminar" : "Descartar"}
                         </button>
-                        <button onClick={() => handleSave('accepted')} disabled={loading} className="flex-1 md:flex-none px-6 py-2.5 bg-[#8CC63F] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] transition-all active:scale-95 flex items-center justify-center gap-2">
-                             <FiCheck size={14} strokeWidth={3} /> {isEditing ? "Guardar" : "Finalizar & Aprobar"}
+                        <button 
+                            onClick={() => handleSave('accepted')} 
+                            disabled={loading} 
+                            className="shrink-0 px-4 py-2 bg-[#8CC63F] text-white rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap"
+                        >
+                             <FiCheck size={13} strokeWidth={3} /> {isEditing ? "Guardar" : "Finalizar & Aprobar"}
                         </button>
                     </div>
                 </div>
             </div>
+
 
             {/* Main Area: The Invoice Editor */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-32">

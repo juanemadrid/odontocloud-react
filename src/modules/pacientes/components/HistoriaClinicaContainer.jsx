@@ -32,9 +32,16 @@ export default function HistoriaClinicaContainer({ patient }) {
     const [filterProf, setFilterProf] = useState("");
     const [filterTrans, setFilterTrans] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [signModal, setSignModal] = useState({ isOpen: false, doc: null });
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, docId: null });
 
-    const handleSignPrescription = async (docObj) => {
-        if (!window.confirm("¿Desea firmar digitalmente todos los medicamentos de esta receta?")) return;
+    const handleSignPrescription = (docObj) => {
+        setSignModal({ isOpen: true, doc: docObj });
+    };
+
+    const confirmSignPrescription = async () => {
+        const docObj = signModal.doc;
+        setSignModal({ isOpen: false, doc: null });
         try {
             const updatedItems = (docObj.recetaItems || []).map(item => ({
                 ...item,
@@ -47,7 +54,7 @@ export default function HistoriaClinicaContainer({ patient }) {
                 recetaItems: updatedItems
             }, { merge: true });
             
-            toast.success("Receta firmada digitalmente");
+            toast.success("Receta firmada digitalmente ✅");
         } catch (err) {
             console.error("Error signing prescription", err);
             toast.error("Error al firmar la receta");
@@ -89,8 +96,13 @@ export default function HistoriaClinicaContainer({ patient }) {
         setModalOpen(true);
     };
 
-    const handleDeleteDoc = async (docId) => {
-        if (!window.confirm("¿Seguro que deseas eliminar este documento clínico?")) return;
+    const handleDeleteDoc = (docId) => {
+        setDeleteModal({ isOpen: true, docId });
+    };
+
+    const confirmDeleteDoc = async () => {
+        const docId = deleteModal.docId;
+        setDeleteModal({ isOpen: false, docId: null });
         try {
             await deleteDoc(doc(db, `pacientes/${patient.id}/docClis`, docId));
             toast.success("Documento eliminado correctamente");
@@ -992,11 +1004,11 @@ export default function HistoriaClinicaContainer({ patient }) {
                     </div>
 
                     {/* Elite Table */}
-                    <div className="overflow-x-auto rounded-xl border border-slate-100">
-                        <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto rounded-xl border border-slate-100 pb-1">
+                        <table className="min-w-[900px] w-full text-left border-collapse">
                             <thead>
                                 <tr>
-                                    <th className="bg-slate-50 border-b border-slate-100 px-4 py-3 align-top min-w-[150px]">
+                                    <th className="bg-slate-50 border-b border-slate-100 px-4 py-3 align-top min-w-[120px]">
                                         <div className="font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1">Fecha <FiSearch size={10} /></div>
                                         <input type="text" value={filterFecha} onChange={(e) => setFilterFecha(e.target.value)} className="w-full text-xs p-1 border border-slate-200 rounded outline-none focus:border-blue-400" />
                                     </th>
@@ -1018,7 +1030,7 @@ export default function HistoriaClinicaContainer({ patient }) {
                                         <div className="font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1"><FiEdit2 size={10} className="text-slate-400" /> Transcribe</div>
                                         <input type="text" value={filterTrans} onChange={(e) => setFilterTrans(e.target.value)} className="w-full text-xs p-1 border border-slate-200 rounded outline-none focus:border-blue-400" />
                                     </th>
-                                    <th className="bg-slate-50 border-b border-slate-100 px-4 py-3 align-top w-[140px]">
+                                    <th className="bg-slate-50 border-b border-slate-100 px-3 py-3 align-top w-[160px] min-w-[160px] shrink-0">
                                         <div className="font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-2">Acciones</div>
                                     </th>
                                 </tr>
@@ -1051,32 +1063,32 @@ export default function HistoriaClinicaContainer({ patient }) {
                                             <td className="px-4 py-4 align-top">
                                                 <div className="text-sm text-slate-500 truncate max-w-[200px]">{doc.transcribe}</div>
                                             </td>
-                                            <td className="px-4 py-4 align-top">
-                                                <div className="flex items-center gap-1">
-                                                    <button onClick={() => handleViewDoc(doc)} className="w-7 h-7 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded flex items-center justify-center transition-colors" title="Ver detalle">
-                                                        <FiEye size={12} strokeWidth={3} />
+                                            <td className="px-3 py-3 align-middle w-[160px] min-w-[160px] shrink-0">
+                                                <div className="flex items-center flex-nowrap gap-1">
+                                                    <button onClick={() => handleViewDoc(doc)} className="w-6 h-6 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg flex items-center justify-center transition-colors shrink-0" title="Ver detalle">
+                                                        <FiEye size={11} strokeWidth={2.5} />
                                                     </button>
-                                                    <button onClick={() => handlePrintDoc(doc)} className="w-7 h-7 bg-cyan-100 hover:bg-cyan-200 text-cyan-600 rounded flex items-center justify-center transition-colors" title="Imprimir/Descargar">
-                                                        <FiDownload size={12} strokeWidth={3} />
+                                                    <button onClick={() => handlePrintDoc(doc)} className="w-6 h-6 bg-cyan-100 hover:bg-cyan-200 text-cyan-600 rounded-lg flex items-center justify-center transition-colors shrink-0" title="Imprimir/Descargar">
+                                                        <FiDownload size={11} strokeWidth={2.5} />
                                                     </button>
-                                                    <button onClick={() => handleEditDoc(doc)} className="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-600 rounded flex items-center justify-center transition-colors" title="Editar">
-                                                        <FiEdit2 size={12} strokeWidth={3} />
+                                                    <button onClick={() => handleEditDoc(doc)} className="w-6 h-6 bg-emerald-100 hover:bg-emerald-200 text-emerald-600 rounded-lg flex items-center justify-center transition-colors shrink-0" title="Editar">
+                                                        <FiEdit2 size={11} strokeWidth={2.5} />
                                                     </button>
                                                     {doc.tipoDocumento === "Receta" && (
                                                         <button 
                                                             onClick={() => handleSignPrescription(doc)} 
-                                                            className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                                                            className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
                                                                 (doc.recetaItems || []).length > 0 && (doc.recetaItems || []).every(item => item.doctorSignature)
-                                                                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                                                                    : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-600'
+                                                                    ? 'bg-indigo-500 hover:bg-indigo-600 text-white' 
+                                                                    : 'bg-violet-100 hover:bg-violet-200 text-violet-600'
                                                             }`} 
-                                                            title="Firmar Receta completa"
+                                                            title="Firmar Receta"
                                                         >
-                                                            <FiPenTool size={12} strokeWidth={3} />
+                                                            <FiPenTool size={11} strokeWidth={2.5} />
                                                         </button>
                                                     )}
-                                                    <button onClick={() => handleDeleteDoc(doc.id)} className="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-600 rounded flex items-center justify-center transition-colors" title="Eliminar">
-                                                        <FiTrash2 size={12} strokeWidth={3} />
+                                                    <button onClick={() => handleDeleteDoc(doc.id)} className="w-6 h-6 bg-rose-100 hover:bg-rose-200 text-rose-500 rounded-lg flex items-center justify-center transition-colors shrink-0" title="Eliminar">
+                                                        <FiTrash2 size={11} strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -1101,6 +1113,72 @@ export default function HistoriaClinicaContainer({ patient }) {
                 initialData={editingDoc}
                 isViewOnly={isViewOnly}
             />
+
+            {/* Modal: Confirmar Firma Digital de Receta */}
+            {signModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn border border-violet-100">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-violet-50 rounded-full flex items-center justify-center text-violet-500 mx-auto mb-6">
+                                <FiPenTool size={36} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Firmar Receta Digitalmente?
+                            </h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+                                Se firmará digitalmente con tu nombre de usuario (<strong>{userProfile?.nombreCompleto || userProfile?.nombre || "Doctor"}</strong>) todos los medicamentos de esta receta. Esta acción quedará registrada.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={confirmSignPrescription}
+                                    className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-violet-200 hover:bg-violet-700 transition-all active:scale-95"
+                                >
+                                    ✅ SÍ, FIRMAR DIGITALMENTE
+                                </button>
+                                <button 
+                                    onClick={() => setSignModal({ isOpen: false, doc: null })}
+                                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                    CANCELAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Confirmar Eliminación de Documento Clínico */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn border border-rose-100">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-6 animate-pulse">
+                                <FiTrash2 size={40} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Eliminar Documento?
+                            </h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+                                Estás a punto de eliminar este documento clínico. Esta acción <strong>no se puede deshacer</strong>.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={confirmDeleteDoc}
+                                    className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all active:scale-95"
+                                >
+                                    SÍ, ELIMINAR PERMANENTEMENTE
+                                </button>
+                                <button 
+                                    onClick={() => setDeleteModal({ isOpen: false, docId: null })}
+                                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                    NO, CANCELAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

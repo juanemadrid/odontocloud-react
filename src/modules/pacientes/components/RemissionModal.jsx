@@ -48,11 +48,19 @@ export default function RemissionModal({ isOpen, onClose, patient, initialData =
         const fetchDoctors = async () => {
             try {
                 const userQ = query(
-                    collection(db, "usuarios"), 
-                    where("inquilino", "==", userProfile?.inquilino || userProfile?.tenantId)
+                    collection(db, "profesionales"), 
+                    where("inquilino", "==", userProfile?.inquilino || userProfile?.tenantId),
+                    where("activo", "==", true)
                 );
                 const userSnap = await getDocs(userQ);
-                setAllDoctors(userSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.rol === 'doctor' || d.perfil === 'doctor' || d.esDoctor));
+                setAllDoctors(userSnap.docs.map(d => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
+                        nombreCompleto: data.nombreCompleto || data.nombre || "",
+                        ...data
+                    };
+                }));
                 
                 // Patient assigned doctors for the sender field
                 if (patient?.profesionales && Array.isArray(patient.profesionales)) {

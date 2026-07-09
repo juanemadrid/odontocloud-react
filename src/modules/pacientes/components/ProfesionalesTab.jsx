@@ -24,9 +24,8 @@ export default function ProfesionalesTab({ patient, onUpdate }) {
             if (!userProfile?.inquilino) return;
             try {
                 const q = query(
-                    collection(db, "usuarios"), 
+                    collection(db, "profesionales"), 
                     where("inquilino", "==", userProfile.inquilino), 
-                    where("esDoctor", "==", true),
                     where("activo", "==", true)
                 );
                 const snap = await getDocs(q);
@@ -34,7 +33,7 @@ export default function ProfesionalesTab({ patient, onUpdate }) {
                     const d = doc.data();
                     return { 
                         id: doc.id, 
-                        nombreCompleto: d.nombreCompleto || `${d.nombre || ''} ${d.apellido || ''}`.trim(),
+                        nombreCompleto: d.nombreCompleto || d.nombre || "",
                         ...d
                     };
                 });

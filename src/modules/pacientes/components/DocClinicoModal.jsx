@@ -509,15 +509,14 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
             if (!userProfile?.inquilino) return;
             try {
                 const q = query(
-                    collection(db, "usuarios"),
+                    collection(db, "profesionales"),
                     where("inquilino", "==", userProfile.inquilino),
-                    where("esDoctor", "==", true),
                     where("activo", "==", true)
                 );
                 const s = await getDocs(q);
                 const list = s.docs.map(d => {
                     const data = d.data();
-                    return { id: d.id, nombreCompleto: data.nombreCompleto || `${data.nombre || ''} ${data.apellido || ''}`.trim() };
+                    return { id: d.id, nombreCompleto: data.nombreCompleto || data.nombre || "" };
                 });
                 setCatalogProfesionales(list.sort((a,b) => a.nombreCompleto?.localeCompare(b.nombreCompleto) || 0));
             } catch (err) { }

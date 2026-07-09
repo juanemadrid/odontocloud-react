@@ -8,7 +8,7 @@ import { toast } from "sonner";
  */
 export const BudgetPrintService = {
     
-    generatePDF: async (plan, patient, clinic) => {
+    generatePDF: async (plan, patient, clinic, userProfile) => {
         if (!plan || !patient || !clinic) {
             console.error("Missing data for PDF generation:", { plan, patient, clinic });
             toast.error("Datos insuficientes para generar el documento");
