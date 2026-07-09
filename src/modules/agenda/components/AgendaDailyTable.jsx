@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { FiClock, FiUser, FiHome, FiActivity, FiSearch, FiFilter, FiChevronDown, FiCalendar, FiSmartphone, FiEdit2 } from 'react-icons/fi';
 
 const APPOINTMENT_STATUSES = [
@@ -77,6 +78,8 @@ function StatusSelector({ currentStatus, onChange }) {
 }
 
 export default function AgendaDailyTable({ appointments, doctors, branches, chairs, onEventClick, onUpdateStatus, onWhatsApp, sidebarVisible }) {
+    const navigate = useNavigate();
+
     const formatTime = (date) => {
         if (!date) return "--:--";
         const d = new Date(date);
@@ -137,7 +140,18 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <div className="flex flex-col min-w-[150px]">
-                                                        <p className={`font-black text-blue-600 hover:underline cursor-pointer uppercase transition-all print:text-slate-800 print:whitespace-normal ${sidebarVisible ? 'text-[10px] truncate max-w-[150px]' : 'text-[13px] truncate max-w-[250px]'}`} onClick={() => onEventClick(apt)} title={apt.paciente || apt.pacienteNombre}>
+                                                        <p 
+                                                            className={`font-black text-blue-600 hover:underline cursor-pointer uppercase transition-all print:text-slate-800 print:whitespace-normal ${sidebarVisible ? 'text-[10px] truncate max-w-[150px]' : 'text-[13px] truncate max-w-[250px]'}`} 
+                                                            onClick={() => {
+                                                                if (apt.pacienteId) {
+                                                                    const prefix = window.location.pathname.split('/agenda')[0] || '/dashboard';
+                                                                    navigate(`${prefix}/pacientes?id=${apt.pacienteId}`);
+                                                                } else {
+                                                                    onEventClick(apt);
+                                                                }
+                                                            }} 
+                                                            title={apt.paciente || apt.pacienteNombre}
+                                                        >
                                                             {apt.paciente || apt.pacienteNombre || "S/N"}
                                                         </p>
                                                         <p className={`text-slate-400 font-bold tracking-tight truncate transition-all ${sidebarVisible ? 'text-[8px]' : 'text-[10px]'}`} title={apt.celular || apt.documento}>{apt.celular || apt.documento || "ID PENDIENTE"}</p>
