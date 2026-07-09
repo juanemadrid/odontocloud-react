@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FiClock, FiUser, FiHome, FiActivity, FiSearch, FiFilter, FiChevronDown, FiCalendar, FiSmartphone, FiEdit2 } from 'react-icons/fi';
 
 const APPOINTMENT_STATUSES = [
@@ -79,6 +79,7 @@ function StatusSelector({ currentStatus, onChange }) {
 
 export default function AgendaDailyTable({ appointments, doctors, branches, chairs, onEventClick, onUpdateStatus, onWhatsApp, sidebarVisible }) {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const formatTime = (date) => {
         if (!date) return "--:--";
@@ -144,7 +145,7 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
                                                             className={`font-black text-blue-600 hover:underline cursor-pointer uppercase transition-all print:text-slate-800 print:whitespace-normal ${sidebarVisible ? 'text-[10px] truncate max-w-[150px]' : 'text-[13px] truncate max-w-[250px]'}`} 
                                                             onClick={() => {
                                                                 if (apt.pacienteId) {
-                                                                    const prefix = window.location.pathname.split('/agenda')[0] || '/dashboard';
+                                                                    const prefix = location.pathname.split('/agenda')[0] || '/dashboard';
                                                                     navigate(`${prefix}/pacientes?id=${apt.pacienteId}`);
                                                                 } else {
                                                                     onEventClick(apt);
