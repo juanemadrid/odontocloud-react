@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import cie10Data from '../../../data/cie10.json';
+import CIE10_COMPLETO from '../../../data/cie10Completo.js';
 import { useCombobox } from 'downshift'; // Optional, but usually better. Or raw input for minimal deps.
 // Vamos a usar raw input + lista filtrada para no añadir dependencias si no es necesario, o podemos usar un datalist simple.
 
@@ -16,12 +16,12 @@ export default function CIE10Search({ onSelect, className, value, label }) {
     }, [value]);
 
     const filteredItems = useMemo(() => {
-        if (!query) return [];
+        if (!query || query.length < 2) return [];
         const lower = query.toLowerCase();
-        return cie10Data.filter(item =>
+        return CIE10_COMPLETO.filter(item =>
             item.code.toLowerCase().includes(lower) ||
             item.name.toLowerCase().includes(lower)
-        ).slice(0, 5); // Limit to 5 results
+        ).slice(0, 8); // Show up to 8 results for better coverage
     }, [query]);
 
     const handleSelect = (item) => {

@@ -10,7 +10,7 @@ import {
     FiDownload,
     FiPenTool
 } from "react-icons/fi";
-import { collection, query, onSnapshot, orderBy, doc, deleteDoc, setDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
@@ -21,6 +21,23 @@ export default function HistoriaClinicaContainer({ patient }) {
     const toast = useToast();
     const { userProfile } = useAuth();
     const [documents, setDocuments] = useState([]);
+    const [clinicConfig, setClinicConfig] = useState(null);
+
+    useEffect(() => {
+        if (!userProfile?.inquilino) return;
+        const loadClinicConfig = async () => {
+            try {
+                const snap = await getDoc(doc(db, "tenants", userProfile.inquilino));
+                if (snap.exists()) {
+                    setClinicConfig(snap.data());
+                }
+            } catch (err) {
+                console.error("Error loading clinic config", err);
+            }
+        };
+        loadClinicConfig();
+    }, [userProfile?.inquilino]);
+
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedDocType, setSelectedDocType] = useState("");
     const [editingDoc, setEditingDoc] = useState(null);
@@ -119,6 +136,10 @@ export default function HistoriaClinicaContainer({ patient }) {
             return;
         }
 
+        const logoUrl = clinicConfig?.logo || "";
+        const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
+        const isTemplate = doc.isTemplateDoc || !["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento);
+
         let contentHtml = "";
         if (doc.tipoDocumento === "Receta") {
             const items = doc.recetaItems || [];
@@ -154,9 +175,150 @@ export default function HistoriaClinicaContainer({ patient }) {
                     </tbody>
                 </table>
             `;
+        } else if (doc.tipoDocumento === "Orden") {
+            const dxRel = doc.dxRelacionados || [];
+            const cups = doc.cupsItems || [];
+            contentHtml = `
+                <div class="section-title">Detalle de Orden de Servicio</div>
+                <div style="margin-top: 15px; font-size: 13px;">
+                    <p><strong>Tipo de Orden:</strong> ${doc.tipoOrden || 'Orden médica'}</p>
+                    <p><strong>Diagnóstico Principal:</strong> ${doc.dxPrincipal ? `${doc.dxPrincipal.code} - ${doc.dxPrincipal.name}` : '-'}</p>
+                    ${dxRel.length > 0 ? `
+                        <p><strong>Diagnósticos Relacionados:</strong></p>
+                        <ul>
+                            ${dxRel.map(d => `<li>${d.code} - ${d.name}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+                
+                <div class="section-title">Procedimientos (CUPS)</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Código</th>
+                            <th>Procedimiento (Nombre)</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cups.length === 0 ? `
+                            <tr><td colspan="3" style="text-align: center; color: #64748b;">No se registran procedimientos.</td></tr>
+                        ` : cups.map(c => `
+                            <tr>
+                                <td class="font-mono">${c.code}</td>
+                                <td><strong>${c.name}</strong></td>
+                                <td>${c.descripcion || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                ${doc.observacionesGenerales ? `
+                    <div class="section-title">Observaciones Generales</div>
+                    <div class="content-box" style="margin-top: 10px;">${doc.observacionesGenerales.replace(/\n/g, '<br/>')}</div>
+                ` : ''}
+            `;
+        } else if (doc.tipoDocumento === "Consulta") {
+            const ant = doc.antecedentes || [];
+            const aler = doc.alergias || [];
+            const fam = doc.antFamiliares || [];
+            const meds = doc.medicamentosPrev || [];
+            contentHtml = `
+                <div class="section-title">Motivo de Consulta y Enfermedad Actual</div>
+                <div style="margin-top: 15px; font-size: 13px;">
+                    <p><strong>Motivo de Consulta:</strong> ${doc.motivoConsulta || '-'}</p>
+                    <p><strong>Enfermedad Actual:</strong> ${doc.enfermedadActual || '-'}</p>
+                </div>
+                
+                <div class="section-title">Antecedentes Clínicos</div>
+                ${doc.antNoRefiere ? `<p><em>No refiere antecedentes.</em></p>` : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 100px;">Código</th>
+                                <th>Diagnóstico</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${ant.length === 0 ? `<tr><td colspan="3" style="text-align: center; color: #64748b;">No hay antecedentes registrados.</td></tr>` : ant.map(a => `
+                                <tr>
+                                    <td class="font-mono">${a.code}</td>
+                                    <td><strong>${a.name}</strong></td>
+                                    <td>${a.obs || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+                
+                <div class="section-title">Alergias</div>
+                ${doc.alerNoRefiere ? `<p><em>No refiere alergias.</em></p>` : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 150px;">Tipo de Alergia</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${aler.length === 0 ? `<tr><td colspan="2" style="text-align: center; color: #64748b;">No hay alergias registradas.</td></tr>` : aler.map(a => `
+                                <tr>
+                                    <td><strong>${a.tipo}</strong></td>
+                                    <td>${a.obs || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+
+                <div class="section-title">Antecedentes Familiares</div>
+                ${doc.famNoRefiere ? `<p><em>No refiere antecedentes familiares.</em></p>` : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">Parentesco</th>
+                                <th style="width: 100px;">CIE10</th>
+                                <th>Diagnóstico</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${fam.length === 0 ? `<tr><td colspan="4" style="text-align: center; color: #64748b;">No hay antecedentes familiares registrados.</td></tr>` : fam.map(f => `
+                                <tr>
+                                    <td><strong>${f.parentesco}</strong></td>
+                                    <td class="font-mono">${f.code}</td>
+                                    <td><strong>${f.name}</strong></td>
+                                    <td>${f.obs || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+
+                <div class="section-title">Medicamentos en Uso</div>
+                ${doc.medPrevNoRefiere ? `<p><em>No refiere uso de medicamentos.</em></p>` : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 200px;">DCI / Medicamento</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${meds.length === 0 ? `<tr><td colspan="2" style="text-align: center; color: #64748b;">No hay medicamentos registrados.</td></tr>` : meds.map(m => `
+                                <tr>
+                                    <td><strong>${m.nombre}</strong></td>
+                                    <td>${m.obs || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+            `;
         } else {
             contentHtml = `
-                <div class="section-title">Contenido del Documento</div>
+                ${isTemplate ? '' : '<div class="section-title">Contenido del Documento</div>'}
                 <div class="content-box">${(doc.contenido || "").replace(/\n/g, "<br/>")}</div>
             `;
         }
@@ -176,43 +338,45 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     .header {
                         display: flex;
-                        justify-content: space-between;
+                        flex-direction: column;
                         align-items: center;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 20px;
-                        margin-bottom: 25px;
+                        gap: 15px;
+                        border-bottom: 2px solid #1e3a8a;
+                        padding-bottom: 15px;
+                        margin-bottom: 20px;
                     }
                     .logo-area {
                         display: flex;
+                        justify-content: center;
                         align-items: center;
-                        gap: 10px;
+                        width: 100%;
                     }
                     .logo-text {
-                        font-size: 24px;
+                        font-size: 26px;
                         font-weight: 900;
                         color: #1e3a8a;
                         letter-spacing: -0.05em;
-                    }
-                    .logo-sub {
-                        color: #8CC63F;
+                        text-transform: uppercase;
                     }
                     .doc-title {
-                        text-align: right;
+                        text-align: center;
+                        width: 100%;
                     }
                     .doc-title h1 {
-                        font-size: 20px;
-                        font-weight: 800;
+                        font-size: 22px;
+                        font-weight: 900;
                         text-transform: uppercase;
                         margin: 0;
-                        color: #0f172a;
+                        color: #1e3a8a;
+                        letter-spacing: 0.05em;
                     }
                     .doc-title p {
                         font-size: 11px;
-                        font-weight: 700;
+                        font-weight: 800;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 5px 0 0 0;
-                        letter-spacing: 0.1em;
+                        margin: 6px 0 0 0;
+                        letter-spacing: 0.2em;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -333,11 +497,14 @@ export default function HistoriaClinicaContainer({ patient }) {
             <body>
                 <div class="header">
                     <div class="logo-area">
-                        <div class="logo-text">Odonto<span class="logo-sub">Cloud</span></div>
+                        ${logoUrl 
+                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
+                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
+                        }
                     </div>
                     <div class="doc-title">
-                        <h1>${doc.tipoDocumento} Médica</h1>
-                        <p>Registro Clínico Oficial</p>
+                        <h1>${doc.tipoDocumento}${["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento) ? ' Médica' : ''}</h1>
+                        ${isTemplate ? '' : '<p>Registro Clínico Oficial</p>'}
                     </div>
                 </div>
 
@@ -362,16 +529,25 @@ export default function HistoriaClinicaContainer({ patient }) {
 
                 ${contentHtml}
 
-                <div class="footer-sig">
-                    <div class="sig-block">
-                        <div class="sig-line"></div>
-                        <div class="sig-title">${doc.profesional || ''}</div>
-                        <div class="sig-subtitle">Profesional Tratante</div>
+                <div class="footer-sig" style="margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;">
+                    <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
+                        <div class="sig-title" style="font-weight: bold; color: #0f172a;">${doc.profesional || ''}</div>
+                        <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Profesional Tratante</div>
                     </div>
-                    <div class="sig-block">
-                        <div class="sig-line"></div>
-                        <div class="sig-title">${doc.transcribe || ''}</div>
-                        <div class="sig-subtitle">Transcriptor / Auxiliar</div>
+                    
+                    ${doc.terceraFirma ? `
+                    <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
+                        <div class="sig-title" style="font-weight: bold; color: #0f172a;">${patient.nombreCompleto || ''}</div>
+                        <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Paciente / Aceptante</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
+                        <div class="sig-title" style="font-weight: bold; color: #0f172a;">${doc.transcribe || ''}</div>
+                        <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Transcriptor / Auxiliar</div>
                     </div>
                 </div>
 
@@ -396,6 +572,9 @@ export default function HistoriaClinicaContainer({ patient }) {
             console.error("Error fetching anamnesis for print", e);
         }
 
+        const logoUrl = clinicConfig?.logo || "";
+        const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
+
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
             toast.error("Por favor permite los popups en este sitio para poder imprimir.");
@@ -417,43 +596,45 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     .header {
                         display: flex;
-                        justify-content: space-between;
+                        flex-direction: column;
                         align-items: center;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 20px;
-                        margin-bottom: 25px;
+                        gap: 15px;
+                        border-bottom: 2px solid #1e3a8a;
+                        padding-bottom: 15px;
+                        margin-bottom: 20px;
                     }
                     .logo-area {
                         display: flex;
+                        justify-content: center;
                         align-items: center;
-                        gap: 10px;
+                        width: 100%;
                     }
                     .logo-text {
-                        font-size: 24px;
+                        font-size: 26px;
                         font-weight: 900;
                         color: #1e3a8a;
                         letter-spacing: -0.05em;
-                    }
-                    .logo-sub {
-                        color: #8CC63F;
+                        text-transform: uppercase;
                     }
                     .doc-title {
-                        text-align: right;
+                        text-align: center;
+                        width: 100%;
                     }
                     .doc-title h1 {
-                        font-size: 18px;
-                        font-weight: 800;
+                        font-size: 22px;
+                        font-weight: 900;
                         text-transform: uppercase;
                         margin: 0;
-                        color: #0f172a;
+                        color: #1e3a8a;
+                        letter-spacing: 0.05em;
                     }
                     .doc-title p {
-                        font-size: 10px;
-                        font-weight: 700;
+                        font-size: 11px;
+                        font-weight: 800;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 5px 0 0 0;
-                        letter-spacing: 0.1em;
+                        margin: 6px 0 0 0;
+                        letter-spacing: 0.2em;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -564,7 +745,10 @@ export default function HistoriaClinicaContainer({ patient }) {
             <body>
                 <div class="header">
                     <div class="logo-area">
-                        <div class="logo-text">Odonto<span class="logo-sub">Cloud</span></div>
+                        ${logoUrl 
+                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
+                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
+                        }
                     </div>
                     <div class="doc-title">
                         <h1>Historia Clínica Odontológica</h1>
@@ -704,6 +888,9 @@ export default function HistoriaClinicaContainer({ patient }) {
             return;
         }
 
+        const logoUrl = clinicConfig?.logo || "";
+        const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
+
         printWindow.document.write(`
             <html>
             <head>
@@ -719,43 +906,45 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     .header {
                         display: flex;
-                        justify-content: space-between;
+                        flex-direction: column;
                         align-items: center;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 20px;
-                        margin-bottom: 25px;
+                        gap: 15px;
+                        border-bottom: 2px solid #1e3a8a;
+                        padding-bottom: 15px;
+                        margin-bottom: 20px;
                     }
                     .logo-area {
                         display: flex;
+                        justify-content: center;
                         align-items: center;
-                        gap: 10px;
+                        width: 100%;
                     }
                     .logo-text {
-                        font-size: 24px;
+                        font-size: 26px;
                         font-weight: 900;
                         color: #1e3a8a;
                         letter-spacing: -0.05em;
-                    }
-                    .logo-sub {
-                        color: #8CC63F;
+                        text-transform: uppercase;
                     }
                     .doc-title {
-                        text-align: right;
+                        text-align: center;
+                        width: 100%;
                     }
                     .doc-title h1 {
-                        font-size: 18px;
-                        font-weight: 800;
+                        font-size: 22px;
+                        font-weight: 900;
                         text-transform: uppercase;
                         margin: 0;
-                        color: #0f172a;
+                        color: #1e3a8a;
+                        letter-spacing: 0.05em;
                     }
                     .doc-title p {
-                        font-size: 10px;
-                        font-weight: 700;
+                        font-size: 11px;
+                        font-weight: 800;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 5px 0 0 0;
-                        letter-spacing: 0.1em;
+                        margin: 6px 0 0 0;
+                        letter-spacing: 0.2em;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -844,7 +1033,10 @@ export default function HistoriaClinicaContainer({ patient }) {
             <body>
                 <div class="header">
                     <div class="logo-area">
-                        <div class="logo-text">Odonto<span class="logo-sub">Cloud</span></div>
+                        ${logoUrl 
+                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
+                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
+                        }
                     </div>
                     <div class="doc-title">
                         <h1>Impresión Parcial de Historia</h1>
@@ -908,6 +1100,32 @@ export default function HistoriaClinicaContainer({ patient }) {
                                         `).join('')}
                                     </tbody>
                                 </table>
+                            ` : d.tipoDocumento === 'Orden' ? `
+                                <div style="margin-top: 5px; font-size: 11px;">
+                                    <p><strong>Tipo de Orden:</strong> ${d.tipoOrden || 'Orden médica'}</p>
+                                    <p><strong>Dx Principal:</strong> ${d.dxPrincipal ? `${d.dxPrincipal.code} - ${d.dxPrincipal.name}` : '-'}</p>
+                                    ${(d.dxRelacionados || []).length > 0 ? `
+                                        <p><strong>Dx Relacionados:</strong> ${(d.dxRelacionados || []).map(r => r.code).join(', ')}</p>
+                                    ` : ''}
+                                    ${(d.cupsItems || []).length > 0 ? `
+                                        <div style="margin-top: 5px;"><strong>Procedimientos (CUPS):</strong></div>
+                                        <ul style="margin: 2px 0; padding-left: 15px;">
+                                            ${(d.cupsItems || []).map(c => `<li>[${c.code}] ${c.name} ${c.descripcion ? `(${c.descripcion})` : ''}</li>`).join('')}
+                                        </ul>
+                                    ` : ''}
+                                    ${d.observacionesGenerales ? `<p><strong>Observaciones:</strong> ${d.observacionesGenerales}</p>` : ''}
+                                </div>
+                            ` : d.tipoDocumento === 'Consulta' ? `
+                                <div style="margin-top: 5px; font-size: 11px;">
+                                    <p><strong>Motivo de Consulta:</strong> ${d.motivoConsulta || '-'}</p>
+                                    <p><strong>Enfermedad Actual:</strong> ${d.enfermedadActual || '-'}</p>
+                                    ${(d.antecedentes || []).length > 0 ? `
+                                        <p><strong>Antecedentes:</strong> ${(d.antecedentes || []).map(a => `[${a.code}] ${a.name}`).join(', ')}</p>
+                                    ` : ''}
+                                    ${(d.alergias || []).length > 0 ? `
+                                        <p><strong>Alergias:</strong> ${(d.alergias || []).map(a => `${a.tipo} (${a.obs || ''})`).join(', ')}</p>
+                                    ` : ''}
+                                </div>
                             ` : (d.contenido || '').replace(/\n/g, '<br/>')}
                         </div>
                     </div>

@@ -1,339 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiCheck, FiSave, FiPlus, FiTrash2, FiSearch, FiBox, FiList, FiPenTool } from 'react-icons/fi';
 
-import { collection, doc, setDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import CIE10Search from './CIE10Search';
+import MedicamentoSearch from './MedicamentoSearch';
+import VIAS_ADMINISTRACION from '../../../data/viasAdministracionColombia';
+import COLOMBIAN_CUM_REGISTRY from '../../../data/cumCompleto';
+import { CUPS_DENTAL_CODES } from "../../../data/cupsCodes";
+import { PREDEFINED_TEMPLATES } from '../../../data/plantillasPredeterminadas';
 
-/**
- * CATÁLOGO CUM – Código Único Nacional de Medicamentos
- * 
- * Marco legal: Resolución 0255 de 2007 - Ministerio de la Protección Social
- * Entidad gestora: INVIMA (Instituto Nacional de Vigilancia de Medicamentos y Alimentos)
- * Consulta oficial: https://www.datos.gov.co → "Código Único de Medicamentos Vigentes"
- * 
- * Campos obligatorios per Res. 255/2007 Art. 3:
- *  1. cum              → Número Trazador (expediente INVIMA + consecutivo de presentación)
- *  2. atc              → Clasificación Anatómico-Terapéutica hasta 5° nivel (OMS)
- *  3. formaFarmaceutica → Forma farmacéutica estandarizada
- *  4. unidadConcentracion → Unidad de concentración del principio activo (mg, %, UI, etc.)
- *  5. viaAdministracion → Vía de administración estandarizada
- *  6. unidadMedida     → Unidad de medida de la presentación comercial (tableta, cápsula, mL, etc.)
- * 
- * Campos adicionales (contexto clínico odontológico):
- *  - principioActivo, concentracion, descripcion, marca, tipo (POS/NO POS), registroInvima
- */
-const COLOMBIAN_CUM_REGISTRY = [
-  // ══ ANALGÉSICOS / ANTIPIRÉTICOS (Grupo ATC: N02 / M01) ══════════════════
-  {
-    cum: "19987452-1",            registroInvima: "INVIMA 2021M-007223-R4",
-    principioActivo: "Acetaminofén",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "N02BE01",
-    marca: "Genfar",
-    descripcion: "Acetaminofén 500 mg Tableta – Analgésico/antipirético de primera línea en odontología"
-  },
-  {
-    cum: "19987452-2",            registroInvima: "INVIMA 2021M-007223-R4",
-    principioActivo: "Acetaminofén",
-    concentracion: "1000 mg",    unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "N02BE01",
-    marca: "Genfar",
-    descripcion: "Acetaminofén 1000 mg Tableta – Dosis alta para dolor moderado"
-  },
-  {
-    cum: "20083210-1",            registroInvima: "INVIMA 2022M-010029-R2",
-    principioActivo: "Ibuprofeno",
-    concentracion: "400 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta recubierta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "M01AE01",
-    marca: "Bayer",
-    descripcion: "Ibuprofeno 400 mg Tableta recubierta – AINE antiinflamatorio/analgésico posoperatorio"
-  },
-  {
-    cum: "20083210-2",            registroInvima: "INVIMA 2022M-010029-R2",
-    principioActivo: "Ibuprofeno",
-    concentracion: "600 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta recubierta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "M01AE01",
-    marca: "Bayer",
-    descripcion: "Ibuprofeno 600 mg Tableta recubierta – Dolor moderado a severo"
-  },
-  {
-    cum: "19935303-4",            registroInvima: "INVIMA 2020M-005412-R3",
-    principioActivo: "Ketorolaco Trometamina",
-    concentracion: "10 mg",      unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "M01AB15",
-    marca: "Genfar",
-    descripcion: "Ketorolaco 10 mg Tableta – AINE de alta potencia analgésica (máx. 5 días)"
-  },
-  {
-    cum: "19935303-5",            registroInvima: "INVIMA 2020M-005412-R3",
-    principioActivo: "Ketorolaco Trometamina",
-    concentracion: "30 mg/mL",   unidadConcentracion: "mg/mL",
-    formaFarmaceutica: "Solución inyectable", viaAdministracion: "Intramuscular",
-    unidadMedida: "Ampolla 1 mL", tipo: "POS",
-    atc: "M01AB15",
-    marca: "Genfar",
-    descripcion: "Ketorolaco 30 mg/mL Ampolla IM – Dolor agudo posoperatorio inmediato"
-  },
-  {
-    cum: "20145678-1",            registroInvima: "INVIMA 2023M-013210-R1",
-    principioActivo: "Naproxeno Sódico",
-    concentracion: "550 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "M01AE02",
-    marca: "Tecnoquímicas",
-    descripcion: "Naproxeno Sódico 550 mg Tableta – AINE de acción prolongada"
-  },
-  // ══ ANTIINFLAMATORIOS CORTICOSTEROIDES (Grupo ATC: H02) ═════════════════
-  {
-    cum: "19872341-2",            registroInvima: "INVIMA 2019M-003801-R5",
-    principioActivo: "Dexametasona",
-    concentracion: "4 mg",       unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "H02AB02",
-    marca: "Genfar",
-    descripcion: "Dexametasona 4 mg Tableta – Corticoide antiinflamatorio; reduce edema posoperatorio"
-  },
-  {
-    cum: "19872341-3",            registroInvima: "INVIMA 2019M-003801-R5",
-    principioActivo: "Dexametasona",
-    concentracion: "8 mg/2 mL",  unidadConcentracion: "mg/mL",
-    formaFarmaceutica: "Solución inyectable", viaAdministracion: "Intramuscular",
-    unidadMedida: "Ampolla 2 mL", tipo: "POS",
-    atc: "H02AB02",
-    marca: "Chalver",
-    descripcion: "Dexametasona 8 mg/2 mL Ampolla IM – Antiinflamatorio potente de acción rápida"
-  },
-  {
-    cum: "20031892-1",            registroInvima: "INVIMA 2021M-008891-R2",
-    principioActivo: "Metilprednisolona",
-    concentracion: "4 mg",       unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "NO POS",
-    atc: "H02AB04",
-    marca: "Pfizer",
-    descripcion: "Metilprednisolona 4 mg Tableta – Corticoide; esquema Medrol Dosepak en cirugía oral"
-  },
-  // ══ ANTIBIÓTICOS (Grupo ATC: J01) ═══════════════════════════════════════
-  {
-    cum: "20043210-1",            registroInvima: "INVIMA 2021M-007896-R4",
-    principioActivo: "Amoxicilina",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Cápsula", viaAdministracion: "Oral",
-    unidadMedida: "Cápsula",      tipo: "POS",
-    atc: "J01CA04",
-    marca: "Genfar",
-    descripcion: "Amoxicilina 500 mg Cápsula – Betalactámico de primera línea en infecciones dentales"
-  },
-  {
-    cum: "20043210-2",            registroInvima: "INVIMA 2021M-007896-R4",
-    principioActivo: "Amoxicilina + Ácido Clavulánico",
-    concentracion: "875 mg/125 mg", unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta recubierta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "J01CR02",
-    marca: "GlaxoSmithKline",
-    descripcion: "Amoxicilina/Clavulánico 875/125 mg Tableta – Amplio espectro; bacterias productoras de betalactamasa"
-  },
-  {
-    cum: "20084532-1",            registroInvima: "INVIMA 2020M-006231-R3",
-    principioActivo: "Clindamicina",
-    concentracion: "300 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Cápsula", viaAdministracion: "Oral",
-    unidadMedida: "Cápsula",      tipo: "POS",
-    atc: "J01FF01",
-    marca: "Tecnoquímicas",
-    descripcion: "Clindamicina 300 mg Cápsula – Antibiótico de elección en infecciones periodontales graves"
-  },
-  {
-    cum: "20084532-2",            registroInvima: "INVIMA 2020M-006231-R3",
-    principioActivo: "Clindamicina",
-    concentracion: "600 mg/4 mL", unidadConcentracion: "mg/mL",
-    formaFarmaceutica: "Solución inyectable", viaAdministracion: "Intramuscular",
-    unidadMedida: "Ampolla 4 mL", tipo: "POS",
-    atc: "J01FF01",
-    marca: "Chalver",
-    descripcion: "Clindamicina 600 mg/4 mL Ampolla IM – Infecciones orofaciales graves hospitalizadas"
-  },
-  {
-    cum: "20091234-1",            registroInvima: "INVIMA 2022M-009543-R2",
-    principioActivo: "Azitromicina",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta recubierta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "J01FA10",
-    marca: "Genfar",
-    descripcion: "Azitromicina 500 mg Tableta – Macrólido; alternativa en alérgicos a penicilina"
-  },
-  {
-    cum: "20021567-1",            registroInvima: "INVIMA 2020M-005100-R4",
-    principioActivo: "Metronidazol",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "J01XD01",
-    marca: "Genfar",
-    descripcion: "Metronidazol 500 mg Tableta – Antibiótico anaerobio; pericoronitis, abscesos"
-  },
-  {
-    cum: "20021567-2",            registroInvima: "INVIMA 2020M-005100-R4",
-    principioActivo: "Amoxicilina + Metronidazol",
-    concentracion: "500 mg/500 mg", unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "J01CR01",
-    marca: "Lafrancol",
-    descripcion: "Amoxicilina + Metronidazol 500/500 mg Tableta combinada – Sinergia aerobios/anaerobios"
-  },
-  // ══ ANESTÉSICOS LOCALES (Grupo ATC: N01B) ═══════════════════════════════
-  {
-    cum: "19921098-1",            registroInvima: "INVIMA 2018M-002341-R6",
-    principioActivo: "Lidocaína Clorhidrato + Epinefrina",
-    concentracion: "2% / 1:80.000", unidadConcentracion: "% / dilución",
-    formaFarmaceutica: "Solución inyectable – Cárpula dental", viaAdministracion: "Infiltrativa o bloqueo nervioso",
-    unidadMedida: "Cárpula 1.8 mL", tipo: "NO POS",
-    atc: "N01BB52",
-    marca: "New Stetic",
-    descripcion: "Lidocaína 2% + Epinefrina 1:80.000 – Anestesia dental estándar, duración ~60–90 min"
-  },
-  {
-    cum: "19921098-2",            registroInvima: "INVIMA 2018M-002341-R6",
-    principioActivo: "Lidocaína Clorhidrato + Epinefrina",
-    concentracion: "2% / 1:100.000", unidadConcentracion: "% / dilución",
-    formaFarmaceutica: "Solución inyectable – Cárpula dental", viaAdministracion: "Infiltrativa o bloqueo nervioso",
-    unidadMedida: "Cárpula 1.8 mL", tipo: "NO POS",
-    atc: "N01BB52",
-    marca: "Septodont",
-    descripcion: "Lidocaína 2% + Epinefrina 1:100.000 – Menor vasoconstricción; uso en pacientes con riesgo cardiovascular leve"
-  },
-  {
-    cum: "20104321-1",            registroInvima: "INVIMA 2021M-009102-R2",
-    principioActivo: "Mepivacaína Clorhidrato",
-    concentracion: "3%",         unidadConcentracion: "%",
-    formaFarmaceutica: "Solución inyectable – Cárpula dental", viaAdministracion: "Infiltrativa o bloqueo nervioso",
-    unidadMedida: "Cárpula 1.8 mL", tipo: "NO POS",
-    atc: "N01BB03",
-    marca: "New Stetic",
-    descripcion: "Mepivacaína 3% sin vasoconstrictor – Indicada en pacientes con contraindicación a epinefrina"
-  },
-  {
-    cum: "20104321-2",            registroInvima: "INVIMA 2021M-009102-R2",
-    principioActivo: "Articaína Clorhidrato + Epinefrina",
-    concentracion: "4% / 1:100.000", unidadConcentracion: "% / dilución",
-    formaFarmaceutica: "Solución inyectable – Cárpula dental", viaAdministracion: "Infiltrativa o bloqueo nervioso",
-    unidadMedida: "Cárpula 1.8 mL", tipo: "NO POS",
-    atc: "N01BB58",
-    marca: "Septodont",
-    descripcion: "Articaína 4% + Epinefrina 1:100.000 – Mayor difusión ósea; ideal en infiltrativas mandibulares"
-  },
-  {
-    cum: "20104321-3",            registroInvima: "INVIMA 2021M-009102-R2",
-    principioActivo: "Bupivacaína Clorhidrato + Epinefrina",
-    concentracion: "0.5% / 1:200.000", unidadConcentracion: "% / dilución",
-    formaFarmaceutica: "Solución inyectable", viaAdministracion: "Bloqueo nervioso",
-    unidadMedida: "Ampolla 10 mL", tipo: "NO POS",
-    atc: "N01BB01",
-    marca: "Baxter",
-    descripcion: "Bupivacaína 0.5% + Epinefrina – Anestesia de larga duración (4–8 h); cirugía oral mayor"
-  },
-  // ══ ANTISÉPTICOS BUCALES (Grupo ATC: A01AB) ══════════════════════════════
-  {
-    cum: "20112233-1",            registroInvima: "INVIMA 2022M-011234-R1",
-    principioActivo: "Clorhexidina Gluconato",
-    concentracion: "0.12%",      unidadConcentracion: "%",
-    formaFarmaceutica: "Solución para enjuague bucal", viaAdministracion: "Tópica bucal (enjuague)",
-    unidadMedida: "Frasco 500 mL", tipo: "NO POS",
-    atc: "A01AB03",
-    marca: "Perio·Aid",
-    descripcion: "Clorhexidina 0.12% Enjuague – Antiséptico periodontal; uso crónico"
-  },
-  {
-    cum: "20112233-2",            registroInvima: "INVIMA 2022M-011234-R1",
-    principioActivo: "Clorhexidina Gluconato",
-    concentracion: "0.20%",      unidadConcentracion: "%",
-    formaFarmaceutica: "Solución para enjuague bucal", viaAdministracion: "Tópica bucal (enjuague)",
-    unidadMedida: "Frasco 500 mL", tipo: "NO POS",
-    atc: "A01AB03",
-    marca: "Bexident",
-    descripcion: "Clorhexidina 0.20% Enjuague – Posquirúrgico inmediato (exodoncia, implantes)"
-  },
-  {
-    cum: "20112233-3",            registroInvima: "INVIMA 2022M-011234-R1",
-    principioActivo: "Clorhexidina Gluconato",
-    concentracion: "2%",         unidadConcentracion: "%",
-    formaFarmaceutica: "Solución antiséptica tópica", viaAdministracion: "Tópica (piel/mucosa)",
-    unidadMedida: "Frasco 500 mL", tipo: "NO POS",
-    atc: "A01AB03",
-    marca: "Labquifar",
-    descripcion: "Clorhexidina 2% Solución tópica – Asepsia del campo operatorio previo a cirugía"
-  },
-  // ══ ANSIOLÍTICOS / PREMEDICACIÓN (Grupo ATC: N05B) ══════════════════════
-  {
-    cum: "20198731-1",            registroInvima: "INVIMA 2023M-014521-R1",
-    principioActivo: "Diazepam",
-    concentracion: "5 mg",       unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "POS",
-    atc: "N05BA01",
-    marca: "Genfar",
-    descripcion: "Diazepam 5 mg Tableta – Premedicación ansiolítica; 1 h antes del procedimiento"
-  },
-  {
-    cum: "20198731-2",            registroInvima: "INVIMA 2023M-014521-R1",
-    principioActivo: "Midazolam",
-    concentracion: "7.5 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "NO POS",
-    atc: "N05CD08",
-    marca: "Roche",
-    descripcion: "Midazolam 7.5 mg Tableta – Sedación oral consciente en procedimientos largos"
-  },
-  // ══ HEMOSTÁTICOS (Grupo ATC: B02) ═══════════════════════════════════════
-  {
-    cum: "20231045-1",            registroInvima: "INVIMA 2024M-016892-R1",
-    principioActivo: "Ácido Tranexámico",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "NO POS",
-    atc: "B02AA02",
-    marca: "Lafrancol",
-    descripcion: "Ácido Tranexámico 500 mg Tableta – Hemostático sistémico; pacientes anticoagulados"
-  },
-  {
-    cum: "20231045-2",            registroInvima: "INVIMA 2024M-016892-R1",
-    principioActivo: "Etamsilato",
-    concentracion: "500 mg",     unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "NO POS",
-    atc: "B02BX01",
-    marca: "Tecnoquímicas",
-    descripcion: "Etamsilato 500 mg Tableta – Hemostático capilar; sangrado gingival o alveolar"
-  },
-  // ══ VITAMINAS / REGENERACIÓN TISULAR (Grupo ATC: A11) ═══════════════════
-  {
-    cum: "20009871-1",            registroInvima: "INVIMA 2019M-004102-R3",
-    principioActivo: "Ácido Ascórbico (Vitamina C)",
-    concentracion: "1000 mg",    unidadConcentracion: "mg",
-    formaFarmaceutica: "Tableta efervescente", viaAdministracion: "Oral",
-    unidadMedida: "Tableta",      tipo: "NO POS",
-    atc: "A11GA01",
-    marca: "Bayer",
-    descripcion: "Vitamina C 1000 mg Efervescente – Soporte cicatrización posquirúrgica; colágeno"
-  },
-];
 
 export default function DocClinicoModal({ isOpen, onClose, patient, docType, initialData = null, isViewOnly = false }) {
     const { userProfile } = useAuth();
@@ -356,6 +34,109 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
     const [medSearchTerm, setMedSearchTerm] = useState("");
     const [selectedMed, setSelectedMed] = useState(null);
     const [medSuggestions, setMedSuggestions] = useState([]);
+
+    // Step for Orden: 'profesional' or 'details'
+    const [ordenStep, setOrdenStep] = useState('profesional');
+
+    // Form states for Orden
+    const [tipoOrden, setTipoOrden] = useState('Orden médica');
+    const [dxPrincipal, setDxPrincipal] = useState(null);
+    const [diagnosticosRelacionados, setDiagnosticosRelacionados] = useState([]);
+    const [tempDxRelacionado, setTempDxRelacionado] = useState(null);
+    const [observacionesGenerales, setObservacionesGenerales] = useState('');
+
+    // CUPS items for Orden
+    const [cupsItems, setCupsItems] = useState([]);
+    const [cupsModalOpen, setCupsModalOpen] = useState(false);
+    const [selectedCups, setSelectedCups] = useState(null);
+    const [cupsObservaciones, setCupsObservaciones] = useState('');
+    const [cupsQuery, setCupsQuery] = useState('');
+    const [showCupsSuggestions, setShowCupsSuggestions] = useState(false);
+
+    // ── Plantillas Clínicas states ───────────────────────────────────────────
+    const [templates, setTemplates] = useState([]);
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [templateValues, setTemplateValues] = useState({});
+
+    // ── Consulta Médica form states ────────────────────────────────────────
+    const [consultaTab, setConsultaTab] = useState('motivo');
+    const [motivoConsulta, setMotivoConsulta] = useState('');
+    const [enfermedadActual, setEnfermedadActual] = useState('');
+    // Antecedentes
+    const [antNoRefiere, setAntNoRefiere] = useState(false);
+    const [tempAntCIE10, setTempAntCIE10] = useState(null);
+    const [tempAntObs, setTempAntObs] = useState('');
+    const [antecedentes, setAntecedentes] = useState([]);
+    // Alergias
+    const [alerNoRefiere, setAlerNoRefiere] = useState(false);
+    const [tempAlerTipo, setTempAlerTipo] = useState('');
+    const [tempAlerObs, setTempAlerObs] = useState('');
+    const [alergias, setAlergias] = useState([]);
+    // Antecedentes Familiares
+    const [famNoRefiere, setFamNoRefiere] = useState(false);
+    const [tempFamParentesco, setTempFamParentesco] = useState('');
+    const [tempFamCIE10, setTempFamCIE10] = useState(null);
+    const [tempFamObs, setTempFamObs] = useState('');
+    const [antFamiliares, setAntFamiliares] = useState([]);
+    // Medicamentos previos
+    const [medPrevNoRefiere, setMedPrevNoRefiere] = useState(false);
+    const [tempMedPrevItem, setTempMedPrevItem] = useState(null);
+    const [tempMedPrevObs, setTempMedPrevObs] = useState('');
+    const [medicamentosPrev, setMedicamentosPrev] = useState([]);
+
+    // ── Asociar Consulta (for Orden form) ────────────────────────────────────
+    const [asocConsultaModal, setAsocConsultaModal] = useState(false);
+    const [consultasList, setConsultasList] = useState([]);
+    const [asocConsultaId, setAsocConsultaId] = useState(null);
+
+    // ── Consulta summary generator ────────────────────────────────────────
+    const generateConsultaSummary = (motivo, enfermedad, ants, aler, fams, meds) => {
+        const lines = [];
+        if (motivo) lines.push(`MOTIVO DE CONSULTA:\n${motivo}`);
+        if (enfermedad) lines.push(`ENFERMEDAD ACTUAL:\n${enfermedad}`);
+        if (ants && ants.length > 0) {
+            lines.push(`ANTECEDENTES:`);
+            ants.forEach(a => lines.push(`  • [${a.code}] ${a.name}${a.obs ? ' – ' + a.obs : ''}`));
+        }
+        if (aler && aler.length > 0) {
+            lines.push(`ALERGIAS:`);
+            aler.forEach(a => lines.push(`  • ${a.tipo}${a.obs ? ' – ' + a.obs : ''}`));
+        }
+        if (fams && fams.length > 0) {
+            lines.push(`ANTECEDENTES FAMILIARES:`);
+            fams.forEach(f => lines.push(`  • ${f.parentesco}: [${f.code}] ${f.name}${f.obs ? ' – ' + f.obs : ''}`));
+        }
+        if (meds && meds.length > 0) {
+            lines.push(`MEDICAMENTOS EN USO:`);
+            meds.forEach(m => lines.push(`  • ${m.nombre}${m.obs ? ' – ' + m.obs : ''}`));
+        }
+        return lines.join('\n');
+    };
+
+    // Summary generator helper
+    const generateOrdenSummary = (tOrden, dxPrin, dxRels, cups, obs) => {
+        const summaryLines = [];
+        summaryLines.push(`TIPO DE ORDEN: ${tOrden}`);
+        if (dxPrin) {
+            summaryLines.push(`DIAGNÓSTICO PRINCIPAL: ${dxPrin.code} - ${dxPrin.name}`);
+        }
+        if (dxRels && dxRels.length > 0) {
+            summaryLines.push(`DIAGNÓSTICOS RELACIONADOS:`);
+            dxRels.forEach(dx => {
+                summaryLines.push(`  • ${dx.code} - ${dx.name}`);
+            });
+        }
+        if (cups && cups.length > 0) {
+            summaryLines.push(`PROCEDIMIENTOS (CUPS):`);
+            cups.forEach(c => {
+                summaryLines.push(`  • [${c.code}] ${c.name} ${c.descripcion ? `(Obs: ${c.descripcion})` : ''}`);
+            });
+        }
+        if (obs) {
+            summaryLines.push(`OBSERVACIONES GENERALES: ${obs}`);
+        }
+        return summaryLines.join('\n');
+    };
  
     // Sub-modal states for "Detalle de Prescripción"
     const [prescriptionDetailOpen, setPrescriptionDetailOpen] = useState(false);
@@ -365,7 +146,7 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
     const [prescripcionDosisUnidad, setPrescripcionDosisUnidad] = useState("mg");
     const [prescripcionFrecuenciaValor, setPrescripcionFrecuenciaValor] = useState("");
     const [prescripcionFrecuenciaUnidad, setPrescripcionFrecuenciaUnidad] = useState("Horas");
-    const [prescripcionVia, setPrescripcionVia] = useState("Oral");
+    const [prescripcionVia, setPrescripcionVia] = useState("ORAL");
     const [prescripcionDuracionValor, setPrescripcionDuracionValor] = useState("");
     const [prescripcionDuracionUnidad, setPrescripcionDuracionUnidad] = useState("Días");
     const [prescripcionCantidad, setPrescripcionCantidad] = useState("");
@@ -490,18 +271,123 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
             setMedSearchTerm("");
             setSelectedMed(null);
             clearPrescriptionDetailFields();
+            
+            // Reset Orden states
+            setOrdenStep('profesional');
+            setTipoOrden('Orden médica');
+            setDxPrincipal(null);
+            setDiagnosticosRelacionados([]);
+            setTempDxRelacionado(null);
+            setObservacionesGenerales('');
+            setCupsItems([]);
+            setSelectedCups(null);
+            setCupsObservaciones('');
+            setCupsQuery('');
+            setAsocConsultaId(null);
+            // Reset Consulta states
+            setConsultaTab('motivo');
+            setMotivoConsulta('');
+            setEnfermedadActual('');
+            setAntNoRefiere(false); setTempAntCIE10(null); setTempAntObs(''); setAntecedentes([]);
+            setAlerNoRefiere(false); setTempAlerTipo(''); setTempAlerObs(''); setAlergias([]);
+            setFamNoRefiere(false); setTempFamParentesco(''); setTempFamCIE10(null); setTempFamObs(''); setAntFamiliares([]);
+            setMedPrevNoRefiere(false); setTempMedPrevItem(null); setTempMedPrevObs(''); setMedicamentosPrev([]);
+            // Reset Plantilla states
+            setTemplates([]);
+            setSelectedTemplate(null);
+            setTemplateValues({});
         } else if (initialData) {
             setContenido(initialData.contenido || "");
             setDiagnostico(initialData.diagnostico || "");
             setProfesional(initialData.profesional || userProfile?.nombreCompleto || userProfile?.nombre || "");
             setRecetaItems(initialData.recetaItems || []);
             setSelectedPlan(initialData.planFormulacion || "");
+            
+            // Initialize Orden states if we are editing/viewing an existing Orden
+            if (initialData.tipoDocumento === 'Orden') {
+                setOrdenStep('details'); // Go directly to details when editing or viewing
+                setTipoOrden(initialData.tipoOrden || 'Orden médica');
+                setDxPrincipal(initialData.dxPrincipal || null);
+                setDiagnosticosRelacionados(initialData.dxRelacionados || []);
+                setObservacionesGenerales(initialData.observacionesGenerales || '');
+                setCupsItems(initialData.cupsItems || []);
+                setAsocConsultaId(initialData.asocConsultaId || null);
+            }
+            // Initialize Consulta states if editing/viewing
+            if (initialData.tipoDocumento === 'Consulta') {
+                setConsultaTab('motivo');
+                setMotivoConsulta(initialData.motivoConsulta || '');
+                setEnfermedadActual(initialData.enfermedadActual || '');
+                setAntecedentes(initialData.antecedentes || []);
+                setAntNoRefiere(initialData.antNoRefiere || false);
+                setAlergias(initialData.alergias || []);
+                setAlerNoRefiere(initialData.alerNoRefiere || false);
+                setAntFamiliares(initialData.antFamiliares || []);
+                setFamNoRefiere(initialData.famNoRefiere || false);
+                setMedicamentosPrev(initialData.medicamentosPrev || []);
+                setMedPrevNoRefiere(initialData.medPrevNoRefiere || false);
+            }
+            // Initialize Template states if editing/viewing a template document
+            if (initialData.isTemplateDoc) {
+                const predefined = PREDEFINED_TEMPLATES.find(t => t.id === initialData.templateId || t.nombre === initialData.tipoDocumento);
+                if (predefined) {
+                    setSelectedTemplate(predefined);
+                } else {
+                    setSelectedTemplate({ nombre: initialData.tipoDocumento, campos: initialData.campos || [] });
+                }
+                setTemplateValues(initialData.valoresCampos || {});
+            }
         } else {
-            setProfesional(userProfile?.nombreCompleto || userProfile?.nombre || "");
             setRecetaItems([]);
             setSelectedPlan("");
+            
+            // For a new Orden, start with empty professional so they must choose
+            if (docType === 'Orden') {
+                setProfesional("");
+            } else {
+                setProfesional(userProfile?.nombreCompleto || userProfile?.nombre || "");
+            }
+            
+            // Initialize new Orden defaults
+            setOrdenStep('profesional');
+            setTipoOrden('Orden médica');
+            setDxPrincipal(null);
+            setDiagnosticosRelacionados([]);
+            setTempDxRelacionado(null);
+            setObservacionesGenerales('');
+            setCupsItems([]);
+            setSelectedCups(null);
+            setCupsObservaciones('');
+            setCupsQuery('');
+            // Reset Plantilla states for new doc
+            setSelectedTemplate(null);
+            setTemplateValues({});
         }
-    }, [isOpen, initialData, userProfile]);
+    }, [isOpen, initialData, userProfile, docType]);
+
+    // Load configured clinical templates (Plantillas Clínicas) from Firestore
+    useEffect(() => {
+        const loadTemplates = async () => {
+            if (!isOpen || !userProfile?.inquilino) return;
+            const isTemplateMode = docType === 'Plantilla';
+            const isEditingTemplate = initialData?.isTemplateDoc;
+            if (!isTemplateMode && !isEditingTemplate) return;
+            if (isTemplateMode) {
+                try {
+                    const q = query(
+                        collection(db, 'tenants', userProfile.inquilino, 'plantillas_clinicas'),
+                        orderBy('nombre', 'asc')
+                    );
+                    const snap = await getDocs(q);
+                    const dbTemplates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setTemplates([...PREDEFINED_TEMPLATES, ...dbTemplates]);
+                } catch (err) {
+                    console.error('Error loading templates:', err);
+                }
+            }
+        };
+        loadTemplates();
+    }, [isOpen, docType, userProfile, initialData]);
 
     // Load active professionals
     useEffect(() => {
@@ -531,7 +417,7 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
         setPrescripcionDosisUnidad("mg");
         setPrescripcionFrecuenciaValor("");
         setPrescripcionFrecuenciaUnidad("Horas");
-        setPrescripcionVia("Oral");
+        setPrescripcionVia("ORAL");
         setPrescripcionDuracionValor("");
         setPrescripcionDuracionUnidad("Días");
         setPrescripcionCantidad("");
@@ -565,7 +451,7 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
         
         setPrescripcionFrecuenciaValor("");
         setPrescripcionFrecuenciaUnidad("Horas");
-        setPrescripcionVia(m.viaAdministracion || "Oral");
+        setPrescripcionVia(m.viaAdministracion ? m.viaAdministracion.toUpperCase() : "ORAL");
         setPrescripcionDuracionValor("");
         setPrescripcionDuracionUnidad("Días");
         setPrescripcionCantidad("");
@@ -615,7 +501,7 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
     };
 
     const handleRemoveItem = (index) => {
-        setRecetaItems(prev => prev.filter((_, idx) => idx !== index));
+                setRecetaItems(prev => prev.filter((_, idx) => idx !== index));
     };
 
     const generateContenidoSummary = (items) => {
@@ -624,14 +510,43 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
         ).join("\n");
     };
 
+    // Generate a human-readable text summary from filled template fields
+    const generateTemplateSummary = (campos, valores) => {
+        const lines = [];
+        (campos || []).forEach(field => {
+            if (field.type === 'section') {
+                lines.push(`\n── ${field.label} ──`);
+            } else if (field.type === 'checkbox' || field.type === 'toggle') {
+                const val = valores[field.id];
+                lines.push(`${field.label}: ${val ? 'SÍ' : 'NO'}`);
+            } else {
+                const val = valores[field.id] || '';
+                if (val) lines.push(`${field.label}: ${val}`);
+            }
+        });
+        return lines.join('\n');
+    };
+
     const handleSave = async () => {
         let finalContent = contenido;
+        let diagVal = diagnostico;
+        const isTemplateDoc = docType === 'Plantilla' || initialData?.isTemplateDoc;
+
         if (docType === 'Receta') {
             if (recetaItems.length === 0) {
                 toast.error("Debe añadir al menos un medicamento a la receta");
                 return;
             }
             finalContent = generateContenidoSummary(recetaItems);
+        } else if (docType === 'Consulta') {
+            if (!motivoConsulta.trim()) {
+                toast.error("El motivo de consulta no puede estar vacío");
+                return;
+            }
+            finalContent = generateConsultaSummary(motivoConsulta, enfermedadActual, antecedentes, alergias, antFamiliares, medicamentosPrev);
+        } else if (docType === 'Orden') {
+            finalContent = generateOrdenSummary(tipoOrden, dxPrincipal, diagnosticosRelacionados, cupsItems, observacionesGenerales);
+            if (dxPrincipal) diagVal = `${dxPrincipal.code} - ${dxPrincipal.name}`;
         }
 
         if (!finalContent.trim()) {
@@ -649,17 +564,43 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
             const payload = {
                 id: docRef.id,
                 fechaIso: isEditing ? initialData.fechaIso : new Date().toISOString(),
-                tipoDocumento: isEditing ? initialData.tipoDocumento : docType,
+                tipoDocumento: isEditing ? initialData.tipoDocumento : (isTemplateDoc && selectedTemplate ? selectedTemplate.nombre : docType),
                 profesional: profesional,
                 transcribe: isEditing ? initialData.transcribe : (userProfile?.nombreCompleto || userProfile?.nombre || "Sistema"),
                 creadorId: isEditing ? initialData.creadorId : (userProfile?.uid || ""),
                 contenido: finalContent,
-                diagnostico: diagnostico,
+                diagnostico: diagVal,
                 actualizado: serverTimestamp(),
                 // Structured properties for recovery
                 ...(docType === 'Receta' && {
                     recetaItems: recetaItems,
                     planFormulacion: selectedPlan
+                }),
+                ...(docType === 'Orden' && {
+                    tipoOrden: tipoOrden,
+                    dxPrincipal: dxPrincipal,
+                    dxRelacionados: diagnosticosRelacionados,
+                    cupsItems: cupsItems,
+                    observacionesGenerales: observacionesGenerales,
+                    asocConsultaId: asocConsultaId || null
+                }),
+                ...(isTemplateDoc && {
+                    isTemplateDoc: true,
+                    templateId: selectedTemplate?.id || initialData?.templateId || null,
+                    campos: selectedTemplate?.campos || initialData?.campos || [],
+                    valoresCampos: templateValues
+                }),
+                ...(docType === 'Consulta' && {
+                    motivoConsulta,
+                    enfermedadActual,
+                    antecedentes,
+                    antNoRefiere,
+                    alergias,
+                    alerNoRefiere,
+                    antFamiliares,
+                    famNoRefiere,
+                    medicamentosPrev,
+                    medPrevNoRefiere
                 })
             };
 
@@ -676,9 +617,74 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
 
     if (!isOpen) return null;
 
+    if (docType === 'Orden' && ordenStep === 'profesional' && !initialData) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden text-left border border-slate-100">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
+                        <h2 className="text-lg font-black text-slate-800 tracking-tight">Seleccionar Profesional</h2>
+                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors bg-white">
+                            <FiX size={16} />
+                        </button>
+                    </div>
+                    <div className="p-8 space-y-4">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Profesional *</label>
+                            <select 
+                                value={profesional}
+                                onChange={(e) => setProfesional(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                            >
+                                <option value="">Seleccione...</option>
+                                {(patient?.profesionales || []).map(p => {
+                                    const name = p.nombreCompleto || p.nombre || p.displayName || p.id || "";
+                                    return (
+                                        <option key={p.id} value={name}>{name.toUpperCase()}</option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 bg-white">
+                        <button onClick={onClose} className="px-6 py-2.5 rounded-full font-bold text-sm text-slate-500 hover:bg-slate-200 transition-colors border border-slate-200 bg-white">
+                            Cerrar
+                        </button>
+                        <button 
+                            onClick={() => {
+                                if (!profesional) {
+                                    toast.error("Debe seleccionar un profesional");
+                                    return;
+                                }
+                                setOrdenStep('details');
+                            }}
+                            className="px-8 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-full font-black text-[11px] uppercase tracking-widest shadow-sm active:scale-95 transition-all"
+                        >
+                            Continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Load consultas for Asociar Consulta modal ───────────────────────────
+    const handleOpenAsocConsulta = async () => {
+        setAsocConsultaModal(true);
+        if (consultasList.length > 0) return;
+        try {
+            const q = query(collection(db, `pacientes/${patient.id}/docClis`), where('tipoDocumento', '==', 'Consulta'));
+            const snap = await getDocs(q);
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            list.sort((a, b) => new Date(b.fechaIso) - new Date(a.fechaIso));
+            setConsultasList(list);
+        } catch (e) {
+            toast.error('Error cargando consultas');
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-            <div className={`bg-white rounded-2xl shadow-2xl w-full ${docType === 'Receta' ? 'max-w-5xl' : 'max-w-3xl'} flex flex-col max-h-[90vh] overflow-hidden`}>
+            <div className={`bg-white rounded-2xl shadow-2xl w-full ${docType === 'Receta' || docType === 'Orden' || docType === 'Plantilla' || initialData?.isTemplateDoc ? 'max-w-5xl' : 'max-w-3xl'} flex flex-col max-h-[90vh] overflow-hidden`}>
                 
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50 bg-white">
@@ -689,17 +695,17 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
                             <span>Pacientes</span> <span className="text-slate-350">-</span>
                             <span>Doc. Clínicos</span> <span className="text-slate-350">-</span>
-                            <span className="text-blue-500">{isViewOnly ? "Detalle" : (initialData ? "Editar receta" : "Nueva receta")}</span>
+                            <span className="text-blue-500">{isViewOnly ? "Detalle" : (initialData ? `Editar ${docType.toLowerCase()}` : `Nueva ${docType.toLowerCase()}`)}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        {docType === 'Receta' && !isViewOnly && (
+                        {(docType === 'Receta' || docType === 'Orden' || docType === 'Plantilla' || initialData?.isTemplateDoc) && !isViewOnly && (
                             <button 
                                 onClick={handleSave}
                                 disabled={saving}
                                 className="px-6 py-2 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-full font-bold text-xs shadow flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
                             >
-                                {saving ? "Guardando..." : "Guardar receta"}
+                                {saving ? "Guardando..." : `Guardar ${docType.toLowerCase()}`}
                             </button>
                         )}
                         <button onClick={onClose} disabled={saving} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors border border-slate-200 bg-white">
@@ -721,9 +727,12 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-75 disabled:cursor-not-allowed"
                             >
                                 <option value="" disabled>Seleccione...</option>
-                                {catalogProfesionales.map(p => (
-                                    <option key={p.id} value={p.nombreCompleto}>{p.nombreCompleto.toUpperCase()}</option>
-                                ))}
+                                {(docType === 'Orden' ? (patient?.profesionales || []) : catalogProfesionales).map(p => {
+                                    const name = p.nombreCompleto || p.nombre || p.displayName || p.id || "";
+                                    return (
+                                        <option key={p.id} value={name}>{name.toUpperCase()}</option>
+                                    );
+                                })}
                             </select>
                         </div>
                         
@@ -738,24 +747,207 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                 >
                                     <option value="">SELECCIONE...</option>
                                     {treatmentPlans.map(plan => (
-                                        <option key={plan.id} value={plan.nombre}>{plan.nombre.toUpperCase()}</option>
+                                        <option key={plan.id} value={plan.nombre}>{(plan.nombre || "").toUpperCase()}</option>
                                     ))}
                                 </select>
+                            </div>
+                        ) : docType === 'Orden' ? (
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipo de orden *</label>
+                                <select 
+                                    value={tipoOrden}
+                                    onChange={(e) => setTipoOrden(e.target.value)}
+                                    disabled={isViewOnly}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-75 disabled:cursor-not-allowed"
+                                >
+                                    <option value="Orden médica">Orden médica</option>
+                                    <option value="Ayuda diagnóstica">Ayuda diagnóstica</option>
+                                    <option value="Examen de laboratorio">Examen de laboratorio</option>
+                                    <option value="Anexo 3">Anexo 3</option>
+                                </select>
+                            </div>
+                        ) : (docType === 'Plantilla' || initialData?.isTemplateDoc) ? (
+                            /* ── PLANTILLA: selector de plantilla ── */
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                                    {docType === 'Plantilla' && !initialData ? 'Seleccione la plantilla *' : 'Plantilla utilizada'}
+                                </label>
+                                {docType === 'Plantilla' && !initialData ? (
+                                    <select
+                                        value={selectedTemplate?.id || ''}
+                                        onChange={e => {
+                                            const tmpl = templates.find(t => t.id === e.target.value) || null;
+                                            setSelectedTemplate(tmpl);
+                                            setTemplateValues({});
+                                        }}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                                    >
+                                        <option value="">-- Seleccione una plantilla --</option>
+                                        {templates.map(t => (
+                                            <option key={t.id} value={t.id}>{t.nombre}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 opacity-75">
+                                        {selectedTemplate?.nombre || initialData?.tipoDocumento || '—'}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-2">
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Diagnóstico asoc. (Opcional)</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJEM: K021 - CARIES DE LA DENTINA"
-                                    value={diagnostico}
-                                    onChange={(e) => setDiagnostico(e.target.value)}
-                                    readOnly={isViewOnly}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-350 read-only:opacity-75 read-only:cursor-not-allowed" 
-                                />
+                                {isViewOnly ? (
+                                    <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 opacity-75 min-h-[50px]">
+                                        {diagnostico || <span className="text-slate-400 font-normal">Sin diagnóstico asociado</span>}
+                                    </div>
+                                ) : (
+                                    <CIE10Search
+                                        value={diagnostico ? { code: diagnostico.split(' - ')[0], name: diagnostico.split(' - ').slice(1).join(' - ') } : null}
+                                        onSelect={(item) => setDiagnostico(item ? `${item.code} - ${item.name}` : '')}
+                                        className="w-full"
+                                        label=""
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
+
+                    {/* PLANTILLA: Dynamic fields from selected template */}
+                    {(docType === 'Plantilla' || initialData?.isTemplateDoc) && selectedTemplate?.campos?.length > 0 && (
+                        <div className="space-y-6 pb-6 border-b border-slate-100">
+                            {selectedTemplate.id === 'atm' ? (
+                                <div className="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                    {/* 2 Column Checkbox Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                                        {/* Column 1 */}
+                                        <div className="space-y-3.5">
+                                            {[
+                                                { id: 'normal', label: 'NORMAL' },
+                                                { id: 'problem_art_mandibula', label: 'PROBLEM. ARTI. DE MANDIBULA' },
+                                                { id: 'presencia_sintomas_subjetivos', label: 'PRESENCIA DE SINTOMAS SUBJETIVOS' },
+                                                { id: 'ruidos', label: 'RUIDOS' },
+                                                { id: 'dolor_atm', label: 'DOLOR ATM' },
+                                                { id: 'dolor_muscular', label: 'DOLOR MUSCULAR' },
+                                                { id: 'remision_especialista', label: 'REMISIÓN ESPECIALISTA' }
+                                            ].map(item => (
+                                                <label key={item.id} className="flex items-center gap-3.5 cursor-pointer group select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!templateValues[item.id]}
+                                                        disabled={isViewOnly}
+                                                        onChange={e => setTemplateValues(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                                                        className="w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                                                    />
+                                                    <span className="text-[11px] font-black text-slate-500 group-hover:text-slate-800 transition-colors uppercase tracking-wider">{item.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+
+                                        {/* Column 2 */}
+                                        <div className="space-y-3.5">
+                                            {[
+                                                { id: 'desviaciones', label: 'DESVIACIONES' },
+                                                { id: 'limitacion_apertura', label: 'LIMITACIÓN APERTURA' },
+                                                { id: 'brinco', label: 'BRINCO' },
+                                                { id: 'cambio_volumen', label: 'CAMBIO DE VOLUMEN' },
+                                                { id: 'bloqueo_mandibular', label: 'BLOQUEO MANDIBULAR' },
+                                                { id: 'crepitacion', label: 'CREPITACIÓN' },
+                                                { id: 'maloclusion', label: 'MALOCLUSIÓN' }
+                                            ].map(item => (
+                                                <label key={item.id} className="flex items-center gap-3.5 cursor-pointer group select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!templateValues[item.id]}
+                                                        disabled={isViewOnly}
+                                                        onChange={e => setTemplateValues(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                                                        className="w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                                                    />
+                                                    <span className="text-[11px] font-black text-slate-500 group-hover:text-slate-800 transition-colors uppercase tracking-wider">{item.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Observaciones Textarea */}
+                                    <div className="space-y-1.5 pt-4 border-t border-slate-100">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Observaciones</label>
+                                        <textarea
+                                            value={templateValues['observaciones'] || ''}
+                                            onChange={e => setTemplateValues(prev => ({ ...prev, observaciones: e.target.value }))}
+                                            readOnly={isViewOnly}
+                                            rows={4}
+                                            placeholder="Escriba las observaciones aquí..."
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 transition-all resize-y read-only:opacity-70"
+                                        />
+                                    </div>
+
+                                    {/* Tercera Firma Toggle */}
+                                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                        <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider pl-1">Tercera firma</span>
+                                        <button
+                                            type="button"
+                                            disabled={isViewOnly}
+                                            onClick={() => setTemplateValues(prev => ({ ...prev, tercera_firma: !prev.tercera_firma }))}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${templateValues['tercera_firma'] ? 'bg-blue-600' : 'bg-slate-200'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            <span
+                                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${templateValues['tercera_firma'] ? 'translate-x-5' : 'translate-x-0'}`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    {selectedTemplate.campos.map(field => (
+                                        <div key={field.id}>
+                                            {field.type === 'section' ? (
+                                                <div className="flex items-center gap-3 pt-2">
+                                                    <div className="h-px flex-1 bg-gradient-to-r from-blue-200 to-transparent" />
+                                                    <span className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">{field.label}</span>
+                                                    <div className="h-px flex-1 bg-gradient-to-l from-blue-200 to-transparent" />
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                                                        {field.label}{field.required && <span className="text-red-400 ml-1">*</span>}
+                                                    </label>
+                                                    {field.type === 'text' && (
+                                                        <input type="text" value={templateValues[field.id] || ''} onChange={e => setTemplateValues(prev => ({ ...prev, [field.id]: e.target.value }))} readOnly={isViewOnly} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all read-only:opacity-70" />
+                                                    )}
+                                                    {field.type === 'number' && (
+                                                        <input type="number" value={templateValues[field.id] || ''} onChange={e => setTemplateValues(prev => ({ ...prev, [field.id]: e.target.value }))} readOnly={isViewOnly} className="w-40 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all read-only:opacity-70" />
+                                                    )}
+                                                    {field.type === 'date' && (
+                                                        <input type="date" value={templateValues[field.id] || ''} onChange={e => setTemplateValues(prev => ({ ...prev, [field.id]: e.target.value }))} disabled={isViewOnly} className="w-56 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all disabled:opacity-70" />
+                                                    )}
+                                                    {field.type === 'select' && (
+                                                        <select value={templateValues[field.id] || ''} onChange={e => setTemplateValues(prev => ({ ...prev, [field.id]: e.target.value }))} disabled={isViewOnly} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-70">
+                                                            <option value="">-- Seleccione --</option>
+                                                            {(field.options || []).map((op, i) => (
+                                                                <option key={i} value={op}>{op}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                    {field.type === 'textarea' && (
+                                                        <textarea value={templateValues[field.id] || ''} onChange={e => setTemplateValues(prev => ({ ...prev, [field.id]: e.target.value }))} readOnly={isViewOnly} rows={4} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all resize-y read-only:opacity-70" />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {(docType === 'Plantilla') && !selectedTemplate && (
+                        <div className="py-12 text-center border-b border-slate-100">
+                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mx-auto mb-4">
+                                <FiList size={32} />
+                            </div>
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Seleccione una plantilla para continuar</p>
+                        </div>
+                    )}
 
                     {/* INTERACTIVE PRESCRIPTION EDITOR */}
                     {docType === 'Receta' ? (
@@ -916,8 +1108,476 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                 </table>
                             </div>
                         </div>
+                    ) : docType === 'Orden' ? (
+                        <div className="space-y-6">
+                            {/* Diagnóstico Principal */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Diagnóstico Principal (CIE10)</label>
+                                        {!isViewOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenAsocConsulta}
+                                                className="text-[9px] font-black uppercase tracking-widest text-[#8CC63F] hover:text-[#7bb335] flex items-center gap-1 transition-colors"
+                                            >
+                                                <FiSearch size={11} /> Asociar consulta
+                                            </button>
+                                        )}
+                                    </div>
+                                    {asocConsultaId && (
+                                        <p className="text-[10px] text-emerald-600 font-bold pl-1">✓ Consulta asociada</p>
+                                    )}
+                                    {isViewOnly ? (
+                                        <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700">
+                                            {dxPrincipal ? `${dxPrincipal.code} - ${dxPrincipal.name}` : '-'}
+                                        </div>
+                                    ) : (
+                                        <CIE10Search 
+                                            value={dxPrincipal}
+                                            onSelect={(item) => setDxPrincipal(item)}
+                                            className="w-full"
+                                        />
+                                    )}
+                                </div>
+
+                                {/* Diagnósticos Relacionados (Buscador) */}
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Diagnóstico relacionado (CIE10)</label>
+                                    {isViewOnly ? (
+                                        <div className="text-xs text-slate-400 italic font-medium pl-1">
+                                            Lista de diagnósticos relacionados en la tabla de abajo
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2 items-end">
+                                            <CIE10Search 
+                                                value={tempDxRelacionado}
+                                                onSelect={(item) => setTempDxRelacionado(item)}
+                                                className="flex-1"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!tempDxRelacionado) {
+                                                        toast.error("Seleccione un diagnóstico para agregar");
+                                                        return;
+                                                    }
+                                                    if (diagnosticosRelacionados.some(d => d.code === tempDxRelacionado.code)) {
+                                                        toast.error("El diagnóstico ya fue agregado");
+                                                        return;
+                                                    }
+                                                    setDiagnosticosRelacionados(prev => [...prev, tempDxRelacionado]);
+                                                    setTempDxRelacionado(null);
+                                                }}
+                                                className="p-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm"
+                                            >
+                                                <FiPlus size={18} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Tabla Diagnósticos Relacionados */}
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Diagnósticos relacionados agregados</label>
+                                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50">
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Código</th>
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre</th>
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {diagnosticosRelacionados.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-xs font-medium">
+                                                        No ha agregado CIE10
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                diagnosticosRelacionados.map((dx, idx) => (
+                                                    <tr key={dx.code} className="hover:bg-slate-50/30 transition-colors">
+                                                        <td className="px-4 py-3 text-xs font-bold text-slate-500">{dx.code}</td>
+                                                        <td className="px-4 py-3 text-xs font-bold text-slate-700 uppercase">{dx.name}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {!isViewOnly && (
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setDiagnosticosRelacionados(prev => prev.filter((_, i) => i !== idx));
+                                                                    }}
+                                                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                >
+                                                                    <FiTrash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Procedimientos CUPS */}
+                            <div className="space-y-3 pt-4 border-t border-slate-100">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Procedimientos (CUPS)</label>
+                                    {!isViewOnly && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setCupsModalOpen(true);
+                                                setSelectedCups(null);
+                                                setCupsObservaciones('');
+                                                setCupsQuery('');
+                                            }}
+                                            className="bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-full py-1.5 px-4 font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition-colors shadow-sm w-fit"
+                                        >
+                                            <FiPlus size={12} /> Agregar CUPS
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50">
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Código</th>
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre</th>
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Descripción</th>
+                                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {cupsItems.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-xs font-medium">
+                                                        No ha agregado CUPS
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                cupsItems.map((c, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                                                        <td className="px-4 py-3 text-xs font-bold text-slate-500 font-mono">{c.code}</td>
+                                                        <td className="px-4 py-3 text-xs font-bold text-slate-700 uppercase">{c.name}</td>
+                                                        <td className="px-4 py-3 text-xs text-slate-500 uppercase">{c.descripcion || "-"}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {!isViewOnly && (
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setCupsItems(prev => prev.filter((_, i) => i !== idx));
+                                                                    }}
+                                                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                >
+                                                                    <FiTrash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Observaciones generales */}
+                            <div className="space-y-2 pt-4 border-t border-slate-100">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 font-bold">Observaciones Generales</label>
+                                <textarea 
+                                    rows={4}
+                                    placeholder="Escriba las observaciones generales de la orden aquí..."
+                                    value={observacionesGenerales}
+                                    onChange={(e) => setObservacionesGenerales(e.target.value)}
+                                    disabled={isViewOnly}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 resize-none custom-scrollbar transition-all disabled:opacity-75 disabled:cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                    ) : docType === 'Consulta' ? (
+                        // ── Formulario estructurado de Consulta Médica ──────────────
+                        <div className="space-y-0">
+                            {/* Tabs */}
+                            <div className="flex border-b border-slate-100 mb-6">
+                                {['motivo', 'antecedentes'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => setConsultaTab(tab)}
+                                        className={`px-6 py-3 text-[11px] font-black uppercase tracking-widest transition-all border-b-2 -mb-px ${
+                                            consultaTab === tab
+                                                ? 'border-[#8CC63F] text-[#8CC63F]'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        }`}
+                                    >
+                                        {tab === 'motivo' ? 'Motivo Consulta' : 'Antecedentes'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {consultaTab === 'motivo' ? (
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Motivo de la consulta *</label>
+                                        <textarea
+                                            rows={4}
+                                            readOnly={isViewOnly}
+                                            placeholder="Describa el motivo principal de la consulta..."
+                                            value={motivoConsulta}
+                                            onChange={e => setMotivoConsulta(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 resize-none transition-all read-only:opacity-75 read-only:cursor-not-allowed"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Enfermedad actual</label>
+                                        <textarea
+                                            rows={4}
+                                            readOnly={isViewOnly}
+                                            placeholder="Descripción de la enfermedad actual del paciente..."
+                                            value={enfermedadActual}
+                                            onChange={e => setEnfermedadActual(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-blue-500 resize-none transition-all read-only:opacity-75 read-only:cursor-not-allowed"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-8">
+
+                                    {/* ── Antecedentes ── */}
+                                    <div className="space-y-3 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Antecedentes</h4>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={antNoRefiere} onChange={e => setAntNoRefiere(e.target.checked)} disabled={isViewOnly} className="w-4 h-4 accent-slate-400" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No refiere</span>
+                                            </label>
+                                        </div>
+                                        {!antNoRefiere && (
+                                            <>
+                                                {!isViewOnly && (
+                                                    <div className="flex gap-2 items-end">
+                                                        <div className="flex-1">
+                                                            <CIE10Search value={tempAntCIE10} onSelect={setTempAntCIE10} className="w-full" />
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Observación"
+                                                            value={tempAntObs}
+                                                            onChange={e => setTempAntObs(e.target.value)}
+                                                            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500"
+                                                        />
+                                                        <button type="button" onClick={() => {
+                                                            if (!tempAntCIE10) { toast.error('Seleccione un código CIE10'); return; }
+                                                            setAntecedentes(prev => [...prev, { ...tempAntCIE10, obs: tempAntObs }]);
+                                                            setTempAntCIE10(null); setTempAntObs('');
+                                                        }} className="p-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-bold transition-all active:scale-95">
+                                                            <FiPlus size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {antecedentes.length > 0 && (
+                                                    <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead><tr className="bg-slate-50"><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Código</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Diagnóstico</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Observación</th><th className="px-3 py-2"></th></tr></thead>
+                                                            <tbody className="divide-y divide-slate-50">
+                                                                {antecedentes.map((a, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-3 py-2 font-bold text-slate-500 font-mono">{a.code}</td>
+                                                                        <td className="px-3 py-2 font-bold text-slate-700 uppercase">{a.name}</td>
+                                                                        <td className="px-3 py-2 text-slate-500">{a.obs || '-'}</td>
+                                                                        <td className="px-3 py-2 text-right">{!isViewOnly && <button type="button" onClick={() => setAntecedentes(prev => prev.filter((_, j) => j !== i))} className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><FiTrash2 size={13} /></button>}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                {antecedentes.length === 0 && <p className="text-xs text-slate-400 text-center py-2">Sin antecedentes agregados</p>}
+                                            </>
+                                        )}
+                                        {antNoRefiere && <p className="text-xs text-slate-400 italic">No refiere antecedentes</p>}
+                                    </div>
+
+                                    {/* ── Alergias ── */}
+                                    <div className="space-y-3 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Alergias</h4>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={alerNoRefiere} onChange={e => setAlerNoRefiere(e.target.checked)} disabled={isViewOnly} className="w-4 h-4 accent-slate-400" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No refiere</span>
+                                            </label>
+                                        </div>
+                                        {!alerNoRefiere && (
+                                            <>
+                                                {!isViewOnly && (
+                                                    <div className="flex gap-2 items-end">
+                                                        <select value={tempAlerTipo} onChange={e => setTempAlerTipo(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 appearance-none">
+                                                            <option value="">Seleccione tipo...</option>
+                                                            {['Medicamento','Alimento','Ambiental','Látex','Otro'].map(t => <option key={t} value={t}>{t}</option>)}
+                                                        </select>
+                                                        <input type="text" placeholder="Observación" value={tempAlerObs} onChange={e => setTempAlerObs(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500" />
+                                                        <button type="button" onClick={() => {
+                                                            if (!tempAlerTipo) { toast.error('Seleccione tipo de alergia'); return; }
+                                                            setAlergias(prev => [...prev, { tipo: tempAlerTipo, obs: tempAlerObs }]);
+                                                            setTempAlerTipo(''); setTempAlerObs('');
+                                                        }} className="p-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-bold transition-all active:scale-95">
+                                                            <FiPlus size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {alergias.length > 0 && (
+                                                    <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead><tr className="bg-slate-50"><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Tipo</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Observación</th><th className="px-3 py-2"></th></tr></thead>
+                                                            <tbody className="divide-y divide-slate-50">
+                                                                {alergias.map((a, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-3 py-2 font-bold text-slate-700">{a.tipo}</td>
+                                                                        <td className="px-3 py-2 text-slate-500">{a.obs || '-'}</td>
+                                                                        <td className="px-3 py-2 text-right">{!isViewOnly && <button type="button" onClick={() => setAlergias(prev => prev.filter((_, j) => j !== i))} className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><FiTrash2 size={13} /></button>}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                {alergias.length === 0 && <p className="text-xs text-slate-400 text-center py-2">Sin alergias agregadas</p>}
+                                            </>
+                                        )}
+                                        {alerNoRefiere && <p className="text-xs text-slate-400 italic">No refiere alergias</p>}
+                                    </div>
+
+                                    {/* ── Antecedentes Familiares ── */}
+                                    <div className="space-y-3 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Antecedentes Familiares</h4>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={famNoRefiere} onChange={e => setFamNoRefiere(e.target.checked)} disabled={isViewOnly} className="w-4 h-4 accent-slate-400" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No refiere</span>
+                                            </label>
+                                        </div>
+                                        {!famNoRefiere && (
+                                            <>
+                                                {!isViewOnly && (
+                                                    <div className="flex gap-2 items-end flex-wrap">
+                                                        <select value={tempFamParentesco} onChange={e => setTempFamParentesco(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 appearance-none">
+                                                            <option value="">Parentesco...</option>
+                                                            {['Madre','Padre','Hermano(a)','Abuelo(a)','Tío(a)','Hijo(a)','Otro'].map(t => <option key={t} value={t}>{t}</option>)}
+                                                        </select>
+                                                        <div className="flex-1 min-w-[180px]">
+                                                            <CIE10Search value={tempFamCIE10} onSelect={setTempFamCIE10} className="w-full" />
+                                                        </div>
+                                                        <input type="text" placeholder="Observación" value={tempFamObs} onChange={e => setTempFamObs(e.target.value)} className="flex-1 min-w-[120px] bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500" />
+                                                        <button type="button" onClick={() => {
+                                                            if (!tempFamParentesco || !tempFamCIE10) { toast.error('Complete parentesco y diagnóstico'); return; }
+                                                            setAntFamiliares(prev => [...prev, { parentesco: tempFamParentesco, ...tempFamCIE10, obs: tempFamObs }]);
+                                                            setTempFamParentesco(''); setTempFamCIE10(null); setTempFamObs('');
+                                                        }} className="p-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-bold transition-all active:scale-95">
+                                                            <FiPlus size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {antFamiliares.length > 0 && (
+                                                    <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead><tr className="bg-slate-50"><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Parentesco</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Código</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Diagnóstico</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Observación</th><th className="px-3 py-2"></th></tr></thead>
+                                                            <tbody className="divide-y divide-slate-50">
+                                                                {antFamiliares.map((f, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-3 py-2 font-bold text-slate-700">{f.parentesco}</td>
+                                                                        <td className="px-3 py-2 font-bold text-slate-500 font-mono">{f.code}</td>
+                                                                        <td className="px-3 py-2 font-bold text-slate-700 uppercase">{f.name}</td>
+                                                                        <td className="px-3 py-2 text-slate-500">{f.obs || '-'}</td>
+                                                                        <td className="px-3 py-2 text-right">{!isViewOnly && <button type="button" onClick={() => setAntFamiliares(prev => prev.filter((_, j) => j !== i))} className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><FiTrash2 size={13} /></button>}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                {antFamiliares.length === 0 && <p className="text-xs text-slate-400 text-center py-2">Sin antecedentes familiares agregados</p>}
+                                            </>
+                                        )}
+                                        {famNoRefiere && <p className="text-xs text-slate-400 italic">No refiere antecedentes familiares</p>}
+                                    </div>
+
+                                    {/* ── Medicamentos en uso ── */}
+                                    <div className="space-y-3 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Medicamentos en Uso</h4>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={medPrevNoRefiere} onChange={e => setMedPrevNoRefiere(e.target.checked)} disabled={isViewOnly} className="w-4 h-4 accent-slate-400" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No refiere</span>
+                                            </label>
+                                        </div>
+                                        {!medPrevNoRefiere && (
+                                            <>
+                                                {!isViewOnly && (
+                                                    <div className="flex gap-2 items-end">
+                                                        <div className="flex-1 text-left">
+                                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">DCI</label>
+                                                            <MedicamentoSearch 
+                                                                value={tempMedPrevItem} 
+                                                                onChange={setTempMedPrevItem} 
+                                                                disabled={isViewOnly} 
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1 text-left">
+                                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Observación (dosis, frecuencia...)</label>
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Dosis, frecuencia, etc." 
+                                                                value={tempMedPrevObs} 
+                                                                onChange={e => setTempMedPrevObs(e.target.value)} 
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-blue-500" 
+                                                            />
+                                                        </div>
+                                                        <button type="button" onClick={() => {
+                                                            if (!tempMedPrevItem) { toast.error('Seleccione un medicamento de la lista'); return; }
+                                                            setMedicamentosPrev(prev => [...prev, { 
+                                                                nombre: `${tempMedPrevItem.code} - ${tempMedPrevItem.name}`, 
+                                                                obs: tempMedPrevObs.trim() 
+                                                            }]);
+                                                            setTempMedPrevItem(null); 
+                                                            setTempMedPrevObs('');
+                                                        }} className="p-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-bold transition-all active:scale-95 mb-0.5">
+                                                            <FiPlus size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {medicamentosPrev.length > 0 && (
+                                                    <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead><tr className="bg-slate-50"><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Medicamento</th><th className="px-3 py-2 font-black text-slate-500 uppercase tracking-wider">Observación</th><th className="px-3 py-2"></th></tr></thead>
+                                                            <tbody className="divide-y divide-slate-50">
+                                                                {medicamentosPrev.map((m, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-3 py-2 font-bold text-slate-700">{m.nombre}</td>
+                                                                        <td className="px-3 py-2 text-slate-500">{m.obs || '-'}</td>
+                                                                        <td className="px-3 py-2 text-right">{!isViewOnly && <button type="button" onClick={() => setMedicamentosPrev(prev => prev.filter((_, j) => j !== i))} className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><FiTrash2 size={13} /></button>}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                {medicamentosPrev.length === 0 && <p className="text-xs text-slate-400 text-center py-2">Sin medicamentos registrados</p>}
+                                            </>
+                                        )}
+                                        {medPrevNoRefiere && <p className="text-xs text-slate-400 italic">No refiere medicamentos en uso</p>}
+                                    </div>
+
+                                </div>
+                            )}
+                        </div>
                     ) : (
-                        // Muestra el textarea simple para Consultas/Órdenes/Alertas
+                        // Muestra el textarea simple para documentos genéricos
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Detalle / Contenido *</label>
                             <textarea 
@@ -944,6 +1604,65 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                     )}
                 </div>
             </div>
+
+            {/* SUB-MODAL: ASOCIAR CONSULTA */}
+            {asocConsultaModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[80vh]">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide">Consultas con código CUPS de consulta</h4>
+                            <button onClick={() => setAsocConsultaModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all"><FiX size={16} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {consultasList.length === 0 ? (
+                                <p className="text-xs text-slate-400 text-center py-8">No se encontraron consultas médicas para este paciente.</p>
+                            ) : (
+                                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="bg-slate-50">
+                                                <th className="px-4 py-3 font-black text-slate-500 uppercase tracking-wider">Fecha</th>
+                                                <th className="px-4 py-3 font-black text-slate-500 uppercase tracking-wider">Creado por</th>
+                                                <th className="px-4 py-3 font-black text-slate-500 uppercase tracking-wider">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {consultasList.map(c => (
+                                                <tr key={c.id} className={`hover:bg-slate-50/50 transition-colors ${asocConsultaId === c.id ? 'bg-emerald-50' : ''}`}>
+                                                    <td className="px-4 py-3 font-bold text-[#8CC63F]">
+                                                        {c.fechaIso ? new Date(c.fechaIso).toLocaleString('es-ES') : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-bold text-slate-700">{c.transcribe || c.profesional || '-'}</td>
+                                                    <td className="px-4 py-3">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setAsocConsultaId(c.id);
+                                                                // Auto-fill dx principal from first antecedente
+                                                                if (c.antecedentes && c.antecedentes.length > 0) {
+                                                                    setDxPrincipal({ code: c.antecedentes[0].code, name: c.antecedentes[0].name });
+                                                                }
+                                                                setAsocConsultaModal(false);
+                                                                toast.success('Consulta asociada correctamente');
+                                                            }}
+                                                            className="p-2 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-lg transition-all"
+                                                        >
+                                                            <FiCheck size={14} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+                            <button onClick={() => setAsocConsultaModal(false)} className="px-6 py-2 rounded-full font-bold text-sm text-slate-500 hover:bg-slate-100 transition-colors border border-slate-200">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* SUB-MODAL: DETALLE DE PRESCRIPCIÓN */}
             {prescriptionDetailOpen && selectedMed && (
@@ -1092,15 +1811,13 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                     <select 
                                         value={prescripcionVia} 
                                         onChange={e => setPrescripcionVia(e.target.value)} 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 appearance-none"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500"
                                     >
-                                        <option value="Oral">Oral</option>
-                                        <option value="Tópica bucal (enjuague)">Tópica bucal (enjuague)</option>
-                                        <option value="Tópica (piel/mucosa)">Tópica (piel/mucosa)</option>
-                                        <option value="Infiltrativa o bloqueo nervioso">Infiltrativa / bloqueo</option>
-                                        <option value="Sublingual">Sublingual</option>
-                                        <option value="Intramuscular">Intramuscular</option>
-                                        <option value="Intravenosa">Intravenosa</option>
+                                        {VIAS_ADMINISTRACION.map(via => (
+                                            <option key={via.code} value={via.name}>
+                                                {via.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -1185,6 +1902,124 @@ export default function DocClinicoModal({ isOpen, onClose, patient, docType, ini
                                 className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white text-xs font-black rounded-full uppercase tracking-wider shadow"
                             >
                                 Agregar a la Receta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SUB-MODAL: AGREGAR CUPS */}
+            {cupsModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in zoom-in-95 duration-300 max-h-[90vh]">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide text-left">
+                                Agregar CUPS
+                            </h4>
+                            <button 
+                                onClick={() => {
+                                    setCupsModalOpen(false);
+                                    setSelectedCups(null);
+                                    setCupsQuery('');
+                                    setCupsObservaciones('');
+                                }} 
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all"
+                            >
+                                <FiX size={16} />
+                            </button>
+                        </div>
+                        
+                        {/* Body */}
+                        <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-left relative">
+                            {/* Search field */}
+                            <div className="space-y-1 relative">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Código *</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Escriba la consulta o el código CUPS"
+                                    value={cupsQuery} 
+                                    onChange={(e) => {
+                                        setCupsQuery(e.target.value);
+                                        setShowCupsSuggestions(true);
+                                        if (selectedCups) setSelectedCups(null);
+                                    }}
+                                    onFocus={() => setShowCupsSuggestions(true)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 placeholder:text-slate-350"
+                                />
+                                
+                                {/* CUPS Suggestions Dropdown */}
+                                {showCupsSuggestions && cupsQuery.length >= 2 && (
+                                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50">
+                                        {CUPS_DENTAL_CODES.filter(c => 
+                                            c.code.toLowerCase().includes(cupsQuery.toLowerCase()) ||
+                                            c.name.toLowerCase().includes(cupsQuery.toLowerCase())
+                                        ).slice(0, 5).map(c => (
+                                            <div 
+                                                key={c.code}
+                                                onClick={() => {
+                                                    setSelectedCups(c);
+                                                    setCupsQuery(`${c.code} - ${c.name}`);
+                                                    setShowCupsSuggestions(false);
+                                                }}
+                                                className="p-3 hover:bg-indigo-50 cursor-pointer text-xs text-slate-700 flex justify-between items-center transition-all"
+                                            >
+                                                <span><span className="font-bold text-indigo-600">{c.code}</span> - {c.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Observaciones */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Observaciones</label>
+                                <textarea 
+                                    rows={3}
+                                    placeholder="Observaciones"
+                                    value={cupsObservaciones} 
+                                    onChange={e => setCupsObservaciones(e.target.value)} 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 placeholder:text-slate-350 resize-none custom-scrollbar"
+                                />
+                            </div>
+                        </div>
+                        
+                        {/* Footer */}
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    setCupsModalOpen(false);
+                                    setSelectedCups(null);
+                                    setCupsQuery('');
+                                    setCupsObservaciones('');
+                                }}
+                                className="px-5 py-2.5 rounded-full font-bold text-xs text-slate-500 hover:bg-slate-200 transition-colors"
+                            >
+                                Cerrar
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    if (!selectedCups) {
+                                        toast.error("Debe seleccionar un código CUPS de la lista");
+                                        return;
+                                    }
+                                    const newItem = {
+                                        code: selectedCups.code,
+                                        name: selectedCups.name,
+                                        descripcion: cupsObservaciones
+                                    };
+                                    setCupsItems(prev => [...prev, newItem]);
+                                    setCupsModalOpen(false);
+                                    setSelectedCups(null);
+                                    setCupsQuery('');
+                                    setCupsObservaciones('');
+                                    toast.success("CUPS agregado");
+                                }}
+                                className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white text-xs font-black rounded-full uppercase tracking-wider shadow"
+                            >
+                                Agregar CUPS
                             </button>
                         </div>
                     </div>

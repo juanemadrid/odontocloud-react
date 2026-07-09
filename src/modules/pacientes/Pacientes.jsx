@@ -259,6 +259,7 @@ export default function Pacientes() {
           searchTerm={term}
           onSearchChange={setTerm}
           onCreateNew={handleOpenNew}
+          onImportClick={() => setShowImporter(true)}
           onDelete={handleDelete}
           onEdit={handleOpenEdit}
           onToggleStatus={async (p) => {
@@ -295,6 +296,13 @@ export default function Pacientes() {
             />
           </div>
         </div>
+      )}
+
+      {showImporter && (
+        <ImportadorPacientes
+          onComplete={() => reloadData()}
+          onClose={() => setShowImporter(false)}
+        />
       )}
     </div>
   );

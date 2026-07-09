@@ -6,6 +6,7 @@ import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import PlantillaEditor from "./PlantillaEditor";
+import { PREDEFINED_TEMPLATES } from "../../data/plantillasPredeterminadas";
 
 export default function ConfigPlantillas() {
     const { userProfile } = useAuth();
@@ -14,6 +15,7 @@ export default function ConfigPlantillas() {
 
     const [view, setView] = useState("list");
     const [selectedId, setSelectedId] = useState(null);
+    const [isViewOnly, setIsViewOnly] = useState(false);
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -28,7 +30,8 @@ export default function ConfigPlantillas() {
         );
 
         const unsub = onSnapshot(q, (snap) => {
-            setRows(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            const dbTemplates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setRows([...PREDEFINED_TEMPLATES, ...dbTemplates]);
             setLoading(false);
         }, (err) => {
             console.error(err);
@@ -60,9 +63,11 @@ export default function ConfigPlantillas() {
         return (
             <PlantillaEditor
                 id={selectedId}
+                isViewOnly={isViewOnly}
                 onBack={() => {
                     setView("list");
                     setSelectedId(null);
+                    setIsViewOnly(false);
                 }}
                 inquilino={inquilino}
                 userEmail={userProfile?.email}
@@ -171,21 +176,42 @@ export default function ConfigPlantillas() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-all duration-500 translate-x-4 group-hover/row:translate-x-0">
-                                                <button
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100 transition-all active:scale-90"
-                                                    onClick={() => { setSelectedId(row.id); setView("editor"); }}
-                                                >
-                                                    <FiEdit2 size={16} />
-                                                </button>
-                                                <button
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:shadow-lg hover:shadow-red-100 transition-all active:scale-90"
-                                                    onClick={() => handleDelete(row.id)}
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
+                                             {row.isSystem ? (
+                                                 <div className="flex items-center justify-end gap-2">
+                                                     <button
+                                                         title="Visualizar plantilla"
+                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100 transition-all active:scale-90"
+                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(true); }}
+                                                     >
+                                                         <FiEye size={16} />
+                                                     </button>
+                                                 </div>
+                                             ) : (
+                                                 <div className="flex items-center justify-end gap-2">
+                                                     <button
+                                                         title="Editar plantilla"
+                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100 transition-all active:scale-90"
+                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(false); }}
+                                                     >
+                                                         <FiEdit2 size={16} />
+                                                     </button>
+                                                     <button
+                                                         title="Visualizar plantilla"
+                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100 transition-all active:scale-90"
+                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(true); }}
+                                                     >
+                                                         <FiEye size={16} />
+                                                     </button>
+                                                     <button
+                                                         title="Eliminar plantilla"
+                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:shadow-lg hover:shadow-red-100 transition-all active:scale-90"
+                                                         onClick={() => handleDelete(row.id)}
+                                                     >
+                                                         <FiTrash2 size={16} />
+                                                     </button>
+                                                 </div>
+                                             )}
+                                         </td>
                                     </tr>
                                 ))
                             )}

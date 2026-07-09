@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import Skeleton from "../../../components/ui/Skeleton";
-import { FiUsers, FiSearch, FiFilter, FiPlus, FiEdit2, FiTrash2, FiUserX, FiUserCheck, FiHome, FiShield, FiAlertCircle } from "react-icons/fi";
+import { FiUsers, FiSearch, FiFilter, FiPlus, FiEdit2, FiTrash2, FiUserX, FiUserCheck, FiHome, FiShield, FiAlertCircle, FiUpload } from "react-icons/fi";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -14,6 +14,7 @@ export default function PatientList({
     searchTerm,
     onSearchChange,
     onCreateNew,
+    onImportClick,
     onToggleStatus,
     onDelete
 }) {
@@ -97,8 +98,15 @@ export default function PatientList({
                         {showInactive ? "Ver Activos" : "Ver Inactivos"}
                     </button>
                     <button
+                        onClick={onImportClick}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-[18px] font-black text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 border-0 cursor-pointer"
+                    >
+                        <FiUpload size={18} />
+                        Importar Excel
+                    </button>
+                    <button
                         onClick={onCreateNew}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-black text-[11px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95 border-0"
+                        className="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-black text-[11px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95 border-0 cursor-pointer"
                     >
                         <FiPlus size={18} />
                         Nuevo Paciente
