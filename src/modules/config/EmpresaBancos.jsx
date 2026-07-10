@@ -53,127 +53,149 @@ function BancoEditor({ item, onBack, inquilino }) {
     };
 
     return (
-        <div className="p-4 w-full max-w-4xl mx-auto relative transition-all duration-300">
-            {/* Header: Institutional & Actions */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative mb-6">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
-
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={onBack}
-                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg transition-all active:scale-90"
-                        >
-                            <FiArrowLeft size={18} />
-                        </button>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200">
-                            <FiCreditCard size={20} className="text-white" />
+        <div className="p-6 w-full max-w-4xl mx-auto transition-all duration-300 space-y-6">
+            
+            {/* Header: Title, Breadcrumbs & Save Button */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onBack}
+                        className="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg transition-all active:scale-90"
+                    >
+                        <FiArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <span>Configuración</span>
+                            <span className="text-slate-200">/</span>
+                            <span>Bancos</span>
+                            <span className="text-slate-200">/</span>
+                            <span className="text-slate-800">{item ? "Editar banco" : "Nuevo banco"}</span>
                         </div>
-                        <div className="flex flex-col">
-                            <h2 className="text-[18px] font-black text-slate-800 uppercase tracking-tighter">
-                                {item ? "Editar Banco" : "Nuevo Banco"}
-                            </h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Gestión de fondos y cuentas</p>
-                        </div>
+                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none mt-1">
+                            {item ? "Editar banco" : "Nuevo banco"}
+                        </h2>
                     </div>
+                </div>
 
+                <div>
+                    <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-100 transition-all active:scale-95"
+                    >
+                        Guardar
+                    </button>
                 </div>
             </div>
 
-            {/* Editor Body */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_15px_40px_rgba(0,0,0,0.02)] p-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
+            {/* Form Card */}
+            <div className="bg-white rounded-[24px] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] overflow-hidden">
+                <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/10">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Información básica</h3>
+                </div>
 
-                <div className="space-y-8 relative">
-                    <div className="grid md:grid-cols-2 gap-8">
-                        {/* Name Field */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Nombre de la Entidad *</label>
-                            <div className="relative group">
-                                <FiCreditCard className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
+                <div className="p-8 space-y-6">
+                    {/* Rows */}
+                    {[
+                        {
+                            label: "Nombre *",
+                            element: (
                                 <input
-                                    className="w-full pl-16 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-2xl text-[16px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm"
+                                    type="text"
+                                    placeholder="Nombre del banco"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={form.nombre}
                                     onChange={e => handleChange("nombre", e.target.value)}
-                                    placeholder="Ej: Bancolombia"
                                     autoFocus
                                 />
-                            </div>
-                        </div>
-
-                        {/* Acc Number */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Número de Cuenta</label>
-                            <div className="relative group">
-                                <FiHash className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
+                            )
+                        },
+                        {
+                            label: "Número de cuenta",
+                            element: (
                                 <input
-                                    className="w-full pl-16 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-2xl text-[16px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm"
+                                    type="text"
+                                    placeholder="Número de cuenta del banco"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={form.numeroCuenta}
                                     onChange={e => handleChange("numeroCuenta", e.target.value)}
-                                    placeholder="Ej: 123-456789-01"
                                 />
-                            </div>
-                        </div>
-
-                        {/* Method Link */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Medio de Pago Vinculado *</label>
-                            <div className="relative group">
-                                <FiBox className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
+                            )
+                        },
+                        {
+                            label: "Medio de pago *",
+                            element: (
                                 <select
-                                    className="w-full pl-16 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-2xl text-[16px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm appearance-none"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={form.metodoPagoId}
-                                    onChange={(e) => handleChange("metodoPagoId", e.target.value)}
+                                    onChange={e => handleChange("metodoPagoId", e.target.value)}
                                 >
                                     <option value="">Seleccione...</option>
                                     {metodosPago.map(m => (
                                         <option key={m.id} value={m.id}>{m.nombre}</option>
                                     ))}
                                 </select>
-                            </div>
-                        </div>
-
-                        {/* Value / Balance */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Saldo / Valor Inicial *</label>
-                            <div className="relative group">
-                                <FiDollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-500 font-black" />
+                            )
+                        },
+                        {
+                            label: "Valor",
+                            element: (
                                 <input
                                     type="number"
-                                    className="w-full pl-16 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-2xl text-[16px] font-bold text-slate-800 outline-none focus:bg-white focus:border-emerald-500 focus:ring-8 focus:ring-emerald-500/5 transition-all shadow-inner-sm"
+                                    placeholder="Valor inicial"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={form.valor}
                                     onChange={e => handleChange("valor", Number(e.target.value))}
                                 />
-                            </div>
-                        </div>
-
-                        {/* Date */}
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Fecha de Registro</label>
-                            <div className="relative group">
-                                <FiCalendar className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
+                            )
+                        },
+                        {
+                            label: "Fecha *",
+                            element: (
                                 <input
                                     type="date"
-                                    className="w-full pl-16 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-2xl text-[16px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={form.fecha}
                                     onChange={e => handleChange("fecha", e.target.value)}
                                 />
+                            )
+                        },
+                        {
+                            label: "Descripción",
+                            element: (
+                                <textarea
+                                    placeholder="Descripción del banco"
+                                    rows={3}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all resize-none"
+                                    value={form.descripcion}
+                                    onChange={e => handleChange("descripcion", e.target.value)}
+                                />
+                            )
+                        }
+                    ].map((row, idx) => (
+                        <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-wider md:text-right md:pr-6">
+                                {row.label}
+                            </span>
+                            <div className="md:col-span-2">
+                                {row.element}
                             </div>
                         </div>
-                    </div>
+                    ))}
 
-                    <div className="pt-8 border-t border-slate-50 flex justify-end">
+                    {/* Bottom Save Button */}
+                    <div className="pt-6 border-t border-slate-50 flex justify-end">
                         <button
-                            className="bg-slate-900 hover:bg-black text-white px-10 py-3 rounded-[20px] text-[13px] font-black uppercase tracking-[0.2em] shadow-[0_15px_45px_rgba(0,0,0,0.15)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition-all duration-700 active:scale-95 flex items-center gap-3 overflow-hidden relative group"
                             onClick={handleSave}
+                            className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-100 transition-all active:scale-95"
                         >
-                            <div className="absolute inset-0 bg-blue-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <FiSave size={18} className="relative z-10 group-hover:rotate-12 transition-transform duration-500" />
-                            <span className="relative z-10 font-bold">GUARDAR BANCO</span>
+                            Guardar
                         </button>
                     </div>
+
                 </div>
             </div>
+
         </div>
     );
 }

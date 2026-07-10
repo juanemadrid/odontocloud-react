@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { updateDoc, doc } from "firebase/firestore";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import "./pacientes.css";
 
 // 🔹 Slender Pro Components
@@ -109,6 +109,7 @@ export default function Pacientes() {
   const { userProfile } = useAuth();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
 
   // listado
   const [loading, setLoading] = useState(true);
@@ -129,7 +130,7 @@ export default function Pacientes() {
   // Handle URL ID pre-selection (supporting both query param '?id=' and pathname '/pacientes/:id/planes')
   useEffect(() => {
     if (!loading && pacientes.length > 0) {
-      const pathParts = window.location.pathname.split("/pacientes/");
+      const pathParts = location.pathname.split("/pacientes/");
       const idFromPath = pathParts[1] ? pathParts[1].split("/")[0] : null;
       const targetId = idFromPath || searchParams.get("id");
 
@@ -141,9 +142,24 @@ export default function Pacientes() {
         if (found) {
           setSelectedPatient(found);
         }
+      } else {
+        setSelectedPatient(null);
       }
     }
-  }, [loading, pacientes, searchParams]);
+  }, [loading, pacientes, searchParams, location.pathname]);
+
+  // Escuchar el evento de reset desde el sidebar
+  useEffect(() => {
+    const handleReset = () => {
+      setSelectedPatient(null);
+      setOpen(false);
+      setShowImporter(false);
+    };
+    window.addEventListener("reset-module-pacientes", handleReset);
+    return () => {
+      window.removeEventListener("reset-module-pacientes", handleReset);
+    };
+  }, []);
 
   // Handle action=new query parameter to automatically open the new patient form modal
   useEffect(() => {

@@ -44,18 +44,21 @@ export default function HistoricoPagosTab({ patientId }) {
         
         const q = query(
             collection(db, "pagos"),
-            where("patientId", "==", patientId),
-            orderBy("fecha", "desc")
+            where("patientId", "==", patientId)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(d => ({
+            let data = snapshot.docs.map(d => ({
                 id: d.id,
                 ...d.data(),
                 fecha: d.data().fecha?.toDate() || new Date()
-            }))
+            }));
+            
+            // Sort descending client-side to avoid Firestore composite index requirement
+            data.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+            
             // Filter out 'SALDO A FAVOR' concept payments, but show voided ones with indicator
-            .filter(p => p.concepto !== "SALDO A FAVOR");
+            data = data.filter(p => p.concepto !== "SALDO A FAVOR");
 
             setPagos(data);
             setLoading(false);
@@ -141,12 +144,21 @@ export default function HistoricoPagosTab({ patientId }) {
                     <div key={pago.id} className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg hover:shadow-slate-100/50 hover:-translate-y-0.5 transition-all duration-300 group">
                         
                         <div className="flex items-center gap-4 flex-1">
-                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
-                                <FiCreditCard size={16} />
+                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-emerald-50 transition-colors shrink-0 overflow-hidden">
+                                {pago.nroConsecutivo ? (
+                                    <span className="text-[11px] font-black text-emerald-600 group-hover:text-emerald-700 tracking-tight leading-none"># {pago.nroConsecutivo}</span>
+                                ) : (
+                                    <FiCreditCard size={16} className="text-slate-300 group-hover:text-emerald-600 transition-colors" />
+                                )}
                             </div>
                             
                             <div>
                                 <div className="flex items-center gap-2.5 mb-0.5">
+                                    {pago.nroConsecutivo && (
+                                        <span className="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-widest font-mono">
+                                            # {pago.nroConsecutivo}
+                                        </span>
+                                    )}
                                     <h4 className="font-black text-slate-800 text-[12px] uppercase tracking-tight">{pago.concepto || "ABONO GENERAL"}</h4>
                                     <span className="text-[8px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{pago.medio}</span>
                                 </div>

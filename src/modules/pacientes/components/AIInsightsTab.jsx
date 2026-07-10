@@ -267,7 +267,7 @@ export default function AIInsightsTab({ patient }) {
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-base font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                        <FiCpu className="text-indigo-600 animate-pulse" /> Copiloto IA Clínico (Anita Insights)
+                        <FiCpu className="text-indigo-600 animate-pulse" /> Copiloto IA Clínico (Nova Insights)
                     </h2>
                     <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Potencia tu clínica con inteligencia artificial gratuita</p>
                 </div>
@@ -291,7 +291,7 @@ export default function AIInsightsTab({ patient }) {
                         <div>
                             <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest leading-none">Clave API de Gemini (Uso Gratuito)</h4>
                             <p className="text-[10px] text-slate-400 font-bold mt-1.5 leading-relaxed">
-                                El Copiloto IA de Anita utiliza Gemini 1.5 Flash. Obtenga su clave API gratis en Google AI Studio. Su clave no se comparte y se guarda únicamente en este navegador.
+                                El Copiloto IA de Nova utiliza Gemini 1.5 Flash. Obtenga su clave API gratis en Google AI Studio. Su clave no se comparte y se guarda únicamente en este navegador.
                             </p>
                         </div>
                         <a 

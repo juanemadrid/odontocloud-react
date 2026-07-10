@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../firebase/firebaseConfig';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { 
@@ -39,8 +39,38 @@ export default function PagoTab({ patient }) {
     const [reference, setReference] = useState("");
     const [concept, setConcept] = useState("ABONO A TRATAMIENTO");
     const [profesional, setProfesional] = useState(userProfile?.nombreCompleto || "");
+    const [profesionalId, setProfesionalId] = useState("");
+    const [profesionales, setProfesionales] = useState([]);
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const loadProfesionales = async () => {
+            if (!userProfile?.inquilino) return;
+            try {
+                const q = query(
+                    collection(db, "profesionales"),
+                    where("inquilino", "==", userProfile.inquilino)
+                );
+                const snap = await getDocs(q);
+                const list = snap.docs.map(doc => ({
+                    id: doc.id,
+                    nombre: doc.data().nombreCompleto || doc.data().nombre || ""
+                }));
+                setProfesionales(list);
+                
+                // Auto-select logged-in user if they are a professional
+                const matchesMe = list.find(p => p.nombre.toLowerCase() === (userProfile?.nombreCompleto || "").toLowerCase());
+                if (matchesMe) {
+                    setProfesionalId(matchesMe.id);
+                    setProfesional(matchesMe.nombre);
+                }
+            } catch (err) {
+                console.error("Error loading profesionales in PagoTab:", err);
+            }
+        };
+        loadProfesionales();
+    }, [userProfile?.inquilino, userProfile?.nombreCompleto]);
 
     // Payment methods that require a reference number
     const METHODS_REQUIRING_REFERENCE = ["Transferencia", "Cheque", "Consignación", "Nequi", "Daviplata", "PSE"];
@@ -266,6 +296,24 @@ export default function PagoTab({ patient }) {
         
         setLoading(true);
         try {
+            // 1. Fetch active Caja session for this user
+            const cSnap = await getDocs(query(
+                collection(db, "cajas"), 
+                where("inquilino", "==", userProfile?.inquilino || "nop"),
+                where("estado", "==", "abierta"),
+                where("usuarioId", "==", userProfile?.uid)
+            ));
+            let activeCaja = null;
+            if (!cSnap.empty) {
+                activeCaja = { id: cSnap.docs[0].id, ...cSnap.docs[0].data() };
+            }
+
+            // 2. If paid in cash, active cash session is strictly required
+            if (method === "Efectivo" && !activeCaja) {
+                setLoading(false);
+                return toast.error("No tienes una caja abierta para registrar el pago en efectivo.");
+            }
+
             const pagoData = {
                 patientId: patient.id,
                 patientNombre: patient.nombreCompleto,
@@ -274,12 +322,15 @@ export default function PagoTab({ patient }) {
                 referencia: reference || null,
                 concepto: concept,
                 profesional,
+                profesionalId: profesionalId || null,
+                profesionalNombre: profesional || null,
                 notas: notes,
                 fecha: serverTimestamp(),
                 fechaISO: new Date().toISOString(),
                 inquilino: userProfile?.inquilino || "",
                 registradoPor: userProfile?.nombreCompleto || userProfile?.nombre || "Sistema",
-                estado: "Completado"
+                estado: "Completado",
+                cajaId: activeCaja ? activeCaja.id : null
             };
 
             if (selectedPlan) {
@@ -318,8 +369,75 @@ export default function PagoTab({ patient }) {
                 pagoData.itemPayments = itemPayments;
             }
 
-            await addDoc(collection(db, "pagos"), pagoData);
+            // 2.5. Fetch and assign consecutive number (contReciboCaja)
+            let nroConsecutivo = "";
+            let consDocId = null;
+            let consNextCount = 1;
+            try {
+                const qCons = query(
+                    collection(db, "consecutivos"),
+                    where("inquilino", "==", userProfile?.inquilino || "")
+                );
+                const snapCons = await getDocs(qCons);
+                if (!snapCons.empty) {
+                    const consDoc = snapCons.docs[0];
+                    consDocId = consDoc.id;
+                    const currentCount = parseInt(String(consDoc.data().contReciboCaja || 1), 10) || 1;
+                    consNextCount = currentCount + 1;
+                    nroConsecutivo = String(currentCount).padStart(2, '0');
+                } else {
+                    nroConsecutivo = "01";
+                    consNextCount = 2;
+                }
+            } catch (consErr) {
+                console.warn("No se pudo obtener el consecutivo:", consErr);
+                nroConsecutivo = "";
+            }
+
+            if (nroConsecutivo) {
+                pagoData.nroConsecutivo = nroConsecutivo;
+            }
+
+            // 3. Write payment doc
+            const docRef = await addDoc(collection(db, "pagos"), pagoData);
+
+            // 3.1. Increment consecutive counter (write plain number, not increment())
+            if (consDocId) {
+                try {
+                    await updateDoc(doc(db, "consecutivos", consDocId), {
+                        contReciboCaja: consNextCount
+                    });
+                } catch (incErr) {
+                    console.warn("No se pudo actualizar el consecutivo:", incErr);
+                }
+            }
             
+            // 4. Synchronize with active Caja session
+            if (activeCaja) {
+                const movData = {
+                    inquilino: userProfile?.inquilino || "",
+                    tipo: "ingreso",
+                    concepto: concept || "Abono a tratamiento",
+                    monto: paymentAmount,
+                    metodoPago: method,
+                    descripcion: `Abono de ${patient.nombreCompleto}. Plan: ${selectedPlan ? `"${selectedPlan.title || selectedPlan.nombre}"` : "General"}`,
+                    pacienteId: patient.id,
+                    pacienteNombre: patient.nombreCompleto,
+                    pagoId: docRef.id,
+                    usuarioId: userProfile?.uid,
+                    usuarioNombre: userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Sistema",
+                    fecha: serverTimestamp(),
+                };
+                
+                await addDoc(collection(db, "cajas", activeCaja.id, "movimientos"), movData);
+                
+                // Update balance and total ingresos of the active caja session
+                await updateDoc(doc(db, "cajas", activeCaja.id), {
+                    saldoActual: increment(paymentAmount),
+                    totalIngresos: increment(paymentAmount)
+                });
+            }
+
             toast.success("Pago registrado exitosamente");
             setAbonoInput("");
             setNotes("");
@@ -336,9 +454,13 @@ export default function PagoTab({ patient }) {
         }
     };
 
-    const filteredPlans = plans.filter(p => 
-        (p.title || p.nombre || "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPlans = plans.filter(p => {
+        const paid = getPlanPayments(p.id);
+        const total = Number(p.total || 0);
+        const balance = total - paid;
+        const matchesSearch = (p.title || p.nombre || "").toLowerCase().includes(searchTerm.toLowerCase());
+        return balance > 0 && matchesSearch;
+    });
 
     if (loadingData) {
         return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Cargando datos contables...</div>;
@@ -434,13 +556,19 @@ export default function PagoTab({ patient }) {
                                                         {formatCurrency(balance)}
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <button 
-                                                            onClick={() => handleSelectPlan(p)}
-                                                            className="p-2.5 bg-[#8CC63F] text-white rounded-xl hover:bg-[#7bb335] hover:scale-105 active:scale-95 transition-all shadow-md shadow-[#8CC63F]/10 flex items-center justify-center mx-auto"
-                                                            title="Registrar Pago"
-                                                        >
-                                                            <FiCreditCard size={15} />
-                                                        </button>
+                                                         {balance <= 0 ? (
+                                                             <span className="inline-flex items-center justify-center px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-wider leading-none shadow-sm">
+                                                                 Pagado
+                                                             </span>
+                                                         ) : (
+                                                             <button 
+                                                                 onClick={() => handleSelectPlan(p)}
+                                                                 className="p-2.5 bg-[#8CC63F] text-white rounded-xl hover:bg-[#7bb335] hover:scale-105 active:scale-95 transition-all shadow-md shadow-[#8CC63F]/10 flex items-center justify-center mx-auto"
+                                                                 title="Registrar Pago"
+                                                             >
+                                                                 <FiCreditCard size={15} />
+                                                             </button>
+                                                         )}
                                                     </td>
                                                 </tr>
                                             );
@@ -492,7 +620,13 @@ export default function PagoTab({ patient }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-[12px] font-bold text-slate-600">
-                                        {(selectedPlan.items || []).map((it, idx) => {
+                                        {(selectedPlan.items || [])
+                                             .filter(it => {
+                                                 const total = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                                                 const paid = paidMap[it.id] || 0;
+                                                 return total - paid > 0;
+                                             })
+                                             .map((it, idx) => {
                                             const total = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
                                             const paid = paidMap[it.id] || 0;
                                             const balance = Math.max(0, total - paid);
@@ -612,15 +746,24 @@ export default function PagoTab({ patient }) {
                                 <div className="space-y-2">
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Profesional / Responsable</label>
                                     <div className="relative">
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
                                             <FiUser size={16} />
                                         </div>
-                                        <input 
-                                            placeholder="NOMBRE DEL PROFESIONAL..."
-                                            value={profesional}
-                                            onChange={(e) => setProfesional(e.target.value.toUpperCase())}
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all placeholder:text-slate-200 caret-slate-950"
-                                        />
+                                        <select 
+                                            value={profesionalId}
+                                            onChange={(e) => {
+                                                const pId = e.target.value;
+                                                setProfesionalId(pId);
+                                                const found = profesionales.find(p => p.id === pId);
+                                                setProfesional(found ? found.nombre : "");
+                                            }}
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all appearance-none cursor-pointer uppercase"
+                                        >
+                                            <option value="">SELECCIONE PROFESIONAL...</option>
+                                            {profesionales.map(p => (
+                                                <option key={p.id} value={p.id}>{p.nombre.toUpperCase()}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -732,7 +875,7 @@ export default function PagoTab({ patient }) {
                                                 onChange={(e) => setConcept(e.target.value)}
                                                 className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all uppercase"
                                             >
-                                                <option value="SALDO A FAVOR">Saldo a Favor</option>
+                                        <option value="SALDO A FAVOR">Saldo a Favor</option>
                                                 <option value="PAGO DE CONSULTA">Pago de Consulta</option>
                                                 <option value="PAGO DE RADIOGRAFÍA">Pago de Radiografía</option>
                                             </select>
@@ -740,15 +883,24 @@ export default function PagoTab({ patient }) {
                                         <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Profesional / Responsable</label>
                                             <div className="relative">
-                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
                                                     <FiUser size={16} />
                                                 </div>
-                                                <input 
-                                                    placeholder="NOMBRE DEL PROFESIONAL..."
-                                                    value={profesional}
-                                                    onChange={(e) => setProfesional(e.target.value.toUpperCase())}
-                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all placeholder:text-slate-200 caret-slate-950"
-                                                />
+                                                <select 
+                                                    value={profesionalId}
+                                                    onChange={(e) => {
+                                                        const pId = e.target.value;
+                                                        setProfesionalId(pId);
+                                                        const found = profesionales.find(p => p.id === pId);
+                                                        setProfesional(found ? found.nombre : "");
+                                                    }}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all appearance-none cursor-pointer uppercase"
+                                                >
+                                                    <option value="">SELECCIONE PROFESIONAL...</option>
+                                                    {profesionales.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.nombre.toUpperCase()}</option>
+                                                    ))}
+                                                </select>
                                             </div>
                                         </div>
                                         {requiresReference && (

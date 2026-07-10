@@ -63,6 +63,23 @@ export default function CerrarCajaModal({ caja, inquilino, userProfile, onClose,
   const totalEgresos = movimientos.filter(m => m.tipo === "egreso").reduce((s, m) => s + (m.monto || 0), 0);
   const saldoTeorico = (caja.baseInicial || 0) + totalIngresos - totalEgresos;
 
+  // Split cash vs banks expected balances
+  const totalIngresosEfectivo = movimientos
+    .filter(m => m.tipo === "ingreso" && (m.metodoPago === "Efectivo" || !m.metodoPago))
+    .reduce((s, m) => s + (m.monto || 0), 0);
+  const totalEgresosEfectivo = movimientos
+    .filter(m => m.tipo === "egreso" && (m.metodoPago === "Efectivo" || !m.metodoPago))
+    .reduce((s, m) => s + (m.monto || 0), 0);
+  const efectivoEsperado = (caja.baseInicial || 0) + totalIngresosEfectivo - totalEgresosEfectivo;
+
+  const totalIngresosOtros = movimientos
+    .filter(m => m.tipo === "ingreso" && m.metodoPago && m.metodoPago !== "Efectivo")
+    .reduce((s, m) => s + (m.monto || 0), 0);
+  const totalEgresosOtros = movimientos
+    .filter(m => m.tipo === "egreso" && m.metodoPago && m.metodoPago !== "Efectivo")
+    .reduce((s, m) => s + (m.monto || 0), 0);
+  const otrosEsperado = totalIngresosOtros - totalEgresosOtros;
+
   const conteoEfNum = parseFloat(String(conteoEfectivo).replace(/[^0-9]/g, "")) || 0;
   const conteoOtrosNum = parseFloat(String(conteoOtros).replace(/[^0-9]/g, "")) || 0;
   const conteoTotal = conteoEfNum + conteoOtrosNum;
@@ -149,6 +166,18 @@ export default function CerrarCajaModal({ caja, inquilino, userProfile, onClose,
                 <div className={`text-sm font-black truncate ${k.color}`}>{k.val}</div>
               </div>
             ))}
+          </div>
+
+          {/* Desglose por medios de pago */}
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+            <div className="flex-1 flex flex-col items-center p-3.5 bg-white rounded-xl shadow-sm border border-slate-200/50">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Efectivo Esperado (En Caja)</span>
+              <span className="text-slate-800 font-extrabold text-base font-mono">{fmt(efectivoEsperado)}</span>
+            </div>
+            <div className="flex-1 flex flex-col items-center p-3.5 bg-white rounded-xl shadow-sm border border-slate-200/50">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Bancos / Transferencias Esperado</span>
+              <span className="text-blue-600 font-extrabold text-base font-mono">{fmt(otrosEsperado)}</span>
+            </div>
           </div>
 
           {/* Verification Section */}

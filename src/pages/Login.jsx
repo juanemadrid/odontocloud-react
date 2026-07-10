@@ -46,6 +46,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -208,21 +209,52 @@ const Login = () => {
 
 
       console.log("Login - handleSubmit: Buscando usuario en Firestore...");
-      const qUsers = query(
-        collection(db, "usuarios"),
-        where("email", "==", email)
-      );
-      const snapshot = await getDocs(qUsers);
-      console.log("Login - handleSubmit: Snapshot de Firestore recibido. Empty:", snapshot.empty);
+      
+      // Primero buscar por UID (más confiable)
+      let userData = null;
+      let normalizedRol = "recepcionista";
+      let matchedDoc = null;
+      
+      try {
+        const docByUid = await getDocs(query(
+          collection(db, "usuarios"),
+          where("uid", "==", user.uid)
+        ));
+        
+        if (!docByUid.empty) {
+          userData = docByUid.docs[0].data();
+          matchedDoc = docByUid.docs[0];
+        }
+      } catch (e) {
+        console.warn("Búsqueda por UID falló, intentando por email:", e);
+      }
+      
+      // Si no encontró por UID, buscar por email
+      if (!userData) {
+        const qUsers = query(
+          collection(db, "usuarios"),
+          where("email", "==", email)
+        );
+        const snapshot = await getDocs(qUsers);
+        console.log("Login - handleSubmit: Snapshot de Firestore recibido. Empty:", snapshot.empty);
 
-      if (snapshot.empty) {
-        setError("Usuario no encontrado en la base de datos.");
+        if (!snapshot.empty) {
+          userData = snapshot.docs[0].data();
+          matchedDoc = snapshot.docs[0];
+        }
+      }
+
+      if (!userData) {
+        // Usuario autenticado en Firebase Auth pero sin perfil en Firestore
+        // Redirigir como recepcionista por defecto
+        console.warn("Usuario autenticado pero sin perfil en Firestore. Redirigiendo con rol por defecto.");
+        saveSessionOffline(email, "recepcionista");
+        redirectByRole("recepcionista");
         return;
       }
 
-      const userData = snapshot.docs[0].data();
       const rawRol = userData.rol || "sin_rol";
-      let normalizedRol = rawRol.trim().toLowerCase();
+      normalizedRol = rawRol.trim().toLowerCase();
 
       // HARDCODED FALLBACK: MadridSystem siempre es superadmin
       if (email === "madridsystem@outlook.es") {
@@ -233,7 +265,7 @@ const Login = () => {
         email,
         rolOriginal: rawRol,
         rolNormalizado: normalizedRol,
-        path: snapshot.docs[0].ref.path
+        path: matchedDoc ? matchedDoc.ref.path : "sin_path"
       });
 
       try {
@@ -254,15 +286,23 @@ const Login = () => {
         case "auth/wrong-password":
           setError("Contraseña incorrecta.");
           break;
+        case "auth/invalid-credential":
+          setError("Correo o contraseña incorrectos.");
+          break;
         case "auth/invalid-email":
           setError("Correo no válido.");
+          break;
+        case "auth/too-many-requests":
+          setError("Demasiados intentos fallidos. Espere unos minutos.");
           break;
         case "auth/network-request-failed":
           setError("Sin conexión. Usa la sesión guardada o reconecta.");
           break;
         default:
-          setError("Error al iniciar sesión.");
+          setError("Error al iniciar sesión: " + (err.message || err.code));
       }
+    } finally {
+      setLoadingStatus(false);
     }
   };
 
@@ -313,13 +353,50 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
               required={isOnline}
             />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required={isOnline}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required={isOnline}
+                style={{ paddingRight: '2.5rem', width: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  color: '#94a3b8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+                tabIndex={-1}
+                title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+              >
+                {showPassword ? (
+                  // Eye-off icon
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  // Eye icon
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
+              </button>
+            </div>
             <button type="submit" disabled={loadingStatus}>
               {loadingStatus ? "Iniciando..." : (isOnline ? "Iniciar sesión" : "Entrar (modo offline)")}
             </button>

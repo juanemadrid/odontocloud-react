@@ -4,6 +4,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { db, firebaseConfig } from "../../firebase/firebaseConfig"; // Import config to create secondary app
 import { useAuth } from "../../context/AuthContext";
+import { FiTrash2, FiEdit2 } from "react-icons/fi";
 
 // Singleton secondary Firebase app — prevents duplicate-app crashes
 const getSecondaryAuth = () => {
@@ -109,34 +110,6 @@ export default function ConfigUsuarios() {
         setSaving(true);
         try {
             const selectedProfile = rolesDisponibles.find(p => p.id === formData.profileId);
-
-            // ---------------------------------------------------------
-            // PLAN LIMIT ENFORCEMENT
-            // ---------------------------------------------------------
-            if (userProfile?.inquilino && userProfile?.tenant?.planId) {
-                try {
-                    // 1. Get Plan Limits
-                    const planSnap = await getDoc(doc(db, "subscription_plans", userProfile.tenant.planId));
-                    if (planSnap.exists()) {
-                        const { maxUsers } = planSnap.data();
-
-                        // 2. Count current users (using the list we already loaded to save a read, or fresh count)
-                        // Using the state 'users' is faster, but fresh count is safer. Let's use 'users' state for UI speed + safety check? 
-                        // Let's trust local state since we just loaded it, but usually server count is better.
-                        // We'll stick to local state 'users.length' for simplicity as we already filtered by tenant.
-                        if (users.length >= maxUsers) {
-                            alert(`⛔ Has alcanzado el límite de usuarios de tu plan (${maxUsers}). Actualiza tu plan para agregar más.`);
-                            setSaving(false);
-                            return;
-                        }
-                    }
-                } catch (limitErr) {
-                    console.error("Error checking limits", limitErr);
-                    // Don't block creation on error? Or do? Let's log and proceed for now, or block. 
-                }
-            }
-            // ---------------------------------------------------------
-
             const secondaryAuth = getSecondaryAuth();
 
             try {
@@ -240,7 +213,16 @@ export default function ConfigUsuarios() {
                                 {u.sucursales?.length || 0} asignadas
                             </td>
                             <td className="p-4 text-right">
-                                <button onClick={() => handleDelete(u)} className="text-red-500 hover:underline">Eliminar</button>
+                                <div className="flex justify-end gap-2">
+                                    <button 
+                                        onClick={() => handleDelete(u)} 
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-sm font-medium"
+                                        title="Eliminar usuario"
+                                    >
+                                        <FiTrash2 className="text-base" />
+                                        <span>Eliminar</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}

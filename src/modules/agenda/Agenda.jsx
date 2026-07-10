@@ -35,6 +35,21 @@ export default function Agenda() {
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
     const [cancellingAptId, setCancellingAptId] = useState(null);
 
+    // Escuchar el evento de reset desde el sidebar
+    React.useEffect(() => {
+        const handleReset = () => {
+            setModalOpen(false);
+            setEditingApt(null);
+            setSlotData(null);
+            setCancelModalOpen(false);
+            setCancellingAptId(null);
+        };
+        window.addEventListener("reset-module-agenda", handleReset);
+        return () => {
+            window.removeEventListener("reset-module-agenda", handleReset);
+        };
+    }, []);
+
     // --- Metrics Calculation ---
     const occupancyPercentage = useMemo(() => {
         if (!appointments || appointments.length === 0) return 0;

@@ -3,16 +3,17 @@ import ReactDOM from "react-dom";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc, or } from "firebase/firestore";
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { db, firebaseConfig } from "../../firebase/firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 // Singleton secondary Firebase app — prevents duplicate-app crashes
+// firebaseConfig debe estar importado antes de esta función
 const getSecondaryAuth = () => {
     const existing = getApps().find(app => app.name === "SecondaryAppEmpresa");
     const app = existing || initializeApp(firebaseConfig, "SecondaryAppEmpresa");
     return getAuth(app);
 };
-import { db, firebaseConfig } from "../../firebase/firebaseConfig";
-import { useAuth } from "../../context/AuthContext";
-import { useToast } from "../../context/ToastContext";
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiFilter, FiUser, FiArrowLeft, FiArrowRight, FiSave, FiInfo, FiMail, FiPhone, FiCreditCard, FiMapPin, FiActivity, FiLayers, FiChevronRight, FiChevronLeft, FiChevronsRight, FiChevronsLeft, FiEye, FiEyeOff, FiHelpCircle } from "react-icons/fi";
 import Input from "../../components/ui/Input";
 
@@ -39,6 +40,7 @@ export default function EmpresaUsuarios() {
     const [searchTermSucAvailable, setSearchTermSucAvailable] = useState("");
     const [searchTermSucSelected, setSearchTermSucSelected] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // Usuario a eliminar
 
     // Form State
     const initialForm = {
@@ -162,21 +164,6 @@ export default function EmpresaUsuarios() {
 
     // 3. Handlers
     const handleOpenModal = async (user = null) => {
-        if (!user && userProfile?.inquilino && userProfile?.tenant?.planId) {
-            try {
-                const planSnap = await getDoc(doc(db, "subscription_plans", userProfile.tenant.planId));
-                if (planSnap.exists()) {
-                    const { maxUsers } = planSnap.data();
-                    const activeUsersCount = users.filter(u => u.activo !== false).length;
-                    if (maxUsers && activeUsersCount >= maxUsers) {
-                        return toast.error(`⛔ Límite alcanzado: Tu plan actual (${userProfile.tenant.plan.name || 'Básico'}) permite máximo ${maxUsers} usuarios. Actualiza tu plan para agregar más.`);
-                    }
-                }
-            } catch (err) {
-                console.error("Error checking pre-limit", err);
-            }
-        }
-
         if (user) {
             setEditId(user.id);
             setFormData({
@@ -229,29 +216,11 @@ export default function EmpresaUsuarios() {
         if (!editId && !formData.password) {
             return toast.warning("Contraseña requerida para nuevos usuarios");
         }
-
-        // ---------------------------------------------------------
-        // PLAN LIMIT ENFORCEMENT
-        // ---------------------------------------------------------
-        if (!editId && userProfile?.inquilino && userProfile?.tenant?.planId) {
-            setSaving(true);
-            try {
-                const planSnap = await getDoc(doc(db, "subscription_plans", userProfile.tenant.planId));
-                if (planSnap.exists()) {
-                    const { maxUsers } = planSnap.data();
-                    const activeUsersCount = users.filter(u => u.activo !== false).length;
-                    if (maxUsers && activeUsersCount >= maxUsers) {
-                        toast.error(`⛔ Límite de usuarios alcanzado (${maxUsers}). Por favor, actualiza tu plan.`);
-                        setSaving(false);
-                        return;
-                    }
-                }
-            } catch (limitErr) {
-                console.error("Error checking limits", limitErr);
-                // Optionally handle error
-            }
+        
+        // Validar longitud de contraseña
+        if (formData.password && formData.password.length < 8) {
+            return toast.error("La contraseña debe tener mínimo 8 caracteres");
         }
-        // ---------------------------------------------------------
 
         setSaving(true);
         try {
@@ -261,9 +230,25 @@ export default function EmpresaUsuarios() {
 
             // If Creating New -> Create in Auth
             if (!editId) {
-                const secondaryAuth = getSecondaryAuth();
-                const userCred = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
-                uid = userCred.user.uid;
+                try {
+                    const secondaryAuth = getSecondaryAuth();
+                    const userCred = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
+                    uid = userCred.user.uid;
+                    // Cerrar sesión en la app secundaria para no interferir con la sesión principal
+                    await secondaryAuth.signOut();
+                } catch (authError) {
+                    setSaving(false);
+                    if (authError.code === 'auth/email-already-in-use') {
+                        toast.error("El correo ya está registrado en Firebase. Si el usuario existía antes, edítalo en lugar de crearlo nuevamente.");
+                    } else if (authError.code === 'auth/weak-password') {
+                        toast.error("La contraseña es muy débil. Use mínimo 8 caracteres.");
+                    } else if (authError.code === 'auth/invalid-email') {
+                        toast.error("El formato del correo electrónico no es válido.");
+                    } else {
+                        toast.error("Error al crear cuenta de acceso: " + authError.message);
+                    }
+                    return;
+                }
             }
 
             // Save to Firestore
@@ -371,6 +356,55 @@ export default function EmpresaUsuarios() {
         } catch (e) {
             toast.error("Error al cambiar estado");
         }
+    };
+
+    const handleDelete = async (u) => {
+        console.log("🗑️ handleDelete llamado con usuario:", u);
+        
+        // Protección para usuarios administradores
+        if (u.rol === "administrador") {
+            console.log("⛔ Usuario administrador, bloqueado");
+            return toast.error("⛔ No se puede eliminar un usuario administrador");
+        }
+        
+        // Mostrar modal de confirmación personalizado
+        setDeleteConfirmModal(u);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmModal) return;
+        
+        const u = deleteConfirmModal;
+        console.log("✅ Usuario confirmó eliminación");
+        
+        try {
+            console.log("Eliminando usuario de Firestore...");
+            // Eliminar de la colección usuarios
+            await deleteDoc(doc(db, "usuarios", u.id));
+            console.log("✅ Usuario eliminado de colección usuarios");
+            
+            // Si era doctor, también eliminar de profesionales
+            if (u.esDoctor) {
+                try {
+                    await deleteDoc(doc(db, "profesionales", u.id));
+                    console.log("✅ Usuario eliminado de colección profesionales");
+                } catch (e) {
+                    console.warn("No se pudo eliminar de profesionales:", e);
+                }
+            }
+            
+            toast.success("Usuario eliminado correctamente");
+            setDeleteConfirmModal(null);
+            loadData();
+        } catch (e) {
+            console.error("❌ Error eliminando usuario:", e);
+            toast.error("Error al eliminar usuario: " + e.message);
+        }
+    };
+
+    const cancelDelete = () => {
+        console.log("❌ Usuario canceló la eliminación");
+        setDeleteConfirmModal(null);
     };
 
     return (
@@ -505,7 +539,7 @@ export default function EmpresaUsuarios() {
                                             )}
                                         </td>
                                         <td className="px-8 py-4">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                            <div className="flex items-center justify-end gap-2 transition-all duration-300">
                                                 <button
                                                     onClick={() => handleDisable(u)}
                                                     className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${u.activo === false ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
@@ -516,8 +550,16 @@ export default function EmpresaUsuarios() {
                                                 <button
                                                     onClick={() => handleOpenModal(u)}
                                                     className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all"
+                                                    title="Editar usuario"
                                                 >
                                                     <FiEdit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(u)}
+                                                    className="w-9 h-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-all"
+                                                    title="Eliminar usuario permanentemente"
+                                                >
+                                                    <FiTrash2 size={16} />
                                                 </button>
                                             </div>
                                         </td>
@@ -894,12 +936,25 @@ export default function EmpresaUsuarios() {
                                         <div className="space-y-2.5">
                                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Contraseña *</label>
                                             <div className="relative">
-                                                <input type={showPassword ? "text" : "password"} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editId} placeholder="Mínimo 8 caracteres" className="w-full h-11 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl pl-4 pr-12 font-bold text-[13px] text-slate-700 outline-none transition-all caret-black" />
+                                                <input 
+                                                    type={showPassword ? "text" : "password"} 
+                                                    value={formData.password} 
+                                                    onChange={e => setFormData({ ...formData, password: e.target.value })} 
+                                                    required={!editId} 
+                                                    minLength={8}
+                                                    placeholder="Mínimo 8 caracteres" 
+                                                    className={`w-full h-11 bg-slate-50 border ${formData.password && formData.password.length > 0 && formData.password.length < 8 ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'} focus:bg-white rounded-xl pl-4 pr-12 font-bold text-[13px] text-slate-700 outline-none transition-all caret-black`}
+                                                />
                                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
                                                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                                                 </button>
                                             </div>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">{editId ? "Dejar vacío para conservar la actual" : "Mín. 8 caracteres alfanuméricos"}</p>
+                                            <p className={`text-[9px] font-bold uppercase tracking-widest pl-1 ${formData.password && formData.password.length > 0 && formData.password.length < 8 ? 'text-red-500' : 'text-slate-400'}`}>
+                                                {editId ? "Dejar vacío para conservar la actual" : 
+                                                 formData.password && formData.password.length > 0 && formData.password.length < 8 ? 
+                                                 `Faltan ${8 - formData.password.length} caracteres` : 
+                                                 "Mín. 8 caracteres alfanuméricos"}
+                                            </p>
                                         </div>
                                     </div>
                                 </section>
@@ -943,6 +998,63 @@ export default function EmpresaUsuarios() {
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            {deleteConfirmModal && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+                        {/* Header */}
+                        <div className="bg-red-50 px-8 py-6 rounded-t-3xl border-b border-red-100">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                                    <FiTrash2 size={28} className="text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-red-900 uppercase tracking-tight">Eliminar Usuario</h3>
+                                    <p className="text-sm font-bold text-red-600">Acción Permanente</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-8 py-6 space-y-4">
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <p className="text-sm font-bold text-slate-700">
+                                    ¿Está seguro de eliminar <span className="font-black text-red-600">{deleteConfirmModal.nombreCompleto || deleteConfirmModal.nombre}</span>?
+                                </p>
+                            </div>
+                            
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
+                                <FiInfo className="text-yellow-600 shrink-0 mt-0.5" size={20} />
+                                <div className="text-xs font-bold text-slate-600 space-y-1">
+                                    <p>⚠️ Esta acción NO se puede deshacer</p>
+                                    <p>• Se eliminará el usuario de la base de datos</p>
+                                    <p>• Se perderán todos sus datos asociados</p>
+                                    {deleteConfirmModal.esDoctor && <p>• Se eliminará también de profesionales/agenda</p>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-8 py-6 bg-slate-50 rounded-b-3xl flex gap-3 border-t border-slate-100">
+                            <button
+                                onClick={cancelDelete}
+                                className="flex-1 px-6 py-3 rounded-xl bg-white border-2 border-slate-200 text-slate-700 font-black text-sm uppercase tracking-wider hover:bg-slate-50 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 px-6 py-3 rounded-xl bg-red-600 text-white font-black text-sm uppercase tracking-wider hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                            >
+                                <FiTrash2 size={16} />
+                                Eliminar
+                            </button>
                         </div>
                     </div>
                 </div>,

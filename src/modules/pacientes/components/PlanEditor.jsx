@@ -153,6 +153,32 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         });
     }, [items, paidMap, evolutions]);
 
+    const hasPayments = React.useMemo(() => {
+        return payments && payments.length > 0;
+    }, [payments]);
+
+    const getItemRealizedDate = (itemId) => {
+        const evo = evolutions.find(e =>
+            e.planId === initialData?.id &&
+            e.plantillaItems?.[itemId]?.checked === true
+        );
+        if (!evo) return null;
+        try {
+            const d = evo.date?.toDate ? evo.date.toDate() : new Date(evo.date);
+            return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch { return null; }
+    };
+
+    // Returns: 'none' | 'debt' | 'partial' | 'paid'
+    const getItemStatus = (item) => {
+        if (!isItemRealized(item.id)) return 'none';
+        const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+        const paid = paidMap[item.id] || 0;
+        if (paid <= 0) return 'debt';
+        if (paid < totalCost) return 'partial';
+        return 'paid';
+    };
+
     const cargarCombo = async (plan) => {
         setLoadingPlanItems(true);
         try {
@@ -571,6 +597,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                         <input
                             placeholder="TÍTULO DEL PRESUPUESTO..."
                             value={title}
+                            disabled={hasPayments}
                             onChange={(e) => setTitle(e.target.value.toUpperCase())}
                             className="bg-transparent border-none p-0 text-lg font-black text-slate-800 tracking-tight outline-none w-full max-w-sm uppercase focus:ring-0"
                         />
@@ -593,7 +620,12 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                     </button>
 
                     {/* Action buttons — compact */}
-                    <div className="flex items-center gap-1.5 w-full md:w-auto">
+                    <div className="flex items-center gap-1.5 w-full md:w-auto font-black text-[10px] uppercase tracking-wider">
+                        {hasPayments && (
+                            <span className="px-3 py-2 bg-amber-50 text-amber-600 border border-amber-100 rounded-xl flex items-center gap-1 shadow-sm mr-2">
+                                🔒 PAGOS REGISTRADOS
+                            </span>
+                        )}
                         {(initialData?.type || 'presupuesto') === 'presupuesto' && (
                             <button 
                                 onClick={handleConvertToPlan}
@@ -604,13 +636,15 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                 <FiActivity size={13} /> Convertir a Plan
                             </button>
                         )}
-                        <button 
-                            onClick={() => setDeleteModal({ isOpen: true, planId: initialData?.id, planName: title })} 
-                            disabled={loading} 
-                            className="shrink-0 px-3 py-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-rose-100 whitespace-nowrap"
-                        >
-                            <FiTrash2 size={13} /> {isEditing ? "Eliminar" : "Descartar"}
-                        </button>
+                        {!hasPayments && (
+                            <button 
+                                onClick={() => setDeleteModal({ isOpen: true, planId: initialData?.id, planName: title })} 
+                                disabled={loading} 
+                                className="shrink-0 px-3 py-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-rose-100 whitespace-nowrap"
+                            >
+                                <FiTrash2 size={13} /> {isEditing ? "Eliminar" : "Descartar"}
+                            </button>
+                        )}
                         <button 
                             onClick={() => handleSave('accepted')} 
                             disabled={loading} 
@@ -626,6 +660,17 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             {/* Main Area: The Invoice Editor */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-32">
                 <div className="max-w-6xl mx-auto space-y-4">
+                    {hasPayments && (
+                        <div className="bg-amber-50 border border-amber-100 rounded-3xl p-5 flex items-center gap-4 text-amber-800 shrink-0 animate-fadeIn shadow-sm">
+                            <FiAlertCircle size={24} className="text-amber-500 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-widest leading-none text-amber-600 mb-1">Modificación Protegida</p>
+                                <p className="text-[10px] font-bold text-amber-500/80 uppercase tracking-wider leading-normal">
+                                    Este plan de tratamiento tiene pagos registrados. Los tratamientos ya pagados o abonados no pueden modificarse ni eliminarse. Sin embargo, puede agregar nuevos tratamientos a este plan.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     {hasRealizedDebt && (
                         <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex items-center gap-4 text-rose-800 shrink-0 animate-fadeIn shadow-sm">
                             <FiAlertCircle size={24} className="text-rose-500 shrink-0 animate-bounce" />
@@ -659,11 +704,27 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Valor Unit.</th>
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Subtotal</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Estado</th>
                                     <th className="px-4 py-3 w-12"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {items.map((item, index) => (
+                                {items.map((item, index) => {
+                                    const itemStatus = getItemStatus(item);
+                                    const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+                                    const paidAmt = paidMap[item.id] || 0;
+                                    const debtAmt = Math.max(0, totalCost - paidAmt);
+                                    const realizedDate = getItemRealizedDate(item.id);
+
+                                    const statusConfig = {
+                                        none:    { color: 'bg-slate-200',    ring: 'ring-slate-300',    label: 'Sin realizar',            tooltip: 'Este procedimiento aún no ha sido realizado.' },
+                                        debt:    { color: 'bg-rose-500',     ring: 'ring-rose-300',     label: 'Realizado · Sin pagar',   tooltip: `Realizado${realizedDate ? ' el ' + realizedDate : ''} · Deuda total: $${totalCost.toLocaleString('es-CO')}` },
+                                        partial: { color: 'bg-amber-400',    ring: 'ring-amber-300',    label: 'Realizado · Abono parcial', tooltip: `Realizado${realizedDate ? ' el ' + realizedDate : ''} · Abonado: $${paidAmt.toLocaleString('es-CO')} / $${totalCost.toLocaleString('es-CO')} · Saldo: $${debtAmt.toLocaleString('es-CO')}` },
+                                        paid:    { color: 'bg-emerald-500',  ring: 'ring-emerald-300',  label: 'Realizado · Pagado',       tooltip: `Realizado${realizedDate ? ' el ' + realizedDate : ''} · Pagado en su totalidad` },
+                                    };
+                                    const sc = statusConfig[itemStatus];
+
+                                    return (
                                     <tr key={item.id} className="group hover:bg-slate-50/5 transition-colors">
                                         <td className="px-4 py-3 text-[10px] font-black text-slate-300 text-center">{index + 1}</td>
                                         <td className="px-4 py-3 align-middle">
@@ -672,14 +733,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                                     {item.code && <span className="text-indigo-400 mr-2 text-[9px] font-mono">{item.code}</span>}
                                                     {item.desc}
                                                 </div>
-                                                {isItemRealized(item.id) && (
-                                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[8px] font-black uppercase tracking-widest ml-1 animate-fadeIn">
-                                                        ✓ REALIZADO
-                                                    </span>
-                                                )}
-                                                {isItemRealized(item.id) && (Math.max(0, (Number(item.amount) * Number(item.qty)) - (item.descuento || 0) - (paidMap[item.id] || 0))) > 0 && (
-                                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[8px] font-black uppercase tracking-widest ml-1 animate-pulse">
-                                                        ⚠️ DEUDA: ${(Math.max(0, (Number(item.amount) * Number(item.qty)) - (item.descuento || 0) - (paidMap[item.id] || 0))).toLocaleString('es-CO')}
+                                                {itemStatus !== 'none' && (
+                                                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ml-1 animate-fadeIn ${
+                                                        itemStatus === 'debt'    ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                                        itemStatus === 'partial' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                                                                   'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                    }`}>
+                                                        {itemStatus === 'debt' ? '⚠️ SIN PAGAR' : itemStatus === 'partial' ? '⏳ PARCIAL' : '✓ PAGADO'}
                                                     </span>
                                                 )}
                                             </div>
@@ -687,7 +747,8 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     <td className="px-4 py-3 align-middle text-center">
                                         <input
                                             type="number"
-                                            className="w-12 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-700 text-xs transition-all"
+                                            disabled={paidMap[item.id] > 0}
+                                            className="w-12 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-700 text-xs transition-all disabled:opacity-75 disabled:cursor-not-allowed"
                                             value={item.qty}
                                             onChange={(e) => updateItem(item.id, 'qty', Number(e.target.value))}
                                             min="1"
@@ -697,55 +758,84 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                         <div className="flex items-center justify-center gap-1">
                                             <input
                                                 type="text"
+                                                disabled={paidMap[item.id] > 0}
                                                 placeholder="PIEZAS"
-                                                className="w-16 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-500 text-[10px] transition-all uppercase"
+                                                className="w-16 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-500 text-[10px] transition-all uppercase disabled:opacity-75 disabled:cursor-not-allowed"
                                                 value={item.dientes || ""}
                                                 onChange={(e) => updateItem(item.id, 'dientes', e.target.value)}
                                             />
-                                            <button 
-                                                onClick={() => openToothSelector(item)}
-                                                className="text-indigo-500 hover:text-indigo-700 transition-colors"
-                                            >
-                                                <FiPlusCircle size={14} />
-                                            </button>
+                                            {paidMap[item.id] === 0 && (
+                                                <button 
+                                                    onClick={() => openToothSelector(item)}
+                                                    className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                                                >
+                                                    <FiPlusCircle size={14} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 align-middle text-right">
-                                        <div className="flex items-center justify-end gap-1 bg-slate-50 px-2 h-9 rounded-lg border border-slate-100 w-28 ml-auto">
-                                            <span className="text-slate-300 text-[10px] font-bold">$</span>
-                                            <input
-                                                type="number"
-                                                className="w-full bg-transparent text-right outline-none font-black text-slate-700 text-[12px]"
-                                                value={item.amount}
-                                                onChange={(e) => updateItem(item.id, 'amount', Number(e.target.value))}
-                                            />
-                                        </div>
+                                    <td className="px-4 py-3 align-middle text-right font-black font-mono text-slate-700 text-xs">
+                                        {paidMap[item.id] > 0 ? (
+                                            <span>$ {Number(item.amount || 0).toLocaleString('es-CO')}</span>
+                                        ) : (
+                                            <div className="flex items-center justify-end gap-1 bg-slate-50 px-2 h-9 rounded-lg border border-slate-100 w-28 ml-auto font-sans">
+                                                <span className="text-slate-300 text-[10px] font-bold">$</span>
+                                                <input
+                                                    type="number"
+                                                    className="w-full bg-transparent text-right outline-none font-black text-slate-700 text-[12px]"
+                                                    value={item.amount}
+                                                    onChange={(e) => updateItem(item.id, 'amount', Number(e.target.value))}
+                                                />
+                                            </div>
+                                        )}
                                     </td>
-                                    <td className="px-4 py-3 align-middle text-right">
-                                        <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-9 rounded-lg border border-rose-100 w-20 ml-auto">
-                                            <span className="text-rose-300 text-[10px] font-bold">$</span>
-                                            <input
-                                                type="number"
-                                                className="w-full bg-transparent text-right outline-none font-black text-rose-600 text-[12px]"
-                                                value={item.descuento || 0}
-                                                onChange={(e) => updateItem(item.id, 'descuento', Number(e.target.value))}
-                                            />
-                                        </div>
+                                    <td className="px-4 py-3 align-middle text-right font-black font-mono text-rose-600 text-xs">
+                                        {paidMap[item.id] > 0 ? (
+                                            <span>$ {Number(item.descuento || 0).toLocaleString('es-CO')}</span>
+                                        ) : (
+                                            <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-9 rounded-lg border border-rose-100 w-20 ml-auto font-sans">
+                                                <span className="text-rose-300 text-[10px] font-bold">$</span>
+                                                <input
+                                                    type="number"
+                                                    className="w-full bg-transparent text-right outline-none font-black text-rose-600 text-[12px]"
+                                                    value={item.descuento || 0}
+                                                    onChange={(e) => updateItem(item.id, 'descuento', Number(e.target.value))}
+                                                />
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 align-middle text-right font-black text-[13px] text-slate-700 tracking-tight font-mono">
                                         <span className="text-[11px] font-bold text-slate-300 mr-0.5">$</span>
                                         {((item.qty * item.amount) - (item.descuento || 0)).toLocaleString('es-CO')}
                                     </td>
+                                    {/* Estado semáforo */}
+                                    <td className="px-4 py-3 align-middle text-center w-20">
+                                        <div className="flex items-center justify-center" title={sc.tooltip}>
+                                            <div className={`relative w-4 h-4 rounded-full ${sc.color} ${itemStatus === 'debt' ? 'animate-pulse' : ''} ring-2 ${sc.ring} ring-offset-1 cursor-help`}>
+                                            </div>
+                                        </div>
+                                        <div className={`text-center text-[7px] font-black uppercase tracking-wider mt-0.5 ${
+                                            itemStatus === 'none'    ? 'text-slate-300' :
+                                            itemStatus === 'debt'    ? 'text-rose-400' :
+                                            itemStatus === 'partial' ? 'text-amber-500' :
+                                                                       'text-emerald-500'
+                                        }`}>
+                                            {itemStatus === 'none' ? 'Pendiente' : itemStatus === 'debt' ? 'Sin pagar' : itemStatus === 'partial' ? 'Parcial' : 'Pagado'}
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-3 align-middle text-center w-12">
-                                        <button
-                                            onClick={() => removeItem(item.id)}
-                                            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
-                                        >
-                                            <FiTrash2 size={16} />
-                                        </button>
+                                        {paidMap[item.id] === 0 && (
+                                            <button
+                                                onClick={() => removeItem(item.id)}
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <FiTrash2 size={16} />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
-                            ))}
+                                    );
+                                })}
                         </tbody>
                     </table>
 

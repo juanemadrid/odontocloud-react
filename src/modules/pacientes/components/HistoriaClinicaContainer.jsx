@@ -328,122 +328,139 @@ export default function HistoriaClinicaContainer({ patient }) {
             <head>
                 <title>${doc.tipoDocumento} - ${patient.nombreCompleto || ''}</title>
                 <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
                     body {
-                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: #1e293b;
-                        padding: 40px;
-                        max-width: 900px;
+                        padding: 30px;
+                        max-width: 850px;
                         margin: 0 auto;
                         line-height: 1.5;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .header {
                         display: flex;
-                        flex-direction: column;
+                        justify-content: space-between;
                         align-items: center;
-                        gap: 15px;
-                        border-bottom: 2px solid #1e3a8a;
+                        border-bottom: 2px solid #2563eb;
                         padding-bottom: 15px;
-                        margin-bottom: 20px;
+                        margin-bottom: 25px;
+                        gap: 20px;
                     }
                     .logo-area {
                         display: flex;
-                        justify-content: center;
+                        justify-content: flex-start;
                         align-items: center;
-                        width: 100%;
+                        max-width: 50%;
                     }
                     .logo-text {
-                        font-size: 26px;
-                        font-weight: 900;
-                        color: #1e3a8a;
-                        letter-spacing: -0.05em;
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #2563eb;
+                        letter-spacing: -0.04em;
                         text-transform: uppercase;
+                        line-height: 1;
                     }
                     .doc-title {
-                        text-align: center;
-                        width: 100%;
+                        text-align: right;
+                        max-width: 50%;
                     }
                     .doc-title h1 {
-                        font-size: 22px;
-                        font-weight: 900;
+                        font-size: 18px;
+                        font-weight: 800;
                         text-transform: uppercase;
                         margin: 0;
                         color: #1e3a8a;
-                        letter-spacing: 0.05em;
+                        letter-spacing: 0.02em;
                     }
                     .doc-title p {
-                        font-size: 11px;
-                        font-weight: 800;
+                        font-size: 9px;
+                        font-weight: 700;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 6px 0 0 0;
-                        letter-spacing: 0.2em;
+                        margin: 4px 0 0 0;
+                        letter-spacing: 0.15em;
                     }
                     .patient-card {
                         background: #f8fafc;
                         border: 1px solid #e2e8f0;
-                        border-radius: 16px;
-                        padding: 20px;
-                        margin-bottom: 30px;
+                        border-radius: 12px;
+                        padding: 16px 20px;
+                        margin-bottom: 25px;
                         display: grid;
                         grid-template-columns: repeat(2, 1fr);
                         gap: 12px;
                     }
                     .info-group {
-                        font-size: 13px;
+                        padding: 6px 10px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        border: 1px solid #f1f5f9;
                     }
                     .info-label {
-                        font-size: 9px;
+                        font-size: 8px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #64748b;
+                        color: #94a3b8;
                         letter-spacing: 0.05em;
-                        margin-bottom: 2px;
+                        margin-bottom: 3px;
                     }
                     .info-value {
-                        font-weight: 700;
-                        color: #334155;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                        color: #1e293b;
                     }
                     .section-title {
-                        font-size: 13px;
+                        font-size: 11px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #0f172a;
-                        letter-spacing: 0.05em;
-                        border-bottom: 1.5px solid #cbd5e1;
-                        padding-bottom: 6px;
+                        color: #1e3a8a;
+                        letter-spacing: 0.08em;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 5px;
                         margin-top: 30px;
                         margin-bottom: 15px;
                     }
                     .content-box {
-                        font-size: 14px;
+                        font-size: 11.5px;
                         color: #334155;
                         white-space: pre-wrap;
-                        background: #fafafa;
-                        border: 1px solid #f1f5f9;
-                        padding: 20px;
-                        border-radius: 12px;
-                        min-height: 150px;
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-left: 4px solid #2563eb;
+                        padding: 15px 20px;
+                        border-radius: 8px;
+                        min-height: 120px;
+                        line-height: 1.5;
                     }
                     table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-top: 15px;
+                        margin-top: 10px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        overflow: hidden;
                     }
                     th {
-                        background: #f1f5f9;
-                        padding: 10px 12px;
-                        font-size: 10px;
+                        background: #f8fafc;
+                        padding: 8px 10px;
+                        font-size: 9px;
                         font-weight: 800;
                         text-transform: uppercase;
                         color: #475569;
-                        border-bottom: 2px solid #cbd5e1;
+                        border-bottom: 1px solid #e2e8f0;
                         text-align: left;
+                        letter-spacing: 0.05em;
                     }
                     td {
-                        padding: 10px 12px;
-                        font-size: 12px;
-                        border-bottom: 1px solid #e2e8f0;
+                        padding: 8px 10px;
+                        font-size: 11px;
+                        border-bottom: 1px solid #f1f5f9;
                         color: #334155;
+                    }
+                    tr:last-child td {
+                        border-bottom: none;
                     }
                     .text-center { text-align: center; }
                     .font-bold { font-weight: bold; }
@@ -457,23 +474,25 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     .badge.pos { background: #d1fae5; color: #065f46; }
                     .badge.nopos { background: #fef3c7; color: #92400e; }
-                    .text-muted { color: #64748b; font-size: 11px; }
+                    .text-muted { color: #64748b; font-size: 10px; }
                     .rec-row {
                         background: #faf5ff;
-                        font-size: 11px;
+                        font-size: 10.5px;
                         color: #5b21b6;
                         border-bottom: 1.5px dashed #e9d5ff;
                     }
                     .footer-sig {
-                        margin-top: 80px;
+                        margin-top: 60px;
                         display: flex;
                         justify-content: space-between;
                         align-items: flex-end;
+                        gap: 20px;
                     }
                     .sig-block {
-                        width: 250px;
+                        flex: 1;
+                        min-width: 150px;
                         text-align: center;
-                        font-size: 12px;
+                        font-size: 11px;
                     }
                     .sig-line {
                         border-top: 1px solid #94a3b8;
@@ -485,11 +504,11 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     .sig-subtitle {
                         color: #64748b;
-                        font-size: 10px;
+                        font-size: 8.5px;
                         text-transform: uppercase;
                     }
                     @media print {
-                        body { padding: 20px; }
+                        body { padding: 15px; }
                         .no-print { display: none; }
                     }
                 </style>
@@ -554,7 +573,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                 <script>
                     window.onload = function() {
                         window.print();
-                        setTimeout(function() { window.close(); }, 500);
                     };
                 </script>
             </body>
@@ -586,158 +604,185 @@ export default function HistoriaClinicaContainer({ patient }) {
             <head>
                 <title>Historia Clínica - ${patient.nombreCompleto || ''}</title>
                 <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
                     body {
-                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: #1e293b;
-                        padding: 40px;
-                        max-width: 900px;
+                        padding: 30px;
+                        max-width: 850px;
                         margin: 0 auto;
                         line-height: 1.5;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .header {
                         display: flex;
-                        flex-direction: column;
+                        justify-content: space-between;
                         align-items: center;
-                        gap: 15px;
-                        border-bottom: 2px solid #1e3a8a;
+                        border-bottom: 2px solid #2563eb;
                         padding-bottom: 15px;
-                        margin-bottom: 20px;
+                        margin-bottom: 25px;
+                        gap: 20px;
                     }
                     .logo-area {
                         display: flex;
-                        justify-content: center;
+                        justify-content: flex-start;
                         align-items: center;
-                        width: 100%;
+                        max-width: 50%;
                     }
                     .logo-text {
-                        font-size: 26px;
-                        font-weight: 900;
-                        color: #1e3a8a;
-                        letter-spacing: -0.05em;
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #2563eb;
+                        letter-spacing: -0.04em;
                         text-transform: uppercase;
+                        line-height: 1;
                     }
                     .doc-title {
-                        text-align: center;
-                        width: 100%;
+                        text-align: right;
+                        max-width: 50%;
                     }
                     .doc-title h1 {
-                        font-size: 22px;
-                        font-weight: 900;
+                        font-size: 18px;
+                        font-weight: 800;
                         text-transform: uppercase;
                         margin: 0;
                         color: #1e3a8a;
-                        letter-spacing: 0.05em;
+                        letter-spacing: 0.02em;
                     }
                     .doc-title p {
-                        font-size: 11px;
-                        font-weight: 800;
+                        font-size: 9px;
+                        font-weight: 700;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 6px 0 0 0;
-                        letter-spacing: 0.2em;
+                        margin: 4px 0 0 0;
+                        letter-spacing: 0.15em;
                     }
                     .patient-card {
                         background: #f8fafc;
                         border: 1px solid #e2e8f0;
-                        border-radius: 16px;
-                        padding: 20px;
-                        margin-bottom: 30px;
+                        border-radius: 12px;
+                        padding: 16px 20px;
+                        margin-bottom: 25px;
                         display: grid;
                         grid-template-columns: repeat(3, 1fr);
                         gap: 12px;
                     }
                     .info-group {
-                        font-size: 13px;
+                        padding: 6px 10px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        border: 1px solid #f1f5f9;
                     }
                     .info-label {
-                        font-size: 9px;
+                        font-size: 8px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #64748b;
+                        color: #94a3b8;
                         letter-spacing: 0.05em;
-                        margin-bottom: 2px;
+                        margin-bottom: 3px;
                     }
                     .info-value {
-                        font-weight: 700;
-                        color: #334155;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                        color: #1e293b;
                     }
                     .section-title {
-                        font-size: 12px;
+                        font-size: 11px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #0f172a;
-                        letter-spacing: 0.05em;
-                        background: #f1f5f9;
-                        padding: 6px 12px;
+                        color: #1e3a8a;
+                        letter-spacing: 0.08em;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 5px;
                         margin-top: 30px;
                         margin-bottom: 15px;
-                        border-radius: 6px;
                     }
                     .anamnesis-grid {
                         display: grid;
-                        grid-template-columns: 1fr;
-                        gap: 15px;
-                        margin-bottom: 30px;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 12px 20px;
+                        margin-bottom: 25px;
                     }
                     .anamnesis-item {
                         border-bottom: 1px solid #f1f5f9;
-                        padding-bottom: 10px;
+                        padding-bottom: 6px;
                     }
                     .anamnesis-title {
-                        font-size: 11px;
+                        font-size: 8.5px;
                         font-weight: 800;
-                        color: #475569;
+                        color: #64748b;
                         text-transform: uppercase;
-                        margin-bottom: 4px;
+                        letter-spacing: 0.04em;
+                        margin-bottom: 3px;
                     }
                     .anamnesis-content {
-                        font-size: 13px;
-                        color: #1e293b;
+                        font-size: 11.5px;
+                        color: #334155;
+                        line-height: 1.45;
                         white-space: pre-wrap;
                     }
                     .document-item {
                         border: 1px solid #e2e8f0;
-                        border-radius: 12px;
-                        padding: 15px;
+                        border-left: 4px solid #2563eb;
+                        border-radius: 8px;
+                        padding: 15px 18px;
                         margin-bottom: 15px;
+                        background: #ffffff;
                         page-break-inside: avoid;
                     }
                     .document-header {
                         display: flex;
                         justify-content: space-between;
-                        font-size: 12px;
-                        font-weight: bold;
+                        font-size: 11px;
+                        font-weight: 700;
                         border-bottom: 1px solid #f1f5f9;
-                        padding-bottom: 8px;
+                        padding-bottom: 6px;
                         margin-bottom: 10px;
                         color: #475569;
                     }
                     .document-type {
-                        color: #1e3a8a;
+                        color: #2563eb;
+                        font-weight: 800;
                         text-transform: uppercase;
+                        letter-spacing: 0.05em;
                     }
                     .document-body {
-                        font-size: 12px;
+                        font-size: 11.5px;
                         color: #334155;
+                        line-height: 1.45;
                         white-space: pre-wrap;
                     }
                     .receta-table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-top: 8px;
+                        margin-top: 10px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        overflow: hidden;
                     }
                     .receta-table th {
                         background: #f8fafc;
                         font-size: 9px;
-                        padding: 6px 10px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        color: #475569;
+                        letter-spacing: 0.05em;
+                        padding: 8px 10px;
                         text-align: left;
+                        border-bottom: 1px solid #e2e8f0;
                     }
                     .receta-table td {
-                        padding: 6px 10px;
+                        padding: 8px 10px;
                         font-size: 11px;
+                        color: #334155;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+                    .receta-table tr:last-child td {
+                        border-bottom: none;
                     }
                     @media print {
-                        body { padding: 20px; }
+                        body { padding: 15px; }
                         .no-print { display: none; }
                     }
                 </style>
@@ -872,7 +917,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                 <script>
                     window.onload = function() {
                         window.print();
-                        setTimeout(function() { window.close(); }, 500);
                     };
                 </script>
             </body>
@@ -896,136 +940,161 @@ export default function HistoriaClinicaContainer({ patient }) {
             <head>
                 <title>Reporte de Historia Clínica - ${patient.nombreCompleto || ''}</title>
                 <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
                     body {
-                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: #1e293b;
-                        padding: 40px;
-                        max-width: 900px;
+                        padding: 30px;
+                        max-width: 850px;
                         margin: 0 auto;
                         line-height: 1.5;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .header {
                         display: flex;
-                        flex-direction: column;
+                        justify-content: space-between;
                         align-items: center;
-                        gap: 15px;
-                        border-bottom: 2px solid #1e3a8a;
+                        border-bottom: 2px solid #2563eb;
                         padding-bottom: 15px;
-                        margin-bottom: 20px;
+                        margin-bottom: 25px;
+                        gap: 20px;
                     }
                     .logo-area {
                         display: flex;
-                        justify-content: center;
+                        justify-content: flex-start;
                         align-items: center;
-                        width: 100%;
+                        max-width: 50%;
                     }
                     .logo-text {
-                        font-size: 26px;
-                        font-weight: 900;
-                        color: #1e3a8a;
-                        letter-spacing: -0.05em;
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #2563eb;
+                        letter-spacing: -0.04em;
                         text-transform: uppercase;
+                        line-height: 1;
                     }
                     .doc-title {
-                        text-align: center;
-                        width: 100%;
+                        text-align: right;
+                        max-width: 50%;
                     }
                     .doc-title h1 {
-                        font-size: 22px;
-                        font-weight: 900;
+                        font-size: 18px;
+                        font-weight: 800;
                         text-transform: uppercase;
                         margin: 0;
                         color: #1e3a8a;
-                        letter-spacing: 0.05em;
+                        letter-spacing: 0.02em;
                     }
                     .doc-title p {
-                        font-size: 11px;
-                        font-weight: 800;
+                        font-size: 9px;
+                        font-weight: 700;
                         color: #64748b;
                         text-transform: uppercase;
-                        margin: 6px 0 0 0;
-                        letter-spacing: 0.2em;
+                        margin: 4px 0 0 0;
+                        letter-spacing: 0.15em;
                     }
                     .patient-card {
                         background: #f8fafc;
                         border: 1px solid #e2e8f0;
-                        border-radius: 16px;
-                        padding: 20px;
-                        margin-bottom: 30px;
+                        border-radius: 12px;
+                        padding: 16px 20px;
+                        margin-bottom: 25px;
                         display: grid;
                         grid-template-columns: repeat(3, 1fr);
                         gap: 12px;
                     }
                     .info-group {
-                        font-size: 13px;
+                        padding: 6px 10px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        border: 1px solid #f1f5f9;
                     }
                     .info-label {
-                        font-size: 9px;
+                        font-size: 8px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #64748b;
+                        color: #94a3b8;
                         letter-spacing: 0.05em;
-                        margin-bottom: 2px;
+                        margin-bottom: 3px;
                     }
                     .info-value {
-                        font-weight: 700;
-                        color: #334155;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                        color: #1e293b;
                     }
                     .section-title {
-                        font-size: 12px;
+                        font-size: 11px;
                         font-weight: 800;
                         text-transform: uppercase;
-                        color: #0f172a;
-                        letter-spacing: 0.05em;
-                        background: #f1f5f9;
-                        padding: 6px 12px;
+                        color: #1e3a8a;
+                        letter-spacing: 0.08em;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 5px;
                         margin-top: 30px;
                         margin-bottom: 15px;
-                        border-radius: 6px;
                     }
                     .document-item {
                         border: 1px solid #e2e8f0;
-                        border-radius: 12px;
-                        padding: 15px;
+                        border-left: 4px solid #2563eb;
+                        border-radius: 8px;
+                        padding: 15px 18px;
                         margin-bottom: 15px;
+                        background: #ffffff;
                         page-break-inside: avoid;
                     }
                     .document-header {
                         display: flex;
                         justify-content: space-between;
-                        font-size: 12px;
-                        font-weight: bold;
+                        font-size: 11px;
+                        font-weight: 700;
                         border-bottom: 1px solid #f1f5f9;
-                        padding-bottom: 8px;
+                        padding-bottom: 6px;
                         margin-bottom: 10px;
                         color: #475569;
                     }
                     .document-type {
-                        color: #1e3a8a;
+                        color: #2563eb;
+                        font-weight: 800;
                         text-transform: uppercase;
+                        letter-spacing: 0.05em;
                     }
                     .document-body {
-                        font-size: 12px;
+                        font-size: 11.5px;
                         color: #334155;
+                        line-height: 1.45;
                         white-space: pre-wrap;
                     }
                     .receta-table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-top: 8px;
+                        margin-top: 10px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        overflow: hidden;
                     }
                     .receta-table th {
                         background: #f8fafc;
                         font-size: 9px;
-                        padding: 6px 10px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        color: #475569;
+                        letter-spacing: 0.05em;
+                        padding: 8px 10px;
                         text-align: left;
+                        border-bottom: 1px solid #e2e8f0;
                     }
                     .receta-table td {
-                        padding: 6px 10px;
+                        padding: 8px 10px;
                         font-size: 11px;
+                        color: #334155;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+                    .receta-table tr:last-child td {
+                        border-bottom: none;
                     }
                     @media print {
-                        body { padding: 20px; }
+                        body { padding: 15px; }
                         .no-print { display: none; }
                     }
                 </style>
@@ -1134,7 +1203,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                 <script>
                     window.onload = function() {
                         window.print();
-                        setTimeout(function() { window.close(); }, 500);
                     };
                 </script>
             </body>

@@ -6,10 +6,16 @@ import {
 import FinancialDashboard from "../../financiero/components/FinancialDashboard";
 import ReciboCajaList from "../../facturacion/recibo/ReciboCajaList";
 import ReciboCajaForm from "../../facturacion/recibo/ReciboCajaForm";
+import SaldoFavorList from "../../facturacion/saldo/SaldoFavorList";
+import SaldoFavorForm from "../../facturacion/saldo/SaldoFavorForm";
+import NotaCreditoList from "../../facturacion/nota/NotaCreditoList";
+import NotaCreditoForm from "../../facturacion/nota/NotaCreditoForm";
+import NotaDebitoList from "../../facturacion/nota/NotaDebitoList";
+import NotaDebitoForm from "../../facturacion/nota/NotaDebitoForm";
+import Liquidaciones from "../../facturacion/liquidacion/Liquidaciones";
 
 const FACT_OPTIONS = [
   { id: "recibo", label: "Recibo de caja", icon: <FiFileText />, color: "text-emerald-600", bg: "bg-emerald-50", desc: "Comprobantes de ingreso de dinero" },
-  { id: "saldo", label: "Saldo a favor", icon: <FiPlusCircle />, color: "text-blue-600", bg: "bg-blue-50", desc: "Créditos prepagados por pacientes" },
   { id: "nc", label: "Nota crédito", icon: <FiMinusCircle />, color: "text-rose-600", bg: "bg-rose-50", desc: "Anulaciones y descuentos" },
   { id: "nd", label: "Nota débito", icon: <FiPlusCircle />, color: "text-orange-600", bg: "bg-orange-50", desc: "Incrementos de deuda" },
   { id: "liq", label: "Liquidaciones", icon: <FiLayers />, color: "text-purple-600", bg: "bg-purple-50", desc: "Cierre de tratamientos y presupuestos" },
@@ -37,6 +43,27 @@ export default function FacturacionHub() {
     } else if (activeSubView === "recibo_form") {
         content = <ReciboCajaForm onCancel={() => setActiveSubView("recibo")} onSuccess={() => setActiveSubView("recibo")} />;
         title = "Nuevo Recibo de Caja";
+    } else if (activeSubView === "saldo") {
+        content = <SaldoFavorList onNew={() => setActiveSubView("saldo_form")} onBack={() => setActiveSubView(null)} />;
+        title = "Saldo a Favor";
+    } else if (activeSubView === "saldo_form") {
+        content = <SaldoFavorForm onCancel={() => setActiveSubView("saldo")} onSuccess={() => setActiveSubView("saldo")} />;
+        title = "Nuevo Saldo a Favor";
+    } else if (activeSubView === "nc") {
+        content = <NotaCreditoList onNew={() => setActiveSubView("nc_form")} onBack={() => setActiveSubView(null)} />;
+        title = "Nota de Crédito";
+    } else if (activeSubView === "nc_form") {
+        content = <NotaCreditoForm onCancel={() => setActiveSubView("nc")} onSuccess={() => setActiveSubView("nc")} />;
+        title = "Nueva Nota de Crédito";
+    } else if (activeSubView === "nd") {
+        content = <NotaDebitoList onNew={() => setActiveSubView("nd_form")} onBack={() => setActiveSubView(null)} />;
+        title = "Nota de Débito";
+    } else if (activeSubView === "nd_form") {
+        content = <NotaDebitoForm onCancel={() => setActiveSubView("nd")} onSuccess={() => setActiveSubView("nd")} />;
+        title = "Nueva Nota de Débito";
+    } else if (activeSubView === "liq") {
+        content = <Liquidaciones onBack={() => setActiveSubView(null)} />;
+        title = "Liquidación de Comisiones";
     }
 
     if (content) {
@@ -46,6 +73,9 @@ export default function FacturacionHub() {
                     <button 
                         onClick={() => {
                             if (activeSubView === "recibo_form") setActiveSubView("recibo");
+                            else if (activeSubView === "saldo_form") setActiveSubView("saldo");
+                            else if (activeSubView === "nc_form") setActiveSubView("nc");
+                            else if (activeSubView === "nd_form") setActiveSubView("nd");
                             else setActiveSubView(null);
                         }}
                         className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 shadow-sm hover:shadow-md active:scale-95 group"
@@ -59,7 +89,7 @@ export default function FacturacionHub() {
                         <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight leading-none">{title}</h2>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto bg-slate-50/30">
+                <div key={activeSubView} className="flex-1 overflow-y-auto bg-slate-50/30">
                     {content}
                 </div>
             </div>
@@ -78,7 +108,7 @@ export default function FacturacionHub() {
         {FACT_OPTIONS.map((opt) => (
           <button
             key={opt.id}
-            onClick={() => setActiveSubView(opt.id === "fv" || opt.id === "recibo" ? opt.id : null)}
+            onClick={() => setActiveSubView(opt.id)}
             className="group relative bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200 transition-all duration-500 text-left overflow-hidden active:scale-95"
           >
             {/* Hover decoration */}
@@ -108,7 +138,7 @@ export default function FacturacionHub() {
         ))}
       </div>
 
-      {activeSubView && !["fv", "recibo", "recibo_form"].includes(activeSubView) && (
+      {activeSubView && !["fv", "recibo", "recibo_form", "saldo", "saldo_form"].includes(activeSubView) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
             <div className="bg-white p-10 rounded-[40px] shadow-2xl max-w-md w-full text-center border border-white/20">
                 <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">

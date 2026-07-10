@@ -95,6 +95,11 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
         setSidebarOpen(false);
         const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
         const path = id === 'Inicio' ? safeBasePath : `${safeBasePath}/${id}`;
+        
+        // Dispatch reset event for active module resetting
+        const lowerId = String(id).toLowerCase();
+        window.dispatchEvent(new CustomEvent(`reset-module-${lowerId}`));
+        
         navigate(path);
     };
 

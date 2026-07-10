@@ -24,10 +24,20 @@ createRoot(document.getElementById('root')).render(
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/odontocloud-react/sw.js')
-            .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
-            .catch((err) => console.error('Error al registrar el Service Worker:', err));
-    });
+    if (import.meta.env.DEV) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (let registration of registrations) {
+                registration.unregister().then(() => {
+                    console.log('Service Worker removido para evitar caché en desarrollo.');
+                });
+            }
+        });
+    } else {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/odontocloud-react/sw.js')
+                .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+                .catch((err) => console.error('Error al registrar el Service Worker:', err));
+        });
+    }
 }
 

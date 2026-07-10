@@ -1,22 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-    FiArrowLeft, FiCalendar, FiBriefcase, FiUser, FiTrash2, 
-    FiPlus, FiSave, FiAlertCircle, FiCheckCircle, FiX 
+    FiArrowLeft, FiCalendar, FiBriefcase, FiUser, 
+    FiSave, FiAlertCircle, FiCheckCircle 
 } from "react-icons/fi";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { db } from "../../../firebase/firebaseConfig";
 import { 
-    collection, addDoc, doc, updateDoc, getDoc, getDocs, 
-    query, where, serverTimestamp, increment, Timestamp 
+    collection, addDoc, getDocs, query, where, 
+    serverTimestamp, increment, doc, updateDoc, Timestamp 
 } from "firebase/firestore";
 import { useAuth } from "../../../context/AuthContext";
-
-const fmt = (n) =>
-  Number(n || 0).toLocaleString("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  });
 
 const CIUDADES_COLOMBIA = [
     "Abejorral", "Acacías", "Aguachica", "Agustín Codazzi", "Anapoima", "Andes", "Apartadó", "Aracataca", "Arauca", "Armenia",
@@ -47,9 +40,8 @@ const FormRow = ({ label, required, children }) => (
   </tr>
 );
 
-export default function ReciboCajaForm({ onCancel, onSuccess }) {
+export default function SaldoFavorForm({ onCancel, onSuccess }) {
     const navigate = useNavigate();
-    const { id } = useParams();
     const { userProfile } = useAuth();
     const inquilino = userProfile?.inquilino || "";
 
@@ -62,29 +54,15 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
     const [profesional, setProfesional] = useState({ id: "", nombre: "" });
     const [paciente, setPaciente] = useState(null);
-    const [patientSearch, setPatientSearch] = useState("");
-    const [showPatientDrop, setShowPatientDrop] = useState(false);
-    const [condicionPago, setCondicionPago] = useState("Contado");
+    const [valor, setValor] = useState("");
     const [medioPago, setMedioPago] = useState("Efectivo");
-    const [conceptos, setConceptos] = useState([]);
     const [observaciones, setObservaciones] = useState("");
-
-    // Modal state for New Concept
-    const [showNewConceptModal, setShowNewConceptModal] = useState(false);
-    const [newConcept, setNewConcept] = useState({
-        concepto: "",
-        descripcion: "",
-        precioUnitario: "",
-        cantidad: "1",
-        descuento: "0"
-    });
 
     // Lookups
     const [profesionales, setProfesionales] = useState([]);
     const [pacientes, setPacientes] = useState([]);
     const [activeCaja, setActiveCaja] = useState(null);
     const [paymentMethods, setPaymentMethods] = useState(["Efectivo", "Tarjeta", "Transferencia", "Nequi", "Bici-B", "Otros"]);
-    const patientRef = React.useRef(null);
 
     // Modal state for New Tercero
     const [showNewTerceroModal, setShowNewTerceroModal] = useState(false);
@@ -146,94 +124,16 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                 setMedioPago(metodosList[0] || "Efectivo");
             }
 
-         } catch (e) {
-             console.error("Error loading form basics:", e);
-         } finally {
-             setLoading(false);
-         }
-     };
+        } catch (e) {
+            console.error("Error loading form basics:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-     useEffect(() => {
-         loadBasics();
-     }, [inquilino, userProfile?.uid]);
-
-     // Close patient dropdown on outside click
-     useEffect(() => {
-         const handleClickOutside = (e) => {
-             if (patientRef.current && !patientRef.current.contains(e.target)) {
-                 setShowPatientDrop(false);
-             }
-         };
-         document.addEventListener("mousedown", handleClickOutside);
-         return () => document.removeEventListener("mousedown", handleClickOutside);
-     }, []);
-
-     const filteredPatients = useMemo(() => {
-         const q = patientSearch.toLowerCase().trim();
-         if (!q) return [];
-         return pacientes.filter(p => 
-             p.nombre.toLowerCase().includes(q) ||
-             p.cedula.toLowerCase().includes(q)
-         ).slice(0, 8);
-     }, [patientSearch, pacientes]);
-
-     const formatNumberWithDots = (val) => {
-         const clean = String(val).replace(/\D/g, "");
-         if (!clean) return "";
-         return Number(clean).toLocaleString("es-CO");
-     };
-
-     const parseRawNumber = (val) => {
-         return String(val).replace(/\D/g, "");
-     };
-
-     const handleOpenNewConcept = () => {
-         setNewConcept({
-             concepto: "",
-             descripcion: "",
-             precioUnitario: "",
-             cantidad: "1",
-             descuento: "0"
-         });
-         setShowNewConceptModal(true);
-     };
-
-     const handleAddConceptFromModal = (e) => {
-         e.preventDefault();
-         if (!newConcept.concepto.trim()) return alert("El concepto es obligatorio");
-         const price = Number(newConcept.precioUnitario) || 0;
-         const qty = Number(newConcept.cantidad) || 1;
-         const desc = Number(newConcept.descuento) || 0;
-         const total = Math.max(0, (price - desc) * qty);
-
-         const added = {
-             id: Date.now(),
-             concepto: newConcept.concepto.trim(),
-             descripcion: newConcept.descripcion.trim(),
-             precioUnitario: price,
-             cantidad: qty,
-             descuento: desc,
-             total
-         };
-
-         setConceptos(prev => [...prev, added]);
-         setShowNewConceptModal(false);
-     };
-
-     const removeConcept = (conceptId) => {
-         setConceptos(conceptos.filter(c => c.id !== conceptId));
-     };
-
-    // Calculate totals
-    const totals = useMemo(() => {
-        const subtotal = conceptos.reduce((sum, c) => sum + (c.precioUnitario * c.cantidad), 0);
-        const descuento = conceptos.reduce((sum, c) => sum + (Number(c.descuento || 0) * c.cantidad), 0);
-        return {
-            subtotal,
-            descuento,
-            total: Math.max(0, subtotal - descuento)
-        };
-    }, [conceptos]);
+    useEffect(() => {
+        loadBasics();
+    }, [inquilino, userProfile?.uid]);
 
     const handleSaveTercero = async () => {
         if (!newTercero.nombre.trim() || !newTercero.apellidos.trim() || !newTercero.nroDocumento.trim() || !newTercero.telefono.trim()) {
@@ -296,97 +196,61 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
 
     const handleSubmit = async () => {
         if (!paciente) return setError("Debes seleccionar un tercero / paciente.");
-        if (conceptos.length === 0) return setError("Debes agregar al menos un concepto.");
-        if (conceptos.some(c => !c.concepto || c.precioUnitario <= 0)) return setError("Revisa los conceptos y precios.");
-        if (medioPago === "Efectivo" && !activeCaja) return setError("No tienes una caja abierta para registrar el pago en efectivo.");
+        const valNum = Number(valor);
+        if (!valor || isNaN(valNum) || valNum <= 0) return setError("Ingresa un valor válido mayor que 0.");
+        if (medioPago === "Efectivo" && !activeCaja) return setError("No tienes una caja abierta para registrar el efectivo.");
 
         setSaving(true);
         setError("");
 
         try {
-            // Fetch and increment consecutive number
-            const qCons = query(collection(db, "consecutivos"), where("inquilino", "==", inquilino));
-            const snapCons = await getDocs(qCons);
-            let finalConsecutivo = "";
-            let consDocId = null;
-            let nextCount = 1;
-
-            if (!snapCons.empty) {
-                const consDoc = snapCons.docs[0];
-                consDocId = consDoc.id;
-                const consData = consDoc.data();
-                // Parse as number regardless of whether it was stored as string or number
-                const currentCount = parseInt(String(consData.contReciboCaja || 1), 10) || 1;
-                nextCount = currentCount + 1;
-                finalConsecutivo = String(currentCount).padStart(2, '0');
-            } else {
-                const newConsDoc = await addDoc(collection(db, "consecutivos"), {
-                    inquilino,
-                    nombre: "Consecutivo Principal",
-                    contReciboCaja: 2,
-                    creado: serverTimestamp()
-                });
-                consDocId = newConsDoc.id;
-                nextCount = 2;
-                finalConsecutivo = "01";
-            }
-
-            const reciboData = {
+            // Save credit to "pagos" collection with concept "SALDO A FAVOR"
+            const creditData = {
                 inquilino,
-                nroConsecutivo: finalConsecutivo,
                 fecha: Timestamp.fromDate(new Date(fecha + "T00:00:00")),
                 profesionalId: profesional.id || null,
                 profesionalNombre: profesional.nombre || null,
                 pacienteId: paciente.id,
-                pacienteNombre: paciente.nombre,
-                condicionPago,
-                medioPago,
-                conceptos,
-                subtotal: totals.subtotal,
-                descuentoTotal: totals.descuento,
-                total: totals.total,
-                observaciones,
+                patientNombre: paciente.nombre, // Match exact key used in AddCreditModal
+                concepto: "SALDO A FAVOR",
+                monto: valNum,
+                medio: medioPago,
+                notes: observaciones || "ABONO SALDO A FAVOR",
                 cajaId: activeCaja ? activeCaja.id : null,
-                creadoPor: `${userProfile?.nombre || userProfile?.email} - ${userProfile?.profileName || "Administrativo"}`,
+                registradoPor: `${userProfile?.nombre || userProfile?.email}`,
                 createdAt: serverTimestamp()
             };
 
-            const docRef = await addDoc(collection(db, "recibos_caja"), reciboData);
+            const docRef = await addDoc(collection(db, "pagos"), creditData);
 
-            // Always write nextCount as a plain integer (never use increment() — fails on string fields)
-            if (consDocId) {
-                await updateDoc(doc(db, "consecutivos", consDocId), {
-                    contReciboCaja: nextCount
-                });
-            }
-
+            // Sync with open Caja
             if (activeCaja) {
                 const movData = {
                     inquilino,
                     tipo: "ingreso",
-                    concepto: "Recibo de Caja #" + docRef.id.slice(0,6).toUpperCase(),
-                    monto: totals.total,
+                    concepto: "SALDO A FAVOR",
+                    monto: valNum,
                     metodoPago: medioPago,
-                    descripcion: `Cobro a ${paciente.nombre}. Conceptos: ${conceptos.map(c => c.concepto).join(", ")}`,
+                    descripcion: `Saldo a favor para ${paciente.nombre}`,
                     pacienteId: paciente.id,
                     pacienteNombre: paciente.nombre,
-                    reciboId: docRef.id,
+                    pagoId: docRef.id,
                     usuarioId: userProfile?.uid,
                     usuarioNombre: userProfile?.nombre || userProfile?.email,
                     fecha: serverTimestamp(),
                 };
                 await addDoc(collection(db, "cajas", activeCaja.id, "movimientos"), movData);
                 await updateDoc(doc(db, "cajas", activeCaja.id), {
-                    saldoActual: increment(totals.total),
-                    totalIngresos: increment(totals.total)
+                    saldoActual: increment(valNum),
+                    totalIngresos: increment(valNum)
                 });
             }
 
             setSuccess(true);
-            setTimeout(() => onSuccess ? onSuccess() : navigate("/dashboard/facturacion/recibo"), 1500);
+            setTimeout(() => onSuccess ? onSuccess() : navigate("/dashboard/facturacion/saldo"), 1500);
 
         } catch (e) {
-            console.error("Error al guardar recibo:", e);
+            console.error("Error saving credit balance:", e);
             setError("Error crítico al guardar. Intenta de nuevo.");
         } finally {
             setSaving(false);
@@ -396,7 +260,7 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest">Iniciando terminal financiera...</span>
+            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest">Iniciando terminal...</span>
         </div>
     );
 
@@ -417,12 +281,14 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                         <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
                             <span>🏠</span>
                             <span>-</span>
-                            <span>Recibo de caja</span>
+                            <span>Facturación</span>
                             <span>-</span>
-                            <span>Recibo de caja</span>
+                            <span>Saldo a favor</span>
+                            <span>-</span>
+                            <span>Adicionar saldo a favor</span>
                         </div>
                         <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none mt-1">
-                            {id ? "Editar" : "Nuevo"} recibo de caja
+                            Saldo a favor
                         </h2>
                     </div>
                 </div>
@@ -443,8 +309,8 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                         <FiCheckCircle />
                     </div>
                     <div>
-                        <h4 className="text-emerald-800 font-black uppercase text-sm">¡Recibo Guardado!</h4>
-                        <p className="text-emerald-600 text-xs font-medium uppercase tracking-wide">El ingreso ha sido sincronizado correctamente.</p>
+                        <h4 className="text-emerald-800 font-black uppercase text-sm">¡Saldo a favor Guardado!</h4>
+                        <p className="text-emerald-600 text-xs font-medium uppercase tracking-wide">El abono se ha registrado con éxito.</p>
                     </div>
                 </div>
             )}
@@ -461,7 +327,7 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                 </div>
             )}
 
-            {/* Form Fields Stack */}
+            {/* Form Fields Cards */}
             <div className="space-y-6">
                 
                 {/* CARD 1: Datos generales */}
@@ -507,37 +373,20 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                         <table className="w-full text-left">
                             <tbody>
                                 <FormRow label="Tercero *" required>
-                                    <div ref={patientRef} className="relative flex items-center gap-3 w-full">
-                                        <div className="relative flex-1">
-                                            <input
-                                                type="text"
-                                                placeholder={paciente ? `${paciente.nombre} (CC: ${paciente.cedula})` : "Seleccione o escribe para buscar..."}
-                                                value={patientSearch}
-                                                onChange={e => {
-                                                    setPatientSearch(e.target.value);
-                                                    setShowPatientDrop(true);
-                                                }}
-                                                onFocus={() => setShowPatientDrop(true)}
-                                                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                                            />
-                                            {showPatientDrop && filteredPatients.length > 0 && (
-                                                <div className="absolute left-0 right-0 top-12 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-                                                    {filteredPatients.map(p => (
-                                                        <div
-                                                            key={p.id}
-                                                            onClick={() => {
-                                                                setPaciente(p);
-                                                                setPatientSearch("");
-                                                                setShowPatientDrop(false);
-                                                            }}
-                                                            className="px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border-b border-slate-50 last:border-0"
-                                                        >
-                                                            {p.nombre} <span className="text-xs text-slate-400 font-medium font-mono">(CC: {p.cedula})</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                    <div className="flex items-center gap-3">
+                                        <select
+                                            className="flex-1 h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
+                                            value={paciente?.id || ""}
+                                            onChange={e => {
+                                                const p = pacientes.find(x => x.id === e.target.value);
+                                                setPaciente(p || null);
+                                            }}
+                                        >
+                                            <option value="">Seleccione...</option>
+                                            {pacientes.map(p => (
+                                                <option key={p.id} value={p.id}>{p.nombre} (CC: {p.cedula})</option>
+                                            ))}
+                                        </select>
                                         <button
                                             type="button"
                                             onClick={() => setShowNewTerceroModal(true)}
@@ -548,19 +397,16 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                                         </button>
                                     </div>
                                 </FormRow>
-                                <FormRow label="Condición de pago *">
-                                    <select
-                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
-                                        value={condicionPago}
-                                        onChange={e => setCondicionPago(e.target.value)}
-                                    >
-                                        <option value="Contado">Contado</option>
-                                        <option value="15 días">15 días</option>
-                                        <option value="30 días">30 días</option>
-                                        <option value="60 días">60 días</option>
-                                    </select>
+                                <FormRow label="Valor *" required>
+                                    <input 
+                                        type="number"
+                                        placeholder="0"
+                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all font-mono"
+                                        value={valor}
+                                        onChange={e => setValor(e.target.value)}
+                                    />
                                 </FormRow>
-                                <FormRow label="Medio de pago *">
+                                <FormRow label="Medio de pago">
                                     <select
                                         className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
                                         value={medioPago}
@@ -571,97 +417,16 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                                         ))}
                                     </select>
                                 </FormRow>
+                                <FormRow label="Observaciones">
+                                    <textarea 
+                                        className="w-full h-24 p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-blue-500 transition-all resize-none shadow-inner"
+                                        placeholder="Observaciones"
+                                        value={observaciones}
+                                        onChange={e => observaciones => setObservaciones(e.target.value)}
+                                    />
+                                </FormRow>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-
-                {/* CARD 3: Detalle de Conceptos */}
-                <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Conceptos</h3>
-                        <button 
-                            type="button"
-                            onClick={handleOpenNewConcept}
-                            className="h-10 px-5 bg-[#8cc33f] text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#7db02b] transition-all shadow"
-                        >
-                            + Nuevo concepto
-                        </button>
-                    </div>
-                    <div className="p-6 overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="text-slate-400 border-b border-slate-100">
-                                    <th className="pb-3 font-bold uppercase tracking-widest pl-2">Concepto</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest">Descripción</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest text-right">Precio unitario</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest text-center w-20">Cantidad</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest text-right w-24">Descuento</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest text-right pr-2">Total</th>
-                                    <th className="pb-3 font-bold uppercase tracking-widest text-center w-16">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50 text-[13px] text-slate-700">
-                                {conceptos.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="py-8 text-center text-slate-400 italic">
-                                            No se han agregado conceptos. Haz clic en "+ Nuevo concepto" para agregar.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    conceptos.map(c => (
-                                        <tr key={c.id} className="hover:bg-slate-50/20 transition-colors">
-                                            <td className="py-4 pl-2 font-bold text-slate-800">
-                                                {c.concepto}
-                                            </td>
-                                            <td className="py-4 text-slate-500">
-                                                {c.descripcion || "—"}
-                                            </td>
-                                            <td className="py-4 text-right font-semibold text-slate-600 font-mono">
-                                                {fmt(c.precioUnitario)}
-                                            </td>
-                                            <td className="py-4 text-center font-bold text-slate-700 font-mono">
-                                                {c.cantidad}
-                                            </td>
-                                            <td className="py-4 text-right font-semibold text-rose-500 font-mono">
-                                                {fmt(c.descuento)}
-                                            </td>
-                                            <td className="py-4 text-right font-black text-slate-900 pr-2 font-mono">
-                                                {fmt(c.total)}
-                                            </td>
-                                            <td className="py-4 text-center">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => removeConcept(c.id)}
-                                                    className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center mx-auto transition-all"
-                                                    title="Eliminar concepto"
-                                                >
-                                                    <FiTrash2 size={15} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                        <div className="flex justify-end pt-4 border-t border-slate-100 text-base font-black text-slate-800">
-                            Total: <span className="text-[#8cc33f] ml-2 font-mono">{fmt(totals.total)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* CARD 5: Observaciones */}
-                <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100">
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Observaciones</h3>
-                    </div>
-                    <div className="p-6">
-                        <textarea 
-                            className="w-full h-32 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 outline-none focus:border-blue-500 transition-all resize-none shadow-inner"
-                            placeholder="Observaciones"
-                            value={observaciones}
-                            onChange={e => setObservaciones(e.target.value)}
-                        />
                     </div>
                 </div>
 
@@ -737,7 +502,7 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                                         onChange={e => setNewTercero({ ...newTercero, tipoDocumento: e.target.value })}
                                         className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
                                     >
-                                        <option value="CC">Cédula de Cédula de Ciudadanía</option>
+                                        <option value="CC">Cédula de Ciudadanía</option>
                                         <option value="CE">Cédula de Extranjería</option>
                                         <option value="NIT">NIT</option>
                                         <option value="Pasaporte">Pasaporte</option>
@@ -836,114 +601,6 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
                                 {savingModal ? "Guardando..." : "Guardar"}
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-            {/* MODAL: NUEVO CONCEPTO */}
-            {showNewConceptModal && (
-                <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <div 
-                        className="bg-white w-full max-w-[500px] rounded-[32px] shadow-[0_20px_70px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Header */}
-                        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-                            <div>
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                                    Nuevo concepto
-                                </h3>
-                            </div>
-                            <button 
-                                type="button"
-                                onClick={() => setShowNewConceptModal(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-500 transition-all shadow-sm font-bold"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        {/* Form Content */}
-                        <form onSubmit={handleAddConceptFromModal} className="flex flex-col flex-1 min-h-0">
-                            <div className="p-8 overflow-y-auto custom-scrollbar space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Concepto *</label>
-                                    <input 
-                                        type="text"
-                                        required
-                                        value={newConcept.concepto}
-                                        onChange={e => setNewConcept({ ...newConcept, concepto: e.target.value })}
-                                        placeholder="Ingresa el nombre del concepto"
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cantidad *</label>
-                                    <input 
-                                        type="number"
-                                        required
-                                        min="1"
-                                        value={newConcept.cantidad}
-                                        onChange={e => setNewConcept({ ...newConcept, cantidad: e.target.value })}
-                                        placeholder="1"
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Descripción</label>
-                                    <input 
-                                        type="text"
-                                        value={newConcept.descripcion}
-                                        onChange={e => setNewConcept({ ...newConcept, descripcion: e.target.value })}
-                                        placeholder="Ingresa la descripción del concepto"
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Precio Unitario *</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-                                        <input 
-                                            type="text"
-                                            required
-                                            value={formatNumberWithDots(newConcept.precioUnitario)}
-                                            onChange={e => setNewConcept({ ...newConcept, precioUnitario: parseRawNumber(e.target.value) })}
-                                            placeholder="0"
-                                            className="w-full h-11 pl-8 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all font-mono"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Descuento por unidad</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-                                        <input 
-                                            type="text"
-                                            value={formatNumberWithDots(newConcept.descuento)}
-                                            onChange={e => setNewConcept({ ...newConcept, descuento: parseRawNumber(e.target.value) })}
-                                            placeholder="0"
-                                            className="w-full h-11 pl-8 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-rose-500 outline-none focus:bg-white focus:border-blue-500 transition-all font-mono"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="px-8 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewConceptModal(false)}
-                                    className="h-10 px-5 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all"
-                                >
-                                    Cerrar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="h-10 px-6 bg-[#8cc33f] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#7db02b] transition-all shadow"
-                                >
-                                    Agregar
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}

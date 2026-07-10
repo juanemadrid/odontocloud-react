@@ -57,6 +57,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     const [plantillaDetails, setPlantillaDetails] = useState({});
     const [allChecked, setAllChecked] = useState(false);
     const [inventarioMeds, setInventarioMeds] = useState([]);
+    const [planPayments, setPlanPayments] = useState([]); // payments for the selected plan
 
     const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
         defaultValues: {
@@ -354,6 +355,56 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
         loadServicios();
     }, [watchPlanId, planes, initialData, setValue]);
 
+    // Load payments for selected plan to show status dots
+    useEffect(() => {
+        const loadPlanPayments = async () => {
+            if (!watchPlanId || !patient?.id) { setPlanPayments([]); return; }
+            try {
+                const q = query(
+                    collection(db, "pagos"),
+                    where("patientId", "==", patient.id),
+                    where("planId", "==", watchPlanId)
+                );
+                const snap = await getDocs(q);
+                setPlanPayments(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== 'Anulado'));
+            } catch (e) { console.error(e); }
+        };
+        loadPlanPayments();
+    }, [watchPlanId, patient?.id]);
+
+    // Build paid map for selected plan items
+    const planPaidMap = React.useMemo(() => {
+        const map = {};
+        servicios.forEach(s => { map[s.id] = 0; });
+        planPayments.forEach(p => {
+            if (p.itemPayments && p.itemPayments.length > 0) {
+                p.itemPayments.forEach(ip => {
+                    if (map[ip.itemId] !== undefined) map[ip.itemId] += Number(ip.monto || 0);
+                });
+            } else {
+                // Legacy global payment: distribute sequentially
+                let rem = Number(p.monto || 0);
+                for (const s of servicios) {
+                    if (rem <= 0) break;
+                    const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
+                    const cur = map[s.id] || 0;
+                    const saldo = Math.max(0, cost - cur);
+                    if (saldo > 0) { const alloc = Math.min(saldo, rem); map[s.id] += alloc; rem -= alloc; }
+                }
+            }
+        });
+        return map;
+    }, [planPayments, servicios]);
+
+    const getServiceStatus = (s) => {
+        const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
+        const paid = planPaidMap[s.id] || 0;
+        if (cost <= 0) return 'none';
+        if (paid <= 0) return 'unpaid';
+        if (paid < cost) return 'partial';
+        return 'paid';
+    };
+
     const onSubmit = async (data) => {
         console.log("EvolutionModal: onSubmit triggered", data);
         if (!data.doctorId) return toast.error("Debe seleccionar un doctor");
@@ -533,11 +584,29 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {servicios.map((s, idx) => (
+                                            {servicios.map((s, idx) => {
+                                                const svcStatus = getServiceStatus(s);
+                                                const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
+                                                const paid = planPaidMap[s.id] || 0;
+                                                const dotStyle = svcStatus === 'paid' ? 'bg-emerald-500 ring-emerald-200'
+                                                    : svcStatus === 'partial' ? 'bg-amber-400 ring-amber-200'
+                                                    : svcStatus === 'unpaid' ? 'bg-rose-500 ring-rose-200 animate-pulse'
+                                                    : 'bg-slate-200 ring-slate-100';
+                                                const tooltip = svcStatus === 'paid' ? `Pagado en su totalidad ($${cost.toLocaleString('es-CO')})`
+                                                    : svcStatus === 'partial' ? `Abono parcial: $${paid.toLocaleString('es-CO')} / $${cost.toLocaleString('es-CO')}`
+                                                    : svcStatus === 'unpaid' ? `Sin pagar ($${cost.toLocaleString('es-CO')})`
+                                                    : 'Sin valor definido';
+                                                return (
                                                 <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors flex flex-col md:table-row py-2 md:py-0">
                                                     <td className="px-4 py-3 align-middle">
-                                                        <div className="text-[11px] font-bold text-slate-700 leading-tight">
-                                                            {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-1 cursor-help ${dotStyle}`}
+                                                                title={tooltip}
+                                                            />
+                                                            <div className="text-[11px] font-bold text-slate-700 leading-tight">
+                                                                {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2 align-middle">
@@ -567,7 +636,8 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -8,7 +8,7 @@
 - ✅ **Inventario**: Stock, alertas, categorías, movimientos
 - ✅ **Reportes**: Financiero, pacientes, clínico + exportación CSV
 - ✅ **Portal Paciente**: Login, ver citas/pagos/tratamientos
-- ✅ **IA (Anita)**: 9 funciones (con API key de Gemini configurada)
+- ✅ **IA (Nova)**: 9 funciones (con API key de Gemini configurada)
 - ✅ **Configuración**: Usuarios, sucursales, servicios, precios
 
 ## ⚠️ ¿QUÉ NECESITA CONFIGURACIÓN?

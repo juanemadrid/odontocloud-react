@@ -145,7 +145,7 @@ export default function ClinicalAIAssistant({
                     return cleanPrev + ' ' + latestInterim;
                 });
             }
-        }, 600); // 600ms: balance entre captura rápida y esperar fin de frase
+        }, 400); // 400ms: balance entre captura rápida y esperar fin de frase
         
         return () => clearTimeout(flushTimer);
     }, [interimTranscript, isConversational, setTranscript]);
@@ -216,32 +216,32 @@ export default function ClinicalAIAssistant({
 
                 if (isFirstRun.current) {
                     if (currentStart === 2) {
-                        greeting = `¡Hola, ${displayName}! Le habla Anita, su asistente virtual. ¿Qué aclaración clínica registraremos hoy?`;
+                        greeting = `¡Hola, ${displayName}! Le habla Nova, su asistente virtual. ¿Qué aclaración clínica registraremos hoy?`;
                     } else {
-                        greeting = "¡Hola! Le habla Anita, su asistente virtual. Para iniciar, ¿qué doctor registra esta nota?";
+                        greeting = "¡Hola! Le habla Nova, su asistente virtual. Para iniciar, ¿qué doctor registra esta nota?";
                     }
                 } else {
                     if (currentStart === 2) {
-                        greeting = `Le habla Anita, ${displayName}. Por favor, dícteme la aclaración clínica.`;
+                        greeting = `Le habla Nova, ${displayName}. Por favor, dícteme la aclaración clínica.`;
                     } else {
-                        greeting = "Le habla Anita. ¿Qué doctor registra la nota aclaratoria?";
+                        greeting = "Le habla Nova. ¿Qué doctor registra la nota aclaratoria?";
                     }
                 }
             } else {
                 if (isFirstRun.current) {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = `¡Hola, ${displayName}! Le habla Anita, su asistente virtual. ¿Con qué plan de tratamiento iniciamos hoy?`;
+                        greeting = `¡Hola, ${displayName}! Le habla Nova, su asistente virtual. ¿Con qué plan de tratamiento iniciamos hoy?`;
                     } else {
                         setCurrentStep(1);
-                        greeting = "¡Hola! Le habla Anita, su asistente virtual. ¿Qué doctor está a cargo hoy?";
+                        greeting = "¡Hola! Le habla Nova, su asistente virtual. ¿Qué doctor está a cargo hoy?";
                     }
                 } else {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = `Le habla Anita. ¿Qué plan de tratamiento registraremos hoy, ${displayName}?`;
+                        greeting = `Le habla Nova. ¿Qué plan de tratamiento registraremos hoy, ${displayName}?`;
                     } else {
-                        greeting = "Le habla Anita. ¿Qué doctor está a cargo del procedimiento hoy?";
+                        greeting = "Le habla Nova. ¿Qué doctor está a cargo del procedimiento hoy?";
                     }
                 }
             }
@@ -256,16 +256,17 @@ export default function ClinicalAIAssistant({
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(greeting);
                 utterance.lang = 'es-ES';
-                utterance.rate = 1.0; // Velocidad estándar fluida
+                utterance.rate = 1.1; // Velocidad un poco más rápida para mayor agilidad profesional
                 const spanishVoice = getSpanishVoice();
                 if (spanishVoice) {
                     utterance.voice = spanishVoice;
                 }
                 
-                // Safety fallback: if speech synthesis gets blocked or stuck, start listening after 3 seconds anyway
+                // Safety fallback: if speech synthesis gets blocked or stuck, start listening after a dynamic safety window anyway
+                const greetingDuration = Math.max(8000, greeting.length * 65);
                 const safetyTimer = setTimeout(() => {
                     startListening();
-                }, 3000);
+                }, greetingDuration);
 
                 utterance.onstart = () => {
                     scrollToBottom();
@@ -326,7 +327,7 @@ export default function ClinicalAIAssistant({
             // Anti-duplicate guard: skip if this exact text was already sent to Gemini
             // Solo bloquea si el texto es IDÉNTICO y fue procesado hace menos de 3 segundos
             if (rawText === lastProcessedTextRef.current) {
-                console.log("[Anita] Texto duplicado ignorado:", rawText);
+                console.log("[Nova] Texto duplicado ignorado:", rawText);
                 startListening();
                 return;
             }
@@ -497,18 +498,19 @@ export default function ClinicalAIAssistant({
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(response.speechResponse);
                     utterance.lang = 'es-ES';
-                    utterance.rate = 1.0; // Velocidad estándar fluida
+                    utterance.rate = 1.1; // Velocidad un poco más rápida para mayor agilidad profesional
                     const spanishVoice = getSpanishVoice();
                     if (spanishVoice) {
                         utterance.voice = spanishVoice;
                     }
                     
-                    // Safety fallback: if response speech synthesis gets blocked, start listening after 4 seconds
+                    // Safety fallback: if response speech synthesis gets blocked, start listening after a dynamic safety window
+                    const responseDuration = Math.max(10000, response.speechResponse.length * 65);
                     const responseSafetyTimer = setTimeout(() => {
                         if (!(response.fieldToUpdate === 'submit' && response.extractedValue === true)) {
                             startListening();
                         }
-                    }, 4000);
+                    }, responseDuration);
 
                     utterance.onstart = () => {
                         scrollToBottom();
@@ -547,7 +549,7 @@ export default function ClinicalAIAssistant({
                 } else if (isQuotaZero) {
                     toast.warning('⏳ Límite de velocidad alcanzado. Espera unos segundos y vuelve a hablar.', { duration: 4000 });
                 } else if (isCapacityError) {
-                    toast.warning('Anita está ocupada un momento. Hable nuevamente para reintentar.');
+                    toast.warning('Nova está ocupada un momento. Hable nuevamente para reintentar.');
                 } else if (isJsonError) {
                     toast.error('Error al interpretar respuesta de Gemini. Intenta hablar de nuevo.', { duration: 4000 });
                 } else {
@@ -560,7 +562,7 @@ export default function ClinicalAIAssistant({
                 // Limpiar guard de deduplicación después de 2s para evitar bloquear el siguiente turno
                 setTimeout(() => { lastProcessedTextRef.current = ''; }, 2000);
             }
-        }, 350); // 350ms de silencio - balance óptimo velocidad/precisión
+        }, 200); // 200ms de silencio - balance óptimo velocidad/precisión
 
         return () => clearTimeout(timer);
     }, [transcript, isConversational, stopListening, startListening, resetTranscript]);
@@ -660,7 +662,7 @@ export default function ClinicalAIAssistant({
                     <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-[8px]">
                         <FiCpu className={isListening ? "animate-pulse" : ""} size={14} />
                     </span>
-                    <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Anita AI</h4>
+                    <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Nova AI</h4>
                 </div>
                 
                 <div className="flex items-center gap-1.5">
@@ -792,7 +794,7 @@ export default function ClinicalAIAssistant({
                                 {loading 
                                     ? "Procesando..." 
                                     : window.speechSynthesis?.speaking 
-                                    ? "Anita hablando..." 
+                                    ? "Nova hablando..." 
                                     : isListening 
                                     ? "Escuchando..." 
                                     : "Micrófono apagado"}
@@ -851,7 +853,7 @@ export default function ClinicalAIAssistant({
                                     }`}
                                 >
                                     <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
-                                        {msg.role === 'user' ? 'Tú (Dentista)' : 'Anita AI'}
+                                        {msg.role === 'user' ? 'Tú (Dentista)' : 'Nova AI'}
                                     </span>
                                     <span>{msg.parts[0].text}</span>
                                 </div>

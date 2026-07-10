@@ -64,7 +64,7 @@
 - ⚠️ **Falta:** Dashboard ejecutivo dedicado
 
 ### 6. **Inteligencia Artificial** (80%)
-- ✅ Asistente de voz Anita
+- ✅ Asistente de voz Nova
 - ✅ Resumen clínico automático
 - ✅ Sugerencias CIE-10
 - ✅ Recetas automáticas

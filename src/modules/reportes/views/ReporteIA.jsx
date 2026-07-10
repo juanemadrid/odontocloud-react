@@ -272,7 +272,7 @@ export default function ReporteIA() {
                     ) : (
                         <div className="flex flex-col items-center gap-4 py-6">
                             <p className="text-sm text-slate-500 text-center max-w-sm">
-                                Anita analiza todos tus KPIs y genera un diagnóstico ejecutivo con hallazgos y recomendaciones concretas.
+                                Nova analiza todos tus KPIs y genera un diagnóstico ejecutivo con hallazgos y recomendaciones concretas.
                             </p>
                             <button
                                 onClick={handleAnalyzeKPIs}

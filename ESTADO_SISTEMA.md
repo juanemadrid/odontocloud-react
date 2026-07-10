@@ -79,7 +79,7 @@
 - ✅ Solicitar cita por WhatsApp
 - ✅ Información de contacto
 
-### 8. Inteligencia Artificial (Anita)
+### 8. Inteligencia Artificial (Nova)
 - ✅ Asistente de voz para notas clínicas
 - ✅ Resumen clínico automático
 - ✅ Sugerencias CIE-10

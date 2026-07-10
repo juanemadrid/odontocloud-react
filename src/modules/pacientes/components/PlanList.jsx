@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getPlansByPatient, deletePlan } from '../../../services/planService';
 import { getPatientById } from '../../../services/patientService';
-import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX } from "react-icons/fi";
+import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX, FiAlertCircle } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
@@ -12,6 +12,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     const patientId = patient?.id;
     const [plans, setPlans] = useState([]);
     const [payments, setPayments] = useState([]);
+    const [evolutions, setEvolutions] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
     const { userProfile } = useAuth();
@@ -44,10 +45,16 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
             setPlans(data);
 
             if (patientId) {
+                // Load payments
                 const q = query(collection(db, "pagos"), where("patientId", "==", patientId));
                 const snap = await getDocs(q);
                 const paymentsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setPayments(paymentsData);
+
+                // Load clinical evolutions
+                const evoQ = query(collection(db, "clinical_evolutions"), where("patientId", "==", patientId));
+                const evoSnap = await getDocs(evoQ);
+                setEvolutions(evoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             }
         } catch (error) {
             console.error(error);
@@ -146,6 +153,39 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         onNew(); // Switches PresupuestosTab to 'create/edit' mode
     };
 
+    // Compute the display status of a plan: 'paid' | 'debt' | 'partial' | 'pending'
+    const getPlanStatus = (plan) => {
+        const planPayments = payments.filter(pay => pay.planId === plan.id && pay.estado !== 'Anulado');
+        const planEvolutions = evolutions.filter(e => e.planId === plan.id);
+        const totalCost = Number(plan.total || 0);
+        const paidAmt = planPayments.reduce((s, p) => s + Number(p.monto || 0), 0);
+
+        // Build paidMap per item
+        const paidMap = {};
+        (plan.items || []).forEach(it => { paidMap[it.id] = 0; });
+        planPayments.forEach(p => {
+            if (p.itemPayments && p.itemPayments.length > 0) {
+                p.itemPayments.forEach(ip => {
+                    if (paidMap[ip.itemId] !== undefined) paidMap[ip.itemId] += Number(ip.monto || 0);
+                });
+            }
+        });
+
+        // Check if any realized item has debt
+        const hasRealizedDebt = (plan.items || []).some(item => {
+            const realized = planEvolutions.some(e => e.plantillaItems?.[item.id]?.checked === true);
+            if (!realized) return false;
+            const itemCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+            const itemPaid = paidMap[item.id] || 0;
+            return itemCost - itemPaid > 0;
+        });
+
+        if (totalCost > 0 && paidAmt >= totalCost) return 'paid';
+        if (hasRealizedDebt) return 'debt';
+        if (paidAmt > 0) return 'partial';
+        return 'pending';
+    };
+
     const presupuestos = plans.filter(p => !p.type || p.type === 'presupuesto'); // Fallback viejo a presupuesto
     const planesTrat = plans.filter(p => p.type === 'plan');
 
@@ -202,7 +242,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                         </div>
                                     </td>
                                     <td className="px-3 py-3.5 text-center text-slate-500">{validUntil.toLocaleDateString()}</td>
-                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono whitespace-nowrap align-middle">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
                                     <td className="px-3 py-3.5">
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 
@@ -255,6 +295,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                 <th className="px-3 py-3.5">Profesional</th>
                                 <th className="px-3 py-3.5 text-center">Fecha de inicio</th>
                                 <th className="px-3 py-3.5 text-center">Fecha finalización</th>
+                                <th className="px-3 py-3.5 text-center">Estado</th>
                                 <th className="px-3 py-3.5 text-right">Costo total</th>
                                 <th className="px-3 py-3.5 text-right">Pagado</th>
                                 <th className="px-3 py-3.5 text-center">Acciones</th>
@@ -265,20 +306,46 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                 <tr><td colSpan="8" className="p-8 text-center text-slate-400">No data available in table</td></tr>
                             ) : planesTrat.map(p => {
                                 const createdAt = p.date ? new Date(p.date) : new Date();
+                                const paidAmt = payments.filter(pay => pay.planId === p.id && pay.estado !== 'Anulado').reduce((sum, pay) => sum + Number(pay.monto || 0), 0);
+                                const totalCost = Number(p.total || 0);
+                                const planStatus = getPlanStatus(p);
+
+                                const dotColor = planStatus === 'paid' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                                    : planStatus === 'debt' ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse'
+                                    : planStatus === 'partial' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                                    : 'bg-[#8CC63F] shadow-[0_0_8px_rgba(140,198,63,0.5)]';
+
                                 return (
                                 <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onEdit(p)}>
                                     <td className="px-3 py-3.5">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#8CC63F] shadow-[0_0_8px_rgba(140,198,63,0.5)]" />
+                                            <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
                                             <span className="uppercase text-slate-700">{p.title || p.nombre}</span>
                                         </div>
                                     </td>
                                     <td className="px-3 py-3.5 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
                                     <td className="px-3 py-3.5 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
                                     <td className="px-3 py-3.5 text-center text-slate-500">{createdAt.toLocaleDateString()}</td>
-                                    <td className="px-3 py-3.5 text-center text-slate-300 text-[10px] uppercase font-black tracking-widest">Sin finalizar</td>
-                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
-                                    <td className="px-3 py-3.5 text-right font-black text-[#8CC63F] font-mono">$ {Number(payments.filter(pay => pay.planId === p.id).reduce((sum, pay) => sum + Number(pay.monto || 0), 0)).toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5 text-center">
+                                        {planStatus === 'paid' ? (
+                                            <span className="inline-flex items-center justify-center px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[9px] font-black uppercase tracking-wider leading-none shadow-sm">
+                                                Pagado
+                                            </span>
+                                        ) : planStatus === 'debt' ? (
+                                            <span className="inline-flex items-center gap-1 justify-center px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-full text-[9px] font-black uppercase tracking-wider leading-none shadow-sm animate-pulse">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                Con deuda
+                                            </span>
+                                        ) : planStatus === 'partial' ? (
+                                            <span className="inline-flex items-center gap-1 justify-center px-2 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-full text-[9px] font-black uppercase tracking-wider leading-none shadow-sm">
+                                                Abono parcial
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300 text-[10px] uppercase font-black tracking-widest">Sin finalizar</span>
+                                        )}
+                                    </td>
+                                    <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono whitespace-nowrap align-middle">$ {totalCost.toLocaleString('es-CO')}</td>
+                                    <td className="px-3 py-3.5 text-right font-black text-[#8CC63F] font-mono whitespace-nowrap align-middle">$ {paidAmt.toLocaleString('es-CO')}</td>
                                     <td className="px-3 py-3.5 text-center">
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 

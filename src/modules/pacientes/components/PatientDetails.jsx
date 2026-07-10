@@ -523,6 +523,47 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         });
     }, [patient?.id, activeTab]); // Reload on tab switch to ensure sync
 
+    // Compute active realized debt (items marked as done but not paid)
+    const [realizedDebt, setRealizedDebt] = useState(0);
+    useEffect(() => {
+        if (!patient?.id) return;
+        const computeDebt = async () => {
+            try {
+                const [plansSnap, paymentsSnap, evosSnap] = await Promise.all([
+                    getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patient.id))),
+                    getDocs(query(collection(db, "pagos"), where("patientId", "==", patient.id))),
+                    getDocs(query(collection(db, "clinical_evolutions"), where("patientId", "==", patient.id)))
+                ]);
+                const plans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const allPayments = paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== 'Anulado');
+                const evolutions = evosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let totalDebt = 0;
+                plans.forEach(plan => {
+                    const planPayments = allPayments.filter(p => p.planId === plan.id);
+                    const planEvos = evolutions.filter(e => e.planId === plan.id);
+                    const paidMap = {};
+                    (plan.items || []).forEach(it => { paidMap[it.id] = 0; });
+                    planPayments.forEach(p => {
+                        if (p.itemPayments && p.itemPayments.length > 0) {
+                            p.itemPayments.forEach(ip => { if (paidMap[ip.itemId] !== undefined) paidMap[ip.itemId] += Number(ip.monto || 0); });
+                        }
+                    });
+                    (plan.items || []).forEach(item => {
+                        const realized = planEvos.some(e => e.plantillaItems?.[item.id]?.checked === true);
+                        if (!realized) return;
+                        const cost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+                        const paid = paidMap[item.id] || 0;
+                        const debt = Math.max(0, cost - paid);
+                        totalDebt += debt;
+                    });
+                });
+                setRealizedDebt(totalDebt);
+            } catch (e) { console.error('Error computing realized debt:', e); }
+        };
+        computeDebt();
+    }, [patient?.id, activeTab]);
+
     // Cámara Handlers
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [cameraStream, setCameraStream] = useState(null);
@@ -713,6 +754,16 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     badge={financials?.totals?.totalSaldosAFavor > 0 ? `$${formatCurrency(financials.totals.totalSaldosAFavor)}` : "$ 0"} 
                                 />
                                 <SidebarButton icon={FiDollarSign} label="Realizar pago" active={activeTab === "pago"} onClick={() => { if(activeTab === "pago") { setActiveTab(""); setTimeout(() => setActiveTab("pago"), 0); } else setActiveTab("pago"); }} />
+                                {realizedDebt > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('pago')}
+                                        className="w-full mt-1 mb-1 px-3 py-2 rounded-xl bg-rose-500 text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 animate-pulse hover:animate-none hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 active:scale-95"
+                                    >
+                                        <FiAlertCircle size={14} className="shrink-0" />
+                                        <span>Deuda activa: ${realizedDebt.toLocaleString('es-CO')}</span>
+                                    </button>
+                                )}
                                 <SidebarButton icon={FiDollarSign} label="Histórico pagos" active={activeTab === "hist_pago"} onClick={() => { if(activeTab === "hist_pago") { setActiveTab(""); setTimeout(() => setActiveTab("hist_pago"), 0); } else setActiveTab("hist_pago"); }} />
                                 <SidebarButton icon={FiFileText} label="Histórico facturas" active={activeTab === "hist_fact"} onClick={() => { if(activeTab === "hist_fact") { setActiveTab(""); setTimeout(() => setActiveTab("hist_fact"), 0); } else setActiveTab("hist_fact"); }} />
                             </div>

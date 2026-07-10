@@ -31,7 +31,7 @@ La inteligencia artificial YA ESTÁ implementada en el código. Solo necesitas o
 **Opción A: Desde la interfaz (Recomendado)**
 1. Abre OdontoCloud
 2. Ve a cualquier paciente
-3. Click en tab "IA Insights" o "Anita Insights"
+3. Click en tab "IA Insights" o "Nova Insights"
 4. Click en botón "Ajustes API Key"
 5. Pega tu key y guarda
 

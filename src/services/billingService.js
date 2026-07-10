@@ -14,10 +14,11 @@ const s = (n) => Number(n || 0);
 export const getPatientFinancials = async (patientId) => {
     if (!patientId) return { facturas: [], pagos: [], totals: {} };
 
-    const [snapF, snapP, snapPlans] = await Promise.all([
+    const [snapF, snapP, snapPlans, snapND] = await Promise.all([
         getDocs(query(collection(db, "facturas"), where("patientId", "==", patientId))),
         getDocs(query(collection(db, "pagos"), where("patientId", "==", patientId))),
-        getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patientId)))
+        getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patientId))),
+        getDocs(query(collection(db, "notas_debito"), where("pacienteId", "==", patientId)))
     ]);
 
     const facturas = snapF.docs.map(d => {
@@ -49,8 +50,13 @@ export const getPatientFinancials = async (patientId) => {
         pagado: s(d.data().recaudado || d.data().pagado || 0)
     }));
 
+    const totalDebito = snapND.docs
+        .map(d => d.data())
+        .filter(n => n.estado !== "Anulado")
+        .reduce((acc, n) => acc + s(n.total), 0);
+
     // Calculations
-    const totalFacturado = facturas.reduce((acc, f) => acc + f.total, 0);
+    const totalFacturado = facturas.reduce((acc, f) => acc + f.total, 0) + totalDebito;
     
     // Total Pagado/Recaudado: sum of actual transactions (excluding internal credit usage to prevent double counting)
     const totalPagado = pagos

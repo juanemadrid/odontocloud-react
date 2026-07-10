@@ -64,13 +64,30 @@ export const ReceiptPrintService = {
             const patientCity = patient.ciudadDomicilio || "Magangué";
             const patientPhone = patient.celular || "—";
 
-            const pagoId = pago.id ? pago.id.slice(-4).toUpperCase() : Math.floor(1000 + Math.random() * 9000);
+            // Use the consecutive number if saved on the pago, else show "S/N"
+            const receiptNumber = pago.nroConsecutivo
+                ? `No. ${pago.nroConsecutivo}`
+                : `S/N`;
+
+            // Build clinic logo block — use solid background for reliable html2canvas rendering
+            const clinicInitials = clinicName
+                .split(' ')
+                .filter(w => w.length > 1)
+                .slice(0, 2)
+                .map(w => w[0].toUpperCase())
+                .join('') || clinicName.slice(0, 2).toUpperCase();
+            const clinicLogoHTML = clinic.logoUrl
+                ? `<img src="${clinic.logoUrl}" style="width:58px;height:58px;object-fit:contain;border-radius:8px;display:inline-block;vertical-align:middle;" crossorigin="anonymous" />`
+                : `<div style="display:inline-block;width:58px;height:58px;background-color:#1e3a8a;border-radius:8px;vertical-align:middle;text-align:center;padding-top:10px;box-sizing:border-box;">
+                       <div style="font-size:20px;font-weight:900;color:#ffffff;line-height:1;">${clinicInitials}</div>
+                       <div style="font-size:7px;font-weight:700;color:#93c5fd;margin-top:3px;letter-spacing:1px;">DENTAL</div>
+                   </div>`;
+
             const date = pago.fecha ? (pago.fecha.toDate ? pago.fecha.toDate() : new Date(pago.fecha)) : new Date();
             const formattedDate = date.toLocaleDateString('es-CO');
 
             const subtotalStr = `$ ${Number(pago.monto || 0).toLocaleString('es-CO')}`;
             const totalStr = `$ ${Number(pago.monto || 0).toLocaleString('es-CO')}`;
-
             const totalPlanStr = typeof totalPlan === "number" ? `$ ${totalPlan.toLocaleString('es-CO')}` : "—";
             const totalPagadoPlanStr = typeof totalPagadoPlan === "number" ? `$ ${totalPagadoPlan.toLocaleString('es-CO')}` : "—";
             const saldoPlanStr = typeof saldoPlan === "number" ? `$ ${saldoPlan.toLocaleString('es-CO')}` : "—";
@@ -104,28 +121,30 @@ export const ReceiptPrintService = {
 
             const html = `
                 <div style="border: 2px solid #cbd5e1; padding: 20px; border-radius: 8px;">
-                    <!-- HEADER BLOCK -->
-                    <div style="display: flex; justify-content: space-between; align-items: stretch; margin-bottom: 20px;">
-                        <!-- Logo & Address -->
-                        <div style="display: flex; gap: 15px; align-items: center;">
-                            <div style="font-weight: 900; color: #1e3a8a; border: 2px solid #1e3a8a; padding: 10px; border-radius: 8px; text-align: center; line-height: 1.1;">
-                                <div style="font-size: 18px;">ATM</div>
-                                <div style="font-size: 8px; font-weight: bold; tracking-wide: 1px; margin-top: 2px;">Orofacial</div>
-                            </div>
-                            <div style="font-size: 10px; color: #475569; line-height: 1.4;">
-                                <div style="font-weight: 800; font-size: 11px; color: #0f172a; text-transform: uppercase;">${clinicName}</div>
-                                <div>${clinicNit}</div>
-                                <div>${clinicAddress}</div>
-                                <div>Tel: ${clinicPhone} | ${clinicEmail}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Title Box -->
-                        <div style="text-align: right; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Recibo de caja</div>
-                            <div style="font-size: 14px; font-weight: 900; color: #ef4444; font-family: monospace;">No. ${pagoId}</div>
-                        </div>
-                    </div>
+                    <!-- HEADER BLOCK: pure table layout for html2canvas compatibility -->
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                        <tr>
+                            <td style="vertical-align:middle; width:auto;">
+                                <table style="border-collapse:collapse;">
+                                    <tr>
+                                        <td style="vertical-align:middle; padding-right:14px; width:70px;">
+                                            ${clinicLogoHTML}
+                                        </td>
+                                        <td style="vertical-align:middle; font-size:10px; color:#475569; line-height:1.5;">
+                                            <div style="font-weight:800; font-size:12px; color:#0f172a; text-transform:uppercase; margin-bottom:2px;">${clinicName}</div>
+                                            <div>${clinicNit}</div>
+                                            <div>${clinicAddress}</div>
+                                            <div>Tel: ${clinicPhone} | ${clinicEmail}</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="vertical-align:middle; text-align:right;">
+                                <div style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px;">Recibo de caja</div>
+                                <div style="font-size:16px; font-weight:900; color:#ef4444; font-family:monospace; margin-top:4px;">${receiptNumber}</div>
+                            </td>
+                        </tr>
+                    </table>
 
                     <!-- CUSTOMER INFO ROW (TABLE) -->
                     <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; font-size: 10px; margin-bottom: 20px;">
