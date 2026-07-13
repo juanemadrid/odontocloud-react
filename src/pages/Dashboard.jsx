@@ -51,6 +51,7 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
+import { OFFLINE_SESSION_ENABLED } from "../config/runtimeFlags";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo from "/assets/logo.png";
 
@@ -129,6 +130,8 @@ const detectLocale = () => {
 
 /* ================== sesión offline + fechas ================== */
 const getOfflineSession = () => {
+  if (!OFFLINE_SESSION_ENABLED) return null;
+
   try {
     const data = JSON.parse(localStorage.getItem("odc_session"));
     if (data && Date.now() - data.timestamp < 1000 * 60 * 60 * 24) return data;

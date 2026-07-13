@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "../../firebase/firebaseConfig";
-import { collection, query, where, getDocs, orderBy, limit, Timestamp, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, Timestamp, doc, getDoc, onSnapshot, addDoc, updateDoc } from "firebase/firestore";
 import { useParams, useNavigate } from "react-router-dom";
 import { DEFAULT_CONFIG } from "../../constants/DefaultConfig";
-import { FiArrowLeft, FiLogOut, FiCalendar, FiDollarSign, FiActivity, FiMessageCircle, FiX, FiPhone } from "react-icons/fi";
+import { FiArrowLeft, FiLogOut, FiCalendar, FiDollarSign, FiActivity, FiMessageCircle, FiX, FiPhone, FiUser, FiShield, FiAlertTriangle, FiHeart, FiFileText, FiBell } from "react-icons/fi";
 import { toast } from "sonner";
 
 // ── Modal genérico del portal ─────────────────────────────────────────────────
@@ -20,6 +20,19 @@ function PortalModal({ title, icon: Icon, color, onClose, children }) {
         </div>
     );
 }
+
+const STATUS_MAP = {
+    accepted: { label: "Aceptado", classes: "bg-emerald-100 text-emerald-700" },
+    aceptado: { label: "Aceptado", classes: "bg-emerald-100 text-emerald-700" },
+    active: { label: "Activo", classes: "bg-blue-100 text-blue-700" },
+    activo: { label: "Activo", classes: "bg-blue-100 text-blue-700" },
+    completed: { label: "Completado", classes: "bg-emerald-100 text-emerald-700" },
+    completado: { label: "Completado", classes: "bg-emerald-100 text-emerald-700" },
+    draft: { label: "Borrador", classes: "bg-slate-100 text-slate-700" },
+    borrador: { label: "Borrador", classes: "bg-slate-100 text-slate-700" },
+    rejected: { label: "Rechazado", classes: "bg-rose-100 text-rose-700" },
+    rechazado: { label: "Rechazado", classes: "bg-rose-100 text-rose-700" }
+};
 
 export default function PatientPortal() {
     const { clinicSlug } = useParams();
@@ -42,11 +55,73 @@ export default function PatientPortal() {
     const [planes, setPlanes] = useState([]);
     const [todasCitas, setTodasCitas] = useState([]);
     const [loadingData, setLoadingData] = useState(false);
+    const [notificaciones, setNotificaciones] = useState([]);
+    const unsubRef = useRef(null);
 
     // Nueva cita form
     const [nuevaCitaForm, setNuevaCitaForm] = useState({ fecha: "", motivo: "", nombre: "", celular: "" });
     const [citaEnviada, setCitaEnviada] = useState(false);
     const [soporteMsg, setSoporteMsg] = useState("");
+
+    // Extract unique specialists treating this patient
+    const especialistas = useMemo(() => {
+        const set = new Set();
+        const docs = [];
+
+        // 1. Add doctor from upcoming appointments
+        todasCitas.forEach(c => {
+            const name = c.dentista || c.doctorName;
+            if (name && name !== "—" && !set.has(name)) {
+                set.add(name);
+                docs.push({ name, specialty: c.especialidad || "Odontólogo Especialista" });
+            }
+        });
+
+        // 2. Add doctor from treatment plans
+        planes.forEach(p => {
+            const name = p.doctorName || p.dentista || p.doctor;
+            if (name && typeof name === 'string' && name !== "—" && !set.has(name)) {
+                set.add(name);
+                docs.push({ name, specialty: p.especialidad || "Odontólogo Especialista" });
+            }
+        });
+
+        // Fallback: If no specialists found, add a default clinic doctor
+        if (docs.length === 0) {
+            docs.push({ name: config.name || "Tu Odontólogo", specialty: "Odontología General" });
+        }
+
+        return docs;
+    }, [todasCitas, planes, config]);
+
+    useEffect(() => {
+        const checkActiveSession = async () => {
+            try {
+                const sessionStr = localStorage.getItem("odc_patient_session");
+                if (!sessionStr) return;
+                const session = JSON.parse(sessionStr);
+                if (session && session.patientId) {
+                    if (clinicSlug && session.clinicSlug !== clinicSlug) return;
+                    
+                    setLoading(true);
+                    const docRef = doc(db, "pacientes", session.patientId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const patientData = { id: docSnap.id, ...docSnap.data() };
+                        setUser(patientData);
+                        setNuevaCitaForm(f => ({ ...f, nombre: patientData.nombreCompleto || "", celular: patientData.celular || "" }));
+                        setAuth(true);
+                        await loadPatientData(patientData.id, patientData.inquilino || session.inquilinoId);
+                    }
+                }
+            } catch (err) {
+                console.error("Error cargando sesión activa de paciente:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        checkActiveSession();
+    }, [clinicSlug]);
 
     useEffect(() => {
         if (!clinicSlug) return;
@@ -87,6 +162,13 @@ export default function PatientPortal() {
             }
             setUser(patientData);
             setNuevaCitaForm(f => ({ ...f, nombre: patientData.nombreCompleto || "", celular: patientData.celular || "" }));
+            
+            localStorage.setItem("odc_patient_session", JSON.stringify({
+                patientId: patientData.id,
+                clinicSlug: clinicSlug || "",
+                inquilinoId: patientData.inquilino || ""
+            }));
+
             setAuth(true);
             await loadPatientData(patientData.id, patientData.inquilino);
         } catch (error) { toast.error("Error al iniciar sesión: " + error.message); }
@@ -97,11 +179,11 @@ export default function PatientPortal() {
         setLoadingData(true);
         try {
             const iid = inq || inquilinoId;
-            // Citas (todas)
-            const qCitas = query(collection(db, "agenda"), where("pacienteId", "==", patientId));
+            // Citas (todas) - Correct collection name: citas
+            const qCitas = query(collection(db, "citas"), where("pacienteId", "==", patientId));
             const snapCitas = await getDocs(qCitas).catch(() => ({ docs: [] }));
             const citasArr = snapCitas.docs.map(d => ({ id: d.id, ...d.data() }))
-                .sort((a, b) => new Date(`${b.fecha}T${b.hora || "00:00"}`) - new Date(`${a.fecha}T${a.hora || "00:00"}`));
+                .sort((a, b) => new Date(`${b.fecha}T${b.horaInicio || b.hora || "00:00"}`) - new Date(`${a.fecha}T${a.horaInicio || a.hora || "00:00"}`));
             setTodasCitas(citasArr);
 
             // Próxima cita
@@ -109,29 +191,109 @@ export default function PatientPortal() {
             const proxima = citasArr.find(c => c.fecha >= hoy && !["cancelada", "no asistio"].includes((c.estado || "").toLowerCase()));
             setNextAppt(proxima || null);
 
-            // Pagos / facturas
-            const qPagos = query(collection(db, "facturas"), where("pacienteId", "==", patientId));
-            const snapPagos = await getDocs(qPagos).catch(() => ({ docs: [] }));
-            setPagos(snapPagos.docs.map(d => ({ id: d.id, ...d.data() }))
-                .sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0)));
+            // Pagos / facturas - buscar en todas las colecciones posibles
+            const [snapPagos1, snapPagos2, snapRecibos] = await Promise.all([
+                getDocs(query(collection(db, "pagos"), where("patientId", "==", patientId))).catch(() => ({ docs: [] })),
+                getDocs(query(collection(db, "pagos"), where("pacienteId", "==", patientId))).catch(() => ({ docs: [] })),
+                getDocs(query(collection(db, "recibos_caja"), where("pacienteId", "==", patientId))).catch(() => ({ docs: [] }))
+            ]);
+            // Deduplicar por ID
+            const allPagos = [...snapPagos1.docs, ...snapPagos2.docs, ...snapRecibos.docs]
+                .map(d => ({ id: d.id, ...d.data() }));
+            const seenIds = new Set();
+            const dedupedPagos = allPagos.filter(p => {
+                if (seenIds.has(p.id)) return false;
+                seenIds.add(p.id);
+                return true;
+            });
+            setPagos(dedupedPagos.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0)));
 
             // Planes de tratamiento
             const qPlanes = query(collection(db, "treatment_plans"), where("patientId", "==", patientId));
             const snapPlanes = await getDocs(qPlanes).catch(() => ({ docs: [] }));
             setPlanes(snapPlanes.docs.map(d => ({ id: d.id, ...d.data() })));
+
+            // Real-time notifications for patient
+            const qNotifs = query(
+                collection(db, "notificaciones"),
+                where("pacienteId", "==", patientId),
+                where("target", "==", "patient"),
+                orderBy("createdAt", "desc"),
+                limit(20)
+            );
+            if (unsubRef.current) unsubRef.current();
+            const unsubNotifs = onSnapshot(qNotifs, snap => {
+                setNotificaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            });
+            unsubRef.current = unsubNotifs;
         } catch (err) { console.error(err); }
         finally { setLoadingData(false); }
     };
 
-    const handleSolicitarCita = (e) => {
+    const handleSolicitarCita = async (e) => {
         e.preventDefault();
-        // Abrir WhatsApp con el mensaje pre-cargado
+        
+        // Guardar la solicitud en Firestore (notificación al admin)
+        try {
+            await addDoc(collection(db, "notificaciones"), {
+                inquilino: user.inquilino,
+                target: "admin",
+                title: "Nueva Solicitud de Cita 📅",
+                message: `${user.nombreCompleto || user.nombres} ha solicitado una cita para el ${nuevaCitaForm.fecha} por motivo: ${nuevaCitaForm.motivo || "Limpieza/Revisión"}.`,
+                type: "appointment_request",
+                pacienteId: user.id,
+                pacienteNombre: user.nombreCompleto || user.nombres || "",
+                pacienteCelular: nuevaCitaForm.celular || user.celular || "",
+                fechaSolicitada: nuevaCitaForm.fecha || "",
+                motivo: nuevaCitaForm.motivo || "Limpieza/Revisión",
+                estado: "pendiente",
+                read: false,
+                createdAt: new Date().toISOString()
+            });
+
+            // Notificar al paciente que su solicitud fue recibida
+            await addDoc(collection(db, "notificaciones"), {
+                inquilino: user.inquilino,
+                target: "patient",
+                title: "Solicitud Recibida ✅",
+                message: `Hemos recibido tu solicitud de cita para el ${nuevaCitaForm.fecha}. La clínica revisará tu solicitud y te notificará pronto.`,
+                type: "appointment_request_sent",
+                pacienteId: user.id,
+                read: false,
+                createdAt: new Date().toISOString()
+            });
+
+        } catch (err) {
+            console.error("Error creating notification for admin:", err);
+        }
+
+        setCitaEnviada(true);
+    };
+
+    const handleEnviarWhatsApp = () => {
         const phone = config.phone ? config.phone.replace(/\D/g, "") : "";
-        const msg = `Hola, soy *${nuevaCitaForm.nombre}*, quisiera agendar una cita odontológica.\n📅 Fecha preferida: ${nuevaCitaForm.fecha || "por definir"}\n📋 Motivo: ${nuevaCitaForm.motivo || "Consulta general"}\n📱 Mi celular: ${nuevaCitaForm.celular}`;
+        const msg = `Hola, soy *${user.nombreCompleto || user.nombres}*, quisiera agendar una cita odontológica.\n📅 Fecha preferida: ${nuevaCitaForm.fecha || "por definir"}\n📋 Motivo: ${nuevaCitaForm.motivo || "Consulta general"}\n📱 Mi celular: ${nuevaCitaForm.celular}`;
         if (phone) {
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
         }
-        setCitaEnviada(true);
+    };
+
+    const handleLogout = () => {
+        if (unsubRef.current) {
+            try {
+                unsubRef.current();
+            } catch (e) {}
+        }
+        try {
+            localStorage.removeItem("odc_patient_session");
+        } catch (e) {}
+        setAuth(false);
+        setUser(null);
+        setTodasCitas([]);
+        setNextAppt(null);
+        setPagos([]);
+        setPlanes([]);
+        setNotificaciones([]);
     };
 
     // ── Login screen ─────────────────────────────────────────────────────────
@@ -139,42 +301,103 @@ export default function PatientPortal() {
         return (
             <div className="min-h-screen flex bg-white font-sans">
                 <div className="hidden lg:flex w-1/2 bg-slate-900 relative overflow-hidden items-center justify-center">
-                    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=1600" alt="" className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/90 via-indigo-900/40 to-transparent" />
-                    <div className="relative z-10 max-w-lg text-center px-12 text-white">
-                        <div className="mb-8 flex justify-center">
-                            {config?.logo ? <img src={config.logo} className="h-16 w-auto brightness-0 invert opacity-80" alt="Logo" /> : <span className="text-4xl">🦷</span>}
+                    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=1600" alt="" className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-950 via-slate-900/90 to-indigo-950/80" />
+                    <div className="relative z-10 max-w-lg text-center px-12 text-white space-y-6">
+                        <div className="flex justify-center">
+                            {config?.logo ? (
+                                <div className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl">
+                                    <img src={config.logo} className="h-20 w-auto object-contain brightness-0 invert" alt="Logo" />
+                                </div>
+                            ) : (
+                                <div className="w-20 h-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl flex items-center justify-center text-4xl">🦷</div>
+                            )}
                         </div>
-                        <h1 className="text-5xl font-serif mb-6 leading-tight tracking-tight">{config.name || "Tu Salud Dental"}</h1>
-                        <p className="text-indigo-100 text-lg font-light leading-relaxed opacity-90">"{config.vision || config.mission || 'Experiencias odontológicas que transforman vidas.'}"</p>
+                        <div className="space-y-3">
+                            <h1 className="text-5xl font-black mb-2 leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-sky-100">
+                                {config.name || "Tu Salud Dental"}
+                            </h1>
+                            <div className="h-1 w-20 bg-gradient-to-r from-indigo-500 to-sky-400 mx-auto rounded-full" />
+                        </div>
+                        <p className="text-indigo-200/90 text-lg font-light leading-relaxed italic">
+                            "{config.vision || config.mission || 'Experiencias odontológicas que transforman vidas.'}"
+                        </p>
                     </div>
-                    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full blur-3xl opacity-20 animate-pulse" />
+                    {/* Decorative blobs */}
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full blur-[120px] opacity-20 animate-pulse" />
+                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-sky-500 rounded-full blur-[120px] opacity-20 animate-pulse" />
                 </div>
-                <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-white relative">
-                    <button onClick={() => navigate(clinicSlug ? `/c/${clinicSlug}` : "/")} className="absolute top-8 left-8 flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors font-medium text-sm">
-                        <FiArrowLeft size={18} /> Volver
+                
+                <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 relative">
+                    {/* Custom Floating Back Button */}
+                    <button 
+                        onClick={() => navigate(clinicSlug ? `/c/${clinicSlug}` : "/")} 
+                        className="absolute top-8 left-8 flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white text-slate-600 hover:text-indigo-600 transition-all border border-slate-200/80 hover:border-slate-300 shadow-sm font-semibold text-xs backdrop-blur-sm"
+                    >
+                        <FiArrowLeft size={14} /> Volver
                     </button>
-                    <div className="w-full max-w-md space-y-10">
-                        <div className="text-center lg:text-left space-y-3">
-                            <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-indigo-50 text-indigo-600 mb-2 shadow-sm"><span className="text-2xl">🔐</span></div>
-                            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Acceso Pacientes</h2>
-                            <p className="text-slate-500 text-lg">Consulta tus citas, pagos y tratamientos.</p>
+                    
+                    <div className="w-full max-w-md bg-white/80 backdrop-blur-md border border-white p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100/50 space-y-8">
+                        <div className="text-center space-y-2">
+                            <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100/50 mb-1">
+                                <FiShield size={24} />
+                            </div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Portal Pacientes</h2>
+                            <p className="text-slate-500 text-sm font-medium">Consulta tus citas, pagos y tratamientos de forma segura.</p>
                         </div>
-                        <form onSubmit={handleLogin} className="space-y-6">
+                        
+                        <form onSubmit={handleLogin} className="space-y-5">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Documento de Identidad</label>
-                                <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none font-semibold text-slate-800" placeholder="Número de documento" value={docInput} onChange={e => setDocInput(e.target.value)} disabled={loading} />
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                        <FiUser size={18} />
+                                    </div>
+                                    <input 
+                                        type="text"
+                                        className="w-full pl-11 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none font-semibold text-slate-800 placeholder-slate-400/80" 
+                                        placeholder="Número de documento" 
+                                        value={docInput} 
+                                        onChange={e => setDocInput(e.target.value)} 
+                                        disabled={loading} 
+                                        required
+                                    />
+                                </div>
                             </div>
+                            
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Fecha de Nacimiento</label>
-                                <input type="date" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none font-semibold text-slate-800" value={birthDate} onChange={e => setBirthDate(e.target.value)} disabled={loading} />
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                        <FiCalendar size={18} />
+                                    </div>
+                                    <input 
+                                        type="date" 
+                                        className="w-full pl-11 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none font-semibold text-slate-800" 
+                                        value={birthDate} 
+                                        onChange={e => setBirthDate(e.target.value)} 
+                                        disabled={loading} 
+                                        required
+                                    />
+                                </div>
                             </div>
-                            <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-indigo-600/20 transition-all active:scale-[0.99] hover:-translate-y-1" disabled={loading}>
-                                {loading ? "Verificando..." : "Ingresar al Portal"}
+                            
+                            <button 
+                                type="submit" 
+                                className="w-full py-4.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 transition-all active:scale-[0.99] hover:-translate-y-0.5 flex justify-center items-center gap-2 mt-2 disabled:opacity-50" 
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        <span>Verificando...</span>
+                                    </>
+                                ) : "Ingresar al Portal"}
                             </button>
                         </form>
+                        
                         <div className="text-center pt-4 border-t border-slate-100">
-                            <p className="text-xs text-slate-400 uppercase tracking-widest">Área Segura • {config.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Área Segura • {config.name}</p>
                         </div>
                     </div>
                 </div>
@@ -183,8 +406,25 @@ export default function PatientPortal() {
     }
 
     // ── Portal autenticado ────────────────────────────────────────────────────
-    const totalPagado = pagos.filter(p => p.estado === "Pagada").reduce((s, p) => s + Number(p.monto || 0), 0);
-    const totalPendiente = pagos.filter(p => p.estado !== "Pagada").reduce((s, p) => s + Number(p.monto || 0), 0);
+    // Normalizar: recibos_caja tienen 'total', pagos tienen 'monto'. Estado varía entre colecciones.
+    const getPagoMonto = (p) => Number(p.total || p.monto || p.valorTotal || 0);
+    const esPagado = (p) => {
+        const estado = (p.estado || "").toLowerCase();
+        // Recibos de caja se consideran siempre pagados (ya se cobró en caja)
+        if (p.total !== undefined && !p.estado) return true;
+        return estado === "pagada" || estado === "pagado" || estado === "paid" || 
+               estado === "completado" || estado === "completada" || estado === "complete";
+    };
+    const totalPagado = pagos.filter(esPagado).reduce((s, p) => s + getPagoMonto(p), 0);
+    // El pendiente real = total de los planes de tratamiento - lo ya abonado
+    const totalPlanes = planes.reduce((s, plan) => {
+        const items = plan.items || [];
+        const planTotal = Number(plan.total || 0) || items.reduce((sum, it) => sum + Number(it.precio || it.price || it.valor || 0), 0);
+        return s + planTotal;
+    }, 0);
+    const totalPendiente = Math.max(0, totalPlanes - totalPagado);
+
+
 
     return (
         <div className="min-h-screen bg-slate-50 pb-24">
@@ -202,10 +442,27 @@ export default function PatientPortal() {
                             <p className="text-indigo-200 text-xs mt-1">{config.name}</p>
                         </div>
                     </div>
-                    <button onClick={() => setAuth(false)} className="flex flex-col items-center gap-1 group">
-                        <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-rose-500/80 transition-all border border-white/10"><FiLogOut size={20} /></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Salir</span>
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={() => {
+                            notificaciones.forEach(n => {
+                                if (!n.read) updateDoc(doc(db, "notificaciones", n.id), { read: true });
+                            });
+                            setActiveModal("notificaciones");
+                        }} className="flex flex-col items-center gap-1 group relative">
+                            <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-indigo-500/85 transition-all border border-white/10 relative">
+                                <FiBell size={20} />
+                                {notificaciones.some(n => !n.read) && (
+                                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border border-indigo-600 animate-pulse" />
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Alertas</span>
+                        </button>
+
+                        <button onClick={handleLogout} className="flex flex-col items-center gap-1 group">
+                            <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-rose-500/80 transition-all border border-white/10"><FiLogOut size={20} /></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Salir</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -221,12 +478,64 @@ export default function PatientPortal() {
                                 <div className="text-2xl font-black text-indigo-600">{new Date(`${nextAppt.fecha}T12:00:00`).getDate()}</div>
                             </div>
                             <div>
-                                <div className="font-black text-slate-800">{nextAppt.hora || "—"}</div>
+                                <div className="font-black text-slate-800">{nextAppt.horaInicio || nextAppt.hora || "—"}</div>
                                 <div className="text-slate-500 text-sm">{nextAppt.dentista || nextAppt.doctorName || "Odontología General"}</div>
                                 <div className="text-xs text-slate-400">{nextAppt.motivo || nextAppt.title || "Control"}</div>
                             </div>
                         </div>
                     ) : <p className="text-slate-400 text-sm italic">No tienes citas próximas programadas.</p>}
+                </div>
+
+                {/* Tus Especialistas */}
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-slate-100/80">
+                    <h3 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-3">Tus Especialistas</h3>
+                    <div className="divide-y divide-slate-100 space-y-2">
+                        {especialistas.map((esp, i) => (
+                            <div key={i} className="flex items-center gap-3 pt-2 first:pt-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-50 to-indigo-100 border border-indigo-200/60 flex items-center justify-center text-sm text-indigo-600 font-bold shrink-0 shadow-inner">
+                                    {esp.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || "Dr"}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-slate-800 text-sm">{esp.name}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{esp.specialty}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Mi Ficha de Salud */}
+                <div className="bg-white p-5 rounded-2xl shadow-lg border border-slate-100/80 space-y-4 text-left">
+                    <h3 className="text-xs font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                        <FiFileText size={14} /> Mi Ficha de Salud
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nro. Historia</span>
+                            <span className="font-extrabold text-slate-700 text-xs truncate block">{user.nroHistoria || `HC-${(user.id || "").slice(-6).toUpperCase()}`}</span>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Entidad (EPS)</span>
+                            <span className="font-extrabold text-slate-700 text-xs truncate block">{user.nombreEps || "Particular"}</span>
+                        </div>
+                    </div>
+
+                    {user.alertas ? (
+                        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3 items-start">
+                            <FiAlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={16} />
+                            <div>
+                                <h4 className="font-black text-rose-800 text-[9px] uppercase tracking-wider mb-1">Alertas Médicas / Alergias</h4>
+                                <p className="text-rose-700 text-xs font-semibold leading-relaxed">{user.alertas}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex gap-3 items-center">
+                            <FiHeart className="text-emerald-500 shrink-0" size={16} />
+                            <div>
+                                <p className="text-emerald-700 text-xs font-bold leading-none">No se registran alergias o alertas críticas.</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Resumen financiero rápido */}
@@ -275,7 +584,7 @@ export default function PatientPortal() {
                             {todasCitas.slice(0, 8).map(c => (
                                 <div key={c.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                                     <div>
-                                        <p className="text-xs font-bold text-slate-700">{c.fecha} {c.hora && `• ${c.hora}`}</p>
+                                        <p className="text-xs font-bold text-slate-700">{c.fecha} {(c.horaInicio || c.hora) && `• ${c.horaInicio || c.hora}`}</p>
                                         <p className="text-[10px] text-slate-400">{c.motivo || c.title || "Consulta"}</p>
                                     </div>
                                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide ${
@@ -302,12 +611,20 @@ export default function PatientPortal() {
                         <div className="text-center py-6 space-y-4">
                             <div className="text-5xl">✅</div>
                             <p className="font-bold text-slate-800 text-lg">¡Solicitud enviada!</p>
-                            <p className="text-slate-500 text-sm">Te hemos redirigido a WhatsApp. La clínica confirmará tu cita pronto.</p>
+                            <p className="text-slate-500 text-sm">Tu solicitud fue recibida. La clínica la revisará y te notificará aquí cuando sea confirmada.</p>
+                            {config.phone && (
+                                <button
+                                    onClick={handleEnviarWhatsApp}
+                                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2"
+                                >
+                                    <FiMessageCircle /> También enviar por WhatsApp
+                                </button>
+                            )}
                             <button onClick={() => setActiveModal(null)} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-sm uppercase tracking-widest">Cerrar</button>
                         </div>
                     ) : (
                         <form onSubmit={handleSolicitarCita} className="space-y-4">
-                            <p className="text-xs text-slate-500">Completa el formulario y te redirigiremos a WhatsApp con tu solicitud lista para enviar.</p>
+                            <p className="text-xs text-slate-500">Completa el formulario. Tu solicitud llegará directamente a la clínica.</p>
                             <div>
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Fecha preferida</label>
                                 <input type="date" min={new Date().toISOString().slice(0,10)} required value={nuevaCitaForm.fecha} onChange={e => setNuevaCitaForm(f => ({...f, fecha: e.target.value}))} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 font-semibold text-sm text-slate-800" />
@@ -320,8 +637,8 @@ export default function PatientPortal() {
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Tu celular</label>
                                 <input type="tel" value={nuevaCitaForm.celular} onChange={e => setNuevaCitaForm(f => ({...f, celular: e.target.value}))} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 font-semibold text-sm text-slate-800" placeholder="3001234567" />
                             </div>
-                            <button type="submit" className="w-full py-3.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2">
-                                <FiMessageCircle /> Enviar por WhatsApp
+                            <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2">
+                                <FiCalendar /> Enviar Solicitud
                             </button>
                         </form>
                     )}
@@ -341,8 +658,8 @@ export default function PatientPortal() {
                             </div>
                             {pagos.map(p => (
                                 <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div><p className="text-xs font-black text-slate-700">{p.idFactura || p.id?.slice(-6)}</p><p className="text-[10px] text-slate-400">{p.descripcion || "Factura médica"}</p></div>
-                                    <div className="text-right"><p className="text-xs font-black text-slate-700">${Number(p.monto||0).toLocaleString("es-CO")}</p><span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${p.estado === "Pagada" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{p.estado || "Pendiente"}</span></div>
+                                    <div><p className="text-xs font-black text-slate-700">{p.idFactura || p.consecutivo || p.id?.slice(-6)}</p><p className="text-[10px] text-slate-400">{p.descripcion || p.observaciones || "Pago registrado"}</p></div>
+                                    <div className="text-right"><p className="text-xs font-black text-slate-700">${getPagoMonto(p).toLocaleString("es-CO")}</p><span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${esPagado(p) ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{esPagado(p) ? "Pagado" : (p.estado || "Pendiente")}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -365,7 +682,14 @@ export default function PatientPortal() {
                                     <div key={plan.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                                         <div className="flex items-center justify-between mb-2">
                                             <p className="text-sm font-black text-slate-800">{plan.title || plan.nombre || "Plan de Tratamiento"}</p>
-                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${plan.status === "completed" || plan.status === "completado" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{plan.status || "Activo"}</span>
+                                            {(() => {
+                                                const statusInfo = STATUS_MAP[(plan.status || "").toLowerCase()] || { label: plan.status || "Activo", classes: "bg-amber-100 text-amber-700" };
+                                                return (
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${statusInfo.classes}`}>
+                                                        {statusInfo.label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                         {items.length > 0 && (
                                             <>
@@ -390,6 +714,27 @@ export default function PatientPortal() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    )}
+                </PortalModal>
+            )}
+
+            {/* ── MODAL: Notificaciones ──────────────────────────────────────── */}
+            {activeModal === "notificaciones" && (
+                <PortalModal title="Mis Notificaciones" icon={FiBell} color="bg-indigo-600 text-white" onClose={() => setActiveModal(null)}>
+                    {notificaciones.length === 0 ? (
+                        <p className="text-slate-400 text-sm italic text-center py-8">No tienes notificaciones recientes.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {notificaciones.map(n => (
+                                <div key={n.id} className={`p-4 rounded-2xl border transition-all text-left ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-indigo-50/50 border-indigo-100 shadow-sm'}`}>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <h4 className="font-bold text-slate-800 text-xs">{n.title}</h4>
+                                        <span className="text-[9px] text-slate-400 font-semibold">{n.createdAt ? new Date(n.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                    </div>
+                                    <p className="text-slate-600 text-xs leading-relaxed">{n.message}</p>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </PortalModal>

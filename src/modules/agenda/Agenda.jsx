@@ -50,6 +50,31 @@ export default function Agenda() {
         };
     }, []);
 
+    // Escuchar evento para abrir nueva cita con datos prellenados (ej. desde notificaciones)
+    React.useEffect(() => {
+        const handleOpenNewAppointment = (e) => {
+            const data = e.detail || {};
+            // Convertir fecha string a objeto Date para start
+            let start = null;
+            if (data.fecha) {
+                start = new Date(data.fecha + "T08:00:00");
+            }
+            setEditingApt(null);
+            setSlotData({
+                start: start || new Date(),
+                pacienteId: data.pacienteId || "",
+                pacienteNombre: data.pacienteNombre || "",
+                comentario: data.motivo || "",
+                fecha: data.fecha || "",
+            });
+            setModalOpen(true);
+        };
+        window.addEventListener("open-new-appointment", handleOpenNewAppointment);
+        return () => {
+            window.removeEventListener("open-new-appointment", handleOpenNewAppointment);
+        };
+    }, []);
+
     // --- Metrics Calculation ---
     const occupancyPercentage = useMemo(() => {
         if (!appointments || appointments.length === 0) return 0;

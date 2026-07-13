@@ -124,7 +124,7 @@ export function useAgenda() {
                 if (data.fecha?.toDate) dateObj = data.fecha.toDate();
                 else if (typeof data.fecha === 'string') {
                     const [y, m, d] = data.fecha.split("-").map(Number);
-                    const [hh, mm] = (data.horaInicio || "00:00").split(":").map(Number);
+                    const [hh, mm] = (data.horaInicio || data.hora || "00:00").split(":").map(Number);
                     dateObj = new Date(y, m - 1, d, hh, mm);
                 }
 
@@ -220,6 +220,18 @@ export function useAgenda() {
                     citas: arrayUnion(ref.id),
                     inquilino
                 }, { merge: true });
+
+                // Notify Patient in real-time
+                await addDoc(collection(db, "notificaciones"), {
+                    inquilino,
+                    target: "patient",
+                    title: "Nueva Cita Agendada 📅",
+                    message: `Tu cita ha sido programada para el ${payload.fecha} a las ${payload.horaInicio || payload.hora || ""}.`,
+                    type: "appointment_scheduled",
+                    pacienteId,
+                    read: false,
+                    createdAt: new Date().toISOString()
+                });
             } catch (pErr) {
                 console.warn("Could not associate appointment to patient document:", pErr);
             }
@@ -556,6 +568,47 @@ export function useAgenda() {
             Object.entries(finalPatch).filter(([_, v]) => v !== undefined)
         );
         await updateDoc(doc(db, "citas", id), cleanPatch);
+
+        // If status changed or appointment is rescheduled, notify patient in real-time
+        try {
+            const currentDoc = await getDoc(doc(db, "citas", id));
+            const currentData = currentDoc.exists() ? currentDoc.data() : {};
+            const pacienteId = currentData.pacienteId;
+            if (pacienteId) {
+                let title = "Tu Cita ha sido Actualizada";
+                let message = `Tu cita del ${currentData.fecha} ha sido actualizada.`;
+                
+                if (cleanPatch.status || cleanPatch.estado) {
+                    const statusText = (cleanPatch.status || cleanPatch.estado).toLowerCase();
+                    if (statusText === 'cancelled' || ['cancelada', 'cancelado'].includes(statusText)) {
+                        title = "Cita Cancelada ⚠️";
+                        message = `Tu cita del ${currentData.fecha} a las ${currentData.horaInicio || currentData.hora || ""} ha sido cancelada.`;
+                    } else if (statusText === 'completed' || ['completada', 'completado'].includes(statusText)) {
+                        title = "Cita Completada ✅";
+                        message = `Tu cita del ${currentData.fecha} ha sido registrada como completada. ¡Gracias por asistir!`;
+                    } else if (statusText === 'confirmed' || ['confirmada', 'confirmado'].includes(statusText)) {
+                        title = "Cita Confirmada 👍";
+                        message = `Tu cita del ${currentData.fecha} a las ${currentData.horaInicio || currentData.hora || ""} ha sido confirmada.`;
+                    }
+                } else if (cleanPatch.fecha || cleanPatch.horaInicio) {
+                    title = "Cita Reagendada 📅";
+                    message = `Tu cita ha sido reprogramada para el ${currentData.fecha} a las ${currentData.horaInicio || currentData.hora || ""}.`;
+                }
+
+                await addDoc(collection(db, "notificaciones"), {
+                    inquilino: currentData.inquilino || inquilino,
+                    target: "patient",
+                    title,
+                    message,
+                    type: "appointment_update",
+                    pacienteId,
+                    read: false,
+                    createdAt: new Date().toISOString()
+                });
+            }
+        } catch (nErr) {
+            console.warn("Could not send real-time notification to patient:", nErr);
+        }
     };
 
     const deleteAppointment = async (id) => {

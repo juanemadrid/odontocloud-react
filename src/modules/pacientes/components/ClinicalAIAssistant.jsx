@@ -42,6 +42,9 @@ const getSpanishVoice = () => {
     return voice;
 };
 
+const INTERIM_FLUSH_DELAY_MS = 1800;
+const CONVERSATION_SILENCE_DELAY_MS = 1600;
+
 export default function ClinicalAIAssistant({ 
     onApply, 
     onClose,
@@ -145,7 +148,7 @@ export default function ClinicalAIAssistant({
                     return cleanPrev + ' ' + latestInterim;
                 });
             }
-        }, 400); // 400ms: balance entre captura rápida y esperar fin de frase
+        }, INTERIM_FLUSH_DELAY_MS); // Usar el delay de flush correcto para esperar a que termine de hablar antes de forzar el final
         
         return () => clearTimeout(flushTimer);
     }, [interimTranscript, isConversational, setTranscript]);
@@ -231,17 +234,17 @@ export default function ClinicalAIAssistant({
                 if (isFirstRun.current) {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = `¡Hola, ${displayName}! Le habla Nova, su asistente virtual. ¿Con qué plan de tratamiento iniciamos hoy?`;
+                        greeting = `¡Hola, ${displayName}! Le habla Nova, su asistente clínica. Vamos a registrar la evolución completa. ¿Bajo qué plan de tratamiento trabajamos hoy?`;
                     } else {
                         setCurrentStep(1);
-                        greeting = "¡Hola! Le habla Nova, su asistente virtual. ¿Qué doctor está a cargo hoy?";
+                        greeting = "¡Hola! Le habla Nova, su asistente clínica. Para registrar la evolución, dígame: ¿qué doctor atiende al paciente hoy?";
                     }
                 } else {
                     if (isDoc) {
                         setCurrentStep(2);
-                        greeting = `Le habla Nova. ¿Qué plan de tratamiento registraremos hoy, ${displayName}?`;
+                        greeting = `Le habla Nova, ${displayName}. ¿Qué plan de tratamiento registraremos en esta sesión?`;
                     } else {
-                        greeting = "Le habla Nova. ¿Qué doctor está a cargo del procedimiento hoy?";
+                        greeting = "Le habla Nova. ¿Qué doctor está a cargo del procedimiento de hoy?";
                     }
                 }
             }
@@ -297,7 +300,7 @@ export default function ClinicalAIAssistant({
 
     // Conversational Mode: Debounced speech processor (waits for 800ms of silence before calling Gemini)
     useEffect(() => {
-        if (!isConversational || !transcript.trim()) return;
+        if (!isConversational || !transcript.trim() || isLoadingRef.current) return;
 
         const timer = setTimeout(async () => {
             const rawText = transcript.trim();
@@ -379,6 +382,10 @@ export default function ClinicalAIAssistant({
                         setValueRef.current('aplicaMedicamento', !!response.extractedValue);
                     } else if (response.fieldToUpdate === 'controlEsterilizacion') {
                         setValueRef.current('controlEsterilizacion', !!response.extractedValue);
+                    } else if (response.fieldToUpdate === 'resumen') {
+                        // Paso 7: Nova hace el resumen verbal – no actualizar ningún campo del formulario.
+                        // Solo se muestra el resumen en el chat y se espera confirmación del doctor.
+                        console.log('[Nova] Paso 7 – Resumen verbal antes de guardar.');
                     } else if (response.fieldToUpdate === 'submit') {
                         if (response.extractedValue === true) {
                             // Rellenar automáticamente la hora de fin con la hora actual si está vacía
@@ -555,6 +562,7 @@ export default function ClinicalAIAssistant({
                 } else {
                     toast.error(`Error: ${msg || 'No se pudo conectar con el asistente.'}`, { duration: 5000 });
                 }
+                resetTranscript(); // Limpiar transcripción para evitar reintentar con el mismo texto y romper el bucle
                 startListening();
             } finally {
                 setLoading(false);
@@ -562,7 +570,7 @@ export default function ClinicalAIAssistant({
                 // Limpiar guard de deduplicación después de 2s para evitar bloquear el siguiente turno
                 setTimeout(() => { lastProcessedTextRef.current = ''; }, 2000);
             }
-        }, 200); // 200ms de silencio - balance óptimo velocidad/precisión
+        }, CONVERSATION_SILENCE_DELAY_MS); // Usar el delay correcto para dar tiempo a hablar sin fragmentar la frase
 
         return () => clearTimeout(timer);
     }, [transcript, isConversational, stopListening, startListening, resetTranscript]);
@@ -825,13 +833,51 @@ export default function ClinicalAIAssistant({
                         </div>
                     </div>
 
-                    {/* Paso actual del flujo */}
-                    {currentStep > 0 && currentStep <= 7 && (
-                        <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-2.5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
-                            <span>Progreso del Formulario:</span>
-                            <span className="text-indigo-600">Paso {currentStep} de {activeTab === 'nota' ? '3' : '7'}</span>
-                        </div>
+                    {/* Barra de progreso visual – 8 pasos (evolución) o 3 pasos (nota) */}
+                    {currentStep > 0 && (
+                        (() => {
+                            const totalPasos = activeTab === 'nota' ? 3 : 8;
+                            const labelsPasos = activeTab === 'nota'
+                                ? ['Doctor', 'Comentario', 'Guardar']
+                                : ['Doctor', 'Plan', 'Hora', 'Dictado', 'Procedim.', 'Medicam.', 'Resumen', 'Guardar'];
+                            const safePaso = Math.min(currentStep, totalPasos);
+                            const porcentaje = Math.round((safePaso / totalPasos) * 100);
+                            const labelActual = labelsPasos[safePaso - 1] || '';
+                            return (
+                                <div className="bg-slate-50 border border-slate-100 rounded-[12px] p-2.5 flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+                                        <span className="text-slate-400">Paso {safePaso} de {totalPasos}</span>
+                                        <span className="text-indigo-600 flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
+                                            {labelActual}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                        <div
+                                            className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-[#8dc63f] transition-all duration-500"
+                                            style={{ width: `${porcentaje}%` }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        {labelsPasos.map((lbl, i) => (
+                                            <div
+                                                key={i}
+                                                className={`text-[7px] font-black uppercase tracking-widest transition-colors ${
+                                                    i + 1 < safePaso ? 'text-[#8dc63f]'
+                                                    : i + 1 === safePaso ? 'text-indigo-600'
+                                                    : 'text-slate-300'
+                                                }`}
+                                                style={{ width: `${100 / totalPasos}%`, textAlign: 'center' }}
+                                            >
+                                                {i + 1 < safePaso ? '✓' : i + 1 === safePaso ? '●' : '○'}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()
                     )}
+
 
                     {/* Historial de conversación en burbujas */}
                     <div 

@@ -181,6 +181,12 @@ export default function WebCms() {
 
                 {/* Header Premium Clean */}
                 <div className="px-8 py-8 bg-white relative shrink-0 border-b border-slate-50">
+                    <button
+                        onClick={() => navigate("/dashboard/config/datos-basicos")}
+                        className="flex items-center gap-1.5 text-[9.5px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest mb-4 transition-colors duration-300"
+                    >
+                        ← Volver a Ajustes
+                    </button>
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isSuperAdmin ? 'bg-indigo-500' : 'bg-emerald-500'} animate-pulse`} />
@@ -718,7 +724,7 @@ export default function WebCms() {
                 <div className="absolute bottom-0 left-0 w-[1000px] h-[1000px] bg-indigo-100/30 rounded-full blur-[120px] -ml-[500px] -mb-[500px]" />
 
                 {/* Monitor Frame Premium */}
-                <div className="relative w-full h-full flex flex-col items-center justify-center p-8 lg:p-12 xl:p-16 animate-in fade-in zoom-in-95 duration-700">
+                <div className="relative w-full h-full flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700">
 
                     {/* Device Switcher (Functional) */}
                     <div className="absolute top-8 right-12 flex gap-3 z-50">
@@ -743,7 +749,7 @@ export default function WebCms() {
                     <div
                         className={`
                             bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative transition-all duration-700
-                            ${viewMode === 'desktop' ? 'w-full h-full max-w-[1400px] aspect-video rounded-[2rem]' : 'w-[375px] h-[812px] rounded-[3rem] border-[14px]'}
+                            ${viewMode === 'desktop' ? 'w-full max-h-full max-w-[1400px] aspect-video rounded-[2rem]' : 'h-full max-h-full aspect-[375/812] rounded-[3rem] border-[14px]'}
                         `}
                     >
                         {/* Browser Toolbar UI */}
@@ -764,13 +770,15 @@ export default function WebCms() {
                             {config.slug || config.isMaster ? (
                                 <button
                                     onClick={() => {
-                                        const url = config.isMaster ? '/' : `/c/${config.slug}`;
+                                        const baseUrl = import.meta.env.BASE_URL;
+                                        const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                                        const url = config.isMaster ? `${cleanBase}/` : `${cleanBase}/c/${config.slug}`;
                                         window.open(url, '_blank');
                                     }}
                                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 ml-4"
                                     title={config.isMaster ? "Abrir Master" : `Abrir sitio: ${config.slug}`}
                                 >
-                                    <span className="hidden xl:inline">Ver Sitio Real</span>
+                                    <span className="hidden sm:inline">Ver Sitio Real</span>
                                     <FiExternalLink size={14} />
                                 </button>
                             ) : (
@@ -783,7 +791,7 @@ export default function WebCms() {
                                     className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-full transition-all text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 ml-4 animate-pulse cursor-pointer z-50"
                                     title="Falta configurar el Slug"
                                 >
-                                    <span className="hidden xl:inline">⚠️ Configurar URL</span>
+                                    <span className="hidden sm:inline">⚠️ Configurar URL</span>
                                     <FiGlobe size={16} />
                                 </button>
                             )}

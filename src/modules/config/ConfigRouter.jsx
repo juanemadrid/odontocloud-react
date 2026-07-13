@@ -127,6 +127,16 @@ export default function ConfigRouter() {
         }
     };
 
+    if (slug === "editor-web") {
+        return (
+            <React.Suspense fallback={<div className="p-10">Cargando módulo...</div>}>
+                <ErrorBoundary>
+                    {renderModule()}
+                </ErrorBoundary>
+            </React.Suspense>
+        );
+    }
+
     return (
         <ConfigLayout>
             <React.Suspense fallback={<div className="p-10">Cargando módulo...</div>}>

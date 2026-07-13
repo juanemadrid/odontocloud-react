@@ -61,6 +61,8 @@ export const BudgetPrintService = {
             
             const clinicName = clinic?.nombreComercial || clinic?.nombre || clinic?.name || "Clínica Odontológica";
             const clinicNit = clinic?.nit || clinic?.NIT || "---";
+            const cobertura = plan.cobertura || {};
+            const isInstitutionalPlan = cobertura.tipo === "entidad";
 
             // 2.7 Resolve Professional Name & Role (Doctor vs Admin)
             let profDisplayName = plan.profesional || "";
@@ -123,6 +125,38 @@ export const BudgetPrintService = {
                     </div>
                 </div>
             `;
+
+            const coverageHTML = isInstitutionalPlan ? `
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; padding: 18px 20px; margin-bottom: 25px;">
+                    <span style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 12px;">Cobertura / autorizacion institucional</span>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">EPS</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.epsNombre || "---"}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">Entidad</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.entidadNombre || "---"}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">Tarifa</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.tarifaNombre || "---"}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">Orden</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.ordenNumero || "---"}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">Fecha orden</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.ordenFecha || "---"}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 3px 0; font-size: 8px; color: #60a5fa; font-weight: 900; text-transform: uppercase;">Urgencia</p>
+                            <p style="margin: 0; font-size: 11px; color: #1e3a8a; font-weight: 800;">${cobertura.ordenUrgente ? "Si" : "No"}</p>
+                        </div>
+                    </div>
+                </div>
+            ` : "";
 
             const itemsTableHTML = `
                 <div style="margin-bottom: 40px;">
@@ -199,7 +233,7 @@ export const BudgetPrintService = {
             `;
 
             // 4. Assemble and Append
-            printElement.innerHTML = headerHTML + patientInfoHTML + itemsTableHTML + summaryHTML + footerHTML;
+            printElement.innerHTML = headerHTML + patientInfoHTML + coverageHTML + itemsTableHTML + summaryHTML + footerHTML;
             document.body.appendChild(printElement);
 
             // 5. Generate with html2canvas

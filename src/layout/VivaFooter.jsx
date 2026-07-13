@@ -1,10 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { FiFacebook, FiInstagram, FiLinkedin, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
 
 export default function VivaFooter({ config }) {
+    const { clinicSlug } = useParams();
     const isMaster = config?.isMaster;
-    const slug = config?.slug;
+    const slug = clinicSlug || config?.slug;
     const clinicBase = slug ? `/c/${slug}` : "";
 
     return (

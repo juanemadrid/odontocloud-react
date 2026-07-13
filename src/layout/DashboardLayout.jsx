@@ -2,10 +2,12 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
     FiHome, FiCalendar, FiUsers, FiFileText, FiBox,
-    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiSearch, FiDollarSign, FiBriefcase
+    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiSearch, FiDollarSign, FiBriefcase, FiBell, FiCheck, FiSlash, FiUser, FiMessageSquare
 } from "react-icons/fi";
 import logo from "/assets/logo.png"; // Asegúrate de que esta ruta sea correcta
 import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase/firebaseConfig";
+import { collection, query, where, onSnapshot, orderBy, limit, doc, updateDoc, addDoc } from "firebase/firestore";
 
 import { usePermissions } from "../hooks/usePermissions";
 import CommandPalette from "../components/CommandPalette";
@@ -31,7 +33,107 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [notificaciones, setNotificaciones] = useState([]);
+    const [selectedRequest, setSelectedRequest] = useState(null); // notificación seleccionada para confirmar/rechazar
+    const [processingRequest, setProcessingRequest] = useState(false);
+    const [rejectReason, setRejectReason] = useState("");
+    const inquilino = userProfile?.inquilino;
 
+    useEffect(() => {
+        if (!inquilino) return;
+        const q = query(
+            collection(db, "notificaciones"),
+            where("inquilino", "==", inquilino),
+            where("target", "==", "admin"),
+            orderBy("createdAt", "desc"),
+            limit(15)
+        );
+        const unsub = onSnapshot(q, snap => {
+            setNotificaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        return () => unsub();
+    }, [inquilino]);
+
+
+
+    const handleConfirmRequest = async () => {
+        if (!selectedRequest) return;
+        setProcessingRequest(true);
+        try {
+            // Marcar la solicitud como confirmada
+            await updateDoc(doc(db, "notificaciones", selectedRequest.id), {
+                estado: "confirmada",
+                read: true
+            });
+
+            // Notificar al paciente que su cita fue confirmada
+            await addDoc(collection(db, "notificaciones"), {
+                inquilino,
+                target: "patient",
+                title: "Cita Confirmada ✅",
+                message: `Tu solicitud de cita para el ${selectedRequest.fechaSolicitada || "la fecha solicitada"} ha sido confirmada. Pronto te contactaremos con los detalles.`,
+                type: "appointment_confirmed",
+                pacienteId: selectedRequest.pacienteId,
+                read: false,
+                createdAt: new Date().toISOString()
+            });
+
+            setSelectedRequest(null);
+            setNotificationsOpen(false);
+
+            // Navegar a la agenda y abrir el modal con datos prellenados
+            navigate(`${basePath}/agenda`);
+            // Pequeño delay para que la agenda cargue antes de disparar el evento
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent("open-new-appointment", {
+                    detail: {
+                        pacienteId: selectedRequest.pacienteId,
+                        pacienteNombre: selectedRequest.pacienteNombre || selectedRequest.message?.split(" ha solicitado")[0] || "",
+                        fecha: selectedRequest.fechaSolicitada || "",
+                        motivo: selectedRequest.motivo || "",
+                    }
+                }));
+            }, 500);
+
+        } catch (e) {
+            console.error("Error confirmando solicitud:", e);
+        } finally {
+            setProcessingRequest(false);
+        }
+    };
+
+    const handleRejectRequest = async () => {
+        if (!selectedRequest) return;
+        setProcessingRequest(true);
+        try {
+            // Marcar la solicitud como rechazada
+            await updateDoc(doc(db, "notificaciones", selectedRequest.id), {
+                estado: "rechazada",
+                read: true
+            });
+
+            // Notificar al paciente que no hay disponibilidad
+            const motivo = rejectReason.trim() || "no hay disponibilidad en esa fecha";
+            await addDoc(collection(db, "notificaciones"), {
+                inquilino,
+                target: "patient",
+                title: "Solicitud de Cita No Disponible ⚠️",
+                message: `Lo sentimos, tu solicitud de cita para el ${selectedRequest.fechaSolicitada || "la fecha solicitada"} no pudo ser confirmada porque ${motivo}. Por favor solicita otra fecha o contáctanos.`,
+                type: "appointment_rejected",
+                pacienteId: selectedRequest.pacienteId,
+                read: false,
+                createdAt: new Date().toISOString()
+            });
+
+            setSelectedRequest(null);
+            setRejectReason("");
+        } catch (e) {
+            console.error("Error rechazando solicitud:", e);
+        } finally {
+            setProcessingRequest(false);
+        }
+    };
 
     // Calculate Trial Days
     const trialDaysRemaining = useMemo(() => {
@@ -193,6 +295,35 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                             </button>
                         </div>
 
+                        {/* Notificaciones Button */}
+                        <div className="px-1 mb-4 flex justify-center">
+                            <button
+                                onClick={() => {
+                                    notificaciones.forEach(n => {
+                                        if (!n.read) updateDoc(doc(db, "notificaciones", n.id), { read: true });
+                                    });
+                                    setNotificationsOpen(true);
+                                }}
+                                className={`relative flex items-center justify-center transition-all duration-300 group shadow-sm bg-slate-100/50 hover:bg-blue-50 border border-slate-200/40 hover:border-blue-200 text-slate-400 hover:text-blue-600 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-4 py-3 rounded-xl'}`}
+                                title="Notificaciones"
+                            >
+                                <FiBell className="text-slate-400 group-hover:text-blue-600 shrink-0" size={16} />
+                                {notificaciones.some(n => !n.read) && (
+                                    <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white animate-pulse" />
+                                )}
+                                {!collapsedDesktop && (
+                                    <>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Notificaciones</span>
+                                        {notificaciones.filter(n => !n.read).length > 0 && (
+                                            <span className="ml-auto bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                                                {notificaciones.filter(n => !n.read).length}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
                         <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
                             <span className="whitespace-nowrap">Menú Principal</span>
                         </div>
@@ -286,6 +417,159 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                 </main>
             </div>
             <CommandPalette />
+
+            {/* Notifications Slide-over Panel */}
+            {notificationsOpen && (
+                <div className="fixed inset-0 z-[100] flex justify-end">
+                    {/* Backdrop overlay */}
+                    <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-xs transition-opacity" onClick={() => setNotificationsOpen(false)} />
+                    
+                    {/* Panel content */}
+                    <div className="relative w-full max-w-sm bg-white shadow-2xl flex flex-col h-full border-l border-slate-100 animate-in slide-in-from-right duration-300">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-50 bg-slate-50/50">
+                            <h2 className="font-black text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
+                                <FiBell className="text-blue-600" size={14} /> Centro de Notificaciones
+                            </h2>
+                            <button onClick={() => setNotificationsOpen(false)} className="p-1.5 rounded-xl hover:bg-slate-200/50 text-slate-400 hover:text-slate-600 transition-colors">
+                                <FiX size={18} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                            {notificaciones.length === 0 ? (
+                                <div className="text-center py-20 space-y-3">
+                                    <div className="text-4xl text-slate-300">🔔</div>
+                                    <p className="text-slate-400 text-xs italic">No hay notificaciones recientes.</p>
+                                </div>
+                            ) : (
+                                notificaciones.map(n => (
+                                    <div
+                                        key={n.id}
+                                        onClick={() => n.type === "appointment_request" && n.estado !== "confirmada" && n.estado !== "rechazada" && setSelectedRequest(n)}
+                                        className={`p-4 rounded-2xl border transition-all ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-blue-50/40 border-blue-100 shadow-sm'} ${n.type === "appointment_request" && n.estado !== "confirmada" && n.estado !== "rechazada" ? 'cursor-pointer hover:border-blue-300 hover:shadow-md' : ''}`}
+                                    >
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <h4 className="font-extrabold text-slate-800 text-[10px] uppercase tracking-wide">{n.title}</h4>
+                                            <span className="text-[9px] text-slate-400 font-bold">
+                                                {n.createdAt ? new Date(n.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-600 text-xs leading-relaxed">{n.message}</p>
+                                        {/* Badge de estado para solicitudes */}
+                                        {n.type === "appointment_request" && (
+                                            <div className="mt-2 flex items-center gap-2">
+                                                {n.estado === "confirmada" ? (
+                                                    <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">✅ Confirmada</span>
+                                                ) : n.estado === "rechazada" ? (
+                                                    <span className="text-[9px] font-black uppercase bg-red-100 text-red-700 px-2 py-0.5 rounded-full">❌ Rechazada</span>
+                                                ) : (
+                                                    <span className="text-[9px] font-black uppercase bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full animate-pulse">⏳ Pendiente — Toca para gestionar</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Gestionar Solicitud de Cita */}
+            {selectedRequest && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-blue-600 px-8 py-6 text-white">
+                            <div className="flex items-center gap-3 mb-1">
+                                <FiCalendar size={22} />
+                                <h3 className="text-lg font-black uppercase tracking-tight">Solicitud de Cita</h3>
+                            </div>
+                            <p className="text-blue-200 text-xs">Revisa los datos y decide si confirmar o rechazar</p>
+                        </div>
+
+                        {/* Datos de la solicitud */}
+                        <div className="px-8 py-6 space-y-3">
+                            <div className="bg-slate-50 rounded-2xl p-4 space-y-2.5">
+                                <div className="flex items-center gap-3">
+                                    <FiUser className="text-blue-500 shrink-0" size={16} />
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Paciente</p>
+                                        <p className="text-sm font-bold text-slate-800">{selectedRequest.pacienteNombre || selectedRequest.message?.split(" ha solicitado")[0] || "Sin nombre"}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <FiCalendar className="text-blue-500 shrink-0" size={16} />
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Fecha solicitada</p>
+                                        <p className="text-sm font-bold text-slate-800">{selectedRequest.fechaSolicitada || "Ver mensaje abajo"}</p>
+                                    </div>
+                                </div>
+                                {(selectedRequest.motivo || selectedRequest.message) && (
+                                    <div className="flex items-start gap-3">
+                                        <FiMessageSquare className="text-blue-500 shrink-0 mt-0.5" size={16} />
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Motivo / Mensaje</p>
+                                            <p className="text-sm font-bold text-slate-800">{selectedRequest.motivo || selectedRequest.message}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {selectedRequest.pacienteCelular && (
+                                    <div className="flex items-center gap-3">
+                                        <FiUsers className="text-blue-500 shrink-0" size={16} />
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Celular</p>
+                                            <p className="text-sm font-bold text-slate-800">{selectedRequest.pacienteCelular}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Motivo de rechazo (opcional) */}
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                                    Motivo de rechazo (opcional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={rejectReason}
+                                    onChange={e => setRejectReason(e.target.value)}
+                                    placeholder="Ej: No hay disponibilidad ese día..."
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Botones */}
+                        <div className="px-8 pb-8 grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => { setSelectedRequest(null); setRejectReason(""); }}
+                                className="px-4 py-3 rounded-2xl border-2 border-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider hover:bg-slate-50 transition-all"
+                            >
+                                Cerrar
+                            </button>
+                            <button
+                                onClick={handleRejectRequest}
+                                disabled={processingRequest}
+                                className="px-4 py-3 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-black text-xs uppercase tracking-wider hover:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <FiSlash size={14} /> Rechazar
+                            </button>
+                            <button
+                                onClick={handleConfirmRequest}
+                                disabled={processingRequest}
+                                className="col-span-2 px-4 py-3.5 rounded-2xl bg-emerald-600 text-white font-black text-sm uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 disabled:opacity-50"
+                            >
+                                {processingRequest ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <><FiCheck size={16} /> Confirmar y ver Agenda</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

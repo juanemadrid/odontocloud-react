@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import { auth, db } from "../firebase/firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { DEV_BYPASS_ENABLED, OFFLINE_SESSION_ENABLED } from "../config/runtimeFlags";
 
 const AuthContext = createContext({
     user: null,          // Firebase User
@@ -13,6 +14,8 @@ const AuthContext = createContext({
 export const useAuth = () => useContext(AuthContext);
 
 const getOfflineSession = () => {
+    if (!OFFLINE_SESSION_ENABLED) return null;
+
     try {
         const data = JSON.parse(localStorage.getItem("odc_session"));
         if (data && Date.now() - data.timestamp < 1000 * 60 * 60 * 24) return data;
@@ -30,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     // --- EFFECT 1: Auth state change ---
     useEffect(() => {
         const s = getOfflineSession();
-        if (s && (s.email === "admin_test@odontocloud.com" || s.email === "diegomadrid_doc@odontocloud.com" || s.email === "mariarroyo@hotmail.com")) {
+        if (DEV_BYPASS_ENABLED && s && (s.email === "admin_test@odontocloud.com" || s.email === "diegomadrid_doc@odontocloud.com" || s.email === "mariarroyo@hotmail.com")) {
             setUser({ 
                 email: s.email, 
                 uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : s.email === "mariarroyo@hotmail.com" ? 'msn3SgNfgThmyBkbVN3dRtTWbAf1' : 'offline-mock-uid' 
@@ -159,7 +162,7 @@ export const AuthProvider = ({ children }) => {
                 }
             } else {
                 const s = getOfflineSession();
-                if (s && !navigator.onLine) {
+                if (OFFLINE_SESSION_ENABLED && s && !navigator.onLine) {
                     setUser({ email: s.email, uid: 'offline-mock-uid' });
                     setUserProfile({
                         uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : 'offline-mock-uid',

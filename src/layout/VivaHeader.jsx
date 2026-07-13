@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/landing.css";
 import "../styles/inner.css";
@@ -26,7 +26,8 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
     const [scrolled, setScrolled] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const location = useLocation();
-    const slug = config?.slug;
+    const { clinicSlug } = useParams();
+    const slug = clinicSlug || config?.slug;
     const clinicBase = slug ? `/c/${slug}` : "";
 
     // FAIL-SAFE: Never render on dashboard/superadmin routes

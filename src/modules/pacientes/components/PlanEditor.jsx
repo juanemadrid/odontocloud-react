@@ -20,7 +20,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         nombreCompleto: watchPatient("nombreCompleto") || dbPatient?.nombreCompleto,
         nroDocumento: watchPatient("nroDocumento") || dbPatient?.nroDocumento,
         celular: watchPatient("celular") || dbPatient?.celular,
-        email: watchPatient("email") || dbPatient?.email
+        email: watchPatient("email") || dbPatient?.email,
+        nombreEps: watchPatient("nombreEps") || dbPatient?.nombreEps,
+        convenioBeneficio: watchPatient("convenioBeneficio") || dbPatient?.convenioBeneficio
     };
 
     const isEditing = !!initialData?.id;
@@ -33,6 +35,17 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     // Items state
     const [items, setItems] = useState(initialData?.items || []);
     const [obs, setObs] = useState(initialData?.observaciones || "");
+    const [cobertura, setCobertura] = useState(() => ({
+        tipo: initialData?.cobertura?.tipo || (patient?.nombreEps || patient?.convenioBeneficio ? "entidad" : "particular"),
+        epsNombre: initialData?.cobertura?.epsNombre || patient?.nombreEps || "",
+        entidadId: initialData?.cobertura?.entidadId || "",
+        entidadNombre: initialData?.cobertura?.entidadNombre || patient?.convenioBeneficio || "",
+        tarifaId: initialData?.cobertura?.tarifaId || "",
+        tarifaNombre: initialData?.cobertura?.tarifaNombre || "",
+        ordenNumero: initialData?.cobertura?.ordenNumero || "",
+        ordenFecha: initialData?.cobertura?.ordenFecha || "",
+        ordenUrgente: initialData?.cobertura?.ordenUrgente || false
+    }));
 
     const [evolutions, setEvolutions] = useState([]);
     const [payments, setPayments] = useState([]);
@@ -446,6 +459,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 profesionalId: initialData?.profesionalId || "",
                 vigencia: initialData?.vigencia || 30,
                 observaciones: obs,
+                cobertura,
                 inquilino: inquilino || patient?.inquilino || "",
                 baseListId: baseListId || null,
                 convertedAt: new Date()
@@ -495,6 +509,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 profesionalId: initialData?.profesionalId || "",
                 vigencia: initialData?.vigencia || 30,
                 observaciones: obs,
+                cobertura,
                 inquilino: inquilino || patient?.inquilino || "",
                 baseListId: baseListId // Persistir el tarifario usado
             };
@@ -559,7 +574,8 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             date: initialData?.date || new Date(),
             type: initialData?.type || "presupuesto",
             profesional: initialData?.profesional || userProfile?.nombre || userProfile?.nombreCompleto || "",
-            observaciones: obs
+            observaciones: obs,
+            cobertura
         };
 
         await BudgetPrintService.generatePDF(planData, patient, clinic, userProfile);
@@ -682,6 +698,91 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             </div>
                         </div>
                     )}
+                    <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
+                        <div className="bg-slate-50/50 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-blue-500">
+                                    <FiInfo size={14} />
+                                </div>
+                                <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Modalidad administrativa del plan</h5>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => setCobertura({ ...cobertura, tipo: "particular" })}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${cobertura.tipo === "particular" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"}`}
+                                >
+                                    Particular
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCobertura({ ...cobertura, tipo: "entidad" })}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${cobertura.tipo === "entidad" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-500 border-slate-200 hover:border-blue-200"}`}
+                                >
+                                    EPS / convenio
+                                </button>
+                            </div>
+                        </div>
+
+                        {cobertura.tipo === "entidad" && (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-5 animate-fadeIn">
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">EPS</label>
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-300"
+                                        value={cobertura.epsNombre}
+                                        onChange={(e) => setCobertura({ ...cobertura, epsNombre: e.target.value })}
+                                        placeholder="EPS"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Entidad</label>
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-300"
+                                        value={cobertura.entidadNombre}
+                                        onChange={(e) => setCobertura({ ...cobertura, entidadNombre: e.target.value })}
+                                        placeholder="Entidad responsable"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tarifa</label>
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-300"
+                                        value={cobertura.tarifaNombre}
+                                        onChange={(e) => setCobertura({ ...cobertura, tarifaNombre: e.target.value })}
+                                        placeholder="Tarifario"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Orden</label>
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-300"
+                                        value={cobertura.ordenNumero}
+                                        onChange={(e) => setCobertura({ ...cobertura, ordenNumero: e.target.value })}
+                                        placeholder="Autorizacion"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha de orden</label>
+                                    <input
+                                        type="date"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-300"
+                                        value={cobertura.ordenFecha}
+                                        onChange={(e) => setCobertura({ ...cobertura, ordenFecha: e.target.value })}
+                                    />
+                                </div>
+                                <label className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[9px] font-black text-slate-500 uppercase tracking-widest md:col-span-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={cobertura.ordenUrgente}
+                                        onChange={(e) => setCobertura({ ...cobertura, ordenUrgente: e.target.checked })}
+                                        className="accent-blue-600"
+                                    />
+                                    Orden por urgencia
+                                </label>
+                            </div>
+                        )}
+                    </div>
                     <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
                         
                         {/* Header Table Stylized */}

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getPlansByPatient, deletePlan } from '../../../services/planService';
 import { getPatientById } from '../../../services/patientService';
-import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX, FiAlertCircle } from "react-icons/fi";
+import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX, FiAlertCircle, FiShield, FiCheckCircle } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
 import { db } from '../../../firebase/firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditingPlan }) {
     const patientId = patient?.id;
@@ -28,14 +28,24 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         nombre: '',
         profesional: userProfile?.nombreCompleto || `${userProfile?.nombre || ''} ${userProfile?.apellido || ''}`.trim() || '',
         vigencia: 30,
-        observaciones: ''
+        observaciones: '',
+        paymentMode: 'particular',
+        epsName: '',
+        entidadId: '',
+        tarifaId: '',
+        ordenNumero: '',
+        ordenFecha: '',
+        ordenUrgente: false
     });
     
     const [profesionalesDropdown, setProfesionalesDropdown] = useState([]);
+    const [entidades, setEntidades] = useState([]);
+    const [tarifas, setTarifas] = useState([]);
 
     useEffect(() => {
         loadData();
         loadProfesionales();
+        loadInstitutionalCatalogs();
     }, [patientId, refreshKey]);
 
     const loadData = async () => {
@@ -79,6 +89,21 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
             setProfesionalesDropdown([...new Set(profs)]);
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const loadInstitutionalCatalogs = async () => {
+        if (!userProfile?.inquilino) return;
+        try {
+            const [entidadesSnap, tarifasSnap] = await Promise.all([
+                getDocs(query(collection(db, "entidades"), where("inquilino", "==", userProfile.inquilino))),
+                getDocs(query(collection(db, "listas_precios"), where("inquilino", "==", userProfile.inquilino)))
+            ]);
+
+            setEntidades(entidadesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setTarifas(tarifasSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (e) {
+            console.error("Error loading institutional catalogs:", e);
         }
     };
 
@@ -126,20 +151,43 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     };
 
     const currentUserFullName = userProfile?.nombreCompleto || `${userProfile?.nombre || ''} ${userProfile?.apellido || ''}`.trim() || userProfile?.displayName || '';
+    const hasInstitutionalContext = Boolean(userProfile?.tenant?.esIps || patient?.nombreEps || patient?.convenioBeneficio || entidades.length > 0);
 
     const openModal = (type) => {
+        const defaultPaymentMode = hasInstitutionalContext ? 'entidad' : 'particular';
         setModalType(type);
         setFormData({
             nombre: '',
             profesional: currentUserFullName || (profesionalesDropdown.length > 0 ? profesionalesDropdown[0] : ''),
             vigencia: 30,
-            observaciones: ''
+            observaciones: '',
+            paymentMode: defaultPaymentMode,
+            epsName: patient?.nombreEps || patient?.eps || '',
+            entidadId: '',
+            tarifaId: '',
+            ordenNumero: '',
+            ordenFecha: '',
+            ordenUrgente: false
         });
         setShowModal(true);
     };
 
     const handleCreateSubmit = (e) => {
         e.preventDefault();
+        const selectedEntidad = entidades.find(ent => ent.id === formData.entidadId);
+        const selectedTarifa = tarifas.find(tarifa => tarifa.id === formData.tarifaId);
+        const cobertura = {
+            tipo: formData.paymentMode,
+            epsNombre: formData.paymentMode === 'entidad' ? formData.epsName : '',
+            entidadId: formData.paymentMode === 'entidad' ? formData.entidadId : '',
+            entidadNombre: formData.paymentMode === 'entidad' ? (selectedEntidad?.nombre || selectedEntidad?.name || selectedEntidad?.razonSocial || '') : '',
+            tarifaId: formData.paymentMode === 'entidad' ? formData.tarifaId : '',
+            tarifaNombre: formData.paymentMode === 'entidad' ? (selectedTarifa?.nombre || selectedTarifa?.name || '') : '',
+            ordenNumero: formData.paymentMode === 'entidad' ? formData.ordenNumero : '',
+            ordenFecha: formData.paymentMode === 'entidad' ? formData.ordenFecha : '',
+            ordenUrgente: formData.paymentMode === 'entidad' ? formData.ordenUrgente : false
+        };
+
         setShowModal(false);
         // Start edit mode with initial data
         setEditingPlan({
@@ -148,6 +196,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
             profesionalId: formData.profesional,
             vigencia: modalType === 'presupuesto' ? formData.vigencia : null,
             observaciones: formData.observaciones,
+            cobertura,
             items: []
         });
         onNew(); // Switches PresupuestosTab to 'create/edit' mode
@@ -188,6 +237,21 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
 
     const presupuestos = plans.filter(p => !p.type || p.type === 'presupuesto'); // Fallback viejo a presupuesto
     const planesTrat = plans.filter(p => p.type === 'plan');
+
+    const handleFinalizarPlan = async (e, plan) => {
+        e.stopPropagation();
+        if (plan.finalizado) {
+            // Reactivar
+            await updateDoc(doc(db, "treatment_plans", plan.id), { finalizado: false, fechaFinalizacion: null });
+            toast.success("Plan reactivado");
+        } else {
+            await updateDoc(doc(db, "treatment_plans", plan.id), { finalizado: true, fechaFinalizacion: new Date().toISOString() });
+            toast.success("Plan marcado como finalizado ✅");
+        }
+        // Reload plans
+        const snap = await getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patientId)));
+        setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    };
 
     if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Cargando registros...</div>;
 
@@ -363,6 +427,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 <FiPrinter size={14} />
                                             </button>
                                             <button 
+                                                onClick={(e) => handleFinalizarPlan(e, p)}
+                                                className={`p-2 rounded-lg transition-all shadow-sm ${p.finalizado ? 'bg-amber-50 text-amber-500 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}
+                                                title={p.finalizado ? "Reactivar plan" : "Marcar como finalizado"}
+                                            >
+                                                <FiCheckCircle size={14} />
+                                            </button>
+                                            <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
                                                 className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm" 
                                                 title="Eliminar"
@@ -429,6 +500,104 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                     />
                                 </div>
                             )}
+
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-widest">
+                                        <FiShield className="text-blue-500" />
+                                        Modalidad de pago
+                                    </div>
+                                    {hasInstitutionalContext && (
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-2 py-1 rounded-full">
+                                            IPS / convenio disponible
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, paymentMode: 'particular' })}
+                                        className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${formData.paymentMode === 'particular' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                                    >
+                                        Particular
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, paymentMode: 'entidad' })}
+                                        className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${formData.paymentMode === 'entidad' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
+                                    >
+                                        EPS / convenio
+                                    </button>
+                                </div>
+
+                                {formData.paymentMode === 'entidad' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fadeIn">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">EPS</label>
+                                            <input
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 text-xs font-bold text-slate-700"
+                                                value={formData.epsName}
+                                                onChange={(e) => setFormData({ ...formData, epsName: e.target.value })}
+                                                placeholder="Nombre de EPS"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Entidad</label>
+                                            <select
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 text-xs font-bold text-slate-700"
+                                                value={formData.entidadId}
+                                                onChange={(e) => setFormData({ ...formData, entidadId: e.target.value })}
+                                            >
+                                                <option value="">Seleccione...</option>
+                                                {entidades.map(ent => (
+                                                    <option key={ent.id} value={ent.id}>{ent.nombre || ent.name || ent.razonSocial || ent.id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tarifa</label>
+                                            <select
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 text-xs font-bold text-slate-700"
+                                                value={formData.tarifaId}
+                                                onChange={(e) => setFormData({ ...formData, tarifaId: e.target.value })}
+                                            >
+                                                <option value="">Seleccione...</option>
+                                                {tarifas.map(tarifa => (
+                                                    <option key={tarifa.id} value={tarifa.id}>{tarifa.nombre || tarifa.name || tarifa.id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orden</label>
+                                            <input
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 text-xs font-bold text-slate-700"
+                                                value={formData.ordenNumero}
+                                                onChange={(e) => setFormData({ ...formData, ordenNumero: e.target.value })}
+                                                placeholder="Numero de autorizacion"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha de la orden</label>
+                                            <input
+                                                type="date"
+                                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 text-xs font-bold text-slate-700"
+                                                value={formData.ordenFecha}
+                                                onChange={(e) => setFormData({ ...formData, ordenFecha: e.target.value })}
+                                            />
+                                        </div>
+                                        <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.ordenUrgente}
+                                                onChange={(e) => setFormData({ ...formData, ordenUrgente: e.target.checked })}
+                                                className="accent-blue-600"
+                                            />
+                                            Orden por urgencia
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
 
                             <div>
                                 <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Observaciones</label>

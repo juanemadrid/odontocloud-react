@@ -114,6 +114,10 @@ export default function AppointmentModal({
                 f = `${y}-${m}-${d}`;
                 h = String(initialData.start.getHours()).padStart(2, '0') + ":" + String(initialData.start.getMinutes()).padStart(2, '0');
             }
+            // Soporte para fecha directa como string (ej. desde notificación de cita)
+            if (!f && initialData.fecha) {
+                f = initialData.fecha;
+            }
 
             reset({
                 isNewPatient: false,
@@ -231,6 +235,8 @@ export default function AppointmentModal({
             const [hh, mm] = data.hora.split(":").map(Number);
             const start = new Date(y, m - 1, d, hh, mm);
             const end = new Date(start.getTime() + data.duracion * 60000);
+            // Asegurar que horaInicio esté siempre presente para que la agenda lo muestre
+            data.horaInicio = data.hora;
 
             // Import Firebase Firestore dynamically
             const { collection: firestoreCollection, query: firestoreQuery, where, getDocs } = await import('firebase/firestore');
