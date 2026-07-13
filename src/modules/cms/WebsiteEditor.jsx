@@ -53,6 +53,17 @@ export default function WebCms() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Sync state to localStorage for the iframe preview
+    useEffect(() => {
+        try {
+            localStorage.setItem("odc_cms_preview_config", JSON.stringify(config));
+            localStorage.setItem("odc_cms_preview_active_tab", activeTab);
+            localStorage.setItem("odc_cms_preview_is_master", String(isSuperAdmin));
+        } catch (e) {
+            console.warn("Error writing preview config to localStorage:", e);
+        }
+    }, [config, activeTab, isSuperAdmin]);
+
     useEffect(() => {
         if (!userProfile) return;
         // If not super admin and no tenant ID, show error state (handled in render)
@@ -755,7 +766,7 @@ export default function WebCms() {
                     <div
                         className={`
                             bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative transition-all duration-700
-                            ${viewMode === 'desktop' ? 'w-full max-h-full max-w-[1400px] aspect-video rounded-[2rem]' : 'h-full max-h-full aspect-[375/812] rounded-[3rem] border-[14px]'}
+                            ${viewMode === 'desktop' ? 'w-full max-h-full max-w-[1400px] aspect-video rounded-[2rem]' : 'w-[390px] h-[90%] max-h-[812px] rounded-[3rem] border-[14px]'}
                         `}
                     >
                         {/* Browser Toolbar UI */}
@@ -803,21 +814,13 @@ export default function WebCms() {
                             )}
                         </div>
 
-                        {/* Content Scrollable */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white relative">
-                            <div className={`min-h-full origin-top ${viewMode === 'mobile' ? 'w-full' : ''}`}>
-                                <VivaHeader config={config} isPreview={true} />
-                                <div className="p-0 transition-opacity duration-500">
-                                    {(activeTab === 'identity' || activeTab === 'team') ? (
-                                        <IdentitySection config={config} />
-                                    ) : activeTab === 'services' ? (
-                                        <ServicesSection config={config} />
-                                    ) : (
-                                        <ModernLanding previewConfig={config} isMaster={isSuperAdmin} />
-                                    )}
-                                </div>
-                                <VivaFooter config={{ ...config, isMaster: isSuperAdmin }} />
-                            </div>
+                        {/* Content Scrollable / Responsive Iframe Preview */}
+                        <div className="flex-1 bg-white relative overflow-hidden">
+                            <iframe
+                                src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
+                                className="w-full h-full border-none"
+                                title="OdontoCloud CMS Preview"
+                            />
                         </div>
                     </div>
 

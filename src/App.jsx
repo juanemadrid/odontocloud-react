@@ -15,6 +15,7 @@ import Servicios from "./pages/Servicios"; // Restored dedicated page
 import Planes from "./pages/Planes"; // Restored dedicated page
 import { FAQPage } from "./pages/SectionPages";
 import PatientPortal from "./modules/portal/PatientPortal";
+import CmsPreview from "./pages/CmsPreview";
 
 // Lazy Imports
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -63,6 +64,9 @@ export default function App() {
 
         {/* Portal Page - Standalone */}
         <Route path="/c/:clinicSlug/portal" element={<PatientPortal />} />
+
+        {/* CMS Preview Standalone Route */}
+        <Route path="/preview" element={<CmsPreview />} />
 
         {/* Modern Landing Layout */}
         <Route element={<ModernLayout />}>
