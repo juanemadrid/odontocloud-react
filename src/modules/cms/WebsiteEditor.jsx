@@ -717,34 +717,40 @@ export default function WebCms() {
             </div>
 
             {/* PREVIEW PANEL (Right) */}
-            <div className="flex-1 h-full bg-[#F1F5F9] relative overflow-hidden flex flex-col items-center justify-center">
-
-                {/* Background Decoration */}
-                <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-white/40 rounded-full blur-[120px] -mr-[500px] -mt-[500px]" />
-                <div className="absolute bottom-0 left-0 w-[1000px] h-[1000px] bg-indigo-100/30 rounded-full blur-[120px] -ml-[500px] -mb-[500px]" />
-
-                {/* Monitor Frame Premium */}
-                <div className="relative w-full h-full flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700">
-
+            <div className="flex-1 h-full bg-[#F1F5F9] relative overflow-hidden flex flex-col">
+                
+                {/* Top Control Bar / Preview Header */}
+                <div className="h-14 px-8 flex items-center justify-between bg-white border-b border-slate-200 shrink-0 z-50 relative">
+                    <div className="flex items-center gap-2">
+                        <FiMonitor className="text-slate-400" size={14} />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vista Previa del Sitio</span>
+                    </div>
                     {/* Device Switcher (Functional) */}
-                    <div className="absolute top-8 right-12 flex gap-3 z-50">
+                    <div className="flex gap-2">
                         <div
                             onClick={() => setViewMode("desktop")}
-                            className={`p-3 rounded-2xl shadow-lg border cursor-pointer transition-colors group relative ${viewMode === 'desktop' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-600 border-slate-200 hover:bg-indigo-50'}`}
+                            className={`p-2 rounded-xl border cursor-pointer transition-all duration-300 flex items-center justify-center gap-1.5 ${viewMode === 'desktop' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600 hover:bg-slate-50'}`}
                             title="Vista de Escritorio"
                         >
-                            <FiMonitor size={20} />
-                            <span className="absolute top-full mt-2 right-0 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Vista PC</span>
+                            <FiMonitor size={14} />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Escritorio</span>
                         </div>
                         <div
                             onClick={() => setViewMode("mobile")}
-                            className={`p-3 rounded-2xl shadow-lg border cursor-pointer transition-colors group relative ${viewMode === 'mobile' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'}`}
+                            className={`p-2 rounded-xl border cursor-pointer transition-all duration-300 flex items-center justify-center gap-1.5 ${viewMode === 'mobile' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600 hover:bg-slate-50'}`}
                             title="Vista Móvil"
                         >
-                            <FiSmartphone size={20} />
-                            <span className="absolute top-full mt-2 right-0 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Vista Móvil</span>
+                            <FiSmartphone size={14} />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Móvil</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Preview Frame Container */}
+                <div className="flex-1 relative overflow-hidden flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700">
+                    {/* Background Decoration */}
+                    <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-white/40 rounded-full blur-[120px] -mr-[500px] -mt-[500px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-[1000px] h-[1000px] bg-indigo-100/30 rounded-full blur-[120px] -ml-[500px] -mb-[500px] pointer-events-none" />
 
                     <div
                         className={`
@@ -775,7 +781,7 @@ export default function WebCms() {
                                         const url = config.isMaster ? `${cleanBase}/` : `${cleanBase}/c/${config.slug}`;
                                         window.open(url, '_blank');
                                     }}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 ml-4"
+                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 ml-4 shrink-0"
                                     title={config.isMaster ? "Abrir Master" : `Abrir sitio: ${config.slug}`}
                                 >
                                     <span className="hidden sm:inline">Ver Sitio Real</span>
@@ -788,7 +794,7 @@ export default function WebCms() {
                                             navigate("/dashboard/config/empresa");
                                         }
                                     }}
-                                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-full transition-all text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 ml-4 animate-pulse cursor-pointer z-50"
+                                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-full transition-all text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 ml-4 animate-pulse cursor-pointer z-50 shrink-0"
                                     title="Falta configurar el Slug"
                                 >
                                     <span className="hidden sm:inline">⚠️ Configurar URL</span>
