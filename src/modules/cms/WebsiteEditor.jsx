@@ -763,66 +763,115 @@ export default function WebCms() {
                     <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-white/40 rounded-full blur-[120px] -mr-[500px] -mt-[500px] pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[1000px] h-[1000px] bg-indigo-100/30 rounded-full blur-[120px] -ml-[500px] -mb-[500px] pointer-events-none" />
 
-                    <div
-                        className={`
-                            bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative transition-all duration-700
-                            ${viewMode === 'desktop' ? 'w-full max-h-full max-w-[1400px] aspect-video rounded-[2rem]' : 'w-[390px] h-[90%] max-h-[812px] rounded-[3rem] border-[14px]'}
-                        `}
-                    >
-                        {/* Browser Toolbar UI */}
-                        <div className="bg-slate-800 h-10 flex items-center px-8 gap-4 border-b border-slate-700 shrink-0 justify-between">
-                            <div className="flex gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                    {viewMode === 'desktop' ? (
+                        /* DESKTOP BROWSER FRAME */
+                        <div className="w-full max-h-full max-w-[1400px] aspect-video bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative rounded-[2rem] transition-all duration-700">
+                            {/* Browser Toolbar UI */}
+                            <div className="bg-slate-800 h-10 flex items-center px-8 gap-4 border-b border-slate-700 shrink-0 justify-between">
+                                <div className="flex gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                                </div>
+
+                                <div className="flex-1 flex justify-center px-4">
+                                    <div className="flex items-center bg-slate-700/50 px-6 py-1 rounded-full text-[9px] font-black text-slate-400 tracking-[0.2em] w-full max-w-[400px] justify-center gap-3 border border-slate-600/30 overflow-hidden text-ellipsis whitespace-nowrap">
+                                        <span className="text-indigo-400 opacity-80">HTTPS://</span>PORTAL.ODONTOCLOUD.PRO
+                                    </div>
+                                </div>
+
+                                {/* Open Live Button */}
+                                {config.slug || config.isMaster ? (
+                                    <button
+                                        onClick={() => {
+                                            const baseUrl = import.meta.env.BASE_URL;
+                                            const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                                            const url = config.isMaster ? `${cleanBase}/` : `${cleanBase}/c/${config.slug}`;
+                                            window.open(url, '_blank');
+                                        }}
+                                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 ml-4 shrink-0"
+                                        title={config.isMaster ? "Abrir Master" : `Abrir sitio: ${config.slug}`}
+                                    >
+                                        <span className="hidden sm:inline">Ver Sitio Real</span>
+                                        <FiExternalLink size={14} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm("⚠️ No tienes un 'Identificador URL' configurado para tu clínica.\n\n¿Quieres ir a 'Datos Básicos' para configurarlo ahora?")) {
+                                                navigate("/dashboard/config/empresa");
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-full transition-all text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 ml-4 animate-pulse cursor-pointer z-50 shrink-0"
+                                        title="Falta configurar el Slug"
+                                    >
+                                        <span className="hidden sm:inline">⚠️ Configurar URL</span>
+                                        <FiGlobe size={16} />
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="flex-1 flex justify-center px-4">
-                                <div className="flex items-center bg-slate-700/50 px-6 py-1 rounded-full text-[9px] font-black text-slate-400 tracking-[0.2em] w-full max-w-[400px] justify-center gap-3 border border-slate-600/30 overflow-hidden text-ellipsis whitespace-nowrap">
-                                    <span className="text-indigo-400 opacity-80">HTTPS://</span>PORTAL.ODONTOCLOUD.PRO
+                            {/* Content Scrollable / Responsive Iframe Preview */}
+                            <div className="flex-1 bg-white relative overflow-hidden">
+                                <iframe
+                                    src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
+                                    className="w-full h-full border-none"
+                                    title="OdontoCloud CMS Preview"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        /* MOBILE PHONE FRAME */
+                        <div className="w-[375px] h-[90%] max-h-[812px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700">
+                            
+                            {/* Mobile Status Bar (Notch + Time + Icons) */}
+                            <div className="bg-slate-50 h-9 flex items-center justify-between px-6 shrink-0 relative select-none">
+                                <span className="text-[10px] font-bold text-slate-800">9:41</span>
+                                
+                                {/* Dynamic Island Mock */}
+                                <div className="w-20 h-4 bg-black rounded-full absolute left-1/2 -translate-x-1/2 top-2.5" />
+                                
+                                <div className="flex items-center gap-1.5 text-slate-800">
+                                    {/* Signal icon */}
+                                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                        <path d="M2 22h20V2z" />
+                                    </svg>
+                                    {/* Wifi icon */}
+                                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                        <path d="M12 21l-12-14.3c.4-.3 4.8-3.7 12-3.7s11.6 3.4 12 3.7l-12 14.3z" />
+                                    </svg>
+                                    {/* Battery icon */}
+                                    <div className="w-5 h-2.5 border border-current rounded-sm p-0.5 flex items-center">
+                                        <div className="w-full h-full bg-current rounded-[1px]" />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Open Live Button */}
-                            {config.slug || config.isMaster ? (
-                                <button
-                                    onClick={() => {
-                                        const baseUrl = import.meta.env.BASE_URL;
-                                        const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-                                        const url = config.isMaster ? `${cleanBase}/` : `${cleanBase}/c/${config.slug}`;
-                                        window.open(url, '_blank');
-                                    }}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 ml-4 shrink-0"
-                                    title={config.isMaster ? "Abrir Master" : `Abrir sitio: ${config.slug}`}
-                                >
-                                    <span className="hidden sm:inline">Ver Sitio Real</span>
-                                    <FiExternalLink size={14} />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm("⚠️ No tienes un 'Identificador URL' configurado para tu clínica.\n\n¿Quieres ir a 'Datos Básicos' para configurarlo ahora?")) {
-                                            navigate("/dashboard/config/empresa");
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-full transition-all text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 ml-4 animate-pulse cursor-pointer z-50 shrink-0"
-                                    title="Falta configurar el Slug"
-                                >
-                                    <span className="hidden sm:inline">⚠️ Configurar URL</span>
-                                    <FiGlobe size={16} />
-                                </button>
-                            )}
-                        </div>
+                            {/* Mobile Browser Address Bar (Safari Style) */}
+                            <div className="bg-slate-50 h-11 flex items-center justify-center px-4 border-b border-slate-200/50 shrink-0">
+                                <div className="bg-slate-200/60 w-full h-7.5 rounded-lg flex items-center justify-center text-[10px] text-slate-600 gap-1.5 font-sans">
+                                    <svg className="w-2.5 h-2.5 text-slate-400 fill-current" viewBox="0 0 24 24">
+                                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                                    </svg>
+                                    <span>portal.odontocloud.pro</span>
+                                </div>
+                            </div>
 
-                        {/* Content Scrollable / Responsive Iframe Preview */}
-                        <div className="flex-1 bg-white relative overflow-hidden">
-                            <iframe
-                                src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
-                                className="w-full h-full border-none"
-                                title="OdontoCloud CMS Preview"
-                            />
+                            {/* Content / Responsive Iframe Preview */}
+                            <div className="flex-1 bg-white relative overflow-hidden">
+                                <iframe
+                                    src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
+                                    className="w-full h-full border-none"
+                                    title="OdontoCloud CMS Preview Mobile"
+                                />
+                            </div>
+
+                            {/* Mobile Home Swipe Indicator Bar */}
+                            <div className="bg-white h-5 flex justify-center items-center shrink-0 select-none pb-1.5">
+                                <div className="w-28 h-1 bg-slate-800 rounded-full" />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Monitor Stand - Discrete (Only show in Desktop) */}
                     {viewMode === 'desktop' && (
