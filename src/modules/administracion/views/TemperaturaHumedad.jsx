@@ -63,6 +63,20 @@ export default function TemperaturaHumedad() {
   const [appliedStartDate, setAppliedStartDate] = useState(startDate);
   const [appliedEndDate, setAppliedEndDate] = useState(endDate);
 
+  // Graph tab filters matching OralDrive
+  const [graphUbicacion, setGraphUbicacion] = useState("");
+  const [graphStartDate, setGraphStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toLocaleDateString("en-CA"); // One month ago: YYYY-MM-DD
+  });
+  const [graphEndDate, setGraphEndDate] = useState(() => {
+    return new Date().toLocaleDateString("en-CA"); // Today: YYYY-MM-DD
+  });
+  const [appliedGraphUbicacion, setAppliedGraphUbicacion] = useState("");
+  const [appliedGraphStartDate, setAppliedGraphStartDate] = useState(graphStartDate);
+  const [appliedGraphEndDate, setAppliedGraphEndDate] = useState(graphEndDate);
+
   useEffect(() => {
     if (inquilino) {
       loadLocations();
@@ -258,8 +272,15 @@ export default function TemperaturaHumedad() {
 
   // Recharts Chart Data Prep
   const chartData = [...mediciones]
-    .filter(m => !filterUbicacion || m.ubicacionId === filterUbicacion)
-    .slice(0, 15) // Last 15 measurements
+    .filter(m => {
+      const matchLoc = appliedGraphUbicacion ? m.ubicacionId === appliedGraphUbicacion : true;
+      if (!matchLoc) return false;
+
+      const mDate = m.fechaMedida ? m.fechaMedida.substring(0, 10) : "";
+      const isWithinDateRange = (!appliedGraphStartDate || mDate >= appliedGraphStartDate) && (!appliedGraphEndDate || mDate <= appliedGraphEndDate);
+      return isWithinDateRange;
+    })
+    .slice(0, 15) // Last 15 measurements in that range
     .reverse() // Chronological order
     .map(m => {
       let displayName = "";
@@ -742,21 +763,64 @@ export default function TemperaturaHumedad() {
         {/* --- VIEW: GRAFICAR MEDICIONES --- */}
         {activeSubTab === "GRAFICAR" && (
           <div className="flex-1 flex flex-col animate-fadeIn space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Mediciones / Gráfica</span>
-                <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Historial Gráfico</h3>
+            
+            {/* Filters Card */}
+            <div className="bg-slate-50/50 border border-slate-100 p-6 rounded-2xl">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Gráficos</h3>
+                <span className="text-[10px] font-bold text-slate-400">
+                  Temperatura y Humedad - Gráficos
+                </span>
               </div>
-              <select
-                value={filterUbicacion}
-                onChange={(e) => setFilterUbicacion(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
-              >
-                <option value="">Todas las Ubicaciones</option>
-                {locations.map(loc => (
-                  <option key={loc.id} value={loc.id}>{loc.nombre}</option>
-                ))}
-              </select>
+              
+              <div className="flex flex-wrap items-end gap-6">
+                {/* Location Select */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Ubicación *</label>
+                  <select
+                    required
+                    value={graphUbicacion}
+                    onChange={(e) => setGraphUbicacion(e.target.value)}
+                    className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all min-w-[200px]"
+                  >
+                    <option value="">Seleccione...</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha inicial</label>
+                  <input
+                    type="date"
+                    value={graphStartDate}
+                    onChange={(e) => setGraphStartDate(e.target.value)}
+                    className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha final</label>
+                  <input
+                    type="date"
+                    value={graphEndDate}
+                    onChange={(e) => setGraphEndDate(e.target.value)}
+                    className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setAppliedGraphUbicacion(graphUbicacion);
+                    setAppliedGraphStartDate(graphStartDate);
+                    setAppliedGraphEndDate(graphEndDate);
+                  }}
+                  className="h-10 px-8 rounded-xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100"
+                >
+                  Buscar
+                </button>
+              </div>
             </div>
 
             {chartData.length === 0 ? (

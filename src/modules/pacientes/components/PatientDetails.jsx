@@ -457,7 +457,7 @@ const FormDatosPersonales = ({ patient, photoState }) => {
             </div>
 
             {/* 2. RIGHT COLUMN: PHOTO & STATUS */}
-            <div className="w-full lg:w-80 shrink-0 space-y-6">
+            <div className="w-full lg:w-80 shrink-0 space-y-6 lg:sticky lg:top-8 self-start">
                 <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm flex flex-col items-center">
                     <div className="w-48 h-48 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden mb-6 group relative">
                         {isCameraActive ? (
@@ -807,6 +807,25 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         }
         onClose();
     };
+
+    // Sync unsaved changes flag with global window object and handle page exit
+    useEffect(() => {
+        const isDirty = methods.formState.isDirty;
+        window.hasUnsavedChanges = isDirty;
+
+        const handleBeforeUnload = (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            window.hasUnsavedChanges = false;
+        };
+    }, [methods.formState.isDirty]);
 
     // Make sure we update if initialData changes or loads directly
     useEffect(() => {

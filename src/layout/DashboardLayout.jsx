@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
     FiHome, FiCalendar, FiUsers, FiFileText, FiBox,
-    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiSearch, FiDollarSign, FiBriefcase, FiBell, FiCheck, FiSlash, FiUser, FiMessageSquare
+    FiActivity, FiSettings, FiLogOut, FiMenu, FiX, FiClock, FiCheckCircle, FiLayout, FiPieChart, FiGrid, FiSearch, FiDollarSign, FiBriefcase, FiBell, FiCheck, FiSlash, FiUser, FiMessageSquare,
+    FiAlertCircle
 } from "react-icons/fi";
 import logo from "/assets/logo.png"; // Asegúrate de que esta ruta sea correcta
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +15,7 @@ import CommandPalette from "../components/CommandPalette";
 
 export default function DashboardLayout({ children, title, subtitle, basePath = "/dashboard_admin" }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [pendingNavigationPath, setPendingNavigationPath] = useState(null);
     const [collapsedDesktop, setCollapsedDesktop] = useState(() => {
         try {
             return localStorage.getItem('oc_sidebar_collapsed') === 'true';
@@ -166,6 +168,11 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
     }, [userProfile]);
 
     const handleLogout = async () => {
+        if (window.hasUnsavedChanges) {
+            const confirmLeave = window.confirm("Tienes cambios sin guardar. ¿Seguro que deseas cerrar sesión y perderlos?");
+            if (!confirmLeave) return;
+            window.hasUnsavedChanges = false;
+        }
         await logout();
         navigate("/login");
     };
@@ -198,6 +205,11 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
         const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
         const path = id === 'Inicio' ? safeBasePath : `${safeBasePath}/${id}`;
         
+        if (window.hasUnsavedChanges) {
+            setPendingNavigationPath(path);
+            return;
+        }
+
         // Dispatch reset event for active module resetting
         const lowerId = String(id).toLowerCase();
         window.dispatchEvent(new CustomEvent(`reset-module-${lowerId}`));
@@ -248,7 +260,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
 
                     {/* Logo Area - Clinic Focus */}
                     <div className={`px-4 py-5 relative shrink-0 border-b border-slate-100/50 bg-slate-50/30 flex flex-col items-center justify-center min-h-[120px] transition-all duration-500 ${collapsedDesktop ? 'mt-10' : ''}`}>
-                        <div className="flex flex-col items-center gap-4 group cursor-pointer transition-all duration-500" onClick={() => navigate(basePath)}>
+                        <div className="flex flex-col items-center gap-4 group cursor-pointer transition-all duration-500" onClick={() => handleNavClick('Inicio')}>
                             <div className={`${collapsedDesktop ? 'w-10 h-10 rounded-lg' : 'w-20 h-20 rounded-2xl'} bg-white border border-slate-100 shadow-xl flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-1 transition-all duration-500 shrink-0`}>
                                 {userProfile?.rol === 'superadmin' ? (
                                     <div className="w-full h-full bg-slate-900 flex items-center justify-center text-white font-black text-xl lg:text-3xl italic tracking-tighter">M</div>
@@ -565,6 +577,57 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                                 ) : (
                                     <><FiCheck size={16} /> Confirmar y ver Agenda</>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de confirmación para descarte de cambios pendientes */}
+            {pendingNavigationPath && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                            <FiAlertCircle size={32} strokeWidth={2.5} />
+                        </div>
+                        
+                        <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                            ¿Descartar Cambios?
+                        </h3>
+                        
+                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                            Tienes cambios sin guardar. Si sales ahora, perderás todas las modificaciones realizadas en el paciente.
+                        </p>
+
+                        <div className="flex flex-col gap-3 w-full">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    window.hasUnsavedChanges = false;
+                                    const path = pendingNavigationPath;
+                                    setPendingNavigationPath(null);
+                                    
+                                    // Parse the id from path
+                                    const segments = path.split("/");
+                                    const lastSegment = segments[segments.length - 1];
+                                    const id = lastSegment === "dashboard_admin" ? "Inicio" : lastSegment;
+                                    
+                                    const lowerId = String(id).toLowerCase();
+                                    window.dispatchEvent(new CustomEvent(`reset-module-${lowerId}`));
+                                    
+                                    navigate(path);
+                                }}
+                                className="w-full py-3 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                Descartar y Salir
+                            </button>
+                            
+                            <button
+                                type="button"
+                                onClick={() => setPendingNavigationPath(null)}
+                                className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                            >
+                                Seguir Editando
                             </button>
                         </div>
                     </div>
