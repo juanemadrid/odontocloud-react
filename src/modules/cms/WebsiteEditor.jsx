@@ -41,9 +41,9 @@ export default function WebCms() {
         const resizeObserver = new ResizeObserver((entries) => {
             for (let entry of entries) {
                 const parentHeight = entry.contentRect.height;
-                const targetHeight = parentHeight * 0.90;
-                if (targetHeight < 812) {
-                    setScale(targetHeight / 812);
+                const targetHeight = parentHeight * 0.96;
+                if (targetHeight < 667) {
+                    setScale(targetHeight / 667);
                 } else {
                     setScale(1);
                 }
@@ -780,7 +780,7 @@ export default function WebCms() {
                 {/* Preview Frame Container */}
                 <div 
                     ref={previewContainerRef}
-                    className="flex-1 relative overflow-hidden flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700"
+                    className={`flex-1 relative overflow-hidden flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-700 ${viewMode === 'mobile' ? 'p-2' : 'p-4 lg:p-6 xl:p-8'}`}
                 >
                     {/* Background Decoration */}
                     <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-white/40 rounded-full blur-[120px] -mr-[500px] -mt-[500px] pointer-events-none" />
@@ -846,7 +846,7 @@ export default function WebCms() {
                     ) : (
                         /* MOBILE PHONE FRAME */
                         <div 
-                            className="w-[375px] h-[812px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700 shrink-0"
+                            className="w-[375px] h-[667px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700 shrink-0"
                             style={{ 
                                 transform: `scale(${scale})`,
                                 transformOrigin: "center center"
