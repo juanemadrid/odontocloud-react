@@ -53,17 +53,24 @@ export default function AddCreditModal({ isOpen, onClose, patient, onUpdate }) {
         const loadModalData = async () => {
             if (!userProfile?.inquilino) return;
             try {
-                // Load doctors from profesionales
-                const q = query(
-                    collection(db, "profesionales"),
-                    where("inquilino", "==", userProfile.inquilino),
-                    where("activo", "==", true)
-                );
-                const snap = await getDocs(q);
-                setDoctors(snap.docs.map(d => ({
-                    id: d.id,
-                    nombre: d.data().nombreCompleto || d.data().nombre || ""
-                })));
+                // Load doctors from profesionales (checking patient assigned list first)
+                if (patient?.profesionales && Array.isArray(patient.profesionales) && patient.profesionales.length > 0) {
+                    setDoctors(patient.profesionales.map(p => ({
+                        id: p.id,
+                        nombre: p.nombreCompleto || p.nombre || ""
+                    })));
+                } else {
+                    const q = query(
+                        collection(db, "profesionales"),
+                        where("inquilino", "==", userProfile.inquilino),
+                        where("activo", "==", true)
+                    );
+                    const snap = await getDocs(q);
+                    setDoctors(snap.docs.map(d => ({
+                        id: d.id,
+                        nombre: d.data().nombreCompleto || d.data().nombre || ""
+                    })));
+                }
 
                 // Load active payment methods
                 const qMetodos = query(

@@ -48,6 +48,21 @@ export default function PagoTab({ patient }) {
         const loadProfesionales = async () => {
             if (!userProfile?.inquilino) return;
             try {
+                if (patient?.profesionales && Array.isArray(patient.profesionales) && patient.profesionales.length > 0) {
+                    const list = patient.profesionales.map(p => ({
+                        id: p.id,
+                        nombre: p.nombreCompleto || p.nombre || ""
+                    }));
+                    setProfesionales(list);
+                    
+                    const matchesMe = list.find(p => p.nombre.toLowerCase() === (userProfile?.nombreCompleto || "").toLowerCase());
+                    if (matchesMe) {
+                        setProfesionalId(matchesMe.id);
+                        setProfesional(matchesMe.nombre);
+                    }
+                    return;
+                }
+
                 const q = query(
                     collection(db, "profesionales"),
                     where("inquilino", "==", userProfile.inquilino)
@@ -59,7 +74,6 @@ export default function PagoTab({ patient }) {
                 }));
                 setProfesionales(list);
                 
-                // Auto-select logged-in user if they are a professional
                 const matchesMe = list.find(p => p.nombre.toLowerCase() === (userProfile?.nombreCompleto || "").toLowerCase());
                 if (matchesMe) {
                     setProfesionalId(matchesMe.id);
@@ -70,7 +84,7 @@ export default function PagoTab({ patient }) {
             }
         };
         loadProfesionales();
-    }, [userProfile?.inquilino, userProfile?.nombreCompleto]);
+    }, [userProfile?.inquilino, userProfile?.nombreCompleto, patient?.profesionales]);
 
     // Payment methods that require a reference number
     const METHODS_REQUIRING_REFERENCE = ["Transferencia", "Cheque", "Consignación", "Nequi", "Daviplata", "PSE"];

@@ -17,6 +17,34 @@ const startOfWeek = (d) => {
     return x;
 };
 
+const mapTipoDocumento = (tipo) => {
+    if (!tipo) return "";
+    const mapping = {
+        "CC": "Cédula de ciudadanía",
+        "TI": "Tarjeta de identidad",
+        "RC": "Registro civil de nacimiento",
+        "CE": "Cédula de extranjería",
+        "PA": "Pasaporte",
+        "PE": "Permiso por protección temporal",
+        "PEP": "PEP"
+    };
+    return mapping[tipo] || tipo;
+};
+
+const calculateAgeStr = (birthDateStr) => {
+    if (!birthDateStr) return "";
+    const birth = new Date(birthDateStr);
+    const today = new Date();
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+    if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) { years--; months += 12; }
+    if (today.getDate() < birth.getDate()) { months--; if (months < 0) { months += 12; years--; } }
+    let numStr = "";
+    if (years >= 0) numStr = `${years} años`;
+    if (months > 0) numStr += ` y ${months} meses`;
+    return numStr;
+};
+
 export function useAgenda() {
     const { userProfile } = useAuth();
     const inquilino = userProfile?.inquilino;
@@ -173,11 +201,12 @@ export function useAgenda() {
                     nombres: data.nombres,
                     apellidos: data.apellidos,
                     nombreCompleto: `${data.nombres} ${data.apellidos}`,
-                    tipoDocumento: data.tipoDocumento,
+                    tipoDocumento: mapTipoDocumento(data.tipoDocumento),
                     nroDocumento: data.nroDocumento,
                     celular: data.celular,
                     email: data.email || "",
                     fechaNacimiento: data.fechaNacimiento,
+                    edad: calculateAgeStr(data.fechaNacimiento),
                     sexo: data.sexo === 'M' ? 'Masculino' : data.sexo === 'F' ? 'Femenino' : 'Otros',
                     estadoCivil: "",
                     paisNacimiento: "Colombia",

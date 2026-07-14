@@ -76,6 +76,14 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     const loadProfesionales = async () => {
         if (!userProfile?.inquilino) return;
         try {
+            if (patient?.profesionales && Array.isArray(patient.profesionales) && patient.profesionales.length > 0) {
+                const profs = patient.profesionales.map(p => 
+                    p.nombreCompleto || `${p.nombre || ''} ${p.apellido || ''}`.trim() || p.displayName || p.email || ''
+                ).filter(n => !!n);
+                setProfesionalesDropdown([...new Set(profs)]);
+                return;
+            }
+
             // Asumiendo que los profesionales son usuarios del inquilino
             const q = query(
                 collection(db, "usuarios"), 

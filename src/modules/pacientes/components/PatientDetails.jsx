@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { doc, onSnapshot, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where, getDocs, addDoc, getDoc } from "firebase/firestore";
 import { db, storage } from "../../../firebase/firebaseConfig";
 import { formatCurrency } from "../../../utils/formatters";
 import { useAuth } from "../../../context/AuthContext";
@@ -11,6 +11,7 @@ import {
     TIPOS_DOCUMENTO, PAISES, PREFIJOS_TELEFONICOS, TIPOS_VINCULACION,
     SEXOS, ESTADOS_CIVILES, ESTRATOS, ZONAS_RESIDENCIALES, PARENTESCOS, MEDIOS_CONOCIMIENTO
 } from "../constants/patientConstants";
+import { fetchCitiesForCountry, CIUDADES_COLOMBIA } from "../services/geoService";
 
 import { 
     FiUser, FiEdit2, FiTarget, FiCamera, FiClipboard, FiActivity, 
@@ -62,7 +63,38 @@ const FormDatosPersonales = ({ patient, photoState }) => {
     const { register, watch, setValue, formState: { errors } } = useFormContext();
     const { isCameraActive, fotoPreview, startCamera, stopCamera, takePhoto, onFotoChange, videoRef, canvasRef } = photoState;
 
+    const { userProfile } = useAuth();
+    const inquilino = userProfile?.inquilino;
+    const [formConfig, setFormConfig] = React.useState(null);
+
+    React.useEffect(() => {
+        if (!inquilino) return;
+        const loadFormConfig = async () => {
+            try {
+                const docSnap = await getDoc(doc(db, "tenants", inquilino, "config", "formulario_pacientes"));
+                if (docSnap.exists()) {
+                    setFormConfig(docSnap.data());
+                }
+            } catch (e) {
+                console.error("Error loading patient form config:", e);
+            }
+        };
+        loadFormConfig();
+    }, [inquilino]);
+
+    const isVisible = (key) => {
+        if (!formConfig) return true;
+        return formConfig[key]?.visible !== false;
+    };
+
     const age = watch("edad");
+    const nroDocumentoValue = watch("nroDocumento");
+    React.useEffect(() => {
+        if (nroDocumentoValue) {
+            setValue("nroHistoria", nroDocumentoValue);
+        }
+    }, [nroDocumentoValue, setValue]);
+
     const [showPrefijoDrop, setShowPrefijoDrop] = React.useState(false);
     const [prefijoSearch, setPrefijoSearch] = React.useState("");
 
@@ -72,6 +104,80 @@ const FormDatosPersonales = ({ patient, photoState }) => {
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [showPrefijoDrop]);
+
+    const [ciudadesNacimiento, setCiudadesNacimiento] = React.useState([]);
+    const [ciudadesDomicilio, setCiudadesDomicilio] = React.useState([]);
+    const [loadingCiudadesNacimiento, setLoadingCiudadesNacimiento] = React.useState(false);
+    const [loadingCiudadesDomicilio, setLoadingCiudadesDomicilio] = React.useState(false);
+
+    const initialNacimientoRef = React.useRef(true);
+    const initialDomicilioRef = React.useRef(true);
+
+    React.useEffect(() => {
+        initialNacimientoRef.current = true;
+        initialDomicilioRef.current = true;
+    }, [patient?.id]);
+
+    const paisNacimiento = watch("paisNacimiento");
+    const paisDomicilio = watch("paisDomicilio");
+
+    React.useEffect(() => {
+        if (!paisNacimiento) {
+            setCiudadesNacimiento([]);
+            setLoadingCiudadesNacimiento(false);
+            return;
+        }
+
+        if (initialNacimientoRef.current) {
+            initialNacimientoRef.current = false;
+        } else {
+            setValue("ciudadNacimiento", "");
+        }
+
+        let isMounted = true;
+        const loadCities = async () => {
+            setLoadingCiudadesNacimiento(true);
+            const cities = await fetchCitiesForCountry(paisNacimiento);
+            if (isMounted) {
+                setCiudadesNacimiento(cities);
+                setLoadingCiudadesNacimiento(false);
+            }
+        };
+
+        loadCities();
+        return () => {
+            isMounted = false;
+        };
+    }, [paisNacimiento, setValue]);
+
+    React.useEffect(() => {
+        if (!paisDomicilio) {
+            setCiudadesDomicilio([]);
+            setLoadingCiudadesDomicilio(false);
+            return;
+        }
+
+        if (initialDomicilioRef.current) {
+            initialDomicilioRef.current = false;
+        } else {
+            setValue("ciudadDomicilio", "");
+        }
+
+        let isMounted = true;
+        const loadCities = async () => {
+            setLoadingCiudadesDomicilio(true);
+            const cities = await fetchCitiesForCountry(paisDomicilio);
+            if (isMounted) {
+                setCiudadesDomicilio(cities);
+                setLoadingCiudadesDomicilio(false);
+            }
+        };
+
+        loadCities();
+        return () => {
+            isMounted = false;
+        };
+    }, [paisDomicilio, setValue]);
     
     return (
         <div className="flex flex-col lg:flex-row gap-10 p-4 md:p-8 animate-fadeIn">
@@ -130,7 +236,27 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                             </select>
                         </FormRow>
                         <FormRow label="Ciudad de nacimiento">
-                            <input {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Bogotá" />
+                            {!paisNacimiento ? (
+                                <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                    <option value="">Seleccione primero un país...</option>
+                                </select>
+                            ) : loadingCiudadesNacimiento ? (
+                                <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                    <option value="">Cargando ciudades...</option>
+                                </select>
+                            ) : ciudadesNacimiento.length > 0 ? (
+                                <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
+                                    <option value="">Seleccione...</option>
+                                    {ciudadesNacimiento.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            ) : (
+                                <input 
+                                    type="text" 
+                                    {...register("ciudadNacimiento")} 
+                                    className="form-input text-sm w-full md:w-64 font-medium" 
+                                    placeholder="Escriba la ciudad" 
+                                />
+                            )}
                         </FormRow>
                         <FormRow label="Fecha de Nacimiento" required error={errors.fechaNacimiento}>
                             <div className="flex gap-4">
@@ -148,7 +274,27 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                             </select>
                         </FormRow>
                         <FormRow label="Ciudad de domicilio" required error={errors.ciudadDomicilio}>
-                            <input {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Medellín" />
+                            {!paisDomicilio ? (
+                                <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                    <option value="">Seleccione primero un país...</option>
+                                </select>
+                            ) : loadingCiudadesDomicilio ? (
+                                <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                    <option value="">Cargando ciudades...</option>
+                                </select>
+                            ) : ciudadesDomicilio.length > 0 ? (
+                                <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
+                                    <option value="">Seleccione...</option>
+                                    {ciudadesDomicilio.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            ) : (
+                                <input 
+                                    type="text" 
+                                    {...register("ciudadDomicilio")} 
+                                    className="form-input text-sm w-full md:w-64 font-medium" 
+                                    placeholder="Escriba la ciudad" 
+                                />
+                            )}
                         </FormRow>
                         <FormRow label="Barrio" required error={errors.barrio}>
                             <input {...register("barrio")} className="form-input text-sm w-full md:w-64" placeholder="Barrio" />
@@ -256,6 +402,58 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                         </FormRow>
                     </div>
                 </div>
+
+                {/* Section 3: Responsable y Acompañante */}
+                {(isVisible("respNombre") || isVisible("respParentesco") || isVisible("respCelular") || isVisible("respTelefono") || isVisible("respCorreo") || isVisible("acompNombre") || isVisible("acompTelefono")) && (
+                    <div className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm mb-8 pb-8">
+                        <SectionTitle num="3" title="Responsable y Acompañante" />
+                        <div className="pl-0 md:pl-4 space-y-1">
+                            {isVisible("respNombre") && (
+                                <FormRow label="Nombre Responsable" error={errors.nombreResponsable}>
+                                    <input {...register("nombreResponsable")} className="form-input text-sm w-full font-medium" placeholder="Nombre completo del responsable" />
+                                </FormRow>
+                            )}
+                            {isVisible("respParentesco") && (
+                                <FormRow label="Parentesco">
+                                    <select {...register("parentesco")} className="form-input text-sm w-full md:w-64">
+                                        <option value="">Seleccione...</option>
+                                        {PARENTESCOS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </FormRow>
+                            )}
+                            {isVisible("respCelular") && (
+                                <FormRow label="Celular Responsable" error={errors.celularResponsable}>
+                                    <input {...register("celularResponsable")} className="form-input text-sm w-full md:w-64 font-medium" placeholder="Celular" />
+                                </FormRow>
+                            )}
+                            {isVisible("respTelefono") && (
+                                <FormRow label="Teléfono Responsable" error={errors.telefonoResponsable}>
+                                    <input {...register("telefonoResponsable")} className="form-input text-sm w-full md:w-64 font-medium" placeholder="Teléfono" />
+                                </FormRow>
+                            )}
+                            {isVisible("respCorreo") && (
+                                <FormRow label="Correo Responsable" error={errors.emailResponsable}>
+                                    <input {...register("emailResponsable")} className="form-input text-sm w-full font-medium" placeholder="Correo electrónico del responsable" />
+                                </FormRow>
+                            )}
+
+                            {(isVisible("acompNombre") || isVisible("acompTelefono")) && (
+                                <div className="my-4 border-t border-slate-100" />
+                            )}
+
+                            {isVisible("acompNombre") && (
+                                <FormRow label="Nombre Acompañante" error={errors.nombreAcompanante}>
+                                    <input {...register("nombreAcompanante")} className="form-input text-sm w-full font-medium" placeholder="Nombre completo del acompañante" />
+                                </FormRow>
+                            )}
+                            {isVisible("acompTelefono") && (
+                                <FormRow label="Teléfono Acompañante" error={errors.telefonoAcompanante}>
+                                    <input {...register("telefonoAcompanante")} className="form-input text-sm w-full md:w-64 font-medium" placeholder="Teléfono" />
+                                </FormRow>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 2. RIGHT COLUMN: PHOTO & STATUS */}
@@ -380,8 +578,19 @@ const FormAseguramiento = () => {
     );
 };
 
-const FormMarketing = () => {
-    const { register, watch } = useFormContext();
+const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
+    const { register, watch, setValue } = useFormContext();
+
+    const remitidoPorType = watch("remitidoPorType");
+    const initialRemitidoRef = React.useRef(true);
+    useEffect(() => {
+        if (initialRemitidoRef.current) {
+            initialRemitidoRef.current = false;
+        } else {
+            setValue("remitidoPorValue", "");
+        }
+    }, [remitidoPorType, setValue]);
+
     return (
         <div className="p-4 md:p-8 animate-fadeIn max-w-4xl mx-auto">
             <div className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm pb-8">
@@ -397,22 +606,50 @@ const FormMarketing = () => {
                         <input {...register("campania")} className="form-input text-sm w-full" />
                     </FormRow>
                     <FormRow label="Remitido por">
-                        <div className="flex gap-2">
-                            <select {...register("remitidoPorType")} className="form-input text-sm w-32">
-                                <option value="Libre">Libre</option>
-                                <option value="Paciente">Paciente</option>
-                                <option value="Usuario">Usuario</option>
-                            </select>
-                            <input {...register("remitidoPorValue")} className="form-input text-sm flex-1" />
+                        <div className="flex flex-col gap-2 w-full">
+                            <div className="flex gap-2">
+                                <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
+                                    <option value="Libre">Libre</option>
+                                    <option value="Paciente">Paciente</option>
+                                    <option value="Usuario">Doctor</option>
+                                </select>
+                                {remitidoPorType === "Libre" && (
+                                    <input
+                                        {...register("remitidoPorValue")}
+                                        className="form-input text-sm flex-1"
+                                        placeholder="Nombre de quien refiere"
+                                    />
+                                )}
+                                {remitidoPorType === "Paciente" && (
+                                    <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                        <option value="">Seleccione un paciente...</option>
+                                        {pacientesRemision.map(p => (
+                                            <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
+                                                {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                                {remitidoPorType === "Usuario" && (
+                                    <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                        <option value="">Seleccione un doctor...</option>
+                                        {profesionales.map(p => (
+                                            <option key={p.id} value={p.displayName}>
+                                                {p.displayName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
                         </div>
                     </FormRow>
                     <FormRow label="Permite Publicidad">
                         <label className="flex items-center gap-3 cursor-pointer group py-2">
-                            <div className="relative">
-                                <input type="checkbox" {...register("permitePublicidad")} className="sr-only" />
-                                <div className={`w-8 h-5 rounded-full transition-all ${watch("permitePublicidad") ? 'bg-blue-600' : 'bg-slate-200'}`} />
-                                <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("permitePublicidad") ? 'translate-x-3' : ''}`} />
-                            </div>
+                             <div className="relative">
+                                 <input type="checkbox" {...register("permitePublicidad")} className="sr-only" />
+                                 <div className={`w-8 h-5 rounded-full transition-all ${watch("permitePublicidad") ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                                 <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all ${watch("permitePublicidad") ? 'translate-x-3' : ''}`} />
+                             </div>
                         </label>
                     </FormRow>
                 </div>
@@ -450,6 +687,20 @@ const SidebarSectionTitle = ({ children }) => (
     </div>
 );
 
+const normalizeTipoDocumento = (tipo) => {
+    if (!tipo) return "";
+    const mapping = {
+        "CC": "Cédula de ciudadanía",
+        "TI": "Tarjeta de identidad",
+        "RC": "Registro civil de nacimiento",
+        "CE": "Cédula de extranjería",
+        "PA": "Pasaporte",
+        "PE": "Permiso por protección temporal",
+        "PEP": "PEP"
+    };
+    return mapping[tipo] || tipo;
+};
+
 export default function PatientDetails({ initialData, onClose, onDelete }) {
     const [patient, setPatient] = useState(initialData || null);
     // Default to "presu" (Presupuestos & planes) if the URL path ends with "/planes"
@@ -468,15 +719,94 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         }
     }, [window.location.search, activeTab]);
 
+    const [showWarningModal, setShowWarningModal] = useState(false);
+
+    useEffect(() => {
+        if (patient?.registroCompleto === false) {
+            setShowWarningModal(true);
+            if (activeTab !== "datos") {
+                setActiveTab("datos");
+            }
+        } else {
+            setShowWarningModal(false);
+        }
+    }, [patient?.id, patient?.registroCompleto, activeTab]);
+
     const [financials, setFinancials] = useState(null);
     const { userProfile } = useAuth();
     const toast = useToast();
 
+    const [pacientesRemision, setPacientesRemision] = useState([]);
+    const [profesionales, setProfesionales] = useState([]);
+    const inquilino = userProfile?.inquilino;
+
+    useEffect(() => {
+        if (!inquilino) return;
+        const loadRemisionCatalogs = async () => {
+            try {
+                const pSnap = await getDocs(query(collection(db, "pacientes"), where("inquilino", "==", inquilino)));
+                const pacientes = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => (a.nombreCompleto || a.nombre || "").localeCompare(b.nombreCompleto || b.nombre || ""));
+                setPacientesRemision(pacientes);
+
+                const dSnap = await getDocs(query(collection(db, "profesionales"), where("inquilino", "==", inquilino)));
+                const doctors = dSnap.docs.map(d => ({ 
+                    id: d.id, 
+                    ...d.data(), 
+                    displayName: d.data().nombreCompleto || d.data().nombre 
+                })).sort((a, b) => a.displayName.localeCompare(b.displayName));
+                setProfesionales(doctors);
+            } catch (e) {
+                console.error("Error loading remision catalogs in PatientDetails:", e);
+            }
+        };
+        loadRemisionCatalogs();
+    }, [inquilino]);
+
     // RHF Form
     const methods = useForm({
         resolver: zodResolver(patientSchema),
-        defaultValues: { prefijoCelular: "+57", ...(initialData || {}) }
+        defaultValues: { 
+            prefijoCelular: "+57", 
+            ...(initialData || {}),
+            tipoDocumento: normalizeTipoDocumento(initialData?.tipoDocumento),
+            fechaIngreso: initialData?.fechaIngreso || (() => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            })()
+        }
     });
+
+    const isEditableTab = ['datos', 'mark', 'eps'].includes(activeTab);
+
+    const [pendingTab, setPendingTab] = useState(null);
+    const [pendingClose, setPendingClose] = useState(false);
+
+    const handleTabChange = (newTab) => {
+        if (patient?.registroCompleto === false && newTab !== "datos") {
+            toast.error("Debe completar el registro del paciente para poder acceder a otras pestañas.");
+            setShowWarningModal(true);
+            return;
+        }
+        if (isEditableTab && methods.formState.isDirty) {
+            setPendingTab(newTab);
+            return;
+        }
+        if (activeTab === newTab) {
+            setActiveTab("");
+            setTimeout(() => setActiveTab(newTab), 0);
+        } else {
+            setActiveTab(newTab);
+        }
+    };
+
+    const handleClose = () => {
+        if (methods.formState.isDirty) {
+            setPendingClose(true);
+            return;
+        }
+        onClose();
+    };
 
     // Make sure we update if initialData changes or loads directly
     useEffect(() => {
@@ -485,10 +815,15 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
             if (!methods.formState.isDirty) {
                 methods.reset({
                     ...initialData,
+                    tipoDocumento: normalizeTipoDocumento(initialData.tipoDocumento),
                     remitidoPorType: initialData.remitidoPorType || "Libre",
                     asesorComercialType: initialData.asesorComercialType || "Libre",
                     esExtranjero: initialData.esExtranjero || false,
                     permitePublicidad: initialData.permitePublicidad ?? true,
+                    fechaIngreso: initialData.fechaIngreso || (() => {
+                        const d = new Date();
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    })()
                 });
             }
         }
@@ -505,10 +840,15 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                 if (!methods.formState.isDirty) {
                     methods.reset({
                         ...data,
+                        tipoDocumento: normalizeTipoDocumento(data.tipoDocumento),
                         remitidoPorType: data.remitidoPorType || "Libre",
                         asesorComercialType: data.asesorComercialType || "Libre",
                         esExtranjero: data.esExtranjero || false,
                         permitePublicidad: data.permitePublicidad ?? true,
+                        fechaIngreso: data.fechaIngreso || (() => {
+                            const d = new Date();
+                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        })()
                     });
                 }
             }
@@ -623,9 +963,13 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         try {
             import("../../../services/patientService").then(async ({ createOrUpdatePatient }) => {
                 try {
-                    await createOrUpdatePatient(userProfile.inquilino, data, false, fotoFile);
+                    const finalPayload = {
+                        ...data,
+                        registroCompleto: true
+                    };
+                    await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
                     toast.success("Información del paciente actualizada y guardada");
-                    methods.reset(data); // Clear isDirty
+                    methods.reset(finalPayload); // Clear isDirty
                 } catch(e) {
                     toast.error("Hubo un error al guardar");
                 }
@@ -659,7 +1003,33 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
     const birthDate = methods.watch("fechaNacimiento");
     useEffect(() => {
         if (!birthDate) return;
-        const birth = new Date(birthDate);
+        
+        let birth = null;
+        if (birthDate.includes("-")) {
+            const parts = birthDate.split("-");
+            if (parts.length === 3) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10) - 1;
+                const d = parseInt(parts[2], 10);
+                birth = new Date(y, m, d);
+            }
+        } else if (birthDate.includes("/")) {
+            const parts = birthDate.split("/");
+            if (parts.length === 3) {
+                const d = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10) - 1;
+                const y = parseInt(parts[2], 10);
+                birth = new Date(y, m, d);
+            }
+        }
+        if (!birth || isNaN(birth.getTime())) {
+            birth = new Date(birthDate);
+        }
+        if (isNaN(birth.getTime())) {
+            methods.setValue("edad", "");
+            return;
+        }
+
         const today = new Date();
         let years = today.getFullYear() - birth.getFullYear();
         let months = today.getMonth() - birth.getMonth();
@@ -680,7 +1050,6 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
     if (!patient) return (<div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40"><div className="bg-white p-8 rounded-2xl"><p>Cargando datos del paciente...</p></div></div>);
 
     const isFullHeightTab = ['odonto', 'perio', 'presu', 'hc', 'ai_insights'].includes(activeTab);
-    const isEditableTab = ['datos', 'mark', 'eps'].includes(activeTab);
 
     const getPageTitle = () => {
         if (activeTab === 'eps') return 'Edición Eps paciente';
@@ -708,11 +1077,34 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={onClose} className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-rose-600 transition-all active:scale-95 shadow-md shadow-slate-200" title="Cerrar expediente">
+                        <button onClick={handleClose} className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-rose-600 transition-all active:scale-95 shadow-md shadow-slate-200" title="Cerrar expediente">
                             <FiX size={16} />
                         </button>
                     </div>
                 </div>
+
+                {patient.registroCompleto === false && (
+                    <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between gap-4 animate-pulse shrink-0">
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs shadow-md">
+                                <FiAlertCircle size={14} />
+                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-amber-800 text-[11px] font-black uppercase tracking-wider">Registro Incompleto</span>
+                                <span className="text-amber-600 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                                    Este paciente fue registrado desde la agenda y tiene datos pendientes por completar.
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("datos")}
+                            className="px-4 py-1.5 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 active:scale-95 transition-all shadow-md shadow-amber-600/10 shrink-0"
+                        >
+                            Completar Ficha Paciente
+                        </button>
+                    </div>
+                )}
 
                 {/* 2. STUDIO WORKSPACE (Sidebar + Content) */}
                 <FormProvider {...methods}>
@@ -721,27 +1113,26 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         <aside className="w-full lg:w-60 bg-white border-b lg:border-b-0 lg:border-r border-slate-100 overflow-x-auto lg:overflow-y-auto p-3 flex flex-row lg:flex-col shrink-0 custom-scrollbar-hidden lg:custom-scrollbar scrollbar-hide">
                             <SidebarSectionTitle>Información General</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiUser} label="Datos personales" active={activeTab === "datos"} onClick={() => { if(activeTab === "datos") { setActiveTab(""); setTimeout(() => setActiveTab("datos"), 0); } else setActiveTab("datos"); }} />
-                                <SidebarButton icon={FiTrendingUp} label="Marketing" active={activeTab === "mark"} onClick={() => { if(activeTab === "mark") { setActiveTab(""); setTimeout(() => setActiveTab("mark"), 0); } else setActiveTab("mark"); }} />
-                                <SidebarButton icon={FiShield} label="EPS" active={activeTab === "eps"} onClick={() => { if(activeTab === "eps") { setActiveTab(""); setTimeout(() => setActiveTab("eps"), 0); } else setActiveTab("eps"); }} />
-                                <SidebarButton icon={FiUsers} label="Beneficiarios convenio" active={activeTab === "conv"} onClick={() => { if(activeTab === "conv") { setActiveTab(""); setTimeout(() => setActiveTab("conv"), 0); } else setActiveTab("conv"); }} />
-                                <SidebarButton icon={FiBriefcase} label="Profesionales" active={activeTab === "pro"} onClick={() => { if(activeTab === "pro") { setActiveTab(""); setTimeout(() => setActiveTab("pro"), 0); } else setActiveTab("pro"); }} />
-                                <SidebarButton icon={FiCamera} label="Rx / Imágenes / Doc" active={activeTab === "rx"} onClick={() => { if(activeTab === "rx") { setActiveTab(""); setTimeout(() => setActiveTab("rx"), 0); } else setActiveTab("rx"); }} />
+                                <SidebarButton icon={FiUser} label="Datos personales" active={activeTab === "datos"} onClick={() => handleTabChange("datos")} />
+                                <SidebarButton icon={FiTrendingUp} label="Marketing" active={activeTab === "mark"} onClick={() => handleTabChange("mark")} />
+                                <SidebarButton icon={FiShield} label="EPS" active={activeTab === "eps"} onClick={() => handleTabChange("eps")} />
+                                <SidebarButton icon={FiUsers} label="Beneficiarios convenio" active={activeTab === "conv"} onClick={() => handleTabChange("conv")} />
+                                <SidebarButton icon={FiBriefcase} label="Profesionales" active={activeTab === "pro"} onClick={() => handleTabChange("pro")} />
+                                <SidebarButton icon={FiCamera} label="Rx / Imágenes / Doc" active={activeTab === "rx"} onClick={() => handleTabChange("rx")} />
                             </div>
 
                             <SidebarSectionTitle>Historia Clínica</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiClipboard} label="Anamnesis / Antecedentes" active={activeTab === "anamnesis"} onClick={() => { if(activeTab === "anamnesis") { setActiveTab(""); setTimeout(() => setActiveTab("anamnesis"), 0); } else setActiveTab("anamnesis"); }} />
-                                <SidebarButton icon={FiClipboard} label="Doc. Clínicos" active={activeTab === "hc"} onClick={() => { if(activeTab === "hc") { setActiveTab(""); setTimeout(() => setActiveTab("hc"), 0); } else setActiveTab("hc"); }} />
-                                <SidebarButton icon={FiActivity} label="Odontogramas" active={activeTab === "odonto"} onClick={() => { if(activeTab === "odonto") { setActiveTab(""); setTimeout(() => setActiveTab("odonto"), 0); } else setActiveTab("odonto"); }} />
-                                <SidebarButton icon={FiActivity} label="Periodontogramas" active={activeTab === "perio"} onClick={() => { if(activeTab === "perio") { setActiveTab(""); setTimeout(() => setActiveTab("perio"), 0); } else setActiveTab("perio"); }} />
-                                <SidebarButton icon={FiFileText} label="Presupuestos & planes" active={activeTab === "presu"} onClick={() => { if(activeTab === "presu") { setActiveTab(""); setTimeout(() => setActiveTab("presu"), 0); } else setActiveTab("presu"); }} />
-                                <SidebarButton icon={FiActivity} label="Evoluciones & Remis" active={activeTab === "evo"} onClick={() => { if(activeTab === "evo") { setActiveTab(""); setTimeout(() => setActiveTab("evo"), 0); } else setActiveTab("evo"); }} />
+                                <SidebarButton icon={FiClipboard} label="Doc. Clínicos" active={activeTab === "hc"} onClick={() => handleTabChange("hc")} />
+                                <SidebarButton icon={FiActivity} label="Odontogramas" active={activeTab === "odonto"} onClick={() => handleTabChange("odonto")} />
+                                <SidebarButton icon={FiActivity} label="Periodontogramas" active={activeTab === "perio"} onClick={() => handleTabChange("perio")} />
+                                <SidebarButton icon={FiFileText} label="Presupuestos & planes" active={activeTab === "presu"} onClick={() => handleTabChange("presu")} />
+                                <SidebarButton icon={FiActivity} label="Evoluciones & Remis" active={activeTab === "evo"} onClick={() => handleTabChange("evo")} />
                             </div>
 
                             <SidebarSectionTitle>Inteligencia Artificial</SidebarSectionTitle>
                             <div className="flex lg:flex-col gap-1 min-w-max lg:min-w-0">
-                                <SidebarButton icon={FiCpu} label="Copiloto IA Insights" active={activeTab === "ai_insights"} onClick={() => { if(activeTab === "ai_insights") { setActiveTab(""); setTimeout(() => setActiveTab("ai_insights"), 0); } else setActiveTab("ai_insights"); }} />
+                                <SidebarButton icon={FiCpu} label="Copiloto IA Insights" active={activeTab === "ai_insights"} onClick={() => handleTabChange("ai_insights")} />
                             </div>
 
                             <SidebarSectionTitle>Facturación</SidebarSectionTitle>
@@ -750,22 +1141,22 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     icon={FiDollarSign} 
                                     label="Saldo a favor" 
                                     active={activeTab === "saldo"} 
-                                    onClick={() => { if(activeTab === "saldo") { setActiveTab(""); setTimeout(() => setActiveTab("saldo"), 0); } else setActiveTab("saldo"); }} 
+                                    onClick={() => handleTabChange("saldo")} 
                                     badge={financials?.totals?.totalSaldosAFavor > 0 ? `$${formatCurrency(financials.totals.totalSaldosAFavor)}` : "$ 0"} 
                                 />
-                                <SidebarButton icon={FiDollarSign} label="Realizar pago" active={activeTab === "pago"} onClick={() => { if(activeTab === "pago") { setActiveTab(""); setTimeout(() => setActiveTab("pago"), 0); } else setActiveTab("pago"); }} />
+                                <SidebarButton icon={FiDollarSign} label="Realizar pago" active={activeTab === "pago"} onClick={() => handleTabChange("pago")} />
                                 {realizedDebt > 0 && (
                                     <button
                                         type="button"
-                                        onClick={() => setActiveTab('pago')}
+                                        onClick={() => handleTabChange('pago')}
                                         className="w-full mt-1 mb-1 px-3 py-2 rounded-xl bg-rose-500 text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 animate-pulse hover:animate-none hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 active:scale-95"
                                     >
                                         <FiAlertCircle size={14} className="shrink-0" />
                                         <span>Deuda activa: ${realizedDebt.toLocaleString('es-CO')}</span>
                                     </button>
                                 )}
-                                <SidebarButton icon={FiDollarSign} label="Histórico pagos" active={activeTab === "hist_pago"} onClick={() => { if(activeTab === "hist_pago") { setActiveTab(""); setTimeout(() => setActiveTab("hist_pago"), 0); } else setActiveTab("hist_pago"); }} />
-                                <SidebarButton icon={FiFileText} label="Histórico facturas" active={activeTab === "hist_fact"} onClick={() => { if(activeTab === "hist_fact") { setActiveTab(""); setTimeout(() => setActiveTab("hist_fact"), 0); } else setActiveTab("hist_fact"); }} />
+                                <SidebarButton icon={FiDollarSign} label="Histórico pagos" active={activeTab === "hist_pago"} onClick={() => handleTabChange("hist_pago")} />
+                                <SidebarButton icon={FiFileText} label="Histórico facturas" active={activeTab === "hist_fact"} onClick={() => handleTabChange("hist_fact")} />
                             </div>
                         </aside>
 
@@ -797,7 +1188,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     </div>
                                     <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/20">
                                         {activeTab === "datos" && <FormDatosPersonales patient={patient} photoState={{isCameraActive, fotoPreview, startCamera, stopCamera, takePhoto, onFotoChange, videoRef, canvasRef}} />}
-                                        {activeTab === "mark" && <FormMarketing />}
+                                        {activeTab === "mark" && <FormMarketing pacientesRemision={pacientesRemision} profesionales={profesionales} />}
                                         {activeTab === "eps" && <FormAseguramiento />}
                                     </div>
                                 </form>
@@ -809,7 +1200,6 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     {activeTab === "pro" && <ProfesionalesTab patient={patient} onUpdate={setPatient} />}
                                     {activeTab === "fact" && <FacturacionTab patient={patient} />}
                                     
-                                    {activeTab === "anamnesis" && <HistoriaClinicaTab patientId={patient.id} />}
                                     {activeTab === "hc" && <HistoriaClinicaContainer patient={patient} />}
                                     {activeTab === "odonto" && <Odontograma embeddedPatient={patient} />}
                                     {activeTab === "perio" && <Periodontograma embeddedPatient={patient} />}
@@ -833,7 +1223,126 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                             )}
                         </main>
                     </div>
-                </FormProvider>
+                    {showWarningModal && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            {/* Alert Icon inside soft circles */}
+                            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-6 shadow-inner">
+                                <FiAlertCircle size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                Registro Incompleto
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Este paciente fue registrado de forma rápida desde la agenda. Es obligatorio completar sus datos personales, de contacto y ubicación para habilitar la facturación y la historia clínica.
+                            </p>
+
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab("datos");
+                                        setShowWarningModal(false);
+                                    }}
+                                    className="w-full py-3 bg-[#8CC63F] text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Completar Datos Ahora
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Volver a Pacientes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {pendingTab && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                                <FiAlertCircle size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Descartar Cambios?
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Tienes cambios sin guardar en esta pestaña. Si cambias de pestaña ahora, perderás todas las modificaciones realizadas.
+                            </p>
+
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        methods.reset();
+                                        setActiveTab(pendingTab);
+                                        setPendingTab(null);
+                                    }}
+                                    className="w-full py-3 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Descartar Cambios
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingTab(null)}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Seguir Editando
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {pendingClose && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                                <FiAlertCircle size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Cerrar Expediente?
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Tienes cambios sin guardar. Si cierras el expediente ahora, perderás todas las modificaciones realizadas.
+                            </p>
+
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        methods.reset();
+                                        setPendingClose(false);
+                                        onClose();
+                                    }}
+                                    className="w-full py-3 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Descartar y Cerrar
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingClose(false)}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Seguir Editando
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </FormProvider>
         </div>
     );
 }

@@ -82,7 +82,7 @@ export default function CmsPreview() {
                     <ModernLanding previewConfig={config} isMaster={isMaster} />
                 )}
             </div>
-            <VivaFooter config={{ ...config, isMaster: isMaster }} />
+            <VivaFooter config={{ ...config, isMaster: isMaster }} isPreview={true} />
         </div>
     );
 }

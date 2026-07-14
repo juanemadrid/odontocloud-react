@@ -103,12 +103,24 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                 <div className="viva-container viva-topbar-content flex justify-between items-center py-2 h-full">
                     <div className="viva-topbar-left flex gap-6 md:gap-10">
                         <a
-                            href={config?.isMaster ? `tel:${(config?.contactPhone || "3001234567")}` : `https://wa.me/57${(config?.contactPhone || "3001234567").replace(/\D/g, '')}`}
+                            href={isPreview ? "#" : (config?.isMaster ? `tel:${(config?.contactPhone || "3001234567")}` : `https://wa.me/57${(config?.contactPhone || "3001234567").replace(/\D/g, '')}`)}
+                            onClick={(e) => isPreview && e.preventDefault()}
                             className={`viva-contact-item flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:text-sky-500 transition-colors ${isTransparent ? '!text-white/80' : '!text-slate-500'}`}
                         >
                             <IconPhone /> <span className="hidden md:inline">{config?.isMaster ? "Soporte: " : "Citas: "}</span> <span>{config?.contactPhone || "3001234567"}</span>
                         </a>
-                        <Link to={config?.isMaster ? "/servicios" : "/sedes"} className={`viva-contact-item flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:text-sky-500 transition-colors ${isTransparent ? '!text-white/80' : '!text-slate-500'}`}>
+                        <Link 
+                            to={isPreview ? "#" : (config?.isMaster ? "/servicios" : "/sedes")} 
+                            onClick={(e) => {
+                                if (isPreview) {
+                                    e.preventDefault();
+                                    const targetTab = config?.isMaster ? "services" : "identity";
+                                    localStorage.setItem("odc_cms_preview_active_tab", targetTab);
+                                    window.dispatchEvent(new Event("storage"));
+                                }
+                            }}
+                            className={`viva-contact-item flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:text-sky-500 transition-colors ${isTransparent ? '!text-white/80' : '!text-slate-500'}`}
+                        >
                             <IconMap /> <span className="hidden md:inline">{config?.isMaster ? "Funcionalidades" : "Sedes"}</span>
                         </Link>
                     </div>
@@ -117,7 +129,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                         <div className="flex items-center gap-3">
                             {!config?.isMaster ? (
                                 <>
-                                    <Link to={isPreview ? "#" : `${clinicBase}/portal`} className="text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-500">Portal Pacientes</Link>
+                                    <Link to={isPreview ? "#" : `${clinicBase}/portal`} onClick={(e) => isPreview && e.preventDefault()} className="text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-500">Portal Pacientes</Link>
                                 </>
                             ) : null}
 
@@ -133,12 +145,21 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
 
                         {user ? (
                             <div className="flex items-center gap-3">
-                                <Link to={getDashboardPath()} className={`text-[10px] font-bold uppercase tracking-widest ${isTransparent ? 'text-white' : 'text-slate-600'}`}>
+                                <Link 
+                                    to={isPreview ? "#" : getDashboardPath()} 
+                                    onClick={(e) => {
+                                        if (isPreview) {
+                                            e.preventDefault();
+                                            alert("El acceso a tu panel de cuenta está inactivo en la vista previa del editor.");
+                                        }
+                                    }}
+                                    className={`text-[10px] font-bold uppercase tracking-widest ${isTransparent ? 'text-white' : 'text-slate-600'}`}
+                                >
                                     {userProfile?.nombre?.split(' ')[0] || "Mi Cuenta"}
                                 </Link>
                             </div>
                         ) : (
-                            <Link to={isPreview ? "#" : "/login"} className={`text-[10px] font-bold uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity ${isTransparent ? 'text-white' : 'text-slate-600'}`}>
+                            <Link to={isPreview ? "#" : "/login"} onClick={(e) => isPreview && e.preventDefault()} className={`text-[10px] font-bold uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity ${isTransparent ? 'text-white' : 'text-slate-600'}`}>
                                 Login
                             </Link>
                         )}
@@ -196,7 +217,21 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                                 return (
                                     <Link
                                         key={item.name}
-                                        to={item.path}
+                                        to={isPreview ? "#" : item.path}
+                                        onClick={(e) => {
+                                            if (isPreview) {
+                                                e.preventDefault();
+                                                const lowerName = item.name.toLowerCase();
+                                                let targetTab = "hero";
+                                                if (lowerName.includes("nosotros")) targetTab = "identity";
+                                                else if (lowerName.includes("servicio") || lowerName.includes("funcionalidad")) targetTab = "services";
+                                                else if (lowerName.includes("sede")) targetTab = "identity";
+                                                else if (lowerName.includes("planes") || lowerName.includes("faq")) targetTab = "hero";
+                                                
+                                                localStorage.setItem("odc_cms_preview_active_tab", targetTab);
+                                                window.dispatchEvent(new Event("storage"));
+                                            }
+                                        }}
                                         className={`text-[13px] font-bold uppercase tracking-widest transition-all duration-300 relative group py-2
                                                 ${isActive ? '' : `${isTransparent ? 'text-white hover:text-cyan-300' : 'text-slate-600 hover:text-cyan-600'}`}
                                             `}
@@ -217,7 +252,13 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
 
                         {/* MY PANEL BUTTON - PREMIUM STYLE */}
                         <button
-                            onClick={() => navigate(getDashboardPath())}
+                            onClick={() => {
+                                if (isPreview) {
+                                    alert("El acceso a tu panel de clínica está inactivo en la vista previa del editor.");
+                                    return;
+                                }
+                                navigate(getDashboardPath());
+                            }}
                             className={`
                                 relative overflow-hidden px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest 
                                 transition-all duration-300 transform hover:scale-105 hover:shadow-xl group
@@ -257,8 +298,22 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                             return (
                                 <Link
                                     key={item.name}
-                                    to={item.path}
-                                    onClick={() => setMobileMenuOpen(false)}
+                                    to={isPreview ? "#" : item.path}
+                                    onClick={(e) => {
+                                        setMobileMenuOpen(false);
+                                        if (isPreview) {
+                                            e.preventDefault();
+                                            const lowerName = item.name.toLowerCase();
+                                            let targetTab = "hero";
+                                            if (lowerName.includes("nosotros")) targetTab = "identity";
+                                            else if (lowerName.includes("servicio") || lowerName.includes("funcionalidad")) targetTab = "services";
+                                            else if (lowerName.includes("sede")) targetTab = "identity";
+                                            else if (lowerName.includes("planes") || lowerName.includes("faq")) targetTab = "hero";
+                                            
+                                            localStorage.setItem("odc_cms_preview_active_tab", targetTab);
+                                            window.dispatchEvent(new Event("storage"));
+                                        }
+                                    }}
                                     className="text-sm font-bold uppercase tracking-wider text-slate-700 hover:text-cyan-600 py-3 border-b border-slate-100/50 flex justify-between items-center group"
                                 >
                                     {item.name}
@@ -269,6 +324,10 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                         <button
                             onClick={() => {
                                 setMobileMenuOpen(false);
+                                if (isPreview) {
+                                    alert("El acceso a tu panel de clínica está inactivo en la vista previa del editor.");
+                                    return;
+                                }
                                 navigate(getDashboardPath());
                             }}
                             className="mt-4 w-full bg-[var(--viva-blue)] text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-900 shadow-xl"

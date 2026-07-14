@@ -238,7 +238,7 @@ export default function FirmaHuellaModal({ sesion, paciente, planTratamiento = [
                                         <td style={{ padding: "5px 8px", color: "#334155" }}>{sesion?.profesional || "—"}</td>
                                         <td style={{ padding: "5px 8px", color: "#334155" }}>{item.diente}</td>
                                         <td style={{ padding: "5px 8px", color: "#334155" }}>{item.tratamiento}</td>
-                                        <td style={{ padding: "5px 8px", color: "#334155" }}>{item.zona}</td>
+                                        <td style={{ padding: "5px 8px", color: "#334155" }}>{item.zonaLabel || item.zona}</td>
                                     </tr>
                                 ))}
                             </tbody>

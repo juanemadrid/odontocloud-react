@@ -7,7 +7,7 @@ import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import { useToast } from "../../../context/ToastContext";
 import { searchPatients } from "../../../services/patientService";
-import { FiUser, FiCalendar, FiPhone, FiExternalLink, FiSearch, FiCreditCard } from "react-icons/fi";
+import { FiUser, FiCalendar, FiPhone, FiExternalLink, FiSearch, FiCreditCard, FiAlertCircle } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { sendConfirmation } from "../../../services/WhatsAppService";
@@ -79,7 +79,7 @@ export default function AppointmentModal({
     const [dropdownStyle, setDropdownStyle] = useState({});
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
  
-    const { control, register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm({
+    const { control, register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting, isDirty } } = useForm({
         resolver: zodResolver(appointmentSchema),
         defaultValues: {
             isNewPatient: false,
@@ -195,10 +195,19 @@ export default function AppointmentModal({
                 top: rect.bottom + 6,
                 left: rect.left,
                 width: rect.width,
-                zIndex: 99999,
             });
         }
     }, [patientResults]);
+
+    const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+    const handleClose = () => {
+        if (isDirty) {
+            setShowCloseConfirm(true);
+            return;
+        }
+        onClose();
+    };
 
     const handleWhatsApp = async () => {
         if (!initialData?.id && !watch("pacienteId")) {
@@ -646,7 +655,7 @@ export default function AppointmentModal({
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
-                onClick={onClose}
+                onClick={handleClose}
             />
 
             {/* Modal Content */}
@@ -668,12 +677,38 @@ export default function AppointmentModal({
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all active:scale-95"
                     >
                         <span className="text-xl leading-none">×</span>
                     </button>
                 </div>
+
+                {initialData?.registroCompleto === false && (
+                    <div className="bg-amber-50 border-b border-amber-200 px-8 py-3.5 flex items-center justify-between gap-4 animate-pulse shrink-0">
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs shadow-md">
+                                <FiAlertCircle size={14} />
+                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-amber-800 text-[11px] font-black uppercase tracking-wider">Registro Incompleto</span>
+                                <span className="text-amber-600 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                                    Este paciente fue registrado de forma rápida desde la agenda y tiene datos pendientes por completar.
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                handleGoToProfile();
+                                onClose();
+                            }}
+                            className="px-4 py-2 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 active:scale-95 transition-all shadow-md shadow-amber-600/10 shrink-0 animate-bounce"
+                        >
+                            Completar Ficha Paciente
+                        </button>
+                    </div>
+                )}
 
                 <div className="flex flex-1 overflow-hidden">
                     {/* LEFT COL: FORM (Fixed Width) */}
@@ -1072,7 +1107,7 @@ export default function AppointmentModal({
                                     )}
                                     <button
                                         type="button"
-                                        onClick={onClose}
+                                        onClick={handleClose}
                                         className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
                                     >
                                         CERRAR
@@ -1081,7 +1116,7 @@ export default function AppointmentModal({
                             ) : (
                                 <button
                                     type="button"
-                                    onClick={onClose}
+                                    onClick={handleClose}
                                     className="px-8 py-4 rounded-2xl border border-slate-200 text-slate-500 font-extrabold text-[11px] uppercase tracking-[0.2em] hover:bg-slate-100 transition-all active:scale-95"
                                 >
                                     CANCELAR
@@ -1106,7 +1141,44 @@ export default function AppointmentModal({
                         </>
                     )}
                 </div>
+                {showCloseConfirm && (
+                    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                                <FiAlertCircle size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Descartar Cambios?
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Tienes cambios sin guardar en esta cita. Si la cierras ahora, perderás todas las modificaciones realizadas.
+                            </p>
 
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowCloseConfirm(false);
+                                        onClose();
+                                    }}
+                                    className="w-full py-3 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Descartar y Cerrar
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCloseConfirm(false)}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Seguir Editando
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>,
         document.body

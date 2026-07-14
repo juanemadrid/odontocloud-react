@@ -138,17 +138,130 @@ export default function Odontograma({ embeddedPatient }) {
         } catch { toast?.error("Error al capturar imagen"); }
     };
 
-    const handleImprimir = () => {
-        const printContent = odontogramaRef.current;
-        if (!printContent) return;
-        const win = window.open("", "_blank");
-        win.document.write(`
-            <html><head><title>Odontograma - ${embeddedPatient?.nombreCompleto}</title>
-            <style>body{font-family:sans-serif;padding:20px;} img{max-width:100%;}</style></head>
-            <body><h2>Odontograma Clínico</h2><p>Paciente: ${embeddedPatient?.nombreCompleto}</p>
-            ${printContent.innerHTML}</body></html>`);
-        win.document.close();
-        win.print();
+    const handleImprimir = async () => {
+        setLoading(true);
+        try {
+            const { default: html2canvas } = await import("html2canvas");
+            const el = odontogramaRef.current;
+            if (!el) return;
+
+            // Desactivamos temporalmente el anillo de selección activo para la impresión
+            const prevActiveTooth = activeToothId;
+            setActiveToothId(null);
+
+            // Breve espera para asegurar que React actualizó el DOM
+            await new Promise(r => setTimeout(r, 100));
+
+            const canvas = await html2canvas(el, { 
+                backgroundColor: "#ffffff", 
+                scale: 2,
+                logging: false,
+                useCORS: true
+            });
+
+            // Restauramos la selección
+            setActiveToothId(prevActiveTooth);
+
+            const imgData = canvas.toDataURL("image/png");
+
+            const win = window.open("", "_blank");
+            win.document.write(`
+                <html>
+                <head>
+                    <title>Odontograma Clínico - ${embeddedPatient?.nombreCompleto}</title>
+                    <style>
+                        body {
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            margin: 0;
+                            padding: 40px;
+                            color: #334155;
+                            background-color: #ffffff;
+                        }
+                        .header {
+                            border-bottom: 2px solid #e2e8f0;
+                            padding-bottom: 12px;
+                            margin-bottom: 24px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .header h1 {
+                            font-size: 20px;
+                            margin: 0;
+                            color: #1e293b;
+                        }
+                        .header .date {
+                            font-size: 12px;
+                            color: #64748b;
+                        }
+                        .patient-info {
+                            font-size: 13px;
+                            margin-bottom: 24px;
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 12px;
+                            padding: 16px;
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 8px;
+                        }
+                        .patient-info div span {
+                            font-weight: bold;
+                            color: #475569;
+                            margin-right: 4px;
+                        }
+                        .odontogram-image-container {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin-top: 10px;
+                        }
+                        .odontogram-image {
+                            max-width: 100%;
+                            height: auto;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 16px;
+                            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+                        }
+                        @media print {
+                            body {
+                                padding: 20px;
+                            }
+                            .odontogram-image {
+                                border: none;
+                                box-shadow: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Odontograma Clínico</h1>
+                        <div class="date">Fecha de Impresión: ${new Date().toLocaleDateString("es-ES")}</div>
+                    </div>
+                    <div class="patient-info">
+                        <div><span>Paciente:</span> ${embeddedPatient?.nombreCompleto}</div>
+                        <div><span>Doc. Identidad:</span> ${embeddedPatient?.nroDocumento || "—"}</div>
+                        <div><span>Historia Clínica:</span> ${embeddedPatient?.nroHistoria || "—"}</div>
+                        <div><span>Edad:</span> ${embeddedPatient?.edad || "—"}</div>
+                    </div>
+                    <div class="odontogram-image-container">
+                        <img src="${imgData}" class="odontogram-image" />
+                    </div>
+                </body>
+                </html>
+            `);
+            win.document.close();
+
+            const img = win.document.querySelector('.odontogram-image');
+            img.onload = () => {
+                win.print();
+            };
+        } catch { 
+            toast?.error("Error al generar impresión del odontograma"); 
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleToothClick = (dienteId, zona) => {
@@ -229,66 +342,9 @@ export default function Odontograma({ embeddedPatient }) {
     };
 
     const handleSurfaceFilterChange = (newSurfaceId) => {
-        setSurfaceFilter(newSurfaceId);
-
-        // Si hay un diente activo y una herramienta seleccionada (que no sea borrador)
-        // Intentamos actualizar la superficie del último tratamiento para ese diente
-        if (activeToothId && selectedToolId !== "borrador") {
-            const tool = TOOLS.find(t => t.id === selectedToolId);
-            if (!tool) return;
-
-            // Mapeo inverso de superficie de UI a zona técnica del SVG
-            const getTechnicalZone = (surfId, toothId) => {
-                if (surfId === 'todas') return 'Completo';
-                if (surfId === 'vestibular') return 'top';
-                if (surfId === 'oclusal') return 'center';
-                if (surfId === 'lingual') return 'bottom';
-                
-                const num = parseInt(toothId);
-                const isRightSide = (num >= 11 && num <= 18) || (num >= 41 && num <= 48) || (num >= 51 && num <= 55) || (num >= 81 && num <= 85);
-                
-                if (surfId === 'mesial') return isRightSide ? 'right' : 'left';
-                if (surfId === 'distal') return isRightSide ? 'left' : 'right';
-                return 'Completo';
-            };
-
-            const newTechnicalZone = getTechnicalZone(newSurfaceId, activeToothId);
-            const isGeneralTool = ["ausente", "extraccion", "implante_bueno", "implante_malo", "corona_buena", "corona_des", "perno_bueno", "perno_malo", "diente_sano", "fractura", "endodoncia_buena", "endodoncia_mala"].includes(selectedToolId);
-
-            setOdontogramaData(prev => {
-                const toothData = { ...(prev[activeToothId] || {}) };
-                // Limpiamos la zona anterior si el tratamiento no es general
-                if (!isGeneralTool) {
-                    // Eliminamos cualquier hallazgo del mismo tipo que esté en otra zona
-                    Object.keys(toothData).forEach(z => {
-                        if (toothData[z]?.id === selectedToolId) delete toothData[z];
-                    });
-                    // Ponemos el nuevo
-                    toothData[newTechnicalZone] = { id: tool.id, color: tool.color };
-                } else {
-                    toothData.general = { id: tool.id, color: tool.color };
-                }
-                return { ...prev, [activeToothId]: toothData };
-            });
-
-            setPlanTratamiento(prev => {
-                const newPlan = [...prev];
-                // Buscamos la última entrada de este diente para esta herramienta
-                const idx = [...newPlan].reverse().findIndex(item => item.diente === activeToothId && item.toolId === selectedToolId);
-                
-                if (idx !== -1) {
-                    const realIdx = newPlan.length - 1 - idx;
-                    const zonaLabel = isGeneralTool ? "Pieza Completa" : getClinicalZonaLabel(activeToothId, newTechnicalZone);
-                    newPlan[realIdx] = {
-                        ...newPlan[realIdx],
-                        zona: newTechnicalZone,
-                        zonaLabel: zonaLabel,
-                        tratamiento: isGeneralTool ? tool.label : `${tool.label} - ${zonaLabel}`
-                    };
-                }
-                return newPlan;
-            });
-        }
+        const nextSurface = surfaceFilter === newSurfaceId ? "todas" : newSurfaceId;
+        setSurfaceFilter(nextSurface);
+        setActiveToothId(null);
     };
 
     const handleSave = async (finalizar = false) => {
@@ -691,7 +747,6 @@ export default function Odontograma({ embeddedPatient }) {
                                 </span>
                                 <div className="flex-1 min-w-0">
                                     <div className="text-[10px] font-bold text-slate-800 truncate">{item.tratamiento}</div>
-                                    <div className="text-[9px] text-slate-400">{item.zona}</div>
                                 </div>
                                 {!isReadOnly && (
                                     <button 

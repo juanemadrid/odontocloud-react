@@ -109,25 +109,26 @@ function zoneOpacity(zoneData) { return zoneData?.id ? ZONE_OPACITY_ACTIVE : 0; 
 function zoneStroke(zoneData)  { return zoneData?.id ? (zoneData.color || '#ef4444') : 'transparent'; }
 
 // Zonas para MOLAR — corona ancha (Y 0-62 = corona, 62-100 = raíz que queda limpia)
+// Zonas para MOLAR — corona ancha (Y 0-62 = corona, 62-100 = raíz que queda limpia)
 function MolarZones({ data, onClick }) {
     return (
         <g>
             {/* Capa Visual: Medialunas pegadas al borde de la corona */}
-            {/* TOP: crescent fino en borde superior */}
-            <path d="M 22,5 Q 50,0 78,5 Q 50,25 22,5 Z"
-                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="0.5" className="pointer-events-none" />
-            {/* BOTTOM: crescent fino en borde inferior de la corona */}
-            <path d="M 22,95 Q 50,100 78,95 Q 50,75 22,95 Z"
-                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="0.5" className="pointer-events-none" />
-            {/* LEFT: crescent fino en borde izquierdo */}
-            <path d="M 22,5 Q 12,50 22,95 Q 30,50 22,5 Z"
-                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="0.5" className="pointer-events-none" />
-            {/* RIGHT: crescent fino en borde derecho */}
-            <path d="M 78,5 Q 88,50 78,95 Q 70,50 78,5 Z"
-                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="0.5" className="pointer-events-none" />
+            {/* TOP: crescent en borde superior */}
+            <path d="M 22,5 Q 50,0 78,5 Q 50,35 22,5 Z"
+                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="1" className="pointer-events-none" />
+            {/* BOTTOM: crescent en borde inferior de la corona */}
+            <path d="M 22,95 Q 50,100 78,95 Q 50,65 22,95 Z"
+                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="1" className="pointer-events-none" />
+            {/* LEFT: crescent en borde izquierdo */}
+            <path d="M 22,5 Q 12,50 22,95 Q 38,50 22,5 Z"
+                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="1" className="pointer-events-none" />
+            {/* RIGHT: crescent en borde derecho */}
+            <path d="M 78,5 Q 88,50 78,95 Q 62,50 78,5 Z"
+                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="1" className="pointer-events-none" />
             {/* CENTER: lente central (fosa oclusal) */}
-            <path d="M 32,50 Q 50,38 68,50 Q 50,62 32,50 Z"
-                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 32,50 Q 50,32 68,50 Q 50,68 32,50 Z"
+                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="1" className="pointer-events-none" />
 
             {/* Capa de Interactividad (Click Targets grandes transparentes) */}
             <path d="M 22,5 Q 50,0 78,5 L 68,45 Q 50,35 32,45 Z"
@@ -149,16 +150,16 @@ function PremolarZones({ data, onClick }) {
     return (
         <g>
             {/* Capa Visual: Medialunas pegadas al borde de la corona */}
-            <path d="M 28,5 Q 50,0 72,5 Q 50,24 28,5 Z"
-                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="0.5" className="pointer-events-none" />
-            <path d="M 28,95 Q 50,100 72,95 Q 50,76 28,95 Z"
-                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="0.5" className="pointer-events-none" />
-            <path d="M 28,5 Q 18,50 28,95 Q 36,50 28,5 Z"
-                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="0.5" className="pointer-events-none" />
-            <path d="M 72,5 Q 82,50 72,95 Q 64,50 72,5 Z"
-                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="0.5" className="pointer-events-none" />
-            <path d="M 34,50 Q 50,38 66,50 Q 50,62 34,50 Z"
-                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 28,5 Q 50,0 72,5 Q 50,30 28,5 Z"
+                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="1" className="pointer-events-none" />
+            <path d="M 28,95 Q 50,100 72,95 Q 50,70 28,95 Z"
+                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="1" className="pointer-events-none" />
+            <path d="M 28,5 Q 18,50 28,95 Q 42,50 28,5 Z"
+                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="1" className="pointer-events-none" />
+            <path d="M 72,5 Q 82,50 72,95 Q 58,50 72,5 Z"
+                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="1" className="pointer-events-none" />
+            <path d="M 34,50 Q 50,32 66,50 Q 50,68 34,50 Z"
+                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="1" className="pointer-events-none" />
 
             {/* Capa de Interactividad */}
             <path d="M 28,5 Q 50,0 72,5 L 64,45 Q 50,35 36,45 Z"
@@ -181,20 +182,20 @@ function CanineZones({ data, onClick }) {
         <g>
             {/* Capa Visual: Medialunas pegadas al borde de la corona */}
             {/* TOP: crescent en borde puntiagudo superior */}
-            <path d="M 33,8 Q 50,0 67,8 Q 50,25 33,8 Z"
-                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 33,8 Q 50,0 67,8 Q 50,32 33,8 Z"
+                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="1" className="pointer-events-none" />
             {/* BOTTOM: crescent en base de la corona (más ancho, antes de cuello) */}
-            <path d="M 30,95 Q 50,100 70,95 Q 50,78 30,95 Z"
-                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 30,95 Q 50,100 70,95 Q 50,68 30,95 Z"
+                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="1" className="pointer-events-none" />
             {/* LEFT: crescent lateral izquierdo */}
-            <path d="M 33,8 Q 22,50 30,95 Q 38,50 33,8 Z"
-                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 33,8 Q 22,50 30,95 Q 45,50 33,8 Z"
+                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="1" className="pointer-events-none" />
             {/* RIGHT: crescent lateral derecho */}
-            <path d="M 67,8 Q 78,50 70,95 Q 62,50 67,8 Z"
-                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 67,8 Q 78,50 70,95 Q 55,50 67,8 Z"
+                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="1" className="pointer-events-none" />
             {/* CENTER: lente incisal/cingulum central */}
-            <path d="M 38,52 L 50,41 L 62,52 Q 50,63 38,52 Z"
-                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 38,52 L 50,32 L 62,52 Q 50,68 38,52 Z"
+                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="1" className="pointer-events-none" />
 
             {/* Capa de Interactividad */}
             <path d="M 33,8 Q 50,0 67,8 L 62,49 L 50,38 L 38,49 Z"
@@ -217,20 +218,20 @@ function IncisorZones({ data, onClick }) {
         <g>
             {/* Capa Visual: Medialunas pegadas al borde de la corona */}
             {/* TOP: banda horizontal en borde incisal */}
-            <path d="M 25,4 L 75,4 L 75,23 Q 50,29 25,23 Z"
-                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 25,4 L 75,4 L 75,32 Q 50,38 25,32 Z"
+                  fill={zoneFill(data?.top)} opacity={zoneOpacity(data?.top)} stroke={zoneStroke(data?.top)} strokeWidth="1" className="pointer-events-none" />
             {/* BOTTOM: crescent en cervical de la corona */}
-            <path d="M 28,96 Q 50,100 72,96 Q 50,78 28,96 Z"
-                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 28,96 Q 50,100 72,96 Q 50,68 28,96 Z"
+                  fill={zoneFill(data?.bottom)} opacity={zoneOpacity(data?.bottom)} stroke={zoneStroke(data?.bottom)} strokeWidth="1" className="pointer-events-none" />
             {/* LEFT: crescent lateral mesial */}
-            <path d="M 25,4 Q 17,50 28,96 Q 35,50 25,4 Z"
-                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 25,4 Q 17,50 28,96 Q 40,50 25,4 Z"
+                  fill={zoneFill(data?.left)} opacity={zoneOpacity(data?.left)} stroke={zoneStroke(data?.left)} strokeWidth="1" className="pointer-events-none" />
             {/* RIGHT: crescent lateral distal */}
-            <path d="M 75,4 Q 83,50 72,96 Q 65,50 75,4 Z"
-                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 75,4 Q 83,50 72,96 Q 60,50 75,4 Z"
+                  fill={zoneFill(data?.right)} opacity={zoneOpacity(data?.right)} stroke={zoneStroke(data?.right)} strokeWidth="1" className="pointer-events-none" />
             {/* CENTER: lente incisal central */}
-            <path d="M 33,50 Q 50,38 67,50 Q 50,61 33,50 Z"
-                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="0.5" className="pointer-events-none" />
+            <path d="M 33,50 Q 50,32 67,50 Q 50,68 33,50 Z"
+                  fill={zoneFill(data?.center)} opacity={zoneOpacity(data?.center)} stroke={zoneStroke(data?.center)} strokeWidth="1" className="pointer-events-none" />
 
             {/* Capa de Interactividad */}
             <path d="M 25,4 L 75,4 L 67,46 Q 50,35 33,46 Z"
@@ -332,6 +333,7 @@ export default function ToothSVGInline({ numero, data = {}, onZoneClick, isReadO
                     xmlns="http://www.w3.org/2000/svg"
                     className={`absolute ${isUpper ? 'bottom-0' : 'top-0'} left-0 right-0 w-full h-[35%]`}
                     preserveAspectRatio="xMidYMid meet"
+                    onClick={(e) => e.stopPropagation()}
                 >
                     <ZonesComponent data={data} onClick={handleZone} />
                 </svg>

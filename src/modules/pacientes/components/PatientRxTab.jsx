@@ -40,6 +40,16 @@ export default function PatientRxTab({ patient, onUpdate }) {
         const loadCatalog = async () => {
             if (!userProfile?.inquilino) return;
             try {
+                if (patient?.profesionales && Array.isArray(patient.profesionales) && patient.profesionales.length > 0) {
+                    const list = patient.profesionales.map(p => ({
+                        id: p.id,
+                        nombreCompleto: p.nombreCompleto || p.nombre || "",
+                        ...p
+                    }));
+                    setCatalogProfesionales(list.sort((a,b) => a.nombreCompleto?.localeCompare(b.nombreCompleto) || 0));
+                    return;
+                }
+
                 const q = query(
                     collection(db, "profesionales"),
                     where("inquilino", "==", userProfile.inquilino),
@@ -60,7 +70,7 @@ export default function PatientRxTab({ patient, onUpdate }) {
             }
         };
         loadCatalog();
-    }, [userProfile]);
+    }, [userProfile, patient?.profesionales]);
 
     const images = useMemo(() => {
         let list = Array.isArray(patient?.rxImagenes) ? patient.rxImagenes : [];

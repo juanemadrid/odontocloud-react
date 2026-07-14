@@ -17,22 +17,7 @@ import {
     TIPOS_DOCUMENTO, PAISES, PREFIJOS_TELEFONICOS, TIPOS_VINCULACION,
     SEXOS, ESTADOS_CIVILES, ESTRATOS, ZONAS_RESIDENCIALES, PARENTESCOS, MEDIOS_CONOCIMIENTO
 } from "../constants/patientConstants";
-
-const CIUDADES_COLOMBIA = [
-    "Abejorral", "Acacías", "Aguachica", "Agustín Codazzi", "Anapoima", "Andes", "Apartadó", "Aracataca", "Arauca", "Armenia",
-    "Baranoa", "Barbosa", "Barrancabermeja", "Barranquilla", "Bello", "Bogotá D.C.", "Bucaramanga", "Buenaventura", "Buga",
-    "Cajicá", "Calarcá", "Caldas", "Cali", "Candelaria", "Carepa", "Cartagena", "Cartago", "Caucasia", "Cereté", "Chía",
-    "Chigorodó", "Chiquinquirá", "Ciénaga", "Cota", "Cúcuta", "Dosquebradas", "Duitama", "El Bagre", "El Carmen de Viboral",
-    "Envigado", "Espinal", "Facatativá", "Florencia", "Floridablanca", "Fundación", "Funza", "Fusagasugá", "Garzón", "Girardot",
-    "Girón", "Granada", "Honda", "Ibagué", "Ipiales", "Itagüí", "Jamundí", "La Ceja", "La Dorada", "La Estrella", "La Mesa",
-    "Lorica", "Madrid", "Magangué", "Maicao", "Malambo", "Manizales", "Marinilla", "Medellín", "Melgar", "Mitú", "Montelíbano",
-    "Montería", "Mosquera", "Neiva", "Ocaña", "Paipa", "Palmira", "Pamplona", "Pasto", "Pereira", "Pitalito", "Planeta Rica",
-    "Plato", "Popayán", "Puerto Asís", "Puerto Berrío", "Puerto Boyacá", "Puerto Carreño", "Puerto Colombia", "Quibdó",
-    "Riohacha", "Rionegro", "Sabanalarga", "Sabaneta", "Sahagún", "San Andrés", "San Gil", "Santa Marta", "Santa Rosa de Cabal",
-    "Santander de Quilichao", "Saravena", "Sevilla", "Sibaté", "Sincelejo", "Soacha", "Socorro", "Sogamoso", "Soledad", "Sonsón",
-    "Sopó", "Tibú", "Tierralta", "Tuluá", "Tumaco", "Tunja", "Turbaco", "Turbo", "Valledupar", "Villa del Rosario", "Villavicencio",
-    "Villeta", "Yopal", "Yumbo", "Zipaquirá"
-].sort();
+import { fetchCitiesForCountry, CIUDADES_COLOMBIA } from "../services/geoService";
 
 const FormRow = ({ label, required, children, error, helpText }) => (
     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 py-3 border-b border-slate-100/50 last:border-0 hover:bg-slate-50/50 transition-colors px-4">
@@ -53,6 +38,20 @@ const SectionTitle = ({ title, num }) => (
         <h3 className="text-[13px] font-black text-slate-700 uppercase tracking-widest">{title}</h3>
     </div>
 );
+
+const normalizeTipoDocumento = (tipo) => {
+    if (!tipo) return "";
+    const mapping = {
+        "CC": "Cédula de ciudadanía",
+        "TI": "Tarjeta de identidad",
+        "RC": "Registro civil de nacimiento",
+        "CE": "Cédula de extranjería",
+        "PA": "Pasaporte",
+        "PE": "Permiso por protección temporal",
+        "PEP": "PEP"
+    };
+    return mapping[tipo] || tipo;
+};
 
 export default function PatientForm({
     initialData,
@@ -85,6 +84,15 @@ export default function PatientForm({
     const canvasRef = React.useRef(null);
 
     const [formConfig, setFormConfig] = useState(null);
+
+    // States for dynamic cities list based on selected country
+    const [ciudadesNacimiento, setCiudadesNacimiento] = useState([]);
+    const [ciudadesDomicilio, setCiudadesDomicilio] = useState([]);
+    const [loadingCiudadesNacimiento, setLoadingCiudadesNacimiento] = useState(false);
+    const [loadingCiudadesDomicilio, setLoadingCiudadesDomicilio] = useState(false);
+
+    const initialNacimientoRef = React.useRef(true);
+    const initialDomicilioRef = React.useRef(true);
 
     useEffect(() => {
         const loadFormConfig = async () => {
@@ -342,30 +350,57 @@ export default function PatientForm({
         watch,
         setValue,
         reset,
-        formState: { errors, isSubmitting }
+        formState: { errors, isSubmitting, isDirty }
     } = useForm({
         defaultValues: {
             ...initialData,
+            tipoDocumento: normalizeTipoDocumento(initialData?.tipoDocumento),
             prefijoCelular: initialData?.prefijoCelular || "+57",
             remitidoPorType: initialData?.remitidoPorType || "Libre",
             asesorComercialType: initialData?.asesorComercialType || "Libre",
             esExtranjero: initialData?.esExtranjero || false,
             permitePublicidad: initialData?.permitePublicidad ?? true,
             multiplesResponsables: initialData?.multiplesResponsables || false,
+            fechaIngreso: initialData?.fechaIngreso || (() => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            })()
         },
         resolver: zodResolver(dynamicSchema)
     });
+
+    const nroDocumentoValue = watch("nroDocumento");
+    useEffect(() => {
+        if (nroDocumentoValue) {
+            setValue("nroHistoria", nroDocumentoValue);
+        }
+    }, [nroDocumentoValue, setValue]);
+
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+    const handleCancel = () => {
+        if (isDirty) {
+            setShowCancelConfirm(true);
+            return;
+        }
+        onCancel();
+    };
 
     useEffect(() => {
         if (initialData) {
             reset({
                 ...initialData,
+                tipoDocumento: normalizeTipoDocumento(initialData?.tipoDocumento),
                 prefijoCelular: initialData?.prefijoCelular || "+57",
                 remitidoPorType: initialData?.remitidoPorType || "Libre",
                 asesorComercialType: initialData?.asesorComercialType || "Libre",
                 esExtranjero: initialData?.esExtranjero || false,
                 permitePublicidad: initialData?.permitePublicidad ?? true,
                 multiplesResponsables: initialData?.multiplesResponsables || false,
+                fechaIngreso: initialData?.fechaIngreso || (() => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                })()
             });
             setFotoFile(null); 
             if (initialData.fotoUrl) {
@@ -373,6 +408,8 @@ export default function PatientForm({
              } else {
                  setFotoPreview("");
              }
+            initialNacimientoRef.current = true;
+            initialDomicilioRef.current = true;
         }
     }, [initialData, reset]);
 
@@ -396,11 +433,76 @@ export default function PatientForm({
         }
     }, [nombres, apellidos, setValue]);
 
+    const remitidoPorType = watch("remitidoPorType");
+    const initialRemitidoRef = React.useRef(true);
     useEffect(() => {
-        if (docNum && !initialData?.nroHistoria) {
-            setValue("nroHistoria", docNum);
+        if (initialRemitidoRef.current) {
+            initialRemitidoRef.current = false;
+        } else {
+            setValue("remitidoPorValue", "");
         }
-    }, [docNum, setValue, initialData]);
+    }, [remitidoPorType, setValue]);
+
+    const paisNacimiento = watch("paisNacimiento");
+    const paisDomicilio = watch("paisDomicilio");
+
+    useEffect(() => {
+        if (!paisNacimiento) {
+            setCiudadesNacimiento([]);
+            setLoadingCiudadesNacimiento(false);
+            return;
+        }
+
+        if (initialNacimientoRef.current) {
+            initialNacimientoRef.current = false;
+        } else {
+            setValue("ciudadNacimiento", "");
+        }
+
+        let isMounted = true;
+        const loadCities = async () => {
+            setLoadingCiudadesNacimiento(true);
+            const cities = await fetchCitiesForCountry(paisNacimiento);
+            if (isMounted) {
+                setCiudadesNacimiento(cities);
+                setLoadingCiudadesNacimiento(false);
+            }
+        };
+
+        loadCities();
+        return () => {
+            isMounted = false;
+        };
+    }, [paisNacimiento, setValue]);
+
+    useEffect(() => {
+        if (!paisDomicilio) {
+            setCiudadesDomicilio([]);
+            setLoadingCiudadesDomicilio(false);
+            return;
+        }
+
+        if (initialDomicilioRef.current) {
+            initialDomicilioRef.current = false;
+        } else {
+            setValue("ciudadDomicilio", "");
+        }
+
+        let isMounted = true;
+        const loadCities = async () => {
+            setLoadingCiudadesDomicilio(true);
+            const cities = await fetchCitiesForCountry(paisDomicilio);
+            if (isMounted) {
+                setCiudadesDomicilio(cities);
+                setLoadingCiudadesDomicilio(false);
+            }
+        };
+
+        loadCities();
+        return () => {
+            isMounted = false;
+        };
+    }, [paisDomicilio, setValue]);
 
     // Cerrar dropdown de prefijo al hacer click fuera
     useEffect(() => {
@@ -412,7 +514,30 @@ export default function PatientForm({
 
     const age = useMemo(() => {
         if (!birthDate) return "";
-        const birth = new Date(birthDate);
+        
+        let birth = null;
+        if (birthDate.includes("-")) {
+            const parts = birthDate.split("-");
+            if (parts.length === 3) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10) - 1;
+                const d = parseInt(parts[2], 10);
+                birth = new Date(y, m, d);
+            }
+        } else if (birthDate.includes("/")) {
+            const parts = birthDate.split("/");
+            if (parts.length === 3) {
+                const d = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10) - 1;
+                const y = parseInt(parts[2], 10);
+                birth = new Date(y, m, d);
+            }
+        }
+        if (!birth || isNaN(birth.getTime())) {
+            birth = new Date(birthDate);
+        }
+        if (isNaN(birth.getTime())) return "";
+
         const today = new Date();
         let years = today.getFullYear() - birth.getFullYear();
         let months = today.getMonth() - birth.getMonth();
@@ -523,7 +648,7 @@ export default function PatientForm({
                 {onCancel && (
                     <button
                         type="button"
-                        onClick={onCancel}
+                        onClick={handleCancel}
                         className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95"
                     >
                         <FiX size={20} />
@@ -614,10 +739,27 @@ export default function PatientForm({
 
                                 {isVisible("ciudadNacimiento") && (
                                     <FormRow label="Ciudad de nacimiento" required={isRequired("ciudadNacimiento")} error={errors.ciudadNacimiento}>
-                                        <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
-                                            <option value="">Seleccione...</option>
-                                            {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+                                        {!paisNacimiento ? (
+                                            <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                                <option value="">Seleccione primero un país...</option>
+                                            </select>
+                                        ) : loadingCiudadesNacimiento ? (
+                                            <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                                <option value="">Cargando ciudades...</option>
+                                            </select>
+                                        ) : ciudadesNacimiento.length > 0 ? (
+                                            <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
+                                                <option value="">Seleccione...</option>
+                                                {ciudadesNacimiento.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        ) : (
+                                            <input 
+                                                type="text" 
+                                                {...register("ciudadNacimiento")} 
+                                                className="form-input text-sm w-full md:w-64 font-medium" 
+                                                placeholder="Escriba la ciudad" 
+                                            />
+                                        )}
                                     </FormRow>
                                 )}
 
@@ -646,10 +788,27 @@ export default function PatientForm({
 
                                 {isVisible("ciudadDomicilio") && (
                                     <FormRow label="Ciudad de domicilio" required={isRequired("ciudadDomicilio", true)} error={errors.ciudadDomicilio}>
-                                        <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
-                                            <option value="">Seleccione...</option>
-                                            {CIUDADES_COLOMBIA.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+                                        {!paisDomicilio ? (
+                                            <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                                <option value="">Seleccione primero un país...</option>
+                                            </select>
+                                        ) : loadingCiudadesDomicilio ? (
+                                            <select disabled className="form-input text-sm w-full md:w-64 bg-slate-50 cursor-not-allowed">
+                                                <option value="">Cargando ciudades...</option>
+                                            </select>
+                                        ) : ciudadesDomicilio.length > 0 ? (
+                                            <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
+                                                <option value="">Seleccione...</option>
+                                                {ciudadesDomicilio.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        ) : (
+                                            <input 
+                                                type="text" 
+                                                {...register("ciudadDomicilio")} 
+                                                className="form-input text-sm w-full md:w-64 font-medium" 
+                                                placeholder="Escriba la ciudad" 
+                                            />
+                                        )}
                                     </FormRow>
                                 )}
 
@@ -880,7 +1039,7 @@ export default function PatientForm({
                                                         <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
                                                             <option value="Libre">Libre</option>
                                                             <option value="Paciente">Paciente</option>
-                                                            <option value="Usuario">Usuario</option>
+                                                            <option value="Usuario">Doctor</option>
                                                         </select>
                                                         {watch("remitidoPorType") === "Libre" && (
                                                             <input
@@ -901,10 +1060,10 @@ export default function PatientForm({
                                                         )}
                                                         {watch("remitidoPorType") === "Usuario" && (
                                                             <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
-                                                                <option value="">Seleccione un usuario...</option>
-                                                                {usuariosRemision.map(u => (
-                                                                    <option key={u.id} value={`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}>
-                                                                        {`${u.nombre || ""} ${u.apellido || ""}`.trim() || u.email}
+                                                                <option value="">Seleccione un doctor...</option>
+                                                                {profesionales.map(p => (
+                                                                    <option key={p.id} value={p.displayName}>
+                                                                        {p.displayName}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -1092,7 +1251,7 @@ export default function PatientForm({
                     <div className="flex items-center gap-4">
                         <button
                             type="button"
-                            onClick={onCancel}
+                            onClick={handleCancel}
                             className="px-6 py-2.5 text-slate-500 font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-slate-100 transition-all"
                         >
                             Cancelar
@@ -1107,6 +1266,44 @@ export default function PatientForm({
                         </button>
                     </div>
                 </div>
+                {showCancelConfirm && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                                <FiAlertCircle size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                ¿Descartar Cambios?
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Tienes cambios sin guardar en este formulario. Si cancelas ahora, perderás todas las modificaciones realizadas.
+                            </p>
+
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowCancelConfirm(false);
+                                        onCancel();
+                                    }}
+                                    className="w-full py-3 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Descartar Cambios
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCancelConfirm(false)}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Seguir Editando
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </form>
         </div>
     );

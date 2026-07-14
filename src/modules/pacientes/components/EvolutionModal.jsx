@@ -59,6 +59,17 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     const [inventarioMeds, setInventarioMeds] = useState([]);
     const [planPayments, setPlanPayments] = useState([]); // payments for the selected plan
 
+    const getLocalISOStrings = () => {
+        const d = new Date();
+        const tzoffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString();
+        const localDate = localISOTime.slice(0, 10);
+        const localTime = localISOTime.slice(11, 16);
+        return { localDate, localTime };
+    };
+
+    const { localDate, localTime } = getLocalISOStrings();
+
     const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
         defaultValues: {
             doctorId: '',
@@ -73,9 +84,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             formaCirugia: '',
             modalidadAtencion: 'Intramural',
             tipoServicio: '',
-            fecha: new Date().toISOString().slice(0, 10),
-            horaInicio: '',
-            horaFin: '',
+            fecha: localDate,
+            horaInicio: localTime,
+            horaFin: localTime,
             comentario: '',
             aplicaMedicamento: false,
             detalleMedicamento: '',
@@ -156,7 +167,29 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     // Configurar estado inicial
     useEffect(() => {
         if (!isOpen) {
-            reset();
+            reset({
+                doctorId: '',
+                planId: '',
+                serviciosIds: [],
+                ambito: 'Ambulatorio',
+                finalidad: 'Diagnóstico',
+                personalAtiende: '',
+                dxPrincipal: null,
+                dxRelacionado: null,
+                complicacion: null,
+                formaCirugia: '',
+                modalidadAtencion: 'Intramural',
+                tipoServicio: '',
+                fecha: localDate,
+                horaInicio: localTime,
+                horaFin: localTime,
+                comentario: '',
+                aplicaMedicamento: false,
+                detalleMedicamento: '',
+                controlEsterilizacion: false,
+                medicamentos: [],
+                esterilizaciones: []
+            });
             return;
         }
 
@@ -166,8 +199,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             userProfile?.rol === 'odontologo';
         const autoDoctor = esDoctor && userProfile?.uid ? userProfile.uid : undefined;
 
-        const initialTime = getCurrentTimeFormatted();
-        setTempHora(initialTime);
+        const { localDate: currentLocalDate, localTime: currentLocalTime } = getLocalISOStrings();
+
+        setTempHora(currentLocalTime);
         setTempMedicamento('');
         setTempVia('');
         setTempDosis('1');
@@ -177,9 +211,13 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
 
         if (initialData) {
             const safeDate = initialData.date?.toDate ? initialData.date.toDate() : new Date(initialData.date || Date.now());
+            const tzoffset = safeDate.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(safeDate.getTime() - tzoffset)).toISOString();
             reset({
                 ...initialData,
-                fecha: safeDate.toISOString().slice(0, 10),
+                fecha: localISOTime.slice(0, 10),
+                horaInicio: localISOTime.slice(11, 16),
+                horaFin: localISOTime.slice(11, 16),
                 doctorId: initialData.doctorId || '',
                 medicamentos: initialData.medicamentos || [],
                 esterilizaciones: initialData.esterilizaciones || []
@@ -188,7 +226,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             reset({
                 ambito: 'Ambulatorio',
                 finalidad: 'Diagnóstico',
-                fecha: new Date().toISOString().slice(0, 10),
+                fecha: currentLocalDate,
+                horaInicio: currentLocalTime,
+                horaFin: currentLocalTime,
                 doctorId: autoDoctor || '',
                 medicamentos: [],
                 esterilizaciones: []

@@ -14,12 +14,23 @@ export default function RemissionModal({ isOpen, onClose, patient, initialData =
     const [allDoctors, setAllDoctors] = useState([]);
     const [patientDoctors, setPatientDoctors] = useState([]);
 
+    const getLocalISOStrings = () => {
+        const d = new Date();
+        const tzoffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString();
+        const localDate = localISOTime.slice(0, 10);
+        const localTime = localISOTime.slice(11, 16);
+        return { localDate, localTime };
+    };
+
+    const { localDate, localTime } = getLocalISOStrings();
+
     const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
         defaultValues: {
             doctorId: '',
             doctorQuienRecibeId: '',
-            fecha: new Date().toISOString().slice(0, 10),
-            horaInicio: '',
+            fecha: localDate,
+            horaInicio: localTime,
             comentario: '',
         }
     });
@@ -29,15 +40,24 @@ export default function RemissionModal({ isOpen, onClose, patient, initialData =
 
     useEffect(() => {
         if (!isOpen) {
-            reset();
+            reset({
+                doctorId: '',
+                doctorQuienRecibeId: '',
+                fecha: localDate,
+                horaInicio: localTime,
+                comentario: '',
+            });
             return;
         }
 
         if (initialData) {
             const safeDate = initialData.date?.toDate ? initialData.date.toDate() : new Date(initialData.date || Date.now());
+            const tzoffset = safeDate.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(safeDate.getTime() - tzoffset)).toISOString();
             reset({
                 ...initialData,
-                fecha: safeDate.toISOString().slice(0, 10)
+                fecha: localISOTime.slice(0, 10),
+                horaInicio: localISOTime.slice(11, 16)
             });
         }
     }, [isOpen, initialData, reset]);
@@ -63,10 +83,17 @@ export default function RemissionModal({ isOpen, onClose, patient, initialData =
                 }));
                 
                 // Patient assigned doctors for the sender field
-                if (patient?.profesionales && Array.isArray(patient.profesionales)) {
+                if (patient?.profesionales && Array.isArray(patient.profesionales) && patient.profesionales.length > 0) {
                     setPatientDoctors(patient.profesionales);
                 } else {
-                    setPatientDoctors([]);
+                    setPatientDoctors(userSnap.docs.map(d => {
+                        const data = d.data();
+                        return {
+                            id: d.id,
+                            nombreCompleto: data.nombreCompleto || data.nombre || "",
+                            ...data
+                        };
+                    }));
                 }
             } catch (err) {
                 console.error("Error fetching dependencies", err);
