@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -32,6 +32,26 @@ export default function WebCms() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("hero");
     const [viewMode, setViewMode] = useState("desktop");
+    const previewContainerRef = useRef(null);
+    const [scale, setScale] = useState(1);
+
+    // Calculate scale factor to fit mobile mockup within preview area height
+    useEffect(() => {
+        if (!previewContainerRef.current) return;
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                const parentHeight = entry.contentRect.height;
+                const targetHeight = parentHeight * 0.90;
+                if (targetHeight < 812) {
+                    setScale(targetHeight / 812);
+                } else {
+                    setScale(1);
+                }
+            }
+        });
+        resizeObserver.observe(previewContainerRef.current);
+        return () => resizeObserver.disconnect();
+    }, [viewMode]);
 
     const isSuperAdmin = userProfile?.rol?.toLowerCase() === "superadmin";
     // FIX: If SuperAdmin wants to edit their OWN tenant site (if they have one), we might need a switch.
@@ -758,7 +778,10 @@ export default function WebCms() {
                 </div>
 
                 {/* Preview Frame Container */}
-                <div className="flex-1 relative overflow-hidden flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700">
+                <div 
+                    ref={previewContainerRef}
+                    className="flex-1 relative overflow-hidden flex flex-col items-center justify-center p-4 lg:p-6 xl:p-8 animate-in fade-in zoom-in-95 duration-700"
+                >
                     {/* Background Decoration */}
                     <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-white/40 rounded-full blur-[120px] -mr-[500px] -mt-[500px] pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[1000px] h-[1000px] bg-indigo-100/30 rounded-full blur-[120px] -ml-[500px] -mb-[500px] pointer-events-none" />
@@ -822,7 +845,13 @@ export default function WebCms() {
                         </div>
                     ) : (
                         /* MOBILE PHONE FRAME */
-                        <div className="w-[375px] h-[90%] max-h-[812px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700">
+                        <div 
+                            className="w-[375px] h-[812px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700 shrink-0"
+                            style={{ 
+                                transform: `scale(${scale})`,
+                                transformOrigin: "center center"
+                            }}
+                        >
                             
                             {/* Mobile Status Bar (Notch + Time + Icons) */}
                             <div className="bg-slate-50 h-9 flex items-center justify-between px-6 shrink-0 relative select-none">
