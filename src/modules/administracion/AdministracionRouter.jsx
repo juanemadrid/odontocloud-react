@@ -13,6 +13,7 @@ import GestionAgenda from "./views/GestionAgenda";
 import Terceros from "./views/Terceros";
 import Convenios from "./views/Convenios";
 import Campanas from "./views/Campanas";
+import TemperaturaHumedad from "./views/TemperaturaHumedad";
 
 const ADMIN_MENU = [
   { id: "facturacion", label: "Facturación", icon: <FiFileText /> },
@@ -110,9 +111,10 @@ export default function AdministracionRouter() {
                 {activeTab === "terceros" && <Terceros />}
                 {activeTab === "convenios" && <Convenios />}
                 {activeTab === "campanas" && <Campanas />}
+                {activeTab === "temp" && <TemperaturaHumedad />}
                 
                 {/* Placeholders for others */}
-                {!["facturacion", "inventario", "rips", "agenda", "terceros", "convenios", "campanas"].includes(activeTab) && (
+                {!["facturacion", "inventario", "rips", "agenda", "terceros", "convenios", "campanas", "temp"].includes(activeTab) && (
                     <div className="flex flex-col items-center justify-center h-full p-20 text-center animate-fadeIn">
                         <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-4xl text-blue-200 mb-6 border border-blue-100/50">
                             {ADMIN_MENU.find(m => m.id === activeTab)?.icon}

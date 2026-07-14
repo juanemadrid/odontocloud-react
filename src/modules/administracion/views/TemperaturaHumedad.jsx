@@ -1,0 +1,747 @@
+// src/modules/administracion/views/TemperaturaHumedad.jsx
+import React, { useState, useEffect } from "react";
+import { db } from "../../../firebase/firebaseConfig";
+import { 
+  collection, query, where, getDocs, doc, setDoc, 
+  addDoc, serverTimestamp, updateDoc, deleteDoc, orderBy 
+} from "firebase/firestore";
+import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext";
+import { 
+  FiThermometer, FiMapPin, FiPlus, FiSearch, FiEdit3, 
+  FiTrash2, FiSave, FiList, FiTrendingUp, FiActivity 
+} from "react-icons/fi";
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, ResponsiveContainer 
+} from "recharts";
+
+export default function TemperaturaHumedad() {
+  const { userProfile } = useAuth();
+  const toast = useToast();
+  const inquilino = userProfile?.inquilino || userProfile?.tenantId;
+
+  // Sub-navigation state: 'UBICACIONES' | 'REGISTRAR' | 'ENLISTAR' | 'GRAFICAR'
+  const [activeSubTab, setActiveSubTab] = useState("UBICACIONES");
+  
+  // Data lists
+  const [locations, setLocations] = useState([]);
+  const [mediciones, setMediciones] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+  
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form states
+  const [locationFormOpen, setLocationFormOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [locationName, setLocationName] = useState("");
+
+  const [editingMedicion, setEditingMedicion] = useState(null);
+  const [medicionForm, setMedicionForm] = useState({
+    ubicacionId: "",
+    temperatura: "",
+    humedad: "",
+    fecha: new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD local format
+    hora: new Date().toLocaleTimeString("en-US", { hour12: false }).substring(0, 5), // HH:MM
+    responsable: userProfile?.displayName || userProfile?.nombreCompleto || "",
+    observaciones: ""
+  });
+
+  // Filter for enlistar / graficar
+  const [filterUbicacion, setFilterUbicacion] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (inquilino) {
+      loadLocations();
+      loadMediciones();
+      loadProfessionals();
+    }
+  }, [inquilino]);
+
+  const loadLocations = async () => {
+    try {
+      const q = query(
+        collection(db, "temp_ubicaciones"), 
+        where("inquilino", "==", inquilino)
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLocations(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadMediciones = async () => {
+    try {
+      const q = query(
+        collection(db, "temp_mediciones"), 
+        where("inquilino", "==", inquilino),
+        orderBy("fecha", "desc"),
+        orderBy("hora", "desc")
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMediciones(list);
+    } catch (e) {
+      console.error("Error loading measurements:", e);
+    }
+  };
+
+  const loadProfessionals = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(db, "profesionales"), where("inquilino", "==", inquilino))
+      );
+      setProfessionals(snap.docs.map(d => d.data().nombreCompleto || d.data().nombre));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // --- LOCATION ACTIONS ---
+  const handleNewLocation = () => {
+    setEditingLocation(null);
+    setLocationName("");
+    setLocationFormOpen(true);
+  };
+
+  const handleEditLocation = (loc) => {
+    setEditingLocation(loc);
+    setLocationName(loc.nombre || "");
+    setLocationFormOpen(true);
+  };
+
+  const handleSaveLocation = async (e) => {
+    e.preventDefault();
+    if (!locationName.trim()) return toast?.error("El nombre de la ubicación es requerido");
+    setSaving(true);
+    try {
+      const payload = {
+        nombre: locationName.trim(),
+        inquilino,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingLocation?.id) {
+        await setDoc(doc(db, "temp_ubicaciones", editingLocation.id), payload, { merge: true });
+        toast?.success("Ubicación actualizada con éxito");
+      } else {
+        payload.createdAt = serverTimestamp();
+        await addDoc(collection(db, "temp_ubicaciones"), payload);
+        toast?.success("Ubicación creada con éxito");
+      }
+      setLocationFormOpen(false);
+      loadLocations();
+    } catch (e) {
+      console.error(e);
+      toast?.error("Error al guardar la ubicación");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteLocation = async (loc) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar permanentemente la ubicación "${loc.nombre}"?`)) return;
+    try {
+      await deleteDoc(doc(db, "temp_ubicaciones", loc.id));
+      toast?.success("Ubicación eliminada");
+      loadLocations();
+    } catch (e) {
+      console.error(e);
+      toast?.error("Error al eliminar la ubicación");
+    }
+  };
+
+  // --- MEASUREMENT ACTIONS ---
+  const handleSaveMedicion = async (e) => {
+    e.preventDefault();
+    if (!medicionForm.ubicacionId) return toast?.error("Debe seleccionar una ubicación");
+    if (medicionForm.temperatura === "") return toast?.error("La temperatura es requerida");
+    if (medicionForm.humedad === "") return toast?.error("La humedad es requerida");
+    if (!medicionForm.fecha) return toast?.error("La fecha es requerida");
+    if (!medicionForm.hora) return toast?.error("La hora es requerida");
+    if (!medicionForm.responsable) return toast?.error("El responsable es requerido");
+
+    setSaving(true);
+    try {
+      const selectedLoc = locations.find(l => l.id === medicionForm.ubicacionId);
+      const payload = {
+        ...medicionForm,
+        temperatura: parseFloat(medicionForm.temperatura),
+        humedad: parseFloat(medicionForm.humedad),
+        ubicacionNombre: selectedLoc?.nombre || "",
+        inquilino,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingMedicion?.id) {
+        await setDoc(doc(db, "temp_mediciones", editingMedicion.id), payload, { merge: true });
+        toast?.success("Medición actualizada");
+      } else {
+        payload.createdAt = serverTimestamp();
+        await addDoc(collection(db, "temp_mediciones"), payload);
+        toast?.success("Medición registrada con éxito");
+      }
+
+      setMedicionForm({
+        ubicacionId: "",
+        temperatura: "",
+        humedad: "",
+        fecha: new Date().toLocaleDateString("en-CA"),
+        hora: new Date().toLocaleTimeString("en-US", { hour12: false }).substring(0, 5),
+        responsable: userProfile?.displayName || userProfile?.nombreCompleto || "",
+        observaciones: ""
+      });
+      setEditingMedicion(null);
+      loadMediciones();
+      setActiveSubTab("ENLISTAR");
+    } catch (e) {
+      console.error(e);
+      toast?.error("Error al registrar medición");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditMedicion = (med) => {
+    setEditingMedicion(med);
+    setMedicionForm({
+      ubicacionId: med.ubicacionId || "",
+      temperatura: med.temperatura || "",
+      humedad: med.humedad || "",
+      fecha: med.fecha || "",
+      hora: med.hora || "",
+      responsable: med.responsable || "",
+      observaciones: med.observaciones || ""
+    });
+    setActiveSubTab("REGISTRAR");
+  };
+
+  const handleDeleteMedicion = async (med) => {
+    if (!window.confirm("¿Está seguro de eliminar permanentemente esta medición?")) return;
+    try {
+      await deleteDoc(doc(db, "temp_mediciones", med.id));
+      toast?.success("Medición eliminada");
+      loadMediciones();
+    } catch (e) {
+      console.error(e);
+      toast?.error("Error al eliminar medición");
+    }
+  };
+
+  // Filtered mediciones
+  const filteredMediciones = mediciones.filter(m => {
+    const isLocMatch = filterUbicacion ? m.ubicacionId === filterUbicacion : true;
+    if (!isLocMatch) return false;
+
+    const term = searchQuery.toLowerCase();
+    const locName = (m.ubicacionNombre || "").toLowerCase();
+    const resp = (m.responsable || "").toLowerCase();
+    return locName.includes(term) || resp.includes(term);
+  });
+
+  // Recharts Chart Data Prep
+  const chartData = [...mediciones]
+    .filter(m => !filterUbicacion || m.ubicacionId === filterUbicacion)
+    .slice(0, 15) // Last 15 measurements
+    .reverse() // Chronological order
+    .map(m => ({
+      name: `${m.fecha.substring(5)} ${m.hora}`,
+      Temp: m.temperatura,
+      Hum: m.humedad
+    }));
+
+  return (
+    <div className="bg-white rounded-[28px] border border-slate-200/60 shadow-md h-full flex overflow-hidden animate-fadeIn">
+      
+      {/* --- SUB-NAVIGATION SIDEBAR --- */}
+      <div className="w-64 bg-slate-50/50 border-r border-slate-100 flex flex-col p-6 shrink-0 justify-between">
+        <div className="space-y-6">
+          <div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Temperatura & Humedad</span>
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Mediciones</h3>
+          </div>
+          
+          <nav className="flex flex-col gap-2">
+            {[
+              { id: "UBICACIONES", label: "Ubicaciones", icon: <FiMapPin /> },
+              { id: "REGISTRAR", label: "Registrar Medición", icon: <FiPlus /> },
+              { id: "ENLISTAR", label: "Enlistar Mediciones", icon: <FiList /> },
+              { id: "GRAFICAR", label: "Graficar Mediciones", icon: <FiTrendingUp /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveSubTab(tab.id);
+                  setLocationFormOpen(false);
+                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-wider ${
+                  activeSubTab === tab.id
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                    : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800"
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-4 bg-blue-50/40 rounded-2xl border border-blue-100/50 flex items-center gap-3">
+          <FiActivity className="text-blue-500 animate-pulse text-lg shrink-0" />
+          <div className="text-[10px] leading-tight">
+            <div className="font-black text-blue-800 uppercase">Monitoreo</div>
+            <div className="font-bold text-blue-600">Registro de Cadena de Frío</div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- MAIN CONTENT AREA --- */}
+      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col">
+        
+        {/* --- VIEW: UBICACIONES --- */}
+        {activeSubTab === "UBICACIONES" && (
+          <div className="flex-1 flex flex-col animate-fadeIn">
+            {locationFormOpen ? (
+              <form onSubmit={handleSaveLocation} className="max-w-xl bg-slate-50 border border-slate-100 p-6 rounded-2xl space-y-6">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Ubicaciones / {editingLocation ? "Editar" : "Nueva"}</span>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Información básica</h4>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Nombre *</label>
+                  <input
+                    type="text"
+                    required
+                    value={locationName}
+                    onChange={(e) => setLocationName(e.target.value)}
+                    placeholder="Nombre de la ubicación"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end pt-4 border-t border-slate-200/50">
+                  <button
+                    type="button"
+                    onClick={() => setLocationFormOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-white border border-slate-200 text-[11px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-8 py-2.5 rounded-xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                {/* Locations Header Controls */}
+                <div className="flex justify-between items-center gap-4 mb-6">
+                  <div className="relative w-full max-w-sm">
+                    <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar ubicación..."
+                      className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-slate-50/50 outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleNewLocation}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100"
+                  >
+                    <FiPlus size={15} strokeWidth={3} />
+                    <span>Nueva ubicación</span>
+                  </button>
+                </div>
+
+                {/* Locations Table */}
+                <div className="flex-1 overflow-auto border border-slate-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <th className="px-6 py-4">Nombre de la Ubicación</th>
+                        <th className="px-6 py-4 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100/60 text-slate-700">
+                      {locations.length === 0 ? (
+                        <tr>
+                          <td colSpan="2" className="px-6 py-20 text-center">
+                            <div className="text-3xl mb-3">📍</div>
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay ubicaciones registradas</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        locations
+                          .filter(l => (l.nombre || "").toLowerCase().includes(searchQuery.toLowerCase()))
+                          .map(loc => (
+                            <tr key={loc.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4 font-bold text-slate-800 text-[13px]">{loc.nombre}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => handleEditLocation(loc)}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                    title="Editar"
+                                  >
+                                    <FiEdit3 size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteLocation(loc)}
+                                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                    title="Eliminar"
+                                  >
+                                    <FiTrash2 size={15} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* --- VIEW: REGISTRAR MEDICION --- */}
+        {activeSubTab === "REGISTRAR" && (
+          <form onSubmit={handleSaveMedicion} className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
+            <div className="border-b border-slate-100 pb-4 mb-6 shrink-0">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Mediciones / Registrar</span>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Formulario de Medición</h3>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 pb-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-6 border border-slate-100 rounded-2xl">
+                
+                {/* Location Select */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Ubicación *</label>
+                  <select
+                    required
+                    value={medicionForm.ubicacionId}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, ubicacionId: e.target.value })}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  >
+                    <option value="">Seleccione...</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Responsable */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Responsable *</label>
+                  <select
+                    required
+                    value={medicionForm.responsable}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, responsable: e.target.value })}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  >
+                    <option value="">Seleccione...</option>
+                    {professionals.length === 0 ? (
+                      <option value={userProfile?.displayName}>{userProfile?.displayName || "Admin"}</option>
+                    ) : (
+                      professionals.map(pName => (
+                        <option key={pName} value={pName}>{pName}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {/* Temperatura */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Temperatura (°C) *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={medicionForm.temperatura}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, temperatura: e.target.value })}
+                    placeholder="Ej: 22.5"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Humedad */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Humedad (%) *</label>
+                  <input
+                    type="number"
+                    step="1"
+                    required
+                    value={medicionForm.humedad}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, humedad: e.target.value })}
+                    placeholder="Ej: 60"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Fecha */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha *</label>
+                  <input
+                    type="date"
+                    required
+                    value={medicionForm.fecha}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, fecha: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Hora */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Hora *</label>
+                  <input
+                    type="time"
+                    required
+                    value={medicionForm.hora}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, hora: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Observaciones */}
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Observaciones</label>
+                  <textarea
+                    rows="3"
+                    value={medicionForm.observaciones}
+                    onChange={(e) => setFormData({ ...medicionForm, observaciones: e.target.value })}
+                    placeholder="Observaciones o novedades sobre la medición"
+                    className="w-full p-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+              </div>
+            </div>
+
+            {/* Form Actions footer */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMedicion(null);
+                  setActiveSubTab("ENLISTAR");
+                }}
+                className="px-6 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-widest border border-slate-200/60 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-8 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-blue-100"
+              >
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* --- VIEW: ENLISTAR MEDICIONES --- */}
+        {activeSubTab === "ENLISTAR" && (
+          <div className="flex-1 flex flex-col animate-fadeIn">
+            {/* Header controls with filters */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+              <div className="flex flex-1 gap-3 w-full max-w-2xl">
+                <div className="relative flex-1">
+                  <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar por responsable..."
+                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-slate-50/50 outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+                  />
+                </div>
+                
+                <select
+                  value={filterUbicacion}
+                  onChange={(e) => setFilterUbicacion(e.target.value)}
+                  className="px-3 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-white outline-none focus:border-blue-400 shrink-0"
+                >
+                  <option value="">Todas las Ubicaciones</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingMedicion(null);
+                  setActiveSubTab("REGISTRAR");
+                }}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100 w-full sm:w-auto justify-center"
+              >
+                <FiPlus size={15} strokeWidth={3} />
+                <span>Nueva Medición</span>
+              </button>
+            </div>
+
+            {/* Measurements Table */}
+            <div className="flex-1 overflow-auto border border-slate-100 rounded-2xl">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-6 py-4">Fecha / Hora</th>
+                    <th className="px-6 py-4">Ubicación</th>
+                    <th className="px-6 py-4 text-center">Temp (°C)</th>
+                    <th className="px-6 py-4 text-center">Humedad (%)</th>
+                    <th className="px-6 py-4">Responsable</th>
+                    <th className="px-6 py-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100/60 text-slate-700">
+                  {filteredMediciones.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-20 text-center">
+                        <div className="text-3xl mb-3">🌡️</div>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay mediciones registradas</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMediciones.map(med => (
+                      <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-[13px] text-slate-800">{med.fecha}</div>
+                          <div className="text-[10px] text-slate-400 font-bold">{med.hora}</div>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-slate-700 text-[12px]">{med.ubicacionNombre}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                            med.temperatura > 25 || med.temperatura < 15
+                              ? "bg-rose-50 text-rose-600 border border-rose-100"
+                              : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          }`}>
+                            {med.temperatura} °C
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                            med.humedad > 70 || med.humedad < 40
+                              ? "bg-rose-50 text-rose-600 border border-rose-100"
+                              : "bg-blue-50 text-blue-600 border border-blue-100"
+                          }`}>
+                            {med.humedad} %
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-slate-600 text-[12px]">{med.responsable}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditMedicion(med)}
+                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                              title="Editar"
+                            >
+                              <FiEdit3 size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMedicion(med)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                              title="Eliminar"
+                            >
+                              <FiTrash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* --- VIEW: GRAFICAR MEDICIONES --- */}
+        {activeSubTab === "GRAFICAR" && (
+          <div className="flex-1 flex flex-col animate-fadeIn space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Mediciones / Gráfica</span>
+                <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Historial Gráfico</h3>
+              </div>
+              <select
+                value={filterUbicacion}
+                onChange={(e) => setFilterUbicacion(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-white outline-none focus:border-blue-400"
+              >
+                <option value="">Todas las Ubicaciones</option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            {chartData.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center">
+                <div className="text-4xl mb-3">📈</div>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Ingrese al menos una medición para graficar los datos</p>
+              </div>
+            ) : (
+              <>
+                {/* Recharts Component */}
+                <div className="h-80 w-full bg-slate-50 border border-slate-100 p-6 rounded-3xl">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight="bold" />
+                      <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" />
+                      <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
+                      <Legend wrapperStyle={{ fontSize: 11, fontWeight: "bold" }} />
+                      <Line type="monotone" dataKey="Temp" name="Temperatura (°C)" stroke="#ef4444" strokeWidth={3} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="Hum" name="Humedad (%)" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Summary Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+                  <div className="bg-rose-50/40 border border-rose-100 p-5 rounded-2xl">
+                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest block mb-1">Temperatura Máxima</span>
+                    <span className="text-2xl font-black text-rose-700">
+                      {Math.max(...chartData.map(d => d.Temp))} °C
+                    </span>
+                  </div>
+                  
+                  <div className="bg-blue-50/40 border border-blue-100 p-5 rounded-2xl">
+                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest block mb-1">Humedad Máxima</span>
+                    <span className="text-2xl font-black text-blue-700">
+                      {Math.max(...chartData.map(d => d.Hum))} %
+                    </span>
+                  </div>
+
+                  <div className="bg-emerald-50/40 border border-emerald-100 p-5 rounded-2xl">
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Mediciones Graficadas</span>
+                    <span className="text-2xl font-black text-emerald-700">
+                      {chartData.length} registros
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
