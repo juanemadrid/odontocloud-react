@@ -51,6 +51,18 @@ export default function TemperaturaHumedad() {
   const [filterUbicacion, setFilterUbicacion] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Date filters matching OralDrive
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toLocaleDateString("en-CA"); // One month ago: YYYY-MM-DD
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toLocaleDateString("en-CA"); // Today: YYYY-MM-DD
+  });
+  const [appliedStartDate, setAppliedStartDate] = useState(startDate);
+  const [appliedEndDate, setAppliedEndDate] = useState(endDate);
+
   useEffect(() => {
     if (inquilino) {
       loadLocations();
@@ -233,6 +245,10 @@ export default function TemperaturaHumedad() {
   const filteredMediciones = mediciones.filter(m => {
     const isLocMatch = filterUbicacion ? m.ubicacionId === filterUbicacion : true;
     if (!isLocMatch) return false;
+
+    const mDate = m.fechaMedida ? m.fechaMedida.substring(0, 10) : "";
+    const isWithinDateRange = (!appliedStartDate || mDate >= appliedStartDate) && (!appliedEndDate || mDate <= appliedEndDate);
+    if (!isWithinDateRange) return false;
 
     const term = searchQuery.toLowerCase();
     const locName = (m.ubicacionNombre || "").toLowerCase();
@@ -547,134 +563,178 @@ export default function TemperaturaHumedad() {
 
         {/* --- VIEW: ENLISTAR MEDICIONES --- */}
         {activeSubTab === "ENLISTAR" && (
-          <div className="flex-1 flex flex-col animate-fadeIn">
-            {/* Header controls with filters */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-              <div className="flex flex-1 gap-3 w-full max-w-2xl">
-                <div className="relative flex-1">
-                  <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex-1 flex flex-col animate-fadeIn space-y-6">
+            
+            {/* Top Card: Search / Filters */}
+            <div className="bg-slate-50/50 border border-slate-100 p-6 rounded-2xl">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Mediciones</h3>
+                <span className="text-[10px] font-bold text-slate-400">
+                  Temperatura y Humedad - Mediciones
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap items-end gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha Inicial</label>
                   <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Buscar por responsable..."
-                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-slate-50/50 outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
                   />
                 </div>
-                
-                <select
-                  value={filterUbicacion}
-                  onChange={(e) => setFilterUbicacion(e.target.value)}
-                  className="px-3 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-white outline-none focus:border-blue-400 shrink-0"
-                >
-                  <option value="">Todas las Ubicaciones</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.nombre}</option>
-                  ))}
-                </select>
-              </div>
 
-              <button
-                onClick={() => {
-                  setEditingMedicion(null);
-                  setActiveSubTab("REGISTRAR");
-                }}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100 w-full sm:w-auto justify-center"
-              >
-                <FiPlus size={15} strokeWidth={3} />
-                <span>Nueva Medición</span>
-              </button>
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha Final</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setAppliedStartDate(startDate);
+                    setAppliedEndDate(endDate);
+                  }}
+                  className="h-10 px-8 rounded-xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100"
+                >
+                  Buscar
+                </button>
+              </div>
             </div>
 
-            {/* Measurements Table */}
-            <div className="flex-1 overflow-auto border border-slate-100 rounded-2xl">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="px-6 py-4">Fecha de medida</th>
-                    <th className="px-6 py-4">Ubicación</th>
-                    <th className="px-6 py-4 text-center">Temp. Interna (°C)</th>
-                    <th className="px-6 py-4 text-center">Temp. Externa (°C)</th>
-                    <th className="px-6 py-4 text-center">Humedad (%)</th>
-                    <th className="px-6 py-4">Responsable</th>
-                    <th className="px-6 py-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/60 text-slate-700">
-                  {filteredMediciones.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-20 text-center">
-                        <div className="text-3xl mb-3">🌡️</div>
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay mediciones registradas</p>
-                      </td>
+            {/* Bottom Card: Table & Create Action */}
+            <div className="bg-white border border-slate-100 p-6 rounded-2xl flex-1 flex flex-col overflow-hidden">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                <div className="flex flex-1 gap-3 w-full max-w-xl">
+                  <div className="relative flex-1">
+                    <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar por responsable..."
+                      className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-slate-50/50 outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+                    />
+                  </div>
+                  
+                  <select
+                    value={filterUbicacion}
+                    onChange={(e) => setFilterUbicacion(e.target.value)}
+                    className="px-3 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-white outline-none focus:border-blue-400 shrink-0"
+                  >
+                    <option value="">Todas las Ubicaciones</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEditingMedicion(null);
+                    setActiveSubTab("REGISTRAR");
+                  }}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-100 w-full sm:w-auto justify-center"
+                >
+                  <FiPlus size={15} strokeWidth={3} />
+                  <span>+ Nueva medida</span>
+                </button>
+              </div>
+
+              {/* Measurements Table */}
+              <div className="flex-1 overflow-auto border border-slate-100 rounded-2xl">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4">Fecha de medida</th>
+                      <th className="px-6 py-4">Ubicación</th>
+                      <th className="px-6 py-4 text-center">Temp. Interna (°C)</th>
+                      <th className="px-6 py-4 text-center">Temp. Externa (°C)</th>
+                      <th className="px-6 py-4 text-center">Humedad (%)</th>
+                      <th className="px-6 py-4">Responsable</th>
+                      <th className="px-6 py-4 text-center">Acciones</th>
                     </tr>
-                  ) : (
-                    filteredMediciones.map(med => {
-                      // Format fechaMedida: YYYY-MM-DDTHH:MM -> DD/MM/YYYY - HH:MM
-                      let formattedDate = med.fechaMedida || "";
-                      if (formattedDate.includes("T")) {
-                        const [dPart, tPart] = formattedDate.split("T");
-                        const [yr, mo, dy] = dPart.split("-");
-                        formattedDate = `${dy}/${mo}/${yr} - ${tPart}`;
-                      }
-                      return (
-                        <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-[13px] text-slate-800">{formattedDate}</div>
-                          </td>
-                          <td className="px-6 py-4 font-bold text-slate-700 text-[12px]">{med.ubicacionNombre}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
-                              med.temperaturaInterna > 25 || med.temperaturaInterna < 15
-                                ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            }`}>
-                              {med.temperaturaInterna} °C
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
-                              med.temperaturaExterna > 25 || med.temperaturaExterna < 15
-                                ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            }`}>
-                              {med.temperaturaExterna} °C
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
-                              med.humedad > 70 || med.humedad < 40
-                                ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                : "bg-blue-50 text-blue-600 border border-blue-100"
-                            }`}>
-                              {med.humedad} %
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-bold text-slate-600 text-[12px]">{med.responsable}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handleEditMedicion(med)}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                title="Editar"
-                              >
-                                <FiEdit3 size={15} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteMedicion(med)}
-                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                                title="Eliminar"
-                              >
-                                <FiTrash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100/60 text-slate-700">
+                    {filteredMediciones.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-20 text-center">
+                          <div className="text-3xl mb-3">🌡️</div>
+                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay mediciones registradas</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredMediciones.map(med => {
+                        let formattedDate = med.fechaMedida || "";
+                        if (formattedDate.includes("T")) {
+                          const [dPart, tPart] = formattedDate.split("T");
+                          const [yr, mo, dy] = dPart.split("-");
+                          formattedDate = `${dy}/${mo}/${yr} - ${tPart}`;
+                        }
+                        return (
+                          <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-[13px] text-slate-800">{formattedDate}</div>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-slate-700 text-[12px]">{med.ubicacionNombre}</td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                                med.temperaturaInterna > 25 || med.temperaturaInterna < 15
+                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                  : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              }`}>
+                                {med.temperaturaInterna} °C
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                                med.temperaturaExterna > 25 || med.temperaturaExterna < 15
+                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                  : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              }`}>
+                                {med.temperaturaExterna} °C
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                                med.humedad > 70 || med.humedad < 40
+                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                  : "bg-blue-50 text-blue-600 border border-blue-100"
+                              }`}>
+                                {med.humedad} %
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-slate-600 text-[12px]">{med.responsable}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleEditMedicion(med)}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                  title="Editar"
+                                >
+                                  <FiEdit3 size={15} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMedicion(med)}
+                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                  title="Eliminar"
+                                >
+                                  <FiTrash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
