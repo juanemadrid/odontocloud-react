@@ -267,6 +267,8 @@ export default function Odontograma({ embeddedPatient }) {
     const handleToothClick = (dienteId, zona) => {
         setActiveToothId(dienteId);
         
+        if (!surfaceFilter) return;
+
         // Si el usuario tiene un filtro de superficie activo (ej: Mesial)
         // Forzamos que se marque esa zona específica automáticamente en cualquier clic (diente o selector)
         let targetZona = zona;
@@ -342,7 +344,7 @@ export default function Odontograma({ embeddedPatient }) {
     };
 
     const handleSurfaceFilterChange = (newSurfaceId) => {
-        const nextSurface = surfaceFilter === newSurfaceId ? "todas" : newSurfaceId;
+        const nextSurface = surfaceFilter === newSurfaceId ? null : newSurfaceId;
         setSurfaceFilter(nextSurface);
         setActiveToothId(null);
     };
