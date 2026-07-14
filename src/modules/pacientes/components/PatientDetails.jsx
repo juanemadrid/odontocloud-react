@@ -1182,7 +1182,13 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         {/* WORKSPACE CONTENT */}
                         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-white relative overflow-hidden">
                             {isEditableTab ? (
-                                <form onSubmit={methods.handleSubmit(submitForm)} className="h-full flex flex-col">
+                                <form 
+                                    onSubmit={methods.handleSubmit(submitForm, (errors) => {
+                                        console.warn("Form validation errors:", errors);
+                                        toast.error("Por favor completa los campos obligatorios pendientes.");
+                                    })} 
+                                    className="h-full flex flex-col"
+                                >
                                     <div className="px-10 py-4 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10">
                                         <div className="flex items-center gap-3">
                                             <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">{getPageTitle()}</h3>

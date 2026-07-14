@@ -80,8 +80,8 @@ export const patientSchema = z.object({
     asesorComercialType: z.string().default("Libre"),
     asesorComercialValue: z.string().optional(),
 
-    nombreEps: z.string().min(1, "El nombre de la EPS es obligatorio"),
-    tipoVinculacion: z.string().min(1, "El tipo de vinculación es obligatorio"),
+    nombreEps: z.string().optional().or(z.literal("")),
+    tipoVinculacion: z.string().optional().or(z.literal("")),
     polizaSalud: z.string().optional(),
 
     // 5. Otros
