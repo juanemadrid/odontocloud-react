@@ -40,11 +40,10 @@ export default function TemperaturaHumedad() {
   const [editingMedicion, setEditingMedicion] = useState(null);
   const [medicionForm, setMedicionForm] = useState({
     ubicacionId: "",
-    temperatura: "",
+    temperaturaInterna: "",
+    temperaturaExterna: "",
     humedad: "",
-    fecha: new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD local format
-    hora: new Date().toLocaleTimeString("en-US", { hour12: false }).substring(0, 5), // HH:MM
-    responsable: userProfile?.displayName || userProfile?.nombreCompleto || "",
+    fechaMedida: new Date().toISOString().substring(0, 16), // YYYY-MM-DDTHH:MM
     observaciones: ""
   });
 
@@ -79,8 +78,7 @@ export default function TemperaturaHumedad() {
       const q = query(
         collection(db, "temp_mediciones"), 
         where("inquilino", "==", inquilino),
-        orderBy("fecha", "desc"),
-        orderBy("hora", "desc")
+        orderBy("fechaMedida", "desc")
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -159,20 +157,21 @@ export default function TemperaturaHumedad() {
   const handleSaveMedicion = async (e) => {
     e.preventDefault();
     if (!medicionForm.ubicacionId) return toast?.error("Debe seleccionar una ubicación");
-    if (medicionForm.temperatura === "") return toast?.error("La temperatura es requerida");
+    if (medicionForm.temperaturaInterna === "") return toast?.error("La temperatura interna es requerida");
+    if (medicionForm.temperaturaExterna === "") return toast?.error("La temperatura externa es requerida");
     if (medicionForm.humedad === "") return toast?.error("La humedad es requerida");
-    if (!medicionForm.fecha) return toast?.error("La fecha es requerida");
-    if (!medicionForm.hora) return toast?.error("La hora es requerida");
-    if (!medicionForm.responsable) return toast?.error("El responsable es requerido");
+    if (!medicionForm.fechaMedida) return toast?.error("La fecha de medida es requerida");
 
     setSaving(true);
     try {
       const selectedLoc = locations.find(l => l.id === medicionForm.ubicacionId);
       const payload = {
         ...medicionForm,
-        temperatura: parseFloat(medicionForm.temperatura),
+        temperaturaInterna: parseFloat(medicionForm.temperaturaInterna),
+        temperaturaExterna: parseFloat(medicionForm.temperaturaExterna),
         humedad: parseFloat(medicionForm.humedad),
         ubicacionNombre: selectedLoc?.nombre || "",
+        responsable: userProfile?.displayName || userProfile?.nombreCompleto || "Admin",
         inquilino,
         updatedAt: serverTimestamp()
       };
@@ -188,11 +187,10 @@ export default function TemperaturaHumedad() {
 
       setMedicionForm({
         ubicacionId: "",
-        temperatura: "",
+        temperaturaInterna: "",
+        temperaturaExterna: "",
         humedad: "",
-        fecha: new Date().toLocaleDateString("en-CA"),
-        hora: new Date().toLocaleTimeString("en-US", { hour12: false }).substring(0, 5),
-        responsable: userProfile?.displayName || userProfile?.nombreCompleto || "",
+        fechaMedida: new Date().toISOString().substring(0, 16),
         observaciones: ""
       });
       setEditingMedicion(null);
@@ -210,11 +208,10 @@ export default function TemperaturaHumedad() {
     setEditingMedicion(med);
     setMedicionForm({
       ubicacionId: med.ubicacionId || "",
-      temperatura: med.temperatura || "",
+      temperaturaInterna: med.temperaturaInterna || "",
+      temperaturaExterna: med.temperaturaExterna || "",
       humedad: med.humedad || "",
-      fecha: med.fecha || "",
-      hora: med.hora || "",
-      responsable: med.responsable || "",
+      fechaMedida: med.fechaMedida || new Date().toISOString().substring(0, 16),
       observaciones: med.observaciones || ""
     });
     setActiveSubTab("REGISTRAR");
@@ -248,11 +245,19 @@ export default function TemperaturaHumedad() {
     .filter(m => !filterUbicacion || m.ubicacionId === filterUbicacion)
     .slice(0, 15) // Last 15 measurements
     .reverse() // Chronological order
-    .map(m => ({
-      name: `${m.fecha.substring(5)} ${m.hora}`,
-      Temp: m.temperatura,
-      Hum: m.humedad
-    }));
+    .map(m => {
+      let displayName = "";
+      if (m.fechaMedida && m.fechaMedida.includes("T")) {
+        const [dPart, tPart] = m.fechaMedida.split("T");
+        displayName = `${dPart.substring(5)} ${tPart}`;
+      }
+      return {
+        name: displayName,
+        TempInt: m.temperaturaInterna || 0,
+        TempExt: m.temperaturaExterna || 0,
+        Hum: m.humedad || 0
+      };
+    });
 
   return (
     <div className="bg-white rounded-[28px] border border-slate-200/60 shadow-md h-full flex overflow-hidden animate-fadeIn">
@@ -445,77 +450,62 @@ export default function TemperaturaHumedad() {
                   </select>
                 </div>
 
-                {/* Responsable */}
+                {/* Fecha de Medida */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Responsable *</label>
-                  <select
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha de medida *</label>
+                  <input
+                    type="datetime-local"
                     required
-                    value={medicionForm.responsable}
-                    onChange={(e) => setMedicionForm({ ...medicionForm, responsable: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
-                  >
-                    <option value="">Seleccione...</option>
-                    {professionals.length === 0 ? (
-                      <option value={userProfile?.displayName}>{userProfile?.displayName || "Admin"}</option>
-                    ) : (
-                      professionals.map(pName => (
-                        <option key={pName} value={pName}>{pName}</option>
-                      ))
-                    )}
-                  </select>
+                    value={medicionForm.fechaMedida}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, fechaMedida: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
                 </div>
 
-                {/* Temperatura */}
+                {/* Temperatura Interna */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Temperatura (°C) *</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Temperatura interna *</label>
                   <input
                     type="number"
                     step="0.1"
                     required
-                    value={medicionForm.temperatura}
-                    onChange={(e) => setMedicionForm({ ...medicionForm, temperatura: e.target.value })}
-                    placeholder="Ej: 22.5"
+                    value={medicionForm.temperaturaInterna}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, temperaturaInterna: e.target.value })}
+                    placeholder="Temperatura interna"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
+                  />
+                </div>
+
+                {/* Temperatura Externa */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Temperatura externa *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={medicionForm.temperaturaExterna}
+                    onChange={(e) => setMedicionForm({ ...medicionForm, temperaturaExterna: e.target.value })}
+                    placeholder="Temperatura externa"
                     className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
                   />
                 </div>
 
                 {/* Humedad */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Humedad (%) *</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Humedad *</label>
                   <input
                     type="number"
                     step="1"
                     required
                     value={medicionForm.humedad}
                     onChange={(e) => setMedicionForm({ ...medicionForm, humedad: e.target.value })}
-                    placeholder="Ej: 60"
+                    placeholder="Humedad"
                     className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
                   />
                 </div>
 
-                {/* Fecha */}
-                <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Fecha *</label>
-                  <input
-                    type="date"
-                    required
-                    value={medicionForm.fecha}
-                    onChange={(e) => setMedicionForm({ ...medicionForm, fecha: e.target.value })}
-                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
-                  />
-                </div>
-
-                {/* Hora */}
-                <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Hora *</label>
-                  <input
-                    type="time"
-                    required
-                    value={medicionForm.hora}
-                    onChange={(e) => setMedicionForm({ ...medicionForm, hora: e.target.value })}
-                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
-                  />
-                </div>
+                {/* Empty grid space for alignment */}
+                <div className="hidden md:block" />
 
                 {/* Observaciones */}
                 <div className="md:col-span-2">
@@ -523,8 +513,8 @@ export default function TemperaturaHumedad() {
                   <textarea
                     rows="3"
                     value={medicionForm.observaciones}
-                    onChange={(e) => setFormData({ ...medicionForm, observaciones: e.target.value })}
-                    placeholder="Observaciones o novedades sobre la medición"
+                    onChange={(e) => setMedicionForm({ ...medicionForm, observaciones: e.target.value })}
+                    placeholder="Observaciones"
                     className="w-full p-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 bg-white outline-none focus:border-blue-400 transition-all"
                   />
                 </div>
@@ -601,9 +591,10 @@ export default function TemperaturaHumedad() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="px-6 py-4">Fecha / Hora</th>
+                    <th className="px-6 py-4">Fecha de medida</th>
                     <th className="px-6 py-4">Ubicación</th>
-                    <th className="px-6 py-4 text-center">Temp (°C)</th>
+                    <th className="px-6 py-4 text-center">Temp. Interna (°C)</th>
+                    <th className="px-6 py-4 text-center">Temp. Externa (°C)</th>
                     <th className="px-6 py-4 text-center">Humedad (%)</th>
                     <th className="px-6 py-4">Responsable</th>
                     <th className="px-6 py-4 text-center">Acciones</th>
@@ -612,58 +603,75 @@ export default function TemperaturaHumedad() {
                 <tbody className="divide-y divide-slate-100/60 text-slate-700">
                   {filteredMediciones.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-20 text-center">
+                      <td colSpan="7" className="px-6 py-20 text-center">
                         <div className="text-3xl mb-3">🌡️</div>
                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay mediciones registradas</p>
                       </td>
                     </tr>
                   ) : (
-                    filteredMediciones.map(med => (
-                      <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-[13px] text-slate-800">{med.fecha}</div>
-                          <div className="text-[10px] text-slate-400 font-bold">{med.hora}</div>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-700 text-[12px]">{med.ubicacionNombre}</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
-                            med.temperatura > 25 || med.temperatura < 15
-                              ? "bg-rose-50 text-rose-600 border border-rose-100"
-                              : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                          }`}>
-                            {med.temperatura} °C
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
-                            med.humedad > 70 || med.humedad < 40
-                              ? "bg-rose-50 text-rose-600 border border-rose-100"
-                              : "bg-blue-50 text-blue-600 border border-blue-100"
-                          }`}>
-                            {med.humedad} %
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-600 text-[12px]">{med.responsable}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleEditMedicion(med)}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                              title="Editar"
-                            >
-                              <FiEdit3 size={15} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMedicion(med)}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                              title="Eliminar"
-                            >
-                              <FiTrash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    filteredMediciones.map(med => {
+                      // Format fechaMedida: YYYY-MM-DDTHH:MM -> DD/MM/YYYY - HH:MM
+                      let formattedDate = med.fechaMedida || "";
+                      if (formattedDate.includes("T")) {
+                        const [dPart, tPart] = formattedDate.split("T");
+                        const [yr, mo, dy] = dPart.split("-");
+                        formattedDate = `${dy}/${mo}/${yr} - ${tPart}`;
+                      }
+                      return (
+                        <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-[13px] text-slate-800">{formattedDate}</div>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-slate-700 text-[12px]">{med.ubicacionNombre}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                              med.temperaturaInterna > 25 || med.temperaturaInterna < 15
+                                ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                            }`}>
+                              {med.temperaturaInterna} °C
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                              med.temperaturaExterna > 25 || med.temperaturaExterna < 15
+                                ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                            }`}>
+                              {med.temperaturaExterna} °C
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[12px] font-black ${
+                              med.humedad > 70 || med.humedad < 40
+                                ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                : "bg-blue-50 text-blue-600 border border-blue-100"
+                            }`}>
+                              {med.humedad} %
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-slate-600 text-[12px]">{med.responsable}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleEditMedicion(med)}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                title="Editar"
+                              >
+                                <FiEdit3 size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMedicion(med)}
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Eliminar"
+                              >
+                                <FiTrash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -707,7 +715,8 @@ export default function TemperaturaHumedad() {
                       <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" />
                       <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
                       <Legend wrapperStyle={{ fontSize: 11, fontWeight: "bold" }} />
-                      <Line type="monotone" dataKey="Temp" name="Temperatura (°C)" stroke="#ef4444" strokeWidth={3} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="TempInt" name="Temp. Interna (°C)" stroke="#ef4444" strokeWidth={3} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="TempExt" name="Temp. Externa (°C)" stroke="#f59e0b" strokeWidth={3} activeDot={{ r: 6 }} />
                       <Line type="monotone" dataKey="Hum" name="Humedad (%)" stroke="#3b82f6" strokeWidth={3} activeDot={{ r: 6 }} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -716,9 +725,16 @@ export default function TemperaturaHumedad() {
                 {/* Summary Metrics */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
                   <div className="bg-rose-50/40 border border-rose-100 p-5 rounded-2xl">
-                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest block mb-1">Temperatura Máxima</span>
+                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest block mb-1">Temperatura Interna Máx</span>
                     <span className="text-2xl font-black text-rose-700">
-                      {Math.max(...chartData.map(d => d.Temp))} °C
+                      {Math.max(...chartData.map(d => d.TempInt))} °C
+                    </span>
+                  </div>
+
+                  <div className="bg-amber-50/40 border border-amber-100 p-5 rounded-2xl">
+                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-1">Temperatura Externa Máx</span>
+                    <span className="text-2xl font-black text-amber-700">
+                      {Math.max(...chartData.map(d => d.TempExt))} °C
                     </span>
                   </div>
                   
@@ -726,13 +742,6 @@ export default function TemperaturaHumedad() {
                     <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest block mb-1">Humedad Máxima</span>
                     <span className="text-2xl font-black text-blue-700">
                       {Math.max(...chartData.map(d => d.Hum))} %
-                    </span>
-                  </div>
-
-                  <div className="bg-emerald-50/40 border border-emerald-100 p-5 rounded-2xl">
-                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Mediciones Graficadas</span>
-                    <span className="text-2xl font-black text-emerald-700">
-                      {chartData.length} registros
                     </span>
                   </div>
                 </div>
