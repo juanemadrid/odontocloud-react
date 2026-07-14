@@ -197,6 +197,26 @@ export default function Terceros() {
     }
   };
 
+  const handleDelete = async (tercero) => {
+    const isNatural = tercero.tipoPersona === "Natural";
+    const name = isNatural ? `${tercero.nombre} ${tercero.apellidos || ""}`.trim() : tercero.razonSocial || tercero.nombre;
+    if (!window.confirm(`¿Está seguro de que desea eliminar permanentemente al tercero "${name}"?`)) return;
+    
+    try {
+      await deleteDoc(doc(db, "terceros", tercero.id));
+      if (tercero.isEps) {
+        try {
+          await deleteDoc(doc(db, "eps_catalogo", tercero.id));
+        } catch {}
+      }
+      toast?.success("Tercero eliminado con éxito");
+      loadTerceros();
+    } catch (e) {
+      console.error("Error deleting tercero:", e);
+      toast?.error("Error al eliminar el tercero");
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.nombre.trim()) return toast?.error("El nombre es requerido");
@@ -397,6 +417,13 @@ export default function Terceros() {
                               title={tercero.activo ? "Inactivar tercero" : "Activar tercero"}
                             >
                               {tercero.activo ? <FiToggleRight size={18} /> : <FiToggleLeft size={18} />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(tercero)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                              title="Eliminar tercero"
+                            >
+                              <FiTrash2 size={15} />
                             </button>
                           </div>
                         </td>
