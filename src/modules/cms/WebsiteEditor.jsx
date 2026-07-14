@@ -788,7 +788,7 @@ export default function WebCms() {
 
                     {viewMode === 'desktop' ? (
                         /* DESKTOP BROWSER FRAME */
-                        <div className="w-full max-h-full max-w-[1400px] aspect-video bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative rounded-[2rem] transition-all duration-700">
+                        <div className="h-[80%] aspect-video bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] border-[12px] border-slate-800 overflow-hidden flex flex-col relative rounded-[2rem] transition-all duration-700 max-w-full">
                             {/* Browser Toolbar UI */}
                             <div className="bg-slate-800 h-10 flex items-center px-8 gap-4 border-b border-slate-700 shrink-0 justify-between">
                                 <div className="flex gap-2">
@@ -905,8 +905,8 @@ export default function WebCms() {
                     {/* Monitor Stand - Discrete (Only show in Desktop) */}
                     {viewMode === 'desktop' && (
                         <div className="flex flex-col items-center shrink-0 -mt-2 opacity-80">
-                            <div className="w-48 h-10 bg-slate-800 shadow-2xl skew-x-12" />
-                            <div className="w-[600px] h-3 bg-slate-900 rounded-full shadow-2xl relative">
+                            <div className="w-40 h-8 bg-slate-800 shadow-2xl skew-x-12" />
+                            <div className="w-[320px] h-3 bg-slate-900 rounded-full shadow-2xl relative">
                                 <div className="absolute inset-x-0 h-0.5 bg-white/5 top-0 rounded-full" />
                             </div>
                         </div>
