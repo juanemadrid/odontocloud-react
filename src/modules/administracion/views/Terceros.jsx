@@ -104,6 +104,7 @@ export default function Terceros() {
     modalidadPago: "Contado",
     contrato: "",
     isEps: false,
+    codigoEntidadAdministradora: "",
     activo: true
   });
 
@@ -150,6 +151,7 @@ export default function Terceros() {
       modalidadPago: "Contado",
       contrato: "",
       isEps: false,
+      codigoEntidadAdministradora: "",
       activo: true
     });
     setViewMode("FORM");
@@ -176,6 +178,7 @@ export default function Terceros() {
       modalidadPago: tercero.modalidadPago || "Contado",
       contrato: tercero.contrato || "",
       isEps: tercero.isEps || false,
+      codigoEntidadAdministradora: tercero.codigoEntidadAdministradora || "",
       activo: tercero.activo !== undefined ? tercero.activo : true
     });
     setViewMode("FORM");
@@ -205,6 +208,9 @@ export default function Terceros() {
     if (!formData.identificadorProcedencia) return toast?.error("El identificador de procedencia es requerido");
     if (!formData.tipoPersona) return toast?.error("El tipo de persona es requerido");
     if (!formData.modalidadPago) return toast?.error("La modalidad de pago es requerida");
+    if (formData.isEps && !formData.codigoEntidadAdministradora?.trim()) {
+      return toast?.error("El código de entidad administradora es requerido para EPS");
+    }
 
     setSaving(true);
     try {
@@ -219,6 +225,7 @@ export default function Terceros() {
         codigoPostal: formData.codigoPostal.trim(),
         email: formData.email.trim(),
         contrato: formData.contrato.trim(),
+        codigoEntidadAdministradora: formData.isEps ? formData.codigoEntidadAdministradora.trim() : "",
         inquilino,
         updatedAt: serverTimestamp()
       };
@@ -239,7 +246,7 @@ export default function Terceros() {
           nombre: epsName,
           inquilino,
           terceroId,
-          codigoEps: formData.nroDocumento,
+          codigoEps: formData.codigoEntidadAdministradora.trim(),
           activo: formData.activo
         }, { merge: true });
       } else {
@@ -723,6 +730,22 @@ export default function Terceros() {
                   <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8dc63f]"></div>
                 </label>
               </div>
+
+              {formData.isEps && (
+                <div className="md:col-span-2 animate-fadeIn">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">
+                    Código de entidad administradora *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.codigoEntidadAdministradora || ""}
+                    onChange={(e) => setFormData({ ...formData, codigoEntidadAdministradora: e.target.value })}
+                    placeholder="Código de entidad administradora"
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-slate-50/30 outline-none focus:border-blue-400 focus:bg-white transition-all caret-slate-950"
+                  />
+                </div>
+              )}
 
             </div>
           </div>
