@@ -330,7 +330,7 @@ export default function Odontograma({ embeddedPatient }) {
         setPlanTratamiento(prev => [...prev,
             { 
                 diente: dienteId, 
-                zona: targetZona === "Completo" ? "Completo" : targetZona,
+                zona: (isGeneralTool || targetZona === "Completo") ? "Completo" : targetZona,
                 zonaLabel: zonaLabel, 
                 tratamiento: fullDescription, 
                 color: tool.color, 
@@ -387,7 +387,17 @@ export default function Odontograma({ embeddedPatient }) {
         setPlanTratamiento(prev => prev.filter((_, i) => i !== idx));
         setOdontogramaData(prev => {
             const c = { ...(prev[item.diente] || {}) };
-            if (item.zona === "Completo") delete c.general; else delete c[item.zona];
+            const isGeneral = [
+                "ausente", "extraccion", "implante_bueno", "implante_malo", 
+                "corona_buena", "corona_des", "perno_bueno", "perno_malo", 
+                "diente_sano", "fractura", "endodoncia_buena", "endodoncia_mala"
+            ].includes(item.toolId);
+
+            if (item.zona === "Completo" || isGeneral || (c.general && c.general.id === item.toolId)) {
+                delete c.general;
+            } else {
+                delete c[item.zona];
+            }
             return { ...prev, [item.diente]: c };
         });
     };
@@ -681,7 +691,7 @@ export default function Odontograma({ embeddedPatient }) {
                                 {TOOLS.filter(t => t.id !== "borrador").map(t => (
                                     <button
                                         key={t.id}
-                                        onClick={() => !isReadOnly && setSelectedToolId(t.id)}
+                                        onClick={() => !isReadOnly && setSelectedToolId(selectedToolId === t.id ? null : t.id)}
                                         disabled={isReadOnly}
                                         className={`flex items-center gap-2 py-1.5 px-2.5 rounded-xl transition-all text-left ${
                                             selectedToolId === t.id
@@ -699,7 +709,7 @@ export default function Odontograma({ embeddedPatient }) {
                                 ))}
                                 {/* Borrador */}
                                 <button
-                                    onClick={() => !isReadOnly && setSelectedToolId("borrador")}
+                                    onClick={() => !isReadOnly && setSelectedToolId(selectedToolId === "borrador" ? null : "borrador")}
                                     disabled={isReadOnly}
                                     className={`flex items-center gap-2 py-1.5 px-2.5 rounded-xl transition-all text-left col-span-full mt-2 border-t border-slate-100 pt-3 ${
                                         selectedToolId === "borrador" ? "bg-white shadow-sm ring-1 ring-slate-300" : "hover:bg-white/70"
