@@ -264,21 +264,20 @@ export default function ReciboCajaList({ onNew }) {
             const dataPagos = snapPagos.docs
                 .map(d => {
                     const pData = d.data();
+                    const medioRaw = pData.medio || "Abono";
+                    const condicionPago = medioRaw.toLowerCase() === "saldo a favor" ? "Consumo s. a favor" : medioRaw;
                     return {
                         id: d.id,
                         nroConsecutivo: pData.nroConsecutivo || "",
                         fecha: pData.fecha,
                         pacienteNombre: pData.patientNombre || pData.pacienteNombre || "—",
-                        condicionPago: pData.medio || "Abono",
+                        condicionPago: condicionPago,
                         concepto: pData.concepto || "Abono",
                         total: pData.monto || 0,
                         isPago: true
                     };
                 })
-                .filter(p => 
-                    p.concepto !== "SALDO A FAVOR" && 
-                    (p.condicionPago || "").toLowerCase() !== "saldo a favor"
-                );
+                .filter(p => p.concepto !== "SALDO A FAVOR");
 
             // Combine and filter by date range client-side
             let data = [...dataRecibos, ...dataPagos];

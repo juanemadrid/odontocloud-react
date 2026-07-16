@@ -171,7 +171,9 @@ export default function HistoricoPagosTab({ patientId }) {
                                         </span>
                                     )}
                                     <h4 className="font-black text-slate-800 text-[12px] uppercase tracking-tight">{pago.concepto || "ABONO GENERAL"}</h4>
-                                    <span className="text-[8px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{pago.medio}</span>
+                                    <span className="text-[8px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                        {(pago.medio || "").toLowerCase() === "saldo a favor" ? "Consumo s. a favor" : pago.medio}
+                                    </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
                                      <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
