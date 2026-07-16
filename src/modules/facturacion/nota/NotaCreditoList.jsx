@@ -265,31 +265,6 @@ export default function NotaCreditoList({ onNew }) {
 
     return (
         <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
-                <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
-                            <span>🏠</span>
-                            <span>-</span>
-                            <span>Administración</span>
-                            <span>-</span>
-                            <span>Nota crédito</span>
-                        </div>
-                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none mt-1">
-                            Nota crédito
-                        </h2>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={onNew}
-                        className="h-10 px-8 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 animate-pulse"
-                    >
-                        + Nueva nota crédito
-                    </button>
-                </div>
-            </div>
 
             {/* Filter Toggle Cards & Inputs */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

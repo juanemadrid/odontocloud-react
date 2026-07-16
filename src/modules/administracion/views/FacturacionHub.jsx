@@ -70,25 +70,61 @@ export default function FacturacionHub() {
     if (content) {
         return (
             <div className="h-full flex flex-col animate-slideUp">
-                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center gap-4 sticky top-0 z-50">
-                    <button 
-                        onClick={() => {
-                            if (activeSubView === "recibo_form") setActiveSubView("recibo");
-                            else if (activeSubView === "saldo_form") setActiveSubView("saldo");
-                            else if (activeSubView === "nc_form") setActiveSubView("nc");
-                            else if (activeSubView === "nd_form") setActiveSubView("nd");
-                            else setActiveSubView(null);
-                        }}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 shadow-sm hover:shadow-md active:scale-95 group"
-                        title="Volver"
-                    >
-                        <FiArrowRight className="rotate-180 group-hover:-translate-x-0.5 transition-transform" size={18} />
-                    </button>
-                    <div className="h-6 w-[1px] bg-slate-200 mx-1" />
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] leading-none mb-1">Módulo de Facturación</span>
-                        <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight leading-none">{title}</h2>
+                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-50">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => {
+                                if (activeSubView === "recibo_form") setActiveSubView("recibo");
+                                else if (activeSubView === "saldo_form") setActiveSubView("saldo");
+                                else if (activeSubView === "nc_form") setActiveSubView("nc");
+                                else if (activeSubView === "nd_form") setActiveSubView("nd");
+                                else setActiveSubView(null);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 shadow-sm hover:shadow-md active:scale-95 group"
+                            title="Volver"
+                        >
+                            <FiArrowRight className="rotate-180 group-hover:-translate-x-0.5 transition-transform" size={18} />
+                        </button>
+                        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] leading-none mb-1">Módulo de Facturación</span>
+                            <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight leading-none">{title}</h2>
+                        </div>
                     </div>
+
+                    {/* Header Action Buttons */}
+                    {activeSubView === "recibo" && (
+                        <button 
+                            onClick={() => setActiveSubView("recibo_form")}
+                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
+                        >
+                            + Recibo de caja
+                        </button>
+                    )}
+                    {activeSubView === "saldo" && (
+                        <button 
+                            onClick={() => setActiveSubView("saldo_form")}
+                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
+                        >
+                            + Saldo a favor
+                        </button>
+                    )}
+                    {activeSubView === "nc" && (
+                        <button 
+                            onClick={() => setActiveSubView("nc_form")}
+                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
+                        >
+                            + Nota de crédito
+                        </button>
+                    )}
+                    {activeSubView === "nd" && (
+                        <button 
+                            onClick={() => setActiveSubView("nd_form")}
+                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
+                        >
+                            + Nota de débito
+                        </button>
+                    )}
                 </div>
                 <div key={activeSubView} className="flex-1 overflow-y-auto bg-slate-50/30">
                     {content}
