@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { db } from "../firebase/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 /**
  * BudgetPrintService
@@ -59,8 +61,40 @@ export const BudgetPrintService = {
                           patient?.telDomicilio ||
                           "---";
             
-            const clinicName = clinic?.nombreComercial || clinic?.nombre || clinic?.name || "Clínica Odontológica";
-            const clinicNit = clinic?.nit || clinic?.NIT || "---";
+            // Fetch company configuration (empresa) for actual logo, nit, address, phone etc.
+            const tenantId = clinic?.inquilino || userProfile?.inquilino || "";
+            let dbLogoUrl = "";
+            let dbClinicName = "";
+            let dbClinicNit = "";
+            let dbClinicAddress = "";
+            let dbClinicPhone = "";
+            let dbClinicEmail = "";
+
+            if (tenantId) {
+                try {
+                    const configSnap = await getDoc(doc(db, "empresas", tenantId));
+                    if (configSnap.exists()) {
+                        const clinicConfig = configSnap.data();
+                        dbLogoUrl = clinicConfig.logo || "";
+                        dbClinicName = clinicConfig.nombreComercial || clinicConfig.nombre || "";
+                        dbClinicNit = clinicConfig.nit || "";
+                        dbClinicAddress = clinicConfig.direccion || "";
+                        dbClinicPhone = clinicConfig.telefono || "";
+                        dbClinicEmail = clinicConfig.email || "";
+                    }
+                } catch (err) {
+                    console.error("Error loading empresa config for budget print:", err);
+                }
+            }
+
+            // Resolve values
+            const logoUrl = dbLogoUrl || clinic?.logo || clinic?.logoUrl || "";
+            const clinicName = dbClinicName || clinic?.nombreComercial || clinic?.nombre || clinic?.name || "Clínica Odontológica";
+            const clinicNit = dbClinicNit || clinic?.nit || clinic?.NIT || "---";
+            const clinicAddress = dbClinicAddress || clinic?.direccion || "---";
+            const clinicPhone = dbClinicPhone || clinic?.telefono || "---";
+            const clinicEmail = dbClinicEmail || clinic?.email || "";
+
             const cobertura = plan.cobertura || {};
             const isInstitutionalPlan = cobertura.tipo === "entidad";
 
@@ -87,15 +121,15 @@ export const BudgetPrintService = {
             const headerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #2563eb; padding-bottom: 25px; margin-bottom: 30px;">
                     <div style="display: flex; gap: 25px; align-items: center;">
-                        ${clinic?.logo 
-                            ? `<img src="${clinic.logo}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 16px;" />`
-                            : `<div style="width: 100px; height: 100px; background: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 42px; font-weight: 900;">${clinic?.nombre?.substring(0, 1) || "O"}</div>`
+                        ${logoUrl 
+                            ? `<img src="${logoUrl}" style="max-width: 140px; max-height: 75px; object-fit: contain;" />`
+                            : `<div style="width: 80px; height: 80px; background: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 900;">${clinicName.substring(0, 1) || "O"}</div>`
                         }
                         <div>
                             <h1 style="margin: 0; font-size: 28px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: -1px;">${clinicName}</h1>
                             <p style="margin: 4px 0; font-size: 13px; color: #475569; font-weight: 800;">NIT: ${clinicNit}</p>
-                            <p style="margin: 2px 0; font-size: 12px; color: #64748b; font-weight: 500;">${clinic?.direccion || "---"}</p>
-                            <p style="margin: 2px 0; font-size: 12px; color: #64748b; font-weight: 500;">TEL: ${clinic?.telefono || "---"} | ${clinic?.email || ""}</p>
+                            <p style="margin: 2px 0; font-size: 12px; color: #64748b; font-weight: 500;">${clinicAddress}</p>
+                            <p style="margin: 2px 0; font-size: 12px; color: #64748b; font-weight: 500;">TEL: ${clinicPhone} | ${clinicEmail}</p>
                         </div>
                     </div>
                     <div style="text-align: right;">

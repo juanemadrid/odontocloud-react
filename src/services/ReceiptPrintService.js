@@ -50,12 +50,39 @@ export const ReceiptPrintService = {
             printElement.style.color = "#1e293b";
             printElement.style.fontFamily = "'Inter', system-ui, -apple-system, sans-serif";
 
+            // Fetch company configuration (empresa) for actual logo, nit, address, phone etc.
+            const tenantId = clinic.inquilino || userProfile?.inquilino || "";
+            let dbLogoUrl = "";
+            let dbClinicName = "";
+            let dbClinicNit = "";
+            let dbClinicAddress = "";
+            let dbClinicPhone = "";
+            let dbClinicEmail = "";
+
+            if (tenantId) {
+                try {
+                    const configSnap = await getDoc(doc(db, "empresas", tenantId));
+                    if (configSnap.exists()) {
+                        const clinicConfig = configSnap.data();
+                        dbLogoUrl = clinicConfig.logo || "";
+                        dbClinicName = clinicConfig.nombreComercial || clinicConfig.nombre || "";
+                        dbClinicNit = clinicConfig.nit || "";
+                        dbClinicAddress = clinicConfig.direccion || "";
+                        dbClinicPhone = clinicConfig.telefono || "";
+                        dbClinicEmail = clinicConfig.email || "";
+                    }
+                } catch (err) {
+                    console.error("Error loading empresa config for print:", err);
+                }
+            }
+
             // Resolve values
-            const clinicName = clinic.nombreComercial || clinic.nombre || "ATM Centro del Dolor Orofacial";
-            const clinicNit = clinic.nit || "NIT 64576359-3";
-            const clinicAddress = clinic.direccion || "Calle 16 # 13-2c - Sincelejo";
-            const clinicPhone = clinic.telefono || "2769030";
-            const clinicEmail = clinic.email || "atmcentrodelorofacial@gmail.com";
+            const logoUrl = dbLogoUrl || clinic.logo || clinic.logoUrl || "";
+            const clinicName = dbClinicName || clinic.nombreComercial || clinic.nombre || "ATM Centro del Dolor Orofacial";
+            const clinicNit = dbClinicNit || clinic.nit || "NIT 64576359-3";
+            const clinicAddress = dbClinicAddress || clinic.direccion || "Calle 16 # 13-2c - Sincelejo";
+            const clinicPhone = dbClinicPhone || clinic.telefono || "2769030";
+            const clinicEmail = dbClinicEmail || clinic.email || "atmcentrodelorofacial@gmail.com";
 
             const patientName = patient.nombreCompleto || `${patient.nombres || ''} ${patient.apellidos || ''}`.trim() || "Paciente";
             const patientDoc = patient.nroDocumento || "—";
@@ -76,8 +103,8 @@ export const ReceiptPrintService = {
                 .slice(0, 2)
                 .map(w => w[0].toUpperCase())
                 .join('') || clinicName.slice(0, 2).toUpperCase();
-            const clinicLogoHTML = clinic.logoUrl
-                ? `<img src="${clinic.logoUrl}" style="width:58px;height:58px;object-fit:contain;border-radius:8px;display:inline-block;vertical-align:middle;" crossorigin="anonymous" />`
+            const clinicLogoHTML = logoUrl
+                ? `<img src="${logoUrl}" style="max-width:160px;max-height:65px;object-fit:contain;display:inline-block;vertical-align:middle;" crossorigin="anonymous" />`
                 : `<div style="display:inline-block;width:58px;height:58px;background-color:#1e3a8a;border-radius:8px;vertical-align:middle;text-align:center;padding-top:10px;box-sizing:border-box;">
                        <div style="font-size:20px;font-weight:900;color:#ffffff;line-height:1;">${clinicInitials}</div>
                        <div style="font-size:7px;font-weight:700;color:#93c5fd;margin-top:3px;letter-spacing:1px;">DENTAL</div>
@@ -120,23 +147,26 @@ export const ReceiptPrintService = {
             }
 
             const html = `
-                <div style="border: 2px solid #cbd5e1; padding: 20px; border-radius: 8px;">
+                <div style="border: 1px solid #e2e8f0; padding: 30px; border-radius: 16px; position: relative;">
+                    <!-- Colored top decorative bar -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background-color: #8CC63F; border-top-left-radius: 16px; border-top-right-radius: 16px;"></div>
+
                     <!-- HEADER BLOCK: pure table layout for html2canvas compatibility -->
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px; margin-top: 10px;">
                         <tr>
                             <td style="vertical-align:middle; width:auto;">
                                 <table style="border-collapse:collapse;">
-                                    <tr>
-                                        <td style="vertical-align:middle; padding-right:14px; width:70px;">
-                                            ${clinicLogoHTML}
-                                        </td>
-                                        <td style="vertical-align:middle; font-size:10px; color:#475569; line-height:1.5;">
-                                            <div style="font-weight:800; font-size:12px; color:#0f172a; text-transform:uppercase; margin-bottom:2px;">${clinicName}</div>
-                                            <div>${clinicNit}</div>
-                                            <div>${clinicAddress}</div>
-                                            <div>Tel: ${clinicPhone} | ${clinicEmail}</div>
-                                        </td>
-                                    </tr>
+                                     <tr>
+                                         <td style="vertical-align:middle; padding-right:18px; width:160px; max-width:180px;">
+                                             ${clinicLogoHTML}
+                                         </td>
+                                         <td style="vertical-align:middle; font-size:10px; color:#475569; line-height:1.5;">
+                                             <div style="font-weight:800; font-size:12px; color:#0f172a; text-transform:uppercase; margin-bottom:2px;">${clinicName}</div>
+                                             <div>${clinicNit}</div>
+                                             <div>${clinicAddress}</div>
+                                             <div>Tel: ${clinicPhone} | ${clinicEmail}</div>
+                                         </td>
+                                     </tr>
                                 </table>
                             </td>
                             <td style="vertical-align:middle; text-align:right;">
