@@ -16,6 +16,7 @@ import Campanas from "./views/Campanas";
 import TemperaturaHumedad from "./views/TemperaturaHumedad";
 import MedicamentosHub from "../medicamentos/MedicamentosHub";
 import ResiduosHub from "../residuos/ResiduosHub";
+import Esterilizacion from "../esterilizacion/Esterilizacion";
 
 const ADMIN_MENU = [
   { id: "facturacion", label: "Facturación", icon: <FiFileText /> },
@@ -116,9 +117,10 @@ export default function AdministracionRouter() {
                 {activeTab === "temp" && <TemperaturaHumedad />}
                 {activeTab === "medicamentos" && <MedicamentosHub />}
                 {activeTab === "residuos" && <ResiduosHub />}
+                {activeTab === "esterilizacion" && <Esterilizacion />}
                 
                 {/* Placeholders for others */}
-                {!["facturacion", "inventario", "rips", "agenda", "terceros", "convenios", "campanas", "temp", "medicamentos", "residuos"].includes(activeTab) && (
+                {!["facturacion", "inventario", "rips", "agenda", "terceros", "convenios", "campanas", "temp", "medicamentos", "residuos", "esterilizacion"].includes(activeTab) && (
                     <div className="flex flex-col items-center justify-center h-full p-20 text-center animate-fadeIn">
                         <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-4xl text-blue-200 mb-6 border border-blue-100/50">
                             {ADMIN_MENU.find(m => m.id === activeTab)?.icon}
