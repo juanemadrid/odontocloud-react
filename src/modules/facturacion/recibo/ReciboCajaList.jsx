@@ -400,10 +400,10 @@ export default function ReciboCajaList({ onNew }) {
 
             {/* Receipts Table */}
             <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className="overflow-auto max-h-[550px] custom-scrollbar">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-100 shadow-[inset_0_-1px_0_rgba(226,232,240,0.8)]">
+                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                 <th className="px-6 py-4 pl-8">Recibo #</th>
                                 <th className="px-6 py-4">Fecha</th>
                                 <th className="px-6 py-4">Paciente</th>
