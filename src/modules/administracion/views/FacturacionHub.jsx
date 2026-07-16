@@ -16,6 +16,7 @@ import Liquidaciones from "../../facturacion/liquidacion/Liquidaciones";
 
 const FACT_OPTIONS = [
   { id: "recibo", label: "Recibo de caja", icon: <FiFileText />, color: "text-emerald-600", bg: "bg-emerald-50", desc: "Comprobantes de ingreso de dinero" },
+  { id: "saldo", label: "Saldo a favor", icon: <FiDollarSign />, color: "text-teal-600", bg: "bg-teal-50", desc: "Gestión y abonos de saldos a favor de pacientes" },
   { id: "nc", label: "Nota crédito", icon: <FiMinusCircle />, color: "text-rose-600", bg: "bg-rose-50", desc: "Anulaciones y descuentos" },
   { id: "nd", label: "Nota débito", icon: <FiPlusCircle />, color: "text-orange-600", bg: "bg-orange-50", desc: "Incrementos de deuda" },
   { id: "liq", label: "Liquidaciones", icon: <FiLayers />, color: "text-purple-600", bg: "bg-purple-50", desc: "Cierre de tratamientos y presupuestos" },
