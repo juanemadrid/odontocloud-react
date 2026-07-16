@@ -121,7 +121,7 @@ export default function TotalesResiduos() {
             {/* Matrix table */}
             <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm space-y-6">
                 <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                    <table className="w-full text-left border-collapse min-w-[1600px]">
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 <th className="px-4 py-4 pl-6 w-24">Mes</th>
