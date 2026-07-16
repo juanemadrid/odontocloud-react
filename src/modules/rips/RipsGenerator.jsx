@@ -29,6 +29,20 @@ export default function RipsGenerator() {
     const [selectedEps, setSelectedEps] = useState('');
     const [filterType, setFilterType] = useState('facturacion'); // 'facturacion' o 'realizado'
 
+    // Preview and Validation Lists
+    const [dianDocs, setDianDocs] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
+    const [consultas, setConsultas] = useState([]);
+    const [procedimientos, setProcedimientos] = useState([]);
+    const [searched, setSearched] = useState(false);
+
+    const fmt = (n) =>
+      Number(n || 0).toLocaleString("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      });
+
     // Cargar historial de RIPS generados y catálogos al entrar
     useEffect(() => {
         if (!inquilino) return;
@@ -79,6 +93,11 @@ export default function RipsGenerator() {
         setLoading(true);
         setLogs([]);
         const newFiles = [];
+        
+        const dianList = [];
+        const userList = [];
+        const conList = [];
+        const procList = [];
 
         try {
             setLogs(prev => [...prev, `🔍 Iniciando consulta... Filtro por fecha de: ${filterType === 'facturacion' ? 'facturación' : 'realizado'}`]);
@@ -147,10 +166,7 @@ export default function RipsGenerator() {
             for (const f of facturas) {
                 const pName = (f.pacienteNombre || "").toLowerCase();
                 const pacienteData = pacientesMap[pName];
-
-                if (!pacienteData) {
-                    setLogs(prev => [...prev, `⚠️ Paciente no encontrado en BD: ${f.pacienteNombre}. Se usarán datos genéricos.`]);
-                }
+                const patientDoc = pacienteData?.nroDocumento || pacienteData?.cedula || "—";
 
                 // Build Usuario
                 const usuario = buildUsuarioJSON(pacienteData || {
@@ -159,26 +175,115 @@ export default function RipsGenerator() {
                     primerNombre: f.pacienteNombre || 'Desconocido'
                 });
 
-                // Build Consultas from Invoice Items
-                const consultas = (f.items || []).map((item, idx) => {
+                // Validate patient details
+                const userErrors = [];
+                if (!pacienteData) {
+                    userErrors.push("Paciente no registrado en base de datos");
+                } else {
+                    if (!pacienteData.fechaNacimiento) userErrors.push("Falta fecha de nacimiento");
+                    if (!pacienteData.sexo) userErrors.push("Falta sexo");
+                    if (!pacienteData.tipoDoc) userErrors.push("Falta tipo de documento");
+                }
+
+                const userWithValidation = {
+                    ...usuario,
+                    nombreCompleto: pacienteData ? (pacienteData.nombreCompleto || `${pacienteData.nombres || ""} ${pacienteData.apellidos || ""}`.trim()) : f.pacienteNombre,
+                    errors: userErrors
+                };
+
+                if (!userList.some(u => u.numDocumentoIdentificacion === userWithValidation.numDocumentoIdentificacion)) {
+                    userList.push(userWithValidation);
+                }
+
+                // Partition Invoice Items into Consultas & Procedimientos
+                const invoiceConsultas = [];
+                const invoiceProcedimientos = [];
+
+                (f.items || []).forEach((item, idx) => {
                     const smart = suggestClinicalCodes(item.desc || item.concepto);
-                    return buildConsultaJSON({
-                        codPrestador: "123456789001", // TODO: Get from Config
-                        fechaInicio: f.fecha,
-                        codConsulta: smart.cups,
-                        valorServicio: item.total || item.valor || 0,
-                        finalidad: "10", // Tratamiento
-                        causaExterna: "13", // Enfermedad General
-                        dxPrincipal: smart.cie10,
-                        tipoDx: "1"
-                    }, idx + 1);
+                    const isConsulta = (item.desc || item.concepto || "").toLowerCase().includes("consulta") || 
+                                       (item.desc || item.concepto || "").toLowerCase().includes("valoracion");
+
+                    const rowErrors = [];
+                    if (!smart.cie10) rowErrors.push("Falta código de diagnóstico CIE-10");
+                    if (!smart.cups) rowErrors.push("Falta código de procedimiento CUPS");
+
+                    if (isConsulta) {
+                        const consulta = {
+                            codPrestador: "123456789001",
+                            fechaInicioAtencion: f.fecha || new Date().toISOString().split('T')[0],
+                            numAutorizacion: f.nroAutorizacion || null,
+                            codConsulta: smart.cups,
+                            modalidadGrupoServicio: "01",
+                            grupoServicios: "01",
+                            codServicio: 1,
+                            finalidadTecnologiaSalud: "10",
+                            causaMotivoAtencion: "13",
+                            codDiagnosticoPrincipal: smart.cie10,
+                            tipoDiagnosticoPrincipal: "1",
+                            valorServicio: item.total || item.valor || 0,
+                            consecutivo: conList.length + 1,
+                            docPaciente: patientDoc,
+                            invoiceId: f.id,
+                            errors: rowErrors
+                        };
+                        conList.push(consulta);
+                        invoiceConsultas.push(buildConsultaJSON(consulta, idx + 1));
+                    } else {
+                        const procedimiento = {
+                            codPrestador: "123456789001",
+                            fechaProcedimiento: f.fecha || new Date().toISOString().split('T')[0],
+                            numAutorizacion: f.nroAutorizacion || null,
+                            codProcedimiento: smart.cups,
+                            modalidadGrupoServicio: "01",
+                            grupoServicios: "01",
+                            codServicio: 1,
+                            finalidadTecnologiaSalud: "10",
+                            causaMotivoAtencion: "13",
+                            codDiagnosticoPrincipal: smart.cie10,
+                            tipoDiagnosticoPrincipal: "1",
+                            valorServicio: item.total || item.valor || 0,
+                            consecutivo: procList.length + 1,
+                            docPaciente: patientDoc,
+                            invoiceId: f.id,
+                            errors: rowErrors
+                        };
+                        procList.push(procedimiento);
+                        invoiceProcedimientos.push({
+                            codPrestador: procedimiento.codPrestador,
+                            fechaProcedimiento: procedimiento.fechaProcedimiento,
+                            numAutorizacion: procedimiento.numAutorizacion,
+                            codProcedimiento: procedimiento.codProcedimiento,
+                            viaIngresoServicioSalud: "01",
+                            modalidadGrupoServicio: "01",
+                            grupoServicios: "01",
+                            codServicio: 1,
+                            finalidadTecnologiaSalud: "10",
+                            tipoDiagnosticoPrincipal: "1",
+                            codDiagnosticoPrincipal: procedimiento.codDiagnosticoPrincipal,
+                            valorServicio: procedimiento.valorServicio,
+                            consecutivo: idx + 1
+                        });
+                    }
+                });
+
+                // Add to DIAN documents validation list
+                const invoiceErrors = [];
+                if (!f.fecha) invoiceErrors.push("Falta fecha de factura");
+                if (!f.pacienteNombre) invoiceErrors.push("Falta nombre del paciente");
+
+                dianList.push({
+                    id: f.id,
+                    paciente: f.pacienteNombre || "—",
+                    cufe: f.cufe || "—",
+                    errors: invoiceErrors
                 });
 
                 // Build Final JSON
                 const ripsJson = buildRipsJSON({
-                    nitObligado: "900123456", // TODO: Get from Config
-                    numeroFactura: f.id.substring(0, 10), // Use ID as invoice number if missing
-                }, [usuario], consultas, []); // Procedures empty for now
+                    nitObligado: "900123456",
+                    numeroFactura: f.id.substring(0, 10),
+                }, [usuario], invoiceConsultas, invoiceProcedimientos);
 
                 // Add to generated list
                 const fileName = `${f.id}_RIPS.json`;
@@ -218,6 +323,14 @@ export default function RipsGenerator() {
                 }
                 return unique;
             });
+
+            // Set validation previews
+            setDianDocs(dianList);
+            setUsuarios(userList);
+            setConsultas(conList);
+            setProcedimientos(procList);
+            setSearched(true);
+
             setLogs(prev => [...prev, `✅ Proceso finalizado. ${newFiles.length} archivos generados y guardados en la base de datos.`]);
 
         } catch (error) {
@@ -240,9 +353,9 @@ export default function RipsGenerator() {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto animation-fade-in-up font-sans text-slate-800 dark:text-slate-100">
+        <div className="p-6 max-w-7xl mx-auto animation-fade-in-up font-sans text-slate-800 dark:text-slate-100 space-y-8">
             {/* Header & Breadcrumb */}
-            <div className="mb-8">
+            <div>
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                     <span>Administración</span>
                     <FiChevronRight />
@@ -262,7 +375,7 @@ export default function RipsGenerator() {
             </div>
 
             {/* Main configuration Form Card */}
-            <div className="glass-panel p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.03)] rounded-2xl mb-8 transition-all duration-300">
+            <div className="glass-panel p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.03)] rounded-2xl transition-all duration-300">
                 <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-6 flex items-center gap-2">
                     <span className="w-1.5 h-3 bg-blue-500 rounded-full" />
                     Parámetros de Generación
@@ -351,6 +464,7 @@ export default function RipsGenerator() {
                                     checked={filterType === 'facturacion'}
                                     onChange={() => setFilterType('facturacion')}
                                     className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500/20"
+                                    style={{ contentVisibility: 'auto' }}
                                 />
                                 <span className="text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
                                     Filtro por fecha de facturación
@@ -364,6 +478,7 @@ export default function RipsGenerator() {
                                     checked={filterType === 'realizado'}
                                     onChange={() => setFilterType('realizado')}
                                     className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500/20"
+                                    style={{ contentVisibility: 'auto' }}
                                 />
                                 <span className="text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
                                     Filtro por fecha de realizado
@@ -381,7 +496,7 @@ export default function RipsGenerator() {
                         className={`px-8 py-3.5 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-emerald-500/10 flex items-center gap-2.5 transition-all duration-300 text-white
                             ${loading || !dateRange.start || !dateRange.end 
                                 ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed shadow-none' 
-                                : 'bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] hover:shadow-emerald-500/20'}`}
+                                : 'bg-[#8cc33f] hover:bg-[#7db02b] active:scale-[0.98] hover:shadow-[#8cc33f]/20'}`}
                     >
                         {loading ? (
                             <>
@@ -461,6 +576,221 @@ export default function RipsGenerator() {
                     </div>
                 </div>
             </div>
+
+            {/* validation previews */}
+            {searched && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    
+                    {/* Documentos DIAN */}
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Documentos DIAN</h3>
+                            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Total: {dianDocs.length}
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/20 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <th className="px-6 py-4 pl-8 w-24">Estado</th>
+                                        <th className="px-6 py-4">Número de la factura</th>
+                                        <th className="px-6 py-4">Paciente</th>
+                                        <th className="px-6 py-4">Tipo de nota</th>
+                                        <th className="px-6 py-4">CUFE</th>
+                                        <th className="px-6 py-4 text-center pr-8 w-24">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 text-[13px] text-slate-700">
+                                    {dianDocs.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-8 py-10 text-center text-slate-400 italic">Sin datos</td>
+                                        </tr>
+                                    ) : (
+                                        dianDocs.map(doc => (
+                                            <tr key={doc.id} className="hover:bg-slate-50/30 transition-colors">
+                                                <td className="px-6 py-4 pl-8">
+                                                    <span className={`w-2.5 h-2.5 rounded-full inline-block ${doc.errors.length === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} title={doc.errors.join(", ") || "Correcto"} />
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-800 uppercase tracking-tight">{doc.id}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500">{doc.paciente}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500">Factura de Venta</td>
+                                                <td className="px-6 py-4 font-mono text-xs text-slate-400">{doc.cufe}</td>
+                                                <td className="px-6 py-4 text-center pr-8">
+                                                    <button className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-all shadow-sm mx-auto" title="Ver detalles">
+                                                        <FiFileText size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="bg-slate-50/80 px-8 py-3 border-t border-slate-100 flex gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span>Validado correctamente: <strong className="text-emerald-600 font-black">{dianDocs.filter(d => d.errors.length === 0).length}</strong></span>
+                            <span>Validado con errores: <strong className="text-rose-600 font-black">{dianDocs.filter(d => d.errors.length > 0).length}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* Usuarios */}
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Usuarios</h3>
+                            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Total: {usuarios.length}
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/20 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <th className="px-6 py-4 pl-8 w-24">Estado</th>
+                                        <th className="px-6 py-4">Tipo Identificación</th>
+                                        <th className="px-6 py-4">Nro. Identificación</th>
+                                        <th className="px-6 py-4">Nombre Completo</th>
+                                        <th className="px-6 py-4">Tipo Usuario</th>
+                                        <th className="px-6 py-4">F. Nacimiento</th>
+                                        <th className="px-6 py-4 text-center">Sexo</th>
+                                        <th className="px-6 py-4 text-center">Cód. Residencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 text-[13px] text-slate-700">
+                                    {usuarios.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="px-8 py-10 text-center text-slate-400 italic">Sin datos</td>
+                                        </tr>
+                                    ) : (
+                                        usuarios.map((u, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/30 transition-colors">
+                                                <td className="px-6 py-4 pl-8">
+                                                    <span className={`w-2.5 h-2.5 rounded-full inline-block ${u.errors.length === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} title={u.errors.join(", ") || "Correcto"} />
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-500">{u.tipoDocumentoIdentificacion}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{u.numDocumentoIdentificacion}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-700 uppercase tracking-tight">{u.nombreCompleto}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500">{u.tipoUsuario}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500 font-mono">{u.fechaNacimiento}</td>
+                                                <td className="px-6 py-4 text-center font-bold text-slate-600">{u.codSexo}</td>
+                                                <td className="px-6 py-4 text-center font-semibold text-slate-500 font-mono">{u.municipioResidencia}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="bg-slate-50/80 px-8 py-3 border-t border-slate-100 flex gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span>Validado correctamente: <strong className="text-emerald-600 font-black">{usuarios.filter(u => u.errors.length === 0).length}</strong></span>
+                            <span>Validado con errores: <strong className="text-rose-600 font-black">{usuarios.filter(u => u.errors.length > 0).length}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* Consultas */}
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Consultas</h3>
+                            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Total: {consultas.length}
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/20 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <th className="px-6 py-4 pl-8 w-24">Estado</th>
+                                        <th className="px-6 py-4">Identificación Paciente</th>
+                                        <th className="px-6 py-4">Factura</th>
+                                        <th className="px-6 py-4">Cód. Prestador</th>
+                                        <th className="px-6 py-4">Fecha Consulta</th>
+                                        <th className="px-6 py-4">Código CUPS</th>
+                                        <th className="px-6 py-4">Diagnóstico CIE-10</th>
+                                        <th className="px-6 py-4 text-right pr-8">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 text-[13px] text-slate-700">
+                                    {consultas.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="px-8 py-10 text-center text-slate-400 italic">Sin datos</td>
+                                        </tr>
+                                    ) : (
+                                        consultas.map((c, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/30 transition-colors">
+                                                <td className="px-6 py-4 pl-8">
+                                                    <span className={`w-2.5 h-2.5 rounded-full inline-block ${c.errors.length === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} title={c.errors.join(", ") || "Correcto"} />
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{c.docPaciente}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-500">{c.invoiceId}</td>
+                                                <td className="px-6 py-4 font-mono text-slate-400 text-xs">{c.codPrestador}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500 font-mono">{c.fechaInicioAtencion}</td>
+                                                <td className="px-6 py-4 font-black text-blue-600 font-mono">{c.codConsulta}</td>
+                                                <td className="px-6 py-4 font-black text-emerald-600 font-mono">{c.codDiagnosticoPrincipal}</td>
+                                                <td className="px-6 py-4 text-right font-black text-slate-900 font-mono pr-8">{fmt(c.valorServicio)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="bg-slate-50/80 px-8 py-3 border-t border-slate-100 flex gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span>Validado correctamente: <strong className="text-emerald-600 font-black">{consultas.filter(c => c.errors.length === 0).length}</strong></span>
+                            <span>Validado con errores: <strong className="text-rose-600 font-black">{consultas.filter(c => c.errors.length > 0).length}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* Procedimientos */}
+                    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Procedimientos</h3>
+                            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Total: {procedimientos.length}
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/20 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <th className="px-6 py-4 pl-8 w-24">Estado</th>
+                                        <th className="px-6 py-4">Identificación Paciente</th>
+                                        <th className="px-6 py-4">Factura</th>
+                                        <th className="px-6 py-4">Cód. Prestador</th>
+                                        <th className="px-6 py-4">Fecha Procedimiento</th>
+                                        <th className="px-6 py-4">Código CUPS</th>
+                                        <th className="px-6 py-4">Diagnóstico CIE-10</th>
+                                        <th className="px-6 py-4 text-right pr-8">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 text-[13px] text-slate-700">
+                                    {procedimientos.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="px-8 py-10 text-center text-slate-400 italic">Sin datos</td>
+                                        </tr>
+                                    ) : (
+                                        procedimientos.map((p, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/30 transition-colors">
+                                                <td className="px-6 py-4 pl-8">
+                                                    <span className={`w-2.5 h-2.5 rounded-full inline-block ${p.errors.length === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} title={p.errors.join(", ") || "Correcto"} />
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{p.docPaciente}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-500">{p.invoiceId}</td>
+                                                <td className="px-6 py-4 font-mono text-slate-400 text-xs">{p.codPrestador}</td>
+                                                <td className="px-6 py-4 font-semibold text-slate-500 font-mono">{p.fechaProcedimiento}</td>
+                                                <td className="px-6 py-4 font-black text-blue-600 font-mono">{p.codProcedimiento}</td>
+                                                <td className="px-6 py-4 font-black text-emerald-600 font-mono">{p.codDiagnosticoPrincipal}</td>
+                                                <td className="px-6 py-4 text-right font-black text-slate-900 font-mono pr-8">{fmt(p.valorServicio)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="bg-slate-50/80 px-8 py-3 border-t border-slate-100 flex gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span>Validado correctamente: <strong className="text-emerald-600 font-black">{procedimientos.filter(p => p.errors.length === 0).length}</strong></span>
+                            <span>Validado con errores: <strong className="text-rose-600 font-black">{procedimientos.filter(p => p.errors.length > 0).length}</strong></span>
+                        </div>
+                    </div>
+
+                </div>
+            )}
         </div>
     );
 }
