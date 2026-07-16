@@ -392,7 +392,7 @@ export default function RipsGenerator() {
                                 type="date" 
                                 value={dateRange.start} 
                                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                                className="w-full px-4 py-3 pl-10 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200"
+                                className="w-full px-4 py-3 pl-10 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200"
                             />
                             <FiCalendar className="absolute left-3.5 top-3.5 text-slate-400 w-4 h-4" />
                         </div>
@@ -408,7 +408,7 @@ export default function RipsGenerator() {
                                 type="date" 
                                 value={dateRange.end} 
                                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                                className="w-full px-4 py-3 pl-10 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200"
+                                className="w-full px-4 py-3 pl-10 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200"
                             />
                             <FiCalendar className="absolute left-3.5 top-3.5 text-slate-400 w-4 h-4" />
                         </div>
@@ -422,7 +422,7 @@ export default function RipsGenerator() {
                         <select 
                             value={selectedSucursal} 
                             onChange={(e) => setSelectedSucursal(e.target.value)}
-                            className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200 cursor-pointer appearance-none"
+                            className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200 cursor-pointer appearance-none"
                             style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat' }}
                         >
                             <option value="">Seleccione...</option>
@@ -440,7 +440,7 @@ export default function RipsGenerator() {
                         <select 
                             value={selectedEps} 
                             onChange={(e) => setSelectedEps(e.target.value)}
-                            className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200 cursor-pointer appearance-none"
+                            className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none transition-all duration-200 cursor-pointer appearance-none"
                             style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat' }}
                         >
                             <option value="">Seleccione...</option>
