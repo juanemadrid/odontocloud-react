@@ -466,7 +466,7 @@ export default function RipsGenerator() {
                                     className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500/20"
                                     style={{ contentVisibility: 'auto' }}
                                 />
-                                <span className="text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
+                                <span className="text-slate-600 group-hover:text-slate-800 transition-colors">
                                     Filtro por fecha de facturación
                                 </span>
                             </label>
@@ -480,7 +480,7 @@ export default function RipsGenerator() {
                                     className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500/20"
                                     style={{ contentVisibility: 'auto' }}
                                 />
-                                <span className="text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
+                                <span className="text-slate-600 group-hover:text-slate-800 transition-colors">
                                     Filtro por fecha de realizado
                                 </span>
                             </label>

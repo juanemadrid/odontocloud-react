@@ -39,6 +39,26 @@ export default function SaldoFavorList({ onNew }) {
     const [conSaldo, setConSaldo] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedPaciente, setSelectedPaciente] = useState(null);
+    const [searchTermTercero, setSearchTermTercero] = useState("");
+    const [showTerceroDropdown, setShowTerceroDropdown] = useState(false);
+
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setShowTerceroDropdown(false);
+        };
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, []);
+
+    const filteredTerceros = useMemo(() => {
+        if (!searchTermTercero.trim()) return pacientes.slice(0, 50);
+        const q = searchTermTercero.toLowerCase();
+        return pacientes.filter(p => {
+            const name = (p.nombreCompleto || `${p.nombres || ""} ${p.apellidos || ""}`).toLowerCase();
+            const doc = (p.nroDocumento || p.cedula || "").toLowerCase();
+            return name.includes(q) || doc.includes(q);
+        });
+    }, [pacientes, searchTermTercero]);
 
     const loadData = async () => {
         if (!inquilino) return;
@@ -266,23 +286,62 @@ export default function SaldoFavorList({ onNew }) {
             {/* Selector and Financial stats for detailed view */}
             {detalleMovimientos ? (
                 <div className="bg-white p-8 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-6 max-w-xl animate-fadeIn">
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 relative" onClick={e => e.stopPropagation()}>
                         <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">Tercero *</label>
-                        <select
-                            className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
-                            value={selectedPaciente?.id || ""}
-                            onChange={e => {
-                                const p = pacientes.find(x => x.id === e.target.value);
-                                setSelectedPaciente(p || null);
-                            }}
-                        >
-                            <option value="">Seleccione un tercero...</option>
-                            {pacientes.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {(p.nombreCompleto || `${p.nombres || ""} ${p.apellidos || ""}`).trim().toUpperCase()} (CC: {p.nroDocumento || p.cedula || ""})
-                                </option>
-                            ))}
-                        </select>
+                        {selectedPaciente ? (
+                            <div className="flex items-center gap-3 w-full h-11 px-4 border border-slate-200 rounded-xl bg-slate-50 text-sm font-bold text-slate-700">
+                                <FiUser className="text-slate-400 shrink-0" />
+                                <span className="flex-1 truncate uppercase">
+                                    {(selectedPaciente.nombreCompleto || `${selectedPaciente.nombres || ""} ${selectedPaciente.apellidos || ""}`).trim()} (CC: {selectedPaciente.nroDocumento || selectedPaciente.cedula || ""})
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedPaciente(null)}
+                                    className="text-xs font-black text-rose-500 hover:text-rose-700 uppercase tracking-wider bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-sm"
+                                >
+                                    Cambiar
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Escriba nombre o cédula para buscar..."
+                                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
+                                    value={searchTermTercero}
+                                    onChange={(e) => {
+                                        setSearchTermTercero(e.target.value);
+                                        setShowTerceroDropdown(true);
+                                    }}
+                                    onFocus={() => setShowTerceroDropdown(true)}
+                                />
+                                {showTerceroDropdown && (
+                                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-50">
+                                        {filteredTerceros.length === 0 ? (
+                                            <div className="px-4 py-3 text-xs text-slate-400 italic">No se encontraron resultados</div>
+                                        ) : (
+                                            filteredTerceros.map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedPaciente(p);
+                                                        setSearchTermTercero("");
+                                                        setShowTerceroDropdown(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex flex-col gap-0.5"
+                                                >
+                                                    <span className="text-xs font-black text-slate-800 uppercase">
+                                                        {(p.nombreCompleto || `${p.nombres || ""} ${p.apellidos || ""}`).trim()}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-bold">CC: {p.nroDocumento || p.cedula || "—"}</span>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {selectedPaciente && (
