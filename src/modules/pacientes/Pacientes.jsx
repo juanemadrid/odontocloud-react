@@ -19,6 +19,7 @@ import {
   where,
 } from "firebase/firestore";
 import { createOrUpdatePatient, deletePatient } from "../../services/patientService";
+import { useAudit } from "../../hooks/useAudit";
 import ImportadorPacientes from "./components/ImportadorPacientes";
 
 /* ========================
@@ -108,6 +109,7 @@ const INITIAL_FORM = {
 export default function Pacientes() {
   const { userProfile } = useAuth();
   const toast = useToast();
+  const { logAction } = useAudit();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
@@ -154,12 +156,13 @@ export default function Pacientes() {
       setSelectedPatient(null);
       setOpen(false);
       setShowImporter(false);
+      setSearchParams({});
     };
     window.addEventListener("reset-module-pacientes", handleReset);
     return () => {
       window.removeEventListener("reset-module-pacientes", handleReset);
     };
-  }, []);
+  }, [setSearchParams]);
 
   // Handle action=new query parameter to automatically open the new patient form modal
   useEffect(() => {
@@ -219,12 +222,24 @@ export default function Pacientes() {
   const handleSubmit = async (formData, fotoFile) => {
     if (!userProfile?.inquilino) return;
     try {
-      await createOrUpdatePatient(
+      const isNew = !editData;
+      const saved = await createOrUpdatePatient(
         userProfile.inquilino,
         formData,
-        !editData, // isNew if no editData
+        isNew, // isNew if no editData
         fotoFile
       );
+
+      // Audit log
+      await logAction(
+        saved.id,
+        isNew ? "CREATE_PATIENT" : "UPDATE_PATIENT",
+        {
+          nombre: saved.nombreCompleto || `${saved.nombres} ${saved.apellidos}`,
+          documento: saved.nroDocumento
+        }
+      );
+
       toast.success(editData ? "Ficha actualizada" : "Paciente registrado");
       setOpen(false);
       reloadData();
@@ -237,6 +252,17 @@ export default function Pacientes() {
   const handleDelete = async (patient) => {
     try {
       await deletePatient(patient.id);
+
+      // Audit log
+      await logAction(
+        patient.id,
+        "DELETE_PATIENT",
+        {
+          nombre: patient.nombreCompleto || patient.paciente,
+          documento: patient.nroDocumento || patient.documento
+        }
+      );
+
       toast.success("Paciente eliminado correctamente");
       reloadData();
     } catch (err) {
@@ -271,7 +297,10 @@ export default function Pacientes() {
           loading={loading}
           hasMore={false}
           onLoadMore={() => { }}
-          onSelect={setSelectedPatient}
+          onSelect={(patient) => {
+            setSelectedPatient(patient);
+            setSearchParams({ id: patient.id, tab: "datos" });
+          }}
           searchTerm={term}
           onSearchChange={setTerm}
           onCreateNew={handleOpenNew}
@@ -289,14 +318,19 @@ export default function Pacientes() {
       ) : (
         <PatientDetails
           initialData={selectedPatient}
-          onClose={() => setSelectedPatient(null)}
+          onClose={() => {
+            setSelectedPatient(null);
+            setSearchParams({});
+          }}
           onEdit={(p) => {
             handleOpenEdit(p);
             setSelectedPatient(null);
+            setSearchParams({});
           }}
           onDelete={(p) => {
             handleDelete(p);
             setSelectedPatient(null);
+            setSearchParams({});
           }}
         />
       )}

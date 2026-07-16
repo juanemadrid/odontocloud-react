@@ -4,6 +4,7 @@ import { db } from "../../../firebase/firebaseConfig";
 import Button from "../../../components/ui/Button";
 import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useAudit } from "../../../hooks/useAudit";
 
 // Helper to format date
 const formatDate = (iso) => {
@@ -13,6 +14,7 @@ const formatDate = (iso) => {
 
 export default function EvolucionesInmutables({ pacienteId, evoluciones = [], onAdd }) {
     const { user } = useAuth();
+    const { logAction } = useAudit();
     const [newEvo, setNewEvo] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -37,6 +39,12 @@ export default function EvolucionesInmutables({ pacienteId, evoluciones = [], on
             const ref = doc(db, "pacientes", pacienteId);
             await updateDoc(ref, {
                 evoluciones: arrayUnion(entry)
+            });
+
+            // Audit log
+            await logAction(pacienteId, "CREATE_EVOLUTION", {
+                content: newEvo,
+                author: entry.author
             });
 
             if (onAdd) onAdd(entry);
@@ -70,6 +78,14 @@ export default function EvolucionesInmutables({ pacienteId, evoluciones = [], on
 
         try {
             await updateDoc(doc(db, "pacientes", pacienteId), { evoluciones: updatedEvos });
+            
+            // Audit log
+            await logAction(pacienteId, "ADD_EVOLUTION_CLARIFICATION", {
+                note: clarificationText,
+                targetIndex: clarifyingId,
+                author: user?.displayName || user?.email || "Sistema"
+            });
+
             setClarifyingId(null);
             setClarificationText("");
             toast.success("Nota aclaratoria agregada correctamente.");

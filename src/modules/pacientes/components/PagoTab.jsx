@@ -256,8 +256,14 @@ export default function PagoTab({ patient }) {
 
         if (numValue > maxAllowed) {
             setAbonoInput(maxAllowed.toString());
-            if (method === "Saldo a favor" && maxAllowed === availableCredit) {
-                toast.warning("El monto no puede exceder el saldo a favor disponible");
+            if (method === "Saldo a favor") {
+                if (maxAllowed === availableCredit) {
+                    toast.warning("El monto no puede exceder el saldo a favor disponible");
+                } else {
+                    toast.warning("El monto no puede exceder el total seleccionado");
+                }
+            } else {
+                toast.warning("El monto no puede exceder el total seleccionado");
             }
         } else {
             setAbonoInput(numValue.toString());
@@ -293,9 +299,11 @@ export default function PagoTab({ patient }) {
     // Reactive validator to cap payment when item selection or payment method changes
     useEffect(() => {
         if (method === "Saldo a favor") {
-            // Always apply only the minimum needed: min(availableCredit, selectedTotal)
-            const maxToApply = Math.min(availableCredit, selectedTotal);
-            setAbonoInput(maxToApply > 0 ? maxToApply.toString() : "");
+            const maxAllowed = Math.min(availableCredit, selectedTotal);
+            const currentVal = Number(abonoInput || 0);
+            if (currentVal > maxAllowed || currentVal === 0) {
+                setAbonoInput(maxAllowed > 0 ? maxAllowed.toString() : "");
+            }
         }
     }, [selectedItemIds, method, selectedTotal, availableCredit]);
 
@@ -698,7 +706,7 @@ export default function PagoTab({ patient }) {
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="0"
-                                            disabled={method === "Saldo a favor"}
+                                            disabled={selectedTotal <= 0}
                                             value={abonoInput === "" ? "" : Number(abonoInput).toLocaleString('es-CO')}
                                             onChange={(e) => {
                                                 const cleanVal = e.target.value.replace(/\D/g, '');
@@ -709,7 +717,7 @@ export default function PagoTab({ patient }) {
                                     </div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                         {method === "Saldo a favor" 
-                                            ? "Cobro ajustado automáticamente al saldo a favor aplicable."
+                                            ? "Puedes ajustar el monto a debitar de tu saldo a favor."
                                             : "Deje en cero o vacío para pagar el total seleccionado."}
                                     </p>
                                 </div>
@@ -751,7 +759,7 @@ export default function PagoTab({ patient }) {
                                             required
                                             placeholder="Ej: 0012345678..."
                                             value={reference}
-                                            onChange={(e) => setReference(e.target.value.toUpperCase())}
+                                            onChange={(e) => setReference(e.target.value)}
                                             className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[12px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 transition-all placeholder:text-amber-300 caret-slate-950"
                                         />
                                     </div>
@@ -786,18 +794,20 @@ export default function PagoTab({ patient }) {
                                     <textarea 
                                         placeholder="DETALLES DE LA TRANSACCIÓN..."
                                         value={notes}
-                                        onChange={(e) => setNotes(e.target.value.toUpperCase())}
+                                        onChange={(e) => setNotes(e.target.value)}
                                         className="w-full h-24 bg-slate-50 border border-slate-100 rounded-2xl p-4 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all placeholder:text-slate-200 caret-slate-950 resize-none"
                                     />
                                 </div>
 
-                                <button 
-                                    disabled={loading}
-                                    type="submit"
-                                    className="w-full py-4.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-[20px] font-black text-[12px] uppercase tracking-[0.2em] shadow-lg shadow-[#8CC63F]/20 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
-                                >
-                                    <FiCheck size={18} strokeWidth={3} /> {loading ? "Procesando..." : "Finalizar Transacción"}
-                                </button>
+                                <div className="flex justify-end mt-6">
+                                    <button 
+                                        disabled={loading}
+                                        type="submit"
+                                        className="px-8 py-4 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.15em] shadow-md shadow-[#8CC63F]/20 hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                                    >
+                                        <FiCheck size={16} strokeWidth={4} /> {loading ? "Procesando..." : "Finalizar Transacción"}
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -927,7 +937,7 @@ export default function PagoTab({ patient }) {
                                                     required
                                                     placeholder="EJ: 0012345678..."
                                                     value={reference}
-                                                    onChange={(e) => setReference(e.target.value.toUpperCase())}
+                                                    onChange={(e) => setReference(e.target.value)}
                                                     className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 transition-all placeholder:text-amber-300 caret-slate-950"
                                                 />
                                             </div>
@@ -941,7 +951,7 @@ export default function PagoTab({ patient }) {
                                                 <input 
                                                     placeholder="DETALLES DE LA TRANSACCIÓN..."
                                                     value={notes}
-                                                    onChange={(e) => setNotes(e.target.value.toUpperCase())}
+                                                    onChange={(e) => setNotes(e.target.value)}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-[11px] font-black text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-[#8CC63F]/5 transition-all placeholder:text-slate-200 caret-slate-950"
                                                 />
                                             </div>

@@ -1,22 +1,26 @@
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
-// Acceso al contexto de auth para saber quién edita (si existe, o placeholder)
-// import { useAuth } from "../context/AuthContext"; // Asumiremos esto o pasaremos usuario manual
+import { useAuth } from "../context/AuthContext";
 
 export function useAudit() {
+    const { user, userProfile } = useAuth();
 
-    // const { user } = useAuth(); // Idealmente
-
-    const logAction = async (patientId, actionType, details, userId = "unknown", userName = "Sistema") => {
+    const logAction = async (patientId, actionType, details, userId, userName) => {
         try {
+            const finalUserId = userId || userProfile?.uid || user?.uid || "unknown";
+            const finalUserName = userName || userProfile?.nombre || userProfile?.nombreCompleto || user?.email || "Sistema";
+            const tenantId = userProfile?.inquilino || "global";
+
             await addDoc(collection(db, "audit_logs"), {
-                patientId,
-                action: actionType, // e.g., "UPDATE_HISTORY"
-                details, // Object with { changes, oldVal, newVal }
+                patientId: patientId || "system",
+                tenantId,
+                action: actionType,
+                details: details || {},
                 timestamp: serverTimestamp(),
                 performedBy: {
-                    uid: userId,
-                    name: userName
+                    uid: finalUserId,
+                    name: finalUserName,
+                    role: userProfile?.rol || "usuario"
                 },
                 deviceInfo: navigator.userAgent
             });

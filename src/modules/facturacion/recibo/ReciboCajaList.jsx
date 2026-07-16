@@ -261,18 +261,21 @@ export default function ReciboCajaList({ onNew }) {
                 where("inquilino", "==", inquilino)
             );
             const snapPagos = await getDocs(qPagos);
-            const dataPagos = snapPagos.docs.map(d => {
-                const pData = d.data();
-                return {
-                    id: d.id,
-                    fecha: pData.fecha,
-                    pacienteNombre: pData.patientNombre || pData.pacienteNombre || "—",
-                    condicionPago: pData.medio || "Abono",
-                    concepto: pData.concepto || "Abono",
-                    total: pData.monto || 0,
-                    isPago: true
-                };
-            });
+            const dataPagos = snapPagos.docs
+                .map(d => {
+                    const pData = d.data();
+                    return {
+                        id: d.id,
+                        nroConsecutivo: pData.nroConsecutivo || "",
+                        fecha: pData.fecha,
+                        pacienteNombre: pData.patientNombre || pData.pacienteNombre || "—",
+                        condicionPago: pData.medio || "Abono",
+                        concepto: pData.concepto || "Abono",
+                        total: pData.monto || 0,
+                        isPago: true
+                    };
+                })
+                .filter(p => p.concepto !== "SALDO A FAVOR");
 
             // Combine and filter by date range client-side
             let data = [...dataRecibos, ...dataPagos];

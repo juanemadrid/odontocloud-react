@@ -6,12 +6,14 @@ import { FiDollarSign, FiCalendar, FiCreditCard, FiTrash2, FiActivity, FiArrowRi
 import { formatCurrency } from '../../../utils/formatters';
 import { useAuth } from '../../../context/AuthContext';
 import { ReceiptPrintService } from '../../../services/ReceiptPrintService';
+import { useAudit } from '../../../hooks/useAudit';
 
 export default function HistoricoPagosTab({ patientId }) {
     const [pagos, setPagos] = useState([]);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
     const { userProfile } = useAuth();
+    const { logAction } = useAudit();
 
     // Void modal state
     const [voidModal, setVoidModal] = useState({ open: false, pago: null });
@@ -89,6 +91,15 @@ export default function HistoricoPagosTab({ patientId }) {
                 fechaAnulacion: new Date().toISOString(),
                 updatedAt: serverTimestamp()
             });
+
+            // Audit log
+            await logAction(patientId, "VOID_PAYMENT", {
+                pagoId: voidModal.pago.id,
+                monto: voidModal.pago.monto || voidModal.pago.total || 0,
+                concepto: voidModal.pago.concepto || "Servicio Dental",
+                motivoAnulacion: voidReason.trim()
+            });
+
             toast.success("Pago anulado correctamente");
             setVoidModal({ open: false, pago: null });
             setVoidReason("");

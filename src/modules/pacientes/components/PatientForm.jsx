@@ -596,8 +596,8 @@ export default function PatientForm({
         const selectedProf = profesionales.find(p => p.id === data.profesionalId);
         
         if (data.nombreEps && inquilino) {
-            const normalizedEps = data.nombreEps.trim().toUpperCase();
-            if (!epsList.includes(normalizedEps)) {
+            const normalizedEps = data.nombreEps.trim();
+            if (!epsList.map(e => e.toLowerCase()).includes(normalizedEps.toLowerCase())) {
                 try {
                     await addDoc(collection(db, "eps_catalogo"), {
                         nombre: normalizedEps,
@@ -656,7 +656,7 @@ export default function PatientForm({
                 )}
             </div>
 
-            <form onSubmit={handleSubmit(onValidSubmit, onErrorSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+            <form autoComplete="off" onSubmit={handleSubmit(onValidSubmit, onErrorSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
                 
                 {/* BIG SCROLL CANVAS */}
                 <div className="flex-1 overflow-y-auto px-4 md:px-16 py-8 bg-white custom-scrollbar scroll-smooth">
@@ -693,11 +693,11 @@ export default function PatientForm({
                                 )}
 
                                 <FormRow label="Nombres" required error={errors.nombres}>
-                                    <input {...register("nombres")} className="form-input text-sm w-full" placeholder="Nombres paciente" />
+                                    <input {...register("nombres")} autoComplete="new-password" className="form-input text-sm w-full" placeholder="Nombres paciente" />
                                 </FormRow>
 
                                 <FormRow label="Apellidos" required error={errors.apellidos}>
-                                    <input {...register("apellidos")} className="form-input text-sm w-full" placeholder="Apellidos paciente" />
+                                    <input {...register("apellidos")} autoComplete="new-password" className="form-input text-sm w-full" placeholder="Apellidos paciente" />
                                 </FormRow>
 
                                 <FormRow label="Nombre completo">
@@ -1034,43 +1034,76 @@ export default function PatientForm({
                                         )}
                                         {isVisible("remitidoPor") && (
                                             <FormRow label="Remitido por">
-                                                <div className="flex flex-col gap-2 w-full">
-                                                    <div className="flex gap-2">
-                                                        <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
-                                                            <option value="Libre">Libre</option>
-                                                            <option value="Paciente">Paciente</option>
-                                                            <option value="Usuario">Doctor</option>
-                                                        </select>
-                                                        {watch("remitidoPorType") === "Libre" && (
-                                                            <input
-                                                                {...register("remitidoPorValue")}
-                                                                className="form-input text-sm flex-1"
-                                                                placeholder="Nombre de quien refiere"
-                                                            />
-                                                        )}
-                                                        {watch("remitidoPorType") === "Paciente" && (
-                                                            <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
-                                                                <option value="">Seleccione un paciente...</option>
-                                                                {pacientesRemision.map(p => (
-                                                                    <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
-                                                                        {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        )}
-                                                        {watch("remitidoPorType") === "Usuario" && (
-                                                            <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
-                                                                <option value="">Seleccione un doctor...</option>
-                                                                {profesionales.map(p => (
-                                                                    <option key={p.id} value={p.displayName}>
-                                                                        {p.displayName}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </FormRow>
+                                                 <div className="flex flex-col gap-3 w-full">
+                                                     {/* Segmented Control / Selector de tipo de remisión */}
+                                                     <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => setValue("remitidoPorType", "Libre")}
+                                                             className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                                                 watch("remitidoPorType") === "Libre"
+                                                                     ? "bg-white text-indigo-600 shadow-sm"
+                                                                     : "text-slate-500 hover:text-slate-800"
+                                                             }`}
+                                                         >
+                                                             Texto Libre
+                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => setValue("remitidoPorType", "Paciente")}
+                                                             className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                                                 watch("remitidoPorType") === "Paciente"
+                                                                     ? "bg-white text-indigo-600 shadow-sm"
+                                                                     : "text-slate-500 hover:text-slate-800"
+                                                             }`}
+                                                         >
+                                                             Paciente
+                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => setValue("remitidoPorType", "Usuario")}
+                                                             className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                                                 watch("remitidoPorType") === "Usuario"
+                                                                     ? "bg-white text-indigo-600 shadow-sm"
+                                                                     : "text-slate-500 hover:text-slate-800"
+                                                             }`}
+                                                         >
+                                                             Doctor
+                                                         </button>
+                                                     </div>
+
+                                                     {/* Campo de valor de remisión */}
+                                                     <div className="flex gap-2">
+                                                         {watch("remitidoPorType") === "Libre" && (
+                                                             <input
+                                                                 {...register("remitidoPorValue")}
+                                                                 className="form-input text-sm w-full md:w-96"
+                                                                 placeholder="Nombre de la persona que refiere"
+                                                             />
+                                                         )}
+                                                         {watch("remitidoPorType") === "Paciente" && (
+                                                             <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
+                                                                 <option value="">Seleccione un paciente...</option>
+                                                                 {pacientesRemision.map(p => (
+                                                                     <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
+                                                                         {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
+                                                                     </option>
+                                                                 ))}
+                                                             </select>
+                                                         )}
+                                                         {watch("remitidoPorType") === "Usuario" && (
+                                                             <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
+                                                                 <option value="">Seleccione un doctor...</option>
+                                                                 {profesionales.map(p => (
+                                                                     <option key={p.id} value={p.displayName}>
+                                                                         {p.displayName}
+                                                                     </option>
+                                                                 ))}
+                                                             </select>
+                                                         )}
+                                                     </div>
+                                                 </div>
+                                             </FormRow>
                                         )}
                                     </div>
                                 </>

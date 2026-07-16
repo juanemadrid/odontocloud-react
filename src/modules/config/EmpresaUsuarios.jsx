@@ -307,8 +307,8 @@ export default function EmpresaUsuarios() {
             if (formData.esDoctor) {
                 const profData = {
                     id: uid,
-                    nombre: formData.nombre.trim().toUpperCase(),
-                    nombreCompleto: `${formData.nombre} ${formData.apellido}`.trim().toUpperCase(),
+                    nombre: formData.nombre.trim(),
+                    nombreCompleto: `${formData.nombre} ${formData.apellido}`.trim(),
                     correo: formData.email.toLowerCase(),
                     identificacion: formData.numeroDocumento,
                     telefono: formData.telefonoMovil,

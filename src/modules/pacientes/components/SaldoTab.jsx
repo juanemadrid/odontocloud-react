@@ -12,6 +12,7 @@ import { useToast } from '../../../context/ToastContext';
 import { ReceiptPrintService } from '../../../services/ReceiptPrintService';
 import { db } from '../../../firebase/firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
+import { useAudit } from '../../../hooks/useAudit';
 
 export default function SaldoTab({ patient }) {
     const [financials, setFinancials] = useState(null);
@@ -26,6 +27,7 @@ export default function SaldoTab({ patient }) {
 
     const { userProfile } = useAuth();
     const toast = useToast();
+    const { logAction } = useAudit();
 
     const loadData = async () => {
         if (!patient?.id) return;
@@ -70,6 +72,15 @@ export default function SaldoTab({ patient }) {
                 anuladoPor: userProfile?.nombreCompleto || "Sistema",
                 fechaAnulacion: new Date().toISOString()
             });
+
+            // Audit log
+            await logAction(patient?.id, "VOID_CREDIT", {
+                pagoId: selectedPagoToVoid.id,
+                monto: selectedPagoToVoid.monto || selectedPagoToVoid.total || 0,
+                concepto: "SALDO A FAVOR",
+                motivoAnulacion: voidReason.trim()
+            });
+
             toast.success("Abono de saldo a favor anulado con éxito");
             setVoidModalOpen(false);
             setSelectedPagoToVoid(null);

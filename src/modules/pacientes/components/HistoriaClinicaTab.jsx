@@ -4,12 +4,14 @@ import { FiSave, FiAlertCircle } from "react-icons/fi";
 import { FaShieldAlt } from "react-icons/fa";
 import { useToast } from "../../../context/ToastContext";
 import { saveAnamnesis, getAnamnesis } from "../../../services/clinicalService";
+import { useAudit } from "../../../hooks/useAudit";
 import CIE10Search from "./CIE10Search";
 import VoiceInputButton from "./VoiceInputButton";
 
 export default function HistoriaClinicaTab({ patientId }) {
     const toast = useToast();
     const [loading, setLoading] = useState(false);
+    const { logAction } = useAudit();
     const { register, control, handleSubmit, reset, watch, setValue } = useForm();
 
     // Load initial data
@@ -24,6 +26,13 @@ export default function HistoriaClinicaTab({ patientId }) {
         setLoading(true);
         try {
             await saveAnamnesis(patientId, data);
+            
+            // Audit log
+            await logAction(patientId, "UPDATE_HISTORY", {
+                diagnostico: data.diagnosticoPrincipal || "No especificado",
+                motivo: data.motivoConsulta || "No especificado"
+            });
+
             toast.success("Anamnesis guardada");
         } catch (error) {
             console.error(error);

@@ -287,7 +287,7 @@ export default function ConfigRecursosFisicos() {
                                             placeholder="EJ: CONSULTORIO 1"
                                             className="w-full bg-slate-50 border border-slate-100 focus:bg-white focus:border-blue-500 rounded-2xl p-4 text-[14px] font-black text-slate-700 outline-none transition-all shadow-inner group-hover:border-slate-200"
                                             value={formData.nombre}
-                                            onChange={(e) => setFormData({ ...formData, nombre: e.target.value.toUpperCase() })}
+                                            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                         />
                                     </div>
                                 </div>
@@ -299,7 +299,7 @@ export default function ConfigRecursosFisicos() {
                                         placeholder="BREVE DESCRIPCIÓN DEL RECURSO O EQUIPO..."
                                         className="w-full bg-slate-50 border border-slate-100 focus:bg-white focus:border-blue-500 rounded-2xl p-4 text-[14px] font-bold text-slate-600 outline-none transition-all shadow-inner group-hover:border-slate-200 resize-none"
                                         value={formData.descripcion}
-                                        onChange={(e) => setFormData({ ...formData, descripcion: e.target.value.toUpperCase() })}
+                                        onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                                     />
                                 </div>
                             </div>

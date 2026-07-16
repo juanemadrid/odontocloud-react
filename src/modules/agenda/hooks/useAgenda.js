@@ -3,6 +3,7 @@ import { collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, delet
 import { db } from "../../../firebase/firebaseConfig";
 import { useAuth } from "../../../context/AuthContext";
 import { createOrUpdatePatient } from "../../../services/patientService";
+import { useAudit } from "../../../hooks/useAudit";
 
 // Utils
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -47,6 +48,7 @@ const calculateAgeStr = (birthDateStr) => {
 
 export function useAgenda() {
     const { userProfile } = useAuth();
+    const { logAction } = useAudit();
     const inquilino = userProfile?.inquilino;
 
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -243,6 +245,15 @@ export function useAgenda() {
         );
 
         const ref = await addDoc(collection(db, "citas"), payload);
+
+        // Audit log
+        await logAction(payload.pacienteId || "unknown", "CREATE_APPOINTMENT", {
+            fecha: payload.fecha,
+            horaInicio: payload.horaInicio || payload.hora || "",
+            doctor: doctors.find(d => d.id === payload.doctorId)?.nombreCompleto || payload.doctorId || "No asignado",
+            citaId: ref.id
+        });
+
         if (pacienteId) {
             try {
                 await setDoc(doc(db, "pacientes", pacienteId), {
@@ -603,6 +614,15 @@ export function useAgenda() {
             const currentDoc = await getDoc(doc(db, "citas", id));
             const currentData = currentDoc.exists() ? currentDoc.data() : {};
             const pacienteId = currentData.pacienteId;
+
+            // Audit log
+            await logAction(pacienteId || "unknown", "UPDATE_APPOINTMENT", {
+                fecha: cleanPatch.fecha || currentData.fecha,
+                horaInicio: cleanPatch.horaInicio || currentData.horaInicio || "",
+                status: cleanPatch.status || cleanPatch.estado || currentData.status || "",
+                citaId: id
+            });
+
             if (pacienteId) {
                 let title = "Tu Cita ha sido Actualizada";
                 let message = `Tu cita del ${currentData.fecha} ha sido actualizada.`;
@@ -636,12 +656,29 @@ export function useAgenda() {
                 });
             }
         } catch (nErr) {
-            console.warn("Could not send real-time notification to patient:", nErr);
+            console.warn("Could not send real-time notification to patient/log audit:", nErr);
         }
     };
 
     const deleteAppointment = async (id) => {
-        await deleteDoc(doc(db, "citas", id));
+        try {
+            const currentDoc = await getDoc(doc(db, "citas", id));
+            if (currentDoc.exists()) {
+                const currentData = currentDoc.data();
+                await deleteDoc(doc(db, "citas", id));
+                await logAction(currentData.pacienteId || "unknown", "DELETE_APPOINTMENT", {
+                    fecha: currentData.fecha,
+                    horaInicio: currentData.horaInicio || "",
+                    doctor: currentData.doctorNombre || currentData.doctorId || "No asignado",
+                    citaId: id
+                });
+            } else {
+                await deleteDoc(doc(db, "citas", id));
+            }
+        } catch (err) {
+            console.error("Error in auditing deleteAppointment:", err);
+            await deleteDoc(doc(db, "citas", id));
+        }
     };
 
     return {

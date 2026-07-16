@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { doc, onSnapshot, collection, query, where, getDocs, addDoc, getDoc } from "firebase/firestore";
 import { db, storage } from "../../../firebase/firebaseConfig";
-import { formatCurrency } from "../../../utils/formatters";
+import { formatCurrency, calculateAgeStr } from "../../../utils/formatters";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
+import { useAudit } from "../../../hooks/useAudit";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema } from "../schemas/patientSchema";
@@ -87,7 +89,10 @@ const FormDatosPersonales = ({ patient, photoState }) => {
         return formConfig[key]?.visible !== false;
     };
 
-    const age = watch("edad");
+    const birthDate = watch("fechaNacimiento");
+    const age = React.useMemo(() => {
+        return calculateAgeStr(birthDate);
+    }, [birthDate]);
     const nroDocumentoValue = watch("nroDocumento");
     React.useEffect(() => {
         if (nroDocumentoValue) {
@@ -205,13 +210,13 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                             </div>
                         </FormRow>
                         <FormRow label="Nombres" required error={errors.nombres}>
-                            <input {...register("nombres")} className="form-input text-sm w-full" placeholder="Nombres" />
+                            <input {...register("nombres")} autoComplete="new-password" className="form-input text-sm w-full" placeholder="Nombres" />
                         </FormRow>
                         <FormRow label="Apellidos" required error={errors.apellidos}>
-                            <input {...register("apellidos")} className="form-input text-sm w-full" placeholder="Apellidos" />
+                            <input {...register("apellidos")} autoComplete="new-password" className="form-input text-sm w-full" placeholder="Apellidos" />
                         </FormRow>
                         <FormRow label="Nombre completo">
-                            <input value={watch("nombreCompleto")?.toUpperCase() || ""} readOnly className="form-input text-sm w-full bg-slate-50 text-slate-600 font-bold border-transparent" />
+                            <input value={watch("nombreCompleto") || ""} readOnly className="form-input text-sm w-full bg-slate-50 text-slate-600 font-bold border-transparent" />
                         </FormRow>
                         <FormRow label="Sexo" required error={errors.sexo}>
                             <select {...register("sexo")} className="form-input text-sm w-full md:w-64">
@@ -514,6 +519,7 @@ const FormAseguramiento = () => {
     const { register, watch, setValue, formState: { errors } } = useFormContext();
     const [epsList, setEpsList] = useState([]);
     const { userProfile } = useAuth();
+    const toast = useToast();
 
     useEffect(() => {
         if(userProfile?.inquilino) {
@@ -525,6 +531,40 @@ const FormAseguramiento = () => {
     const epsValue = watch("nombreEps");
     const filteredEps = epsList.filter(e => e.toLowerCase().includes((epsValue||"").toLowerCase())).slice(0,5);
     const [showEps, setShowEps] = useState(false);
+
+    const handleAgregarEps = async (e) => {
+        e.preventDefault();
+        const epsInput = watch("nombreEps");
+        if (!epsInput || !epsInput.trim()) {
+            toast?.error("Por favor, ingrese un nombre de EPS");
+            return;
+        }
+
+        const normalizedEps = epsInput.trim();
+        
+        if (epsList.map(e => e.toLowerCase()).includes(normalizedEps.toLowerCase())) {
+            toast?.info("Esta EPS ya se encuentra registrada");
+            return;
+        }
+
+        if (!userProfile?.inquilino) {
+            toast?.error("Inquilino no identificado");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "eps_catalogo"), {
+                nombre: normalizedEps,
+                inquilino: userProfile.inquilino,
+                createdAt: new Date().toISOString()
+            });
+            setEpsList(prev => [...prev, normalizedEps].sort((a, b) => a.localeCompare(b)));
+            toast?.success("EPS agregada al catálogo con éxito");
+        } catch (err) {
+            console.error("Error saving new EPS to catalog:", err);
+            toast?.error("Error al guardar la EPS en el catálogo");
+        }
+    };
 
     return (
         <div className="p-4 md:p-8 animate-fadeIn max-w-4xl mx-auto">
@@ -546,7 +586,7 @@ const FormAseguramiento = () => {
                                     {...register("nombreEps")} 
                                     onFocus={() => setShowEps(true)}
                                     onBlur={() => setTimeout(() => setShowEps(false), 200)}
-                                    className="form-input text-sm w-full uppercase"
+                                    className="form-input text-sm w-full"
                                 />
                                 {showEps && filteredEps.length > 0 && (
                                     <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
@@ -558,7 +598,7 @@ const FormAseguramiento = () => {
                                     </div>
                                 )}
                             </div>
-                            <button type="button" onClick={(e) => { e.preventDefault(); }} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20">
+                            <button type="button" onClick={handleAgregarEps} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20">
                                 <FiPlus size={20} />
                             </button>
                         </div>
@@ -606,22 +646,55 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
                         <input {...register("campania")} className="form-input text-sm w-full" />
                     </FormRow>
                     <FormRow label="Remitido por">
-                        <div className="flex flex-col gap-2 w-full">
+                        <div className="flex flex-col gap-3 w-full">
+                            {/* Segmented Control / Selector de tipo de remisión */}
+                            <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("remitidoPorType", "Libre")}
+                                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                        remitidoPorType === "Libre"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    Texto Libre
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("remitidoPorType", "Paciente")}
+                                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                        remitidoPorType === "Paciente"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    Paciente
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("remitidoPorType", "Usuario")}
+                                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                        remitidoPorType === "Usuario"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    Doctor
+                                </button>
+                            </div>
+
+                            {/* Campo de valor de remisión */}
                             <div className="flex gap-2">
-                                <select {...register("remitidoPorType")} className="form-input text-sm w-36 bg-slate-50 font-medium shrink-0">
-                                    <option value="Libre">Libre</option>
-                                    <option value="Paciente">Paciente</option>
-                                    <option value="Usuario">Doctor</option>
-                                </select>
                                 {remitidoPorType === "Libre" && (
                                     <input
                                         {...register("remitidoPorValue")}
-                                        className="form-input text-sm flex-1"
-                                        placeholder="Nombre de quien refiere"
+                                        className="form-input text-sm w-full md:w-96"
+                                        placeholder="Nombre de la persona que refiere"
                                     />
                                 )}
                                 {remitidoPorType === "Paciente" && (
-                                    <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                    <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
                                         <option value="">Seleccione un paciente...</option>
                                         {pacientesRemision.map(p => (
                                             <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
@@ -631,7 +704,7 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
                                     </select>
                                 )}
                                 {remitidoPorType === "Usuario" && (
-                                    <select {...register("remitidoPorValue")} className="form-input text-sm flex-1">
+                                    <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
                                         <option value="">Seleccione un doctor...</option>
                                         {profesionales.map(p => (
                                             <option key={p.id} value={p.displayName}>
@@ -703,21 +776,20 @@ const normalizeTipoDocumento = (tipo) => {
 
 export default function PatientDetails({ initialData, onClose, onDelete }) {
     const [patient, setPatient] = useState(initialData || null);
+    const { logAction } = useAudit();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     // Default to "presu" (Presupuestos & planes) if the URL path ends with "/planes"
     const pathEndsWithPlanes = window.location.pathname.toLowerCase().endsWith("/planes");
-    
-    // Support dynamic tab initialization and updates via URL queries (e.g. voice commands)
-    const searchParams = new URLSearchParams(window.location.search);
     const queryTab = searchParams.get("tab");
     const [activeTab, setActiveTab] = useState(queryTab || (pathEndsWithPlanes ? "presu" : "datos"));
     
     useEffect(() => {
-        const currentParams = new URLSearchParams(window.location.search);
-        const currentTab = currentParams.get("tab");
+        const currentTab = searchParams.get("tab");
         if (currentTab && currentTab !== activeTab) {
             setActiveTab(currentTab);
         }
-    }, [window.location.search, activeTab]);
+    }, [searchParams]);
 
     const [showWarningModal, setShowWarningModal] = useState(false);
 
@@ -726,11 +798,17 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
             setShowWarningModal(true);
             if (activeTab !== "datos") {
                 setActiveTab("datos");
+                const currentParams = {};
+                for (const [key, value] of searchParams.entries()) {
+                    currentParams[key] = value;
+                }
+                currentParams.tab = "datos";
+                setSearchParams(currentParams);
             }
         } else {
             setShowWarningModal(false);
         }
-    }, [patient?.id, patient?.registroCompleto, activeTab]);
+    }, [patient?.id, patient?.registroCompleto, activeTab, searchParams, setSearchParams]);
 
     const [financials, setFinancials] = useState(null);
     const { userProfile } = useAuth();
@@ -781,6 +859,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
     const [pendingTab, setPendingTab] = useState(null);
     const [pendingClose, setPendingClose] = useState(false);
+    const [showEpsWarning, setShowEpsWarning] = useState(false);
 
     const handleTabChange = (newTab) => {
         if (patient?.registroCompleto === false && newTab !== "datos") {
@@ -792,6 +871,17 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
             setPendingTab(newTab);
             return;
         }
+
+        // Update URL search parameters
+        const currentParams = {};
+        for (const [key, value] of searchParams.entries()) {
+            currentParams[key] = value;
+        }
+        if (currentParams.tab !== newTab) {
+            currentParams.tab = newTab;
+            setSearchParams(currentParams);
+        }
+
         if (activeTab === newTab) {
             setActiveTab("");
             setTimeout(() => setActiveTab(newTab), 0);
@@ -801,6 +891,15 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
     };
 
     const handleClose = () => {
+        const epsNombre = methods.getValues("nombreEps");
+        const epsVinculacion = methods.getValues("tipoVinculacion");
+        const isEpsMissing = !epsNombre || !epsVinculacion;
+
+        if (isEpsMissing) {
+            setShowEpsWarning(true);
+            return;
+        }
+
         if (methods.formState.isDirty) {
             setPendingClose(true);
             return;
@@ -877,10 +976,22 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
     useEffect(() => {
         if (!patient?.id) return;
-        import("../../../services/billingService").then(({ getPatientFinancials }) => {
-            getPatientFinancials(patient.id).then(setFinancials);
+        
+        // Listen to changes in the pagos collection in real-time to auto-update credit/balances
+        const qPagos = query(
+            collection(db, "pagos"),
+            where("patientId", "==", patient.id),
+            where("inquilino", "==", userProfile?.inquilino || "")
+        );
+        
+        const unsub = onSnapshot(qPagos, () => {
+            import("../../../services/billingService").then(({ getPatientFinancials }) => {
+                getPatientFinancials(patient.id).then(setFinancials);
+            });
         });
-    }, [patient?.id, activeTab]); // Reload on tab switch to ensure sync
+        
+        return () => unsub();
+    }, [patient?.id, userProfile?.inquilino]);
 
     // Compute active realized debt (items marked as done but not paid)
     const [realizedDebt, setRealizedDebt] = useState(0);
@@ -984,9 +1095,17 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                 try {
                     const finalPayload = {
                         ...data,
+                        edad: calculateAgeStr(data.fechaNacimiento),
                         registroCompleto: true
                     };
-                    await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
+                    const saved = await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
+                    
+                    // Audit log
+                    await logAction(patient?.id || data.nroDocumento, "UPDATE_PATIENT", {
+                        nombre: finalPayload.nombreCompleto || `${finalPayload.nombres} ${finalPayload.apellidos}`,
+                        documento: finalPayload.nroDocumento
+                    });
+
                     toast.success("Información del paciente actualizada y guardada");
                     methods.reset(finalPayload); // Clear isDirty
                 } catch(e) {
@@ -1004,9 +1123,21 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         try {
             import("../../../services/patientService").then(async ({ createOrUpdatePatient }) => {
                 try {
-                    await createOrUpdatePatient(userProfile.inquilino, allValues, false, fotoFile);
+                    const finalPayload = {
+                        ...allValues,
+                        edad: calculateAgeStr(allValues.fechaNacimiento)
+                    };
+                    const saved = await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
+                    
+                    // Audit log
+                    await logAction(patient?.id || allValues.nroDocumento, "UPDATE_PATIENT", {
+                        nombre: finalPayload.nombreCompleto || `${finalPayload.nombres} ${finalPayload.apellidos}`,
+                        documento: finalPayload.nroDocumento,
+                        parcial: true
+                    });
+
                     toast.success("Información guardada correctamente ✅");
-                    methods.reset(allValues);
+                    methods.reset(finalPayload);
                 } catch(e) {
                     console.error("Error saving partial form:", e);
                     toast.error("Hubo un error al guardar");
@@ -1016,49 +1147,6 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
             toast.error("Hubo un error al guardar");
         }
     };
-
-
-    // Calculate age automatically just in case
-    const birthDate = methods.watch("fechaNacimiento");
-    useEffect(() => {
-        if (!birthDate) return;
-        
-        let birth = null;
-        if (birthDate.includes("-")) {
-            const parts = birthDate.split("-");
-            if (parts.length === 3) {
-                const y = parseInt(parts[0], 10);
-                const m = parseInt(parts[1], 10) - 1;
-                const d = parseInt(parts[2], 10);
-                birth = new Date(y, m, d);
-            }
-        } else if (birthDate.includes("/")) {
-            const parts = birthDate.split("/");
-            if (parts.length === 3) {
-                const d = parseInt(parts[0], 10);
-                const m = parseInt(parts[1], 10) - 1;
-                const y = parseInt(parts[2], 10);
-                birth = new Date(y, m, d);
-            }
-        }
-        if (!birth || isNaN(birth.getTime())) {
-            birth = new Date(birthDate);
-        }
-        if (isNaN(birth.getTime())) {
-            methods.setValue("edad", "");
-            return;
-        }
-
-        const today = new Date();
-        let years = today.getFullYear() - birth.getFullYear();
-        let months = today.getMonth() - birth.getMonth();
-        if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) { years--; months += 12; }
-        if (today.getDate() < birth.getDate()) { months--; if (months < 0) { months += 12; years--; } }
-        let numStr = "";
-        if (years >= 0) numStr = `${years} años`;
-        if (months > 0) numStr += ` y ${months} meses`;
-        methods.setValue("edad", numStr);
-    }, [birthDate, methods]);
 
     const nombres = methods.watch("nombres");
     const apellidos = methods.watch("apellidos");
@@ -1183,6 +1271,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-white relative overflow-hidden">
                             {isEditableTab ? (
                                 <form 
+                                    autoComplete="off"
                                     onSubmit={methods.handleSubmit(submitForm, (errors) => {
                                         console.warn("Form validation errors:", errors);
                                         toast.error("Por favor completa los campos obligatorios pendientes.");
@@ -1362,6 +1451,53 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
                                 >
                                     Seguir Editando
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showEpsWarning && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl animate-scaleIn relative overflow-hidden flex flex-col items-center text-center">
+                            {/* Icon inside soft circle */}
+                            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                                <FiShield size={32} strokeWidth={2.5} />
+                            </div>
+                            
+                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">
+                                Datos de EPS Pendientes
+                            </h3>
+                            
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed mb-6">
+                                Este paciente no tiene registrados los datos de EPS (Tipo de vinculación y Nombre de la EPS), los cuales son obligatorios para habilitar la facturación y el reporte de RIPS.
+                            </p>
+
+                            <div className="flex flex-col gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowEpsWarning(false);
+                                        setActiveTab("eps");
+                                    }}
+                                    className="w-full py-3 bg-[#8CC63F] text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#8CC63F]/20 hover:bg-[#7bb335] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Completar EPS Ahora
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowEpsWarning(false);
+                                        if (methods.formState.isDirty) {
+                                            setPendingClose(true);
+                                        } else {
+                                            onClose();
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-slate-100 text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-full hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center"
+                                >
+                                    Salir de Todos Modos
                                 </button>
                             </div>
                         </div>

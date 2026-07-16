@@ -147,7 +147,7 @@ export default function ImportadorListaPrecios({ onComplete, onClose, activeTab 
                 // Importar a una lista de precios (clínica o servicio)
                 const newListRef = doc(collection(db, "listas_precios"));
                 await setDoc(newListRef, {
-                    nombre: listName.toUpperCase(),
+                    nombre: listName,
                     tipo: activeTab || "clinicos",
                     inquilino,
                     creado: serverTimestamp(),
@@ -176,7 +176,7 @@ export default function ImportadorListaPrecios({ onComplete, onClose, activeTab 
                     await batch.commit();
                 }
 
-                alert(`✅ Importación exitosa: ${fileData.length} ítems cargados en "${listName.toUpperCase()}".`);
+                alert(`✅ Importación exitosa: ${fileData.length} ítems cargados en "${listName}".`);
             }
             
             onComplete && onComplete();
@@ -219,7 +219,7 @@ export default function ImportadorListaPrecios({ onComplete, onClose, activeTab 
                                 type="text"
                                 className="w-full px-6 py-4 bg-slate-100/50 border border-slate-200 rounded-2xl text-[15px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-inner-sm"
                                 value={listName}
-                                onChange={(e) => setListName(e.target.value.toUpperCase())}
+                                onChange={(e) => setListName(e.target.value)}
                                 placeholder="EJ: TARIFAS INSTITUCIONALES 2026"
                             />
                         </div>

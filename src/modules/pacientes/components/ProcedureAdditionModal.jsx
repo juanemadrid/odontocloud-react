@@ -34,64 +34,66 @@ export default function ProcedureAdditionModal({ isOpen, onClose, onAdd, baseLis
         updateStagedItem(toothModal.itemId, 'dientes', teethString);
     };
 
+    const [allItems, setAllItems] = useState([]);
+    const [loadingAllItems, setLoadingAllItems] = useState(false);
+
     useEffect(() => {
         if (isOpen && baseListId) {
-            fetchCategories();
+            const loadAllItems = async () => {
+                setLoadingAllItems(true);
+                try {
+                    const snap = await getDocs(collection(db, "listas_precios", baseListId, "items"));
+                    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setAllItems(list);
+                    
+                    // Extraer categorías únicas
+                    const cats = list.map(item => item.categoria).filter(c => !!c);
+                    setCategories(['TODAS', ...new Set(cats)]);
+                } catch (e) {
+                    console.error("Error al cargar los ítems de la lista de precios:", e);
+                    toast?.error("Error al cargar los productos");
+                } finally {
+                    setLoadingAllItems(false);
+                }
+            };
+            loadAllItems();
+        } else {
+            setAllItems([]);
+            setCategories(['TODAS']);
         }
     }, [isOpen, baseListId]);
 
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            if (isOpen && baseListId) {
-                handleSearch();
-            }
-        }, 300);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, category]);
-
-
-
-    const fetchCategories = async () => {
-        try {
-            const q = query(collection(db, "listas_precios", baseListId, "items"), limit(100));
-            const snap = await getDocs(q);
-            const cats = snap.docs.map(d => d.data().categoria).filter(c => !!c);
-            setCategories(['TODAS', ...new Set(cats)]);
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const handleSearch = async () => {
+    const handleSearch = () => {
         if (!searchTerm.trim()) {
             setSearchResults([]);
             return;
         }
-        setSearchLoading(true);
-        try {
-            let q = query(
-                collection(db, "listas_precios", baseListId, "items"),
-                where("search_name", ">=", searchTerm.toLowerCase()),
-                where("search_name", "<=", searchTerm.toLowerCase() + "\uf8ff"),
-                limit(30)
+
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+        
+        let results = allItems.filter(item => {
+            const nameLower = (item.nombre || "").toLowerCase();
+            const codeLower = (item.codigo || "").toLowerCase();
+            const categoryLower = (item.categoria || "").toLowerCase();
+
+            // Todas las palabras escritas deben coincidir en el nombre, código o categoría
+            return searchWords.every(word => 
+                nameLower.includes(word) || 
+                codeLower.includes(word) || 
+                categoryLower.includes(word)
             );
-            
-            const snap = await getDocs(q);
-            let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            if (category !== 'TODAS') {
-                results = results.filter(r => r.categoria === category);
-            }
-            
-            setSearchResults(results);
-        } catch (e) {
-            console.error(e);
-            toast.error("Error en la búsqueda");
-        } finally {
-            setSearchLoading(false);
+        });
+
+        if (category !== 'TODAS') {
+            results = results.filter(r => r.categoria === category);
         }
+
+        setSearchResults(results.slice(0, 30));
     };
+
+    useEffect(() => {
+        handleSearch();
+    }, [searchTerm, category, allItems]);
 
     const addToList = (proc) => {
         const newItem = {

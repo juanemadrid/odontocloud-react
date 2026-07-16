@@ -121,7 +121,7 @@ export default function ConfigCatalogoCuentas() {
         setSavingAccount(true);
         try {
             const payload = {
-                nombre: formData.nombre.toUpperCase(),
+                nombre: formData.nombre,
                 codigo: codigoCompleto,
                 codigoPadre: formData.codigoPadre,
                 descripcion: formData.descripcion,

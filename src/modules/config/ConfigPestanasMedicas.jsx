@@ -90,7 +90,7 @@ export default function ConfigPestanasMedicas() {
         try {
             const payload = {
                 ...formData,
-                nombre: formData.nombre.toUpperCase(),
+                nombre: formData.nombre,
                 updatedAt: serverTimestamp(),
                 updatedBy: userProfile.email
             };

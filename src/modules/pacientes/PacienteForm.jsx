@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { getPatientById, createOrUpdatePatient, deletePatient } from "../../services/patientService";
+import { useAudit } from "../../hooks/useAudit";
 
 // UI Component
 import PatientForm from "./components/PatientForm";
@@ -13,6 +14,7 @@ export default function PacienteForm() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const toast = useToast();
+  const { logAction } = useAudit();
 
   const isNew = !pacienteId || pacienteId === "nuevo";
   const [loading, setLoading] = useState(!isNew);
@@ -59,6 +61,16 @@ export default function PacienteForm() {
         fotoFile
       );
 
+      // Audit log
+      await logAction(
+        saved.id,
+        isNew ? "CREATE_PATIENT" : "UPDATE_PATIENT",
+        {
+          nombre: saved.nombreCompleto || `${saved.nombres} ${saved.apellidos}`,
+          documento: saved.nroDocumento
+        }
+      );
+
       toast.success(isNew ? "¡Paciente registrado con éxito!" : "Ficha de paciente actualizada.");
 
       // Redirect to the newly created/updated patient details
@@ -77,6 +89,17 @@ export default function PacienteForm() {
 
     try {
       await deletePatient(patient.id);
+
+      // Audit log
+      await logAction(
+        patient.id,
+        "DELETE_PATIENT",
+        {
+          nombre: patient.nombreCompleto,
+          documento: patient.nroDocumento
+        }
+      );
+
       toast.success("Paciente eliminado correctamente.");
       navigate("/dashboard/pacientes");
     } catch (err) {

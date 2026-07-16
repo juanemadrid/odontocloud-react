@@ -375,7 +375,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                         </thead>
                         <tbody className="divide-y divide-slate-50 text-[12px] font-bold text-slate-600">
                             {planesTrat.length === 0 ? (
-                                <tr><td colSpan="8" className="p-8 text-center text-slate-400">No data available in table</td></tr>
+                                <tr><td colSpan="9" className="p-8 text-center text-slate-400">No data available in table</td></tr>
                             ) : planesTrat.map(p => {
                                 const createdAt = p.date ? new Date(p.date) : new Date();
                                 const paidAmt = payments.filter(pay => pay.planId === p.id && pay.estado !== 'Anulado').reduce((sum, pay) => sum + Number(pay.monto || 0), 0);
@@ -398,6 +398,9 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                     <td className="px-3 py-3.5 uppercase text-[10px] text-slate-400 font-black">{userProfile?.tenant?.nombre || "Sede Principal"}</td>
                                     <td className="px-3 py-3.5 text-slate-500">{p.profesionalId || p.profesional || "No Asignado"}</td>
                                     <td className="px-3 py-3.5 text-center text-slate-500">{createdAt.toLocaleDateString()}</td>
+                                    <td className="px-3 py-3.5 text-center text-slate-500">
+                                        {p.fechaFinalizacion ? new Date(p.fechaFinalizacion).toLocaleDateString() : '--'}
+                                    </td>
                                     <td className="px-3 py-3.5 text-center">
                                         {planStatus === 'paid' ? (
                                             <span className="inline-flex items-center justify-center px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[9px] font-black uppercase tracking-wider leading-none shadow-sm">
@@ -418,7 +421,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                     </td>
                                     <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono whitespace-nowrap align-middle">$ {totalCost.toLocaleString('es-CO')}</td>
                                     <td className="px-3 py-3.5 text-right font-black text-[#8CC63F] font-mono whitespace-nowrap align-middle">$ {paidAmt.toLocaleString('es-CO')}</td>
-                                    <td className="px-3 py-3.5 text-center">
+                                    <td className="px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); onEdit(p); }} 

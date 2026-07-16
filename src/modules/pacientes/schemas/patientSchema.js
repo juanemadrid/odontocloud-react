@@ -90,4 +90,5 @@ export const patientSchema = z.object({
     notas: z.string().optional(),
     fotoUrl: z.string().optional(),
     alertas: z.string().optional(),
+    edad: z.string().optional(),
 });

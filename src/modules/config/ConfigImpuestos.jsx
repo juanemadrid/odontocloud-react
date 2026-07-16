@@ -56,7 +56,7 @@ export default function ConfigImpuestos() {
         try {
             const payload = {
                 ...formData,
-                nombre: formData.nombre.toUpperCase(),
+                nombre: formData.nombre,
                 porcentaje: Number(formData.porcentaje),
                 updatedAt: serverTimestamp(),
                 updatedBy: userProfile.email

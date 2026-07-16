@@ -614,8 +614,8 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             placeholder="TÍTULO DEL PRESUPUESTO..."
                             value={title}
                             disabled={hasPayments}
-                            onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                            className="bg-transparent border-none p-0 text-lg font-black text-slate-800 tracking-tight outline-none w-full max-w-sm uppercase focus:ring-0"
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="bg-transparent border-none p-0 text-lg font-black text-slate-800 tracking-tight outline-none w-full max-w-sm focus:ring-0"
                         />
                     </div>
                 </div>
@@ -860,7 +860,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                             <input
                                                 type="text"
                                                 disabled={paidMap[item.id] > 0}
-                                                placeholder="PIEZAS"
                                                 className="w-16 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-500 text-[10px] transition-all uppercase disabled:opacity-75 disabled:cursor-not-allowed"
                                                 value={item.dientes || ""}
                                                 onChange={(e) => updateItem(item.id, 'dientes', e.target.value)}
