@@ -339,7 +339,7 @@ export default function EmpresaBancos() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 border-b border-slate-50 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-all duration-500 translate-x-4 group-hover/row:translate-x-0">
+                                            <div className="flex items-center justify-end gap-1 transition-all duration-300">
                                                 <button
                                                     onClick={() => { setEditingItem(row); setView("editor"); }}
                                                     className="p-2.5 rounded-xl text-blue-500 hover:bg-blue-500 hover:text-white hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-90"
