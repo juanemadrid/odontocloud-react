@@ -203,7 +203,7 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
                                                 </td>
                                                 <td className="py-3 px-2 text-center no-print">
                                                     <span className={`px-2 py-0.5 rounded-md font-black tracking-tight border uppercase transition-all ${sidebarVisible ? 'text-[8px]' : 'text-[11px]'} ${apt.pagoPendiente > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                                                        {apt.pagoPendiente > 0 ? 'Deuda' : 'Pago'}
+                                                        {apt.pagoPendiente > 0 ? `Deuda: $${apt.pagoPendiente.toLocaleString('es-CO')}` : 'Al día'}
                                                     </span>
                                                 </td>
                                                 <td className="py-3 px-6 text-right whitespace-nowrap no-print">

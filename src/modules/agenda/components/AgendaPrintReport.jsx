@@ -134,9 +134,9 @@ export default function AgendaPrintReport({
                                     </td>
                                     <td className="p-4 text-right font-black whitespace-nowrap">
                                         {apt.pagoPendiente > 0 ? (
-                                            <span className="text-rose-500 bg-rose-50 px-2 py-1 rounded-md text-[9px]">DEUDA: ${apt.pagoPendiente.toLocaleString()}</span>
+                                            <span className="text-rose-500 bg-rose-50 px-2 py-1 rounded-md text-[9px]">DEUDA: ${apt.pagoPendiente.toLocaleString('es-CO')}</span>
                                         ) : (
-                                            <span className="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md text-[9px]">SALDADO</span>
+                                            <span className="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md text-[9px]">AL DÍA</span>
                                         )}
                                     </td>
                                 </tr>

@@ -146,6 +146,8 @@ export function useAgenda() {
             where("inquilino", "==", inquilino)
         );
 
+        let isCurrent = true;
+
         const unsub = onSnapshot(q, (snap) => {
             console.log("useAgenda - Snapshot received. docs:", snap.docs.length);
             const raw = snap.docs.map(d => {
@@ -177,12 +179,72 @@ export function useAgenda() {
             console.log("useAgenda - Visible appointments:", visible.length);
             setAppointments(visible);
             setLoading(false);
+
+            // Fetch patient debts asynchronously
+            const uniquePatientIds = [...new Set(visible.map(a => a.pacienteId).filter(Boolean))];
+            if (uniquePatientIds.length > 0) {
+                const fetchDebts = async () => {
+                    try {
+                        const debtMap = {};
+                        await Promise.all(uniquePatientIds.map(async (pid) => {
+                            const [snapPlans, snapPagos, snapEvos] = await Promise.all([
+                                getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", pid))),
+                                getDocs(query(collection(db, "pagos"), where("patientId", "==", pid))),
+                                getDocs(query(collection(db, "clinical_evolutions"), where("patientId", "==", pid)))
+                            ]);
+
+                            const plans = snapPlans.docs.map(d => ({ id: d.id, ...d.data() }));
+                            const payments = snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== 'Anulado');
+                            const evos = snapEvos.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                            let totalDebt = 0;
+                            plans.forEach(plan => {
+                                const planPayments = payments.filter(p => p.planId === plan.id);
+                                const planEvos = evos.filter(e => e.planId === plan.id);
+                                const paidMap = {};
+                                (plan.items || []).forEach(it => { paidMap[it.id] = 0; });
+                                planPayments.forEach(p => {
+                                    if (p.itemPayments && p.itemPayments.length > 0) {
+                                        p.itemPayments.forEach(ip => { 
+                                            if (paidMap[ip.itemId] !== undefined) paidMap[ip.itemId] += Number(ip.monto || 0); 
+                                        });
+                                    }
+                                });
+                                (plan.items || []).forEach(item => {
+                                    const realized = planEvos.some(e => e.plantillaItems?.[item.id]?.checked === true);
+                                    if (!realized) return;
+                                    const cost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+                                    const paid = paidMap[item.id] || 0;
+                                    const debt = Math.max(0, cost - paid);
+                                    totalDebt += debt;
+                                });
+                            });
+                            debtMap[pid] = totalDebt;
+                        }));
+
+                        if (!isCurrent) return;
+
+                        setAppointments(prev => prev.map(apt => {
+                            if (debtMap[apt.pacienteId] !== undefined) {
+                                return { ...apt, pagoPendiente: debtMap[apt.pacienteId] };
+                            }
+                            return apt;
+                        }));
+                    } catch (e) {
+                        console.error("Error fetching patient debts for agenda:", e);
+                    }
+                };
+                fetchDebts();
+            }
         }, (err) => {
             console.error("useAgenda - Snapshot error:", err);
             setLoading(false);
         });
 
-        return () => unsub();
+        return () => {
+            isCurrent = false;
+            unsub();
+        };
     }, [selectedDate, viewMode, inquilino, filterDocId, filterBranchId]);
 
     // Actions
