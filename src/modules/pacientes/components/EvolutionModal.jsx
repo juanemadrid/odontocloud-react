@@ -1244,29 +1244,6 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                         </div>
                         
                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
-                            <div className="flex justify-end">
-                                <label className="flex items-center gap-2 cursor-pointer group">
-                                    <div className="relative">
-                                        <input 
-                                            type="checkbox" 
-                                            className="sr-only peer" 
-                                            checked={allChecked}
-                                            onChange={(e) => {
-                                                const val = e.target.checked;
-                                                setAllChecked(val);
-                                                setPlantillaDetails(prev => {
-                                                    const next = { ...prev };
-                                                    Object.keys(next).forEach(k => next[k].checked = val);
-                                                    return next;
-                                                });
-                                            }}
-                                        />
-                                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#8dc63f]"></div>
-                                    </div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Marcar todos</span>
-                                </label>
-                            </div>
-
                             <table className="w-full text-left table-fixed">
                                 <thead>
                                     <tr className="border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest pb-2">
@@ -1318,6 +1295,27 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                     })}
                                 </tbody>
                             </table>
+
+                            <div className="flex items-center gap-2 mt-4 pl-1">
+                                <input 
+                                    type="checkbox"
+                                    id="marcar-realizadas-chk"
+                                    className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                    checked={allChecked}
+                                    onChange={(e) => {
+                                        const val = e.target.checked;
+                                        setAllChecked(val);
+                                        setPlantillaDetails(prev => {
+                                            const next = { ...prev };
+                                            Object.keys(next).forEach(k => next[k].checked = val);
+                                            return next;
+                                        });
+                                    }}
+                                />
+                                <label htmlFor="marcar-realizadas-chk" className="text-[11px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none">
+                                    Marcar realizadas
+                                </label>
+                            </div>
                         </div>
 
                         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50/30">
