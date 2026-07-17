@@ -34,6 +34,18 @@ const ADMIN_MENU = [
 
 export default function AdministracionRouter() {
   const [activeTab, setActiveTab] = useState("facturacion");
+  const [tabKeys, setTabKeys] = useState({});
+
+  const handleTabClick = (tabId) => {
+    if (activeTab === tabId) {
+      setTabKeys((prev) => ({
+        ...prev,
+        [tabId]: (prev[tabId] || 0) + 1,
+      }));
+    } else {
+      setActiveTab(tabId);
+    }
+  };
 
   return (
     <div className="flex h-full w-full bg-slate-50 overflow-hidden rounded-[32px] border border-slate-200/60 shadow-xl">
@@ -52,7 +64,7 @@ export default function AdministracionRouter() {
           {ADMIN_MENU.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleTabClick(item.id)}
               className={`
                 w-full flex items-center gap-3 px-4 py-3.5 rounded-[20px] transition-all duration-300 group
                 ${activeTab === item.id 
@@ -107,17 +119,17 @@ export default function AdministracionRouter() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/10 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
 
             <div className="flex-1 h-full w-full overflow-y-auto custom-scrollbar p-6">
-                {activeTab === "facturacion" && <FacturacionHub />}
-                {activeTab === "inventario" && <Inventario />}
-                {activeTab === "rips" && <RipsGenerator />}
-                {activeTab === "agenda" && <GestionAgenda />}
-                {activeTab === "terceros" && <Terceros />}
-                {activeTab === "convenios" && <Convenios />}
-                {activeTab === "campanas" && <Campanas />}
-                {activeTab === "temp" && <TemperaturaHumedad />}
-                {activeTab === "medicamentos" && <MedicamentosHub />}
-                {activeTab === "residuos" && <ResiduosHub />}
-                {activeTab === "esterilizacion" && <Esterilizacion />}
+                {activeTab === "facturacion" && <FacturacionHub key={tabKeys["facturacion"] || 0} />}
+                {activeTab === "inventario" && <Inventario key={tabKeys["inventario"] || 0} />}
+                {activeTab === "rips" && <RipsGenerator key={tabKeys["rips"] || 0} />}
+                {activeTab === "agenda" && <GestionAgenda key={tabKeys["agenda"] || 0} />}
+                {activeTab === "terceros" && <Terceros key={tabKeys["terceros"] || 0} />}
+                {activeTab === "convenios" && <Convenios key={tabKeys["convenios"] || 0} />}
+                {activeTab === "campanas" && <Campanas key={tabKeys["campanas"] || 0} />}
+                {activeTab === "temp" && <TemperaturaHumedad key={tabKeys["temp"] || 0} />}
+                {activeTab === "medicamentos" && <MedicamentosHub key={tabKeys["medicamentos"] || 0} />}
+                {activeTab === "residuos" && <ResiduosHub key={tabKeys["residuos"] || 0} />}
+                {activeTab === "esterilizacion" && <Esterilizacion key={tabKeys["esterilizacion"] || 0} />}
                 
                 {/* Placeholders for others */}
                 {!["facturacion", "inventario", "rips", "agenda", "terceros", "convenios", "campanas", "temp", "medicamentos", "residuos", "esterilizacion"].includes(activeTab) && (
@@ -127,7 +139,7 @@ export default function AdministracionRouter() {
                         </div>
                         <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
                            Vista en <span className="text-blue-600">Construcción</span>
-                        </h3>
+                         </h3>
                         <p className="text-[13px] font-medium text-slate-400 max-w-sm">
                             El módulo de {ADMIN_MENU.find(m => m.id === activeTab)?.label} está siendo sincronizado con el motor contable real. Pronto estará disponible.
                         </p>
