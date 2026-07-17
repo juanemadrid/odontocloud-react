@@ -35,6 +35,26 @@ export default function WebCms() {
     const previewContainerRef = useRef(null);
     const [scale, setScale] = useState(1);
 
+    const isSuperAdmin = userProfile?.rol?.toLowerCase() === "superadmin";
+    // FIX: If SuperAdmin wants to edit their OWN tenant site (if they have one), we might need a switch.
+    // But for now, let's assume SuperAdmin always edits Master, and Tenant Admins edit Tenant.
+    // If a user is BOTH SuperAdmin AND Tenant (unlikely in strict SaaS, but possible in dev), 
+    // we default to Master for safety, or we can check if they are in a "Tenant Context".
+
+    // However, the user complaint is "I cannot allow OdontoSalud to modify SuperAdmin".
+    // This implies an OdontoSalud user (Tenant Admin) is capable of editing Master.
+    // This only happens if isSuperAdmin is true for them.
+
+    const configDocId = isSuperAdmin ? "general" : userProfile?.inquilino;
+    const baseConfig = isSuperAdmin ? MASTER_CONFIG : DEFAULT_CONFIG;
+
+    // DEBUG: Add tenant name for UI clarity
+    const tenantName = isSuperAdmin ? "SITIO PRINCIPAL (MASTER)" : (userProfile?.tenant?.name || "MI CLÍNICA");
+
+    const [config, setConfig] = useState({ ...baseConfig });
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
     useEffect(() => {
         if (!previewContainerRef.current) return;
         const resizeObserver = new ResizeObserver((entries) => {
@@ -58,27 +78,7 @@ export default function WebCms() {
         });
         resizeObserver.observe(previewContainerRef.current);
         return () => resizeObserver.disconnect();
-    }, [viewMode]);
-
-    const isSuperAdmin = userProfile?.rol?.toLowerCase() === "superadmin";
-    // FIX: If SuperAdmin wants to edit their OWN tenant site (if they have one), we might need a switch.
-    // But for now, let's assume SuperAdmin always edits Master, and Tenant Admins edit Tenant.
-    // If a user is BOTH SuperAdmin AND Tenant (unlikely in strict SaaS, but possible in dev), 
-    // we default to Master for safety, or we can check if they are in a "Tenant Context".
-
-    // However, the user complaint is "I cannot allow OdontoSalud to modify SuperAdmin".
-    // This implies an OdontoSalud user (Tenant Admin) is capable of editing Master.
-    // This only happens if isSuperAdmin is true for them.
-
-    const configDocId = isSuperAdmin ? "general" : userProfile?.inquilino;
-    const baseConfig = isSuperAdmin ? MASTER_CONFIG : DEFAULT_CONFIG;
-
-    // DEBUG: Add tenant name for UI clarity
-    const tenantName = isSuperAdmin ? "SITIO PRINCIPAL (MASTER)" : (userProfile?.tenant?.name || "MI CLÍNICA");
-
-    const [config, setConfig] = useState({ ...baseConfig });
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    }, [viewMode, loading]);
 
     // Sync state to localStorage for the iframe preview
     useEffect(() => {
