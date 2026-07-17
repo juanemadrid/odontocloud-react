@@ -200,7 +200,7 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                         <FormRow label="Nro. de documento" required error={errors.nroDocumento}>
                             <input {...register("nroDocumento")} className="form-input text-sm w-full md:w-64" placeholder="Nro. documento" />
                         </FormRow>
-                        <FormRow label="Número de Historia" helpText="Autogenerado si está vacío">
+                        <FormRow label="Número de Historia">
                             <input {...register("nroHistoria")} className="form-input text-sm w-full md:w-64" placeholder="Nro. historia" />
                         </FormRow>
                         <FormRow label="Fecha de ingreso">
