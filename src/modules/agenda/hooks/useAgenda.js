@@ -344,12 +344,23 @@ export function useAgenda() {
     const updateAppointment = async (id, patch) => {
         let finalPatch = { ...patch };
 
-        // Synchronize status and estado fields
+        // Synchronize status and estado fields (convert English keys to standard uppercase Spanish)
+        const statusMap = {
+            'pending': 'SIN CONFIRMAR',
+            'confirmed': 'CONFIRMADA',
+            'attended': 'ATENDIDO',
+            'urgencia': 'URGENCIA',
+            'sin-cont-web': 'SIN CONT. WEB',
+            'no-show': 'NO ASISTE',
+            'cancelled': 'CANCELADO',
+            'waiting': 'EN ESPERA'
+        };
         if (patch.status !== undefined && patch.estado === undefined) {
-            finalPatch.estado = patch.status;
+            finalPatch.estado = statusMap[patch.status] || patch.status.toUpperCase();
         }
         if (patch.estado !== undefined && patch.status === undefined) {
-            finalPatch.status = patch.estado;
+            const matchedKey = Object.keys(statusMap).find(key => statusMap[key] === patch.estado.toUpperCase());
+            finalPatch.status = matchedKey || patch.estado.toLowerCase();
         }
 
         // Synchronize string fields if start date is updated (e.g. via drag & drop)

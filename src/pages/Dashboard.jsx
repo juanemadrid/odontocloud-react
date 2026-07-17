@@ -666,22 +666,22 @@ function Overview({
 
     const completedCount = docAppointments.filter(
       (c) => {
-        const est = (c.estado || "").toLowerCase();
-        return est === "completada" || est === "atendido" || est === "atendida" || est === "atendiendo" || est === "completed";
+        const est = (c.estado || "").toLowerCase().trim();
+        return ["completada", "completado", "atendido", "atendida", "atendiendo", "completed", "attended"].includes(est);
       }
     ).length;
 
     const enEsperaCount = docAppointments.filter(
       (c) => {
-        const est = (c.estado || "").toLowerCase();
-        return est === "en espera" || est === "waiting";
+        const est = (c.estado || "").toLowerCase().trim();
+        return ["en espera", "waiting"].includes(est);
       }
     ).length;
 
     const pendienteCount = docAppointments.filter(
       (c) => {
-        const est = (c.estado || "").toLowerCase();
-        return est === "pendiente" || est === "programada" || est === "confirmada" || est === "sin confirmar" || est === "pending" || est === "confirmed" || est === "sin-confirmar";
+        const est = (c.estado || "").toLowerCase().trim();
+        return ["pendiente", "programada", "confirmada", "sin confirmar", "pending", "confirmed", "sin-confirmar", "confirmado"].includes(est);
       }
     ).length;
 
@@ -806,7 +806,8 @@ function Overview({
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
                 {docAppointments.map((c) => {
-                  const isCompleted = ["completada", "atendido", "atendida", "atendiendo", "completed"].includes((c.estado || "").toLowerCase());
+                  const isCompleted = ["completada", "completado", "atendido", "atendida", "atendiendo", "completed", "attended"].includes((c.estado || "").toLowerCase().trim());
+                  const isWaiting = ["en espera", "waiting"].includes((c.estado || "").toLowerCase().trim());
                   return (
                     <div key={c.id} className="p-4 hover:bg-slate-50 border-2 border-slate-100 hover:border-blue-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                       <div className="space-y-2 flex-1">
@@ -815,11 +816,11 @@ function Overview({
                             {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border-2
-                            ${((c.estado || "").toLowerCase() === "en espera" || (c.estado || "").toLowerCase() === "waiting") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            ${isWaiting ? "bg-amber-50 text-amber-700 border-amber-200" :
                               isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                               "bg-blue-50 text-blue-700 border-blue-200"}
                           `}>
-                            {c.estado}
+                            {getStatusLabel(c.estado)}
                           </span>
                           {c.consultorio && (
                             <span className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
@@ -1072,25 +1073,29 @@ function Overview({
               </div>
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-[300px]">
-                {todaysAppointments.slice(0, 5).map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
-                    <div>
-                      <div className="font-semibold text-slate-800 text-sm">{c.pacienteNombre}</div>
-                      <div className="text-xs text-slate-500 flex items-center gap-1">
-                        <FiClock size={10} />
-                        {fmtTime(c.fecha, detectLocale())}
+                {todaysAppointments.slice(0, 5).map((c) => {
+                  const isCompleted = ["completada", "completado", "atendido", "atendida", "atendiendo", "completed", "attended"].includes((c.estado || "").toLowerCase().trim());
+                  const isWaiting = ["en espera", "waiting"].includes((c.estado || "").toLowerCase().trim());
+                  return (
+                    <div key={c.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                      <div>
+                        <div className="font-semibold text-slate-800 text-sm">{c.pacienteNombre}</div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                          <FiClock size={10} />
+                          {fmtTime(c.fecha, detectLocale())}
+                        </div>
                       </div>
+                      <span className={`
+                            text-xs px-2.5 py-1 rounded-full font-black uppercase tracking-wider border
+                            ${isWaiting ? "bg-amber-100 text-amber-700 border-amber-200" :
+                          isCompleted ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                            "bg-blue-100 text-blue-700 border-blue-200"}
+                         `}>
+                        {getStatusLabel(c.estado)}
+                      </span>
                     </div>
-                    <span className={`
-                          text-xs px-2 py-1 rounded-full font-medium capitalize
-                          ${(c.estado || "").toLowerCase() === "en espera" ? "bg-amber-100 text-amber-700" :
-                        (c.estado || "").toLowerCase() === "completada" ? "bg-emerald-100 text-emerald-700" :
-                          "bg-blue-100 text-blue-700"}
-                       `}>
-                      {c.estado}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1226,6 +1231,16 @@ export default function Dashboard() {
         .replace(".", "");
     return `${fmt(start)} – ${fmt(end)}`;
   }, [locale]);
+
+  const getStatusLabel = (est) => {
+    const clean = (est || "").toLowerCase().trim();
+    if (clean === "attended" || clean === "atendido" || clean === "atendida") return "ATENDIDO";
+    if (clean === "waiting" || clean === "en espera") return "EN ESPERA";
+    if (clean === "confirmed" || clean === "confirmada" || clean === "confirmado") return "CONFIRMADA";
+    if (clean === "pending" || clean === "sin confirmar") return "SIN CONFIRMAR";
+    if (clean === "cancelled" || clean === "cancelado" || clean === "cancelada") return "CANCELADO";
+    return String(est).toUpperCase();
+  };
 
   const normalizeCita = (docSnap) => {
     const data = docSnap.data() || {};
