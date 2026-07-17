@@ -523,7 +523,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 md:p-10 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-            <div className={`bg-white sm:rounded-[24px] rounded-t-[24px] shadow-2xl w-full flex flex-col h-[95vh] sm:h-full sm:max-h-[90vh] overflow-hidden transition-all duration-300 ${showAIAssistant ? 'max-w-7xl' : 'max-w-4xl'}`}>
+            <div className={`bg-white sm:rounded-[24px] rounded-t-[24px] shadow-2xl w-full flex flex-col h-[95vh] sm:h-full sm:max-h-[90vh] overflow-hidden transition-all duration-300 ${showAIAssistant ? 'max-w-7xl' : 'max-w-6xl'}`}>
                 <div className="flex flex-col h-full">
                     {/* Header Custom Tabs like design */}
                     <div className="flex border-b border-slate-100/60 sticky top-0 bg-white z-10 shrink-0">
@@ -618,9 +618,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                         <table className="w-full text-left table-fixed">
                                             <thead className="sticky top-0 bg-white shadow-sm z-10 hidden md:table-header-group">
                                                 <tr>
-                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-2/3">Acciones Clínicas</th>
+                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-1/2">Acciones Clínicas</th>
                                                     <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-1/3">Observaciones</th>
-                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center w-12">Acción</th>
+                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center w-24">Realizado</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -662,17 +662,18 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                             />
                                                         </td>
                                                         <td className="px-4 py-2 align-middle text-center">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setPlantillaDetails(prev => ({
-                                                                    ...prev,
-                                                                    [s.id]: { ...prev[s.id], checked: false }
-                                                                }))}
-                                                                className="text-slate-300 hover:text-rose-500 p-1"
-                                                                title="Quitar"
-                                                            >
-                                                                <FiX size={14} />
-                                                            </button>
+                                                            <div className="flex items-center justify-start md:justify-center">
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
+                                                                    checked={plantillaDetails[s.id]?.checked || false}
+                                                                    onChange={(e) => setPlantillaDetails(prev => ({
+                                                                        ...prev,
+                                                                        [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                                    }))}
+                                                                />
+                                                                <span className="md:hidden ml-2 text-[10px] font-bold tracking-widest uppercase text-slate-400">Realizado</span>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                     );
@@ -1227,7 +1228,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             {/* Procedure Selector Overlay Modal */}
             {showProcedureSelector && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scaleIn">
+                    <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh] overflow-hidden animate-scaleIn">
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
                             <div>
                                 <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Seleccionar Procedimientos del Plan</h4>
@@ -1269,9 +1270,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             <table className="w-full text-left table-fixed">
                                 <thead>
                                     <tr className="border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest pb-2">
-                                        <th className="py-2 w-12 text-center">Sel.</th>
+                                        <th className="py-2 w-24 text-center">Realizado</th>
                                         <th className="py-2 w-3/4">Procedimiento</th>
-                                        <th className="py-2 text-center w-24">Estado Pago</th>
+                                        <th className="py-2 text-center w-28">Estado Pago</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
