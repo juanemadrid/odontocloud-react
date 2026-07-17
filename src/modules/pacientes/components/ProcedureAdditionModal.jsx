@@ -5,7 +5,7 @@ import { FiSearch, FiPlus, FiX, FiInfo, FiTrash2, FiPercent, FiCheckCircle, FiPl
 import { useToast } from '../../../context/ToastContext';
 import ToothSelectorModal from './ToothSelectorModal';
 
-export default function ProcedureAdditionModal({ isOpen, onClose, onAdd, baseListId, inquilino }) {
+export default function ProcedureAdditionModal({ isOpen, onClose, onAdd, baseListId, inquilino, convenioDescuentos = {} }) {
     const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [category, setCategory] = useState('TODAS');
@@ -96,14 +96,22 @@ export default function ProcedureAdditionModal({ isOpen, onClose, onAdd, baseLis
     }, [searchTerm, category, allItems]);
 
     const addToList = (proc) => {
+        const convenioDisc = convenioDescuentos[proc.id] || null;
+        let descPorc = 0;
+        let descVal = 0;
+        if (convenioDisc) {
+            descPorc = convenioDisc.desc_porc || 0;
+            descVal = (proc.precio || 0) * (descPorc / 100) * qty;
+        }
+
         const newItem = {
             id: Math.random().toString(36).substr(2, 9),
             code: proc.codigo || "",
             desc: proc.nombre,
             amount: proc.precio || 0,
             qty: qty,
-            descuento: 0, // valor fijo
-            desc_porc: 0, // porcentaje
+            descuento: descVal,
+            desc_porc: descPorc,
             dientes: "",
             line_obs: "",
             categoria: proc.categoria,

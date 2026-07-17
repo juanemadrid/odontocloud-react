@@ -56,6 +56,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const [loadingPlanes, setLoadingPlanes] = useState(false);
     const [loadingPlanItems, setLoadingPlanItems] = useState(false);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
+    const [convenioDescuentos, setConvenioDescuentos] = useState({});
 
     useEffect(() => {
         const fetchPlanes = async () => {
@@ -284,6 +285,38 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             if (!currentInquilino) return;
             
             try {
+                // SI EL PACIENTE TIENE CONVENIO: Cargar descuentos y usar su lista de precios
+                if (patient?.convenioBeneficio) {
+                    const qConv = query(
+                        collection(db, "convenios"),
+                        where("inquilino", "==", currentInquilino),
+                        where("nombre", "==", patient.convenioBeneficio.trim()),
+                        where("activo", "==", true),
+                        limit(1)
+                    );
+                    const convSnap = await getDocs(qConv);
+                    if (!convSnap.empty) {
+                        const convenioDoc = convSnap.docs[0];
+                        const convData = convenioDoc.data();
+                        
+                        // Cargar los descuentos asociados a este convenio
+                        const descSnap = await getDocs(collection(db, "convenios", convenioDoc.id, "descuentos"));
+                        const descMap = {};
+                        descSnap.docs.forEach(d => {
+                            descMap[d.id] = d.data();
+                        });
+                        setConvenioDescuentos(descMap);
+
+                        // Si no hay lista pre-establecida en initialData, usamos la del convenio
+                        if (!initialData?.baseListId && convData.listaPreciosId) {
+                            setBaseListId(convData.listaPreciosId);
+                            const listSnap = await getDoc(doc(db, "listas_precios", convData.listaPreciosId));
+                            if (listSnap.exists()) setBaseListName(listSnap.data().nombre);
+                            return;
+                        }
+                    }
+                }
+
                 // PRIMERO: Intentar por el plan actual (si ya tiene uno guardado)
                 if (initialData?.baseListId) {
                     setBaseListId(initialData.baseListId);
@@ -335,7 +368,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             }
         };
         fetchInitialBaseList();
-    }, [patient?.planId, inquilino, patient?.inquilino, initialData?.baseListId]);
+    }, [patient?.planId, inquilino, patient?.inquilino, initialData?.baseListId, patient?.convenioBeneficio]);
 
     const handleListChange = async (e) => {
         const id = e.target.value;
@@ -373,13 +406,20 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const selectProcedure = (itemId, proc) => {
+        const convenioDisc = convenioDescuentos[proc.id] || null;
+        let discountVal = 0;
+        if (convenioDisc) {
+            discountVal = ((proc.precio || 0) * (convenioDisc.desc_porc || 0) / 100);
+        }
+
         setItems(items.map(i => i.id === itemId ? {
             ...i,
             desc: proc.nombre || proc.label,
             amount: proc.precio || proc.value || 0,
             code: proc.codigo || "",
             permite_descuento: proc.permite_descuento !== undefined ? proc.permite_descuento : true,
-            max_desc: proc.max_desc !== undefined ? Number(proc.max_desc) : 100
+            max_desc: proc.max_desc !== undefined ? Number(proc.max_desc) : 100,
+            descuento: discountVal * (i.qty || 1)
         } : i));
         setSearchResults([]);
         setShowResults(false);
@@ -1037,6 +1077,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 onAdd={handleModalAdd}
                 baseListId={baseListId}
                 inquilino={inquilino}
+                convenioDescuentos={convenioDescuentos}
             />
             <ToothSelectorModal 
                 isOpen={toothModal.isOpen}

@@ -28,6 +28,91 @@ export default function Convenios() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingConvenio, setEditingConvenio] = useState(null);
+  const [selectedConvenio, setSelectedConvenio] = useState(null);
+  const [priceListItems, setPriceListItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [discounts, setDiscounts] = useState({});
+  const [savingDiscounts, setSavingDiscounts] = useState(false);
+  const [detailSearchQuery, setDetailSearchQuery] = useState("");
+  const [detailCategory, setDetailCategory] = useState("TODAS");
+  const [detailCategories, setDetailCategories] = useState(["TODAS"]);
+
+  const loadConvenioDetails = async (convenio) => {
+    if (!convenio?.listaPreciosId) return;
+    setLoadingItems(true);
+    try {
+      const snapItems = await getDocs(collection(db, "listas_precios", convenio.listaPreciosId, "items"));
+      const items = snapItems.docs.map(d => ({ id: d.id, ...d.data() }));
+      items.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+      setPriceListItems(items);
+
+      const cats = items.map(i => i.categoria).filter(c => !!c);
+      setDetailCategories(["TODAS", ...new Set(cats)]);
+
+      const snapDiscounts = await getDocs(collection(db, "convenios", convenio.id, "descuentos"));
+      const discMap = {};
+      snapDiscounts.docs.forEach(doc => {
+        discMap[doc.id] = doc.data();
+      });
+      setDiscounts(discMap);
+    } catch (e) {
+      console.error("Error loading convenio details:", e);
+      toast?.error("Error al cargar los servicios del convenio");
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  const handleDiscountChange = (itemId, originalPrice, field, value) => {
+    setDiscounts(prev => {
+      const current = prev[itemId] || { desc_porc: 0, descuento: 0 };
+      let newPorc = current.desc_porc;
+      let newVal = current.descuento;
+
+      if (field === "desc_porc") {
+        newPorc = Math.max(0, Math.min(100, Number(value) || 0));
+        newVal = (originalPrice * newPorc) / 100;
+      } else if (field === "descuento") {
+        newVal = Math.max(0, Math.min(originalPrice, Number(value) || 0));
+        newPorc = originalPrice > 0 ? (newVal / originalPrice) * 100 : 0;
+      }
+
+      return {
+        ...prev,
+        [itemId]: {
+          desc_porc: Number(newPorc.toFixed(2)),
+          descuento: Number(newVal.toFixed(2))
+        }
+      };
+    });
+  };
+
+  const handleSaveDiscounts = async () => {
+    if (!selectedConvenio?.id) return;
+    setSavingDiscounts(true);
+    try {
+      const promises = Object.entries(discounts).map(async ([itemId, disc]) => {
+        const docRef = doc(db, "convenios", selectedConvenio.id, "descuentos", itemId);
+        if (disc.desc_porc > 0 || disc.descuento > 0) {
+          await setDoc(docRef, {
+            desc_porc: disc.desc_porc,
+            descuento: disc.descuento,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          await deleteDoc(docRef);
+        }
+      });
+      await Promise.all(promises);
+      toast?.success("Descuentos del convenio guardados con éxito");
+      setViewMode("LIST");
+    } catch (e) {
+      console.error("Error saving discounts:", e);
+      toast?.error("Error al guardar los descuentos");
+    } finally {
+      setSavingDiscounts(false);
+    }
+  };
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -164,6 +249,12 @@ export default function Convenios() {
     setStep(2);
   };
 
+  const handleViewDetails = (convenio) => {
+    setSelectedConvenio(convenio);
+    setViewMode("DETAIL");
+    loadConvenioDetails(convenio);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -180,15 +271,19 @@ export default function Convenios() {
         updatedAt: serverTimestamp()
       };
 
+      let convenioId = editingConvenio?.id;
       if (editingConvenio?.id) {
         await setDoc(doc(db, "convenios", editingConvenio.id), dataToSave, { merge: true });
       } else {
         dataToSave.createdAt = serverTimestamp();
-        await addDoc(collection(db, "convenios"), dataToSave);
+        const docRef = await addDoc(collection(db, "convenios"), dataToSave);
+        convenioId = docRef.id;
       }
 
       toast?.success(editingConvenio ? "Convenio actualizado correctamente" : "Convenio creado con éxito");
-      setViewMode("LIST");
+      
+      const savedConvenio = { id: convenioId, ...dataToSave };
+      handleViewDetails(savedConvenio);
       loadConvenios();
     } catch (e) {
       console.error(e);
@@ -320,6 +415,13 @@ export default function Convenios() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
                             <button
+                              onClick={() => handleViewDetails(convenio)}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                              title="Gestionar descuentos"
+                            >
+                              <FiPercent size={15} />
+                            </button>
+                            <button
                               onClick={() => handleEdit(convenio)}
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                               title="Editar convenio"
@@ -354,7 +456,7 @@ export default function Convenios() {
             </table>
           </div>
         </>
-      ) : (
+      ) : viewMode === "FORM" ? (
         /* CREATE / EDIT FORM VIEW */
         <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
           {/* Header */}
@@ -606,6 +708,177 @@ export default function Convenios() {
                 <span>{saving ? "Guardando..." : "Guardar"}</span>
               </button>
             )}
+          </div>
+        </div>
+      ) : (
+        /* DETAIL VIEW */
+        <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
+          {/* Header */}
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6 shrink-0">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                Convenios / {selectedConvenio?.nombre} / Gestión de Descuentos
+              </span>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
+                Servicios del tarifario: {selectedConvenio?.listaPreciosNombre}
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("LIST")}
+                className="px-6 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-widest border border-slate-200/60 transition-all"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDiscounts}
+                disabled={savingDiscounts}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#8dc63f] hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-[#8dc63f]/25 disabled:opacity-50"
+              >
+                <FiSave size={14} />
+                <span>{savingDiscounts ? "Guardando..." : "Guardar Descuentos"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Convenio Summary Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl mb-6 shrink-0 text-slate-700">
+            <div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Contacto</span>
+              <span className="text-xs font-bold text-slate-800">{selectedConvenio?.nombreContacto}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">E-mail / Teléfono</span>
+              <span className="text-xs font-semibold text-slate-600">{selectedConvenio?.email} | {selectedConvenio?.telefono}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Tarifario Base</span>
+              <span className="text-xs font-bold text-indigo-600">{selectedConvenio?.listaPreciosNombre}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Dirección</span>
+              <span className="text-xs font-semibold text-slate-600">{selectedConvenio?.direccion}</span>
+            </div>
+          </div>
+
+          {/* Controls: Search & Category */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-4 shrink-0">
+            <div className="relative flex-1">
+              <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={detailSearchQuery}
+                onChange={(e) => setDetailSearchQuery(e.target.value)}
+                placeholder="Buscar servicio por nombre o código..."
+                className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-700 bg-slate-50/50 outline-none focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+              />
+            </div>
+            <div className="w-full sm:w-64">
+              <select
+                value={detailCategory}
+                onChange={(e) => setDetailCategory(e.target.value)}
+                className="w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-4 py-2.5 text-[12px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-400 transition-all"
+              >
+                {detailCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Services Table */}
+          <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 rounded-2xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
+                  <th className="px-6 py-4">Código / Servicio</th>
+                  <th className="px-6 py-4">Categoría</th>
+                  <th className="px-6 py-4 text-right">Precio Original</th>
+                  <th className="px-6 py-4 text-center w-36">Descuento (%)</th>
+                  <th className="px-6 py-4 text-center w-40">Descuento ($)</th>
+                  <th className="px-6 py-4 text-right">Precio Final</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100/60 text-slate-700">
+                {loadingItems ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-20 text-center">
+                      <div className="w-8 h-8 border-3 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" style={{ border: "3px solid #f1f5f9", borderTopColor: "#3b82f6" }} />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargando servicios...</span>
+                    </td>
+                  </tr>
+                ) : priceListItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-20 text-center">
+                      <div className="text-3xl mb-3">📋</div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No hay servicios en esta lista de precios</p>
+                    </td>
+                  </tr>
+                ) : (
+                  priceListItems
+                    .filter(item => {
+                      const matchesSearch = 
+                        (item.nombre || "").toLowerCase().includes(detailSearchQuery.toLowerCase()) ||
+                        (item.codigo || "").toLowerCase().includes(detailSearchQuery.toLowerCase());
+                      const matchesCat = detailCategory === "TODAS" || item.categoria === detailCategory;
+                      return matchesSearch && matchesCat;
+                    })
+                    .map(item => {
+                      const originalPrice = item.precio || 0;
+                      const disc = discounts[item.id] || { desc_porc: 0, descuento: 0 };
+                      const finalPrice = Math.max(0, originalPrice - disc.descuento);
+
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="text-[12px] font-bold text-slate-800">{item.nombre}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{item.codigo || "SIN CÓDIGO"}</div>
+                          </td>
+                          <td className="px-6 py-4 text-[11px] font-semibold text-slate-500">
+                            {item.categoria || "General"}
+                          </td>
+                          <td className="px-6 py-4 text-right text-[12px] font-bold text-slate-700">
+                            $ {originalPrice.toLocaleString("es-CO")}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="relative inline-block w-28">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="any"
+                                value={disc.desc_porc || ""}
+                                onChange={(e) => handleDiscountChange(item.id, originalPrice, "desc_porc", e.target.value)}
+                                placeholder="0"
+                                className="w-full text-right pr-7 pl-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-blue-400"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="relative inline-block w-36">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max={originalPrice}
+                                step="any"
+                                value={disc.descuento || ""}
+                                onChange={(e) => handleDiscountChange(item.id, originalPrice, "descuento", e.target.value)}
+                                placeholder="0"
+                                className="w-full text-right pr-2 pl-6 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-blue-400"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right text-[12px] font-black text-indigo-600">
+                            $ {finalPrice.toLocaleString("es-CO")}
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
