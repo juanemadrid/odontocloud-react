@@ -138,7 +138,9 @@ export default function ConfigLayout({ children }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto rounded-[32px] custom-scrollbar relative">
-                    {children}
+                    <div key={location.pathname} className="animate-in fade-in duration-300">
+                        {children}
+                    </div>
                 </div>
             </main>
         </div>

@@ -391,7 +391,7 @@ export default function EmpresaPlanes() {
 
     const [searchTerm, setSearchTerm] = useState("");
     const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [listas, setListas] = useState([]);
 
     // View State

@@ -27,7 +27,7 @@ export default function EmpresaListaPrecios() {
     const [activeTab, setActiveTab] = useState("clinicos"); // clinicos, productos, servicios
     const [searchTerm, setSearchTerm] = useState("");
     const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // View State: 'list' or 'editor'
     const [view, setView] = useState("list");
@@ -311,7 +311,18 @@ export default function EmpresaListaPrecios() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredRows.length === 0 ? (
+                            {loading && filteredRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3 animate-pulse">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-blue-400">
+                                                <div className="w-6 h-6 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Cargando...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filteredRows.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 opacity-40">
