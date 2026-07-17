@@ -58,6 +58,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     const [allChecked, setAllChecked] = useState(false);
     const [inventarioMeds, setInventarioMeds] = useState([]);
     const [planPayments, setPlanPayments] = useState([]); // payments for the selected plan
+    const [showProcedureSelector, setShowProcedureSelector] = useState(false);
 
     const getLocalISOStrings = () => {
         const d = new Date();
@@ -590,96 +591,95 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             <div className="col-span-1 border border-slate-200 rounded-xl overflow-hidden bg-white mt-4">
                                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                                     <div>
-                                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Plantilla del Tratamiento</h5>
-                                        <p className="text-[8px] text-slate-400 font-bold mt-1">Marque los procedimientos que completó hoy y agregue observaciones si aplica.</p>
+                                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Procedimientos a Evolucionar</h5>
+                                        <p className="text-[8px] text-slate-400 font-bold mt-1">Escriba las observaciones para los procedimientos completados hoy.</p>
                                     </div>
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <div className="relative">
-                                            <input 
-                                                type="checkbox" 
-                                                className="sr-only peer" 
-                                                checked={allChecked}
-                                                onChange={(e) => {
-                                                    const val = e.target.checked;
-                                                    setAllChecked(val);
-                                                    setPlantillaDetails(prev => {
-                                                        const next = { ...prev };
-                                                        Object.keys(next).forEach(k => next[k].checked = val);
-                                                        return next;
-                                                    });
-                                                }}
-                                            />
-                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#8dc63f]"></div>
-                                        </div>
-                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Marcar realizadas</span>
-                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowProcedureSelector(true)}
+                                        className="px-4 py-1.5 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-full font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1 shadow-md shadow-lime-500/10"
+                                    >
+                                        <FiPlus size={10} strokeWidth={3} /> Seleccionar ({servicios.filter(s => plantillaDetails[s.id]?.checked).length})
+                                    </button>
                                 </div>
                                 <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                                    <table className="w-full text-left table-fixed">
-                                        <thead className="sticky top-0 bg-white shadow-sm z-10 hidden md:table-header-group">
-                                            <tr>
-                                                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-1/2">Acciones Clínicas</th>
-                                                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-1/3">Observaciones</th>
-                                                <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center w-16">Real.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {servicios.map((s, idx) => {
-                                                const svcStatus = getServiceStatus(s);
-                                                const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
-                                                const paid = planPaidMap[s.id] || 0;
-                                                const dotStyle = svcStatus === 'paid' ? 'bg-emerald-500 ring-emerald-200'
-                                                    : svcStatus === 'partial' ? 'bg-amber-400 ring-amber-200'
-                                                    : svcStatus === 'unpaid' ? 'bg-rose-500 ring-rose-200 animate-pulse'
-                                                    : 'bg-slate-200 ring-slate-100';
-                                                const tooltip = svcStatus === 'paid' ? `Pagado en su totalidad ($${cost.toLocaleString('es-CO')})`
-                                                    : svcStatus === 'partial' ? `Abono parcial: $${paid.toLocaleString('es-CO')} / $${cost.toLocaleString('es-CO')}`
-                                                    : svcStatus === 'unpaid' ? `Sin pagar ($${cost.toLocaleString('es-CO')})`
-                                                    : 'Sin valor definido';
-                                                return (
-                                                <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors flex flex-col md:table-row py-2 md:py-0">
-                                                    <td className="px-4 py-3 align-middle">
-                                                        <div className="flex items-center gap-2">
-                                                            <div
-                                                                className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-1 cursor-help ${dotStyle}`}
-                                                                title={tooltip}
-                                                            />
-                                                            <div className="text-[11px] font-bold text-slate-700 leading-tight">
-                                                                {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                    {servicios.filter(s => plantillaDetails[s.id]?.checked).length === 0 ? (
+                                        <div className="p-6 text-center text-slate-400">
+                                            <p className="text-[11px] font-bold uppercase tracking-widest">No hay procedimientos seleccionados</p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowProcedureSelector(true)}
+                                                className="mt-2 text-[#8dc63f] hover:text-[#7cb035] text-[10px] font-black uppercase tracking-wider underline focus:outline-none"
+                                            >
+                                                Haga clic aquí para seleccionar
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <table className="w-full text-left table-fixed">
+                                            <thead className="sticky top-0 bg-white shadow-sm z-10 hidden md:table-header-group">
+                                                <tr>
+                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-2/3">Acciones Clínicas</th>
+                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-1/3">Observaciones</th>
+                                                    <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center w-12">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {servicios.filter(s => plantillaDetails[s.id]?.checked).map((s, idx) => {
+                                                    const svcStatus = getServiceStatus(s);
+                                                    const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
+                                                    const paid = planPaidMap[s.id] || 0;
+                                                    const dotStyle = svcStatus === 'paid' ? 'bg-emerald-500 ring-emerald-200'
+                                                        : svcStatus === 'partial' ? 'bg-amber-400 ring-amber-200'
+                                                        : svcStatus === 'unpaid' ? 'bg-rose-500 ring-rose-200 animate-pulse'
+                                                        : 'bg-slate-200 ring-slate-100';
+                                                    const tooltip = svcStatus === 'paid' ? `Pagado en su totalidad ($${cost.toLocaleString('es-CO')})`
+                                                        : svcStatus === 'partial' ? `Abono parcial: $${paid.toLocaleString('es-CO')} / $${cost.toLocaleString('es-CO')}`
+                                                        : svcStatus === 'unpaid' ? `Sin pagar ($${cost.toLocaleString('es-CO')})`
+                                                        : 'Sin valor definido';
+                                                    return (
+                                                    <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors flex flex-col md:table-row py-2 md:py-0">
+                                                        <td className="px-4 py-3 align-middle">
+                                                            <div className="flex items-center gap-2">
+                                                                <div
+                                                                    className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-1 cursor-help ${dotStyle}`}
+                                                                    title={tooltip}
+                                                                />
+                                                                <div className="text-[11px] font-bold text-slate-700 leading-tight">
+                                                                    {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-2 align-middle">
-                                                        <input 
-                                                            type="text"
-                                                            placeholder="Anotaciones..."
-                                                            className="w-full h-8 px-2 rounded-md border border-slate-200 text-[10px] font-bold text-slate-600 bg-white outline-none focus:border-[#8dc63f] focus:ring-1 focus:ring-[#8dc63f]/20 transition-all placeholder:text-slate-300 caret-slate-950"
-                                                            value={plantillaDetails[s.id]?.observation || ''}
-                                                            onChange={(e) => setPlantillaDetails(prev => ({
-                                                                ...prev,
-                                                                [s.id]: { ...prev[s.id], observation: e.target.value }
-                                                            }))}
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-2 align-middle text-center">
-                                                        <div className="flex items-center justify-start md:justify-center">
+                                                        </td>
+                                                        <td className="px-4 py-2 align-middle">
                                                             <input 
-                                                                type="checkbox"
-                                                                className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
-                                                                checked={plantillaDetails[s.id]?.checked || false}
+                                                                type="text"
+                                                                placeholder="Anotaciones..."
+                                                                className="w-full h-8 px-2 rounded-md border border-slate-200 text-[10px] font-bold text-slate-600 bg-white outline-none focus:border-[#8dc63f] focus:ring-1 focus:ring-[#8dc63f]/20 transition-all placeholder:text-slate-300 caret-slate-950"
+                                                                value={plantillaDetails[s.id]?.observation || ''}
                                                                 onChange={(e) => setPlantillaDetails(prev => ({
                                                                     ...prev,
-                                                                    [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                                    [s.id]: { ...prev[s.id], observation: e.target.value }
                                                                 }))}
                                                             />
-                                                            <span className="md:hidden ml-2 text-[10px] font-bold tracking-widest uppercase text-slate-400">Realizado</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                        </td>
+                                                        <td className="px-4 py-2 align-middle text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setPlantillaDetails(prev => ({
+                                                                    ...prev,
+                                                                    [s.id]: { ...prev[s.id], checked: false }
+                                                                }))}
+                                                                className="text-slate-300 hover:text-rose-500 p-1"
+                                                                title="Quitar"
+                                                            >
+                                                                <FiX size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1223,6 +1223,114 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                     </button>
                 </div>
             </div>
+
+            {/* Procedure Selector Overlay Modal */}
+            {showProcedureSelector && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scaleIn">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+                            <div>
+                                <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Seleccionar Procedimientos del Plan</h4>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1">Marque los tratamientos que desea agregar a esta sesión de evolución.</p>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setShowProcedureSelector(false)}
+                                className="text-slate-400 hover:text-rose-500 p-1"
+                            >
+                                <FiX size={18} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+                            <div className="flex justify-end">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="relative">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={allChecked}
+                                            onChange={(e) => {
+                                                const val = e.target.checked;
+                                                setAllChecked(val);
+                                                setPlantillaDetails(prev => {
+                                                    const next = { ...prev };
+                                                    Object.keys(next).forEach(k => next[k].checked = val);
+                                                    return next;
+                                                });
+                                            }}
+                                        />
+                                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#8dc63f]"></div>
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Marcar todos</span>
+                                </label>
+                            </div>
+
+                            <table className="w-full text-left table-fixed">
+                                <thead>
+                                    <tr className="border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest pb-2">
+                                        <th className="py-2 w-12 text-center">Sel.</th>
+                                        <th className="py-2 w-3/4">Procedimiento</th>
+                                        <th className="py-2 text-center w-24">Estado Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {servicios.map((s, idx) => {
+                                        const svcStatus = getServiceStatus(s);
+                                        const cost = (Number(s.amount || 0) * Number(s.qty || 1)) - Number(s.descuento || 0);
+                                        const paid = planPaidMap[s.id] || 0;
+                                        const dotStyle = svcStatus === 'paid' ? 'bg-emerald-500 ring-emerald-200'
+                                            : svcStatus === 'partial' ? 'bg-amber-400 ring-amber-200'
+                                            : svcStatus === 'unpaid' ? 'bg-rose-500 ring-rose-200 animate-pulse'
+                                            : 'bg-slate-200 ring-slate-100';
+                                        const tooltip = svcStatus === 'paid' ? `Pagado: $${cost.toLocaleString('es-CO')}`
+                                            : svcStatus === 'partial' ? `Abono: $${paid.toLocaleString('es-CO')} / $${cost.toLocaleString('es-CO')}`
+                                            : svcStatus === 'unpaid' ? `Deuda: $${cost.toLocaleString('es-CO')}`
+                                            : 'Sin valor';
+
+                                        return (
+                                            <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="py-3 text-center align-middle">
+                                                    <input 
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
+                                                        checked={plantillaDetails[s.id]?.checked || false}
+                                                        onChange={(e) => setPlantillaDetails(prev => ({
+                                                            ...prev,
+                                                            [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                        }))}
+                                                    />
+                                                </td>
+                                                <td className="py-3 align-middle text-[11px] font-bold text-slate-700">
+                                                    {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                                </td>
+                                                <td className="py-3 text-center align-middle">
+                                                    <div className="flex justify-center">
+                                                        <div
+                                                            className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-1 cursor-help ${dotStyle}`}
+                                                            title={tooltip}
+                                                        />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50/30">
+                            <button
+                                type="button"
+                                onClick={() => setShowProcedureSelector(false)}
+                                className="px-6 py-2 bg-[#8dc63f] hover:bg-[#7cb035] text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-md shadow-lime-500/10 active:scale-95 transition-all"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     </div>
 );
