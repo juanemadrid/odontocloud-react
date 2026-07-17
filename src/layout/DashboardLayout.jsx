@@ -336,7 +336,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                             </button>
                         </div>
 
-                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
+                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mt-8 mb-4 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
                             <span className="whitespace-nowrap">Menú Principal</span>
                         </div>
                         
