@@ -195,6 +195,7 @@ export default function AppointmentModal({
                 top: rect.bottom + 6,
                 left: rect.left,
                 width: rect.width,
+                zIndex: 100005,
             });
         }
     }, [patientResults]);
