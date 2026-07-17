@@ -172,6 +172,9 @@ export default function ClinicalAIAssistant({
         return () => {
             window.localVoiceAssistantOpen = false;
             window.dispatchEvent(new CustomEvent('speech-recognition-active', { detail: { active: false } }));
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
         };
     }, []);
 
@@ -670,7 +673,7 @@ export default function ClinicalAIAssistant({
                     <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-[8px]">
                         <FiCpu className={isListening ? "animate-pulse" : ""} size={14} />
                     </span>
-                    <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Nova AI</h4>
+                    <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Asistente Nova</h4>
                 </div>
                 
                 <div className="flex items-center gap-1.5">
@@ -708,7 +711,7 @@ export default function ClinicalAIAssistant({
                         setIsConversational(false);
                         setResult(null);
                         setChatHistory([]);
-                        toast.info("Modo Dictado Estándar Activo");
+                        toast.info("Modo Dictar Texto Activo");
                     }}
                     className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[10px] ${
                         !isConversational 
@@ -716,7 +719,7 @@ export default function ClinicalAIAssistant({
                             : 'bg-transparent text-slate-500 hover:text-slate-700'
                     }`}
                 >
-                    Dictado Clínico
+                    Dictar Texto
                 </button>
                 <button
                     type="button"
@@ -726,7 +729,7 @@ export default function ClinicalAIAssistant({
                         setIsConversational(true);
                         setResult(null);
                         setChatHistory([]);
-                        toast.info("Modo Conversacional Activo: Hable con la IA");
+                        toast.info("Modo Asistente Guiado Activo");
                     }}
                     className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[10px] ${
                         isConversational 
@@ -734,7 +737,7 @@ export default function ClinicalAIAssistant({
                             : 'bg-transparent text-slate-500 hover:text-slate-700'
                     }`}
                 >
-                    Voz a Voz (IA)
+                    Asistente Guiado
                 </button>
             </div>
 
@@ -899,7 +902,7 @@ export default function ClinicalAIAssistant({
                                     }`}
                                 >
                                     <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
-                                        {msg.role === 'user' ? 'Tú (Dentista)' : 'Nova AI'}
+                                        {msg.role === 'user' ? 'Tú (Dentista)' : 'Asistente Nova'}
                                     </span>
                                     <span>{msg.parts[0].text}</span>
                                 </div>

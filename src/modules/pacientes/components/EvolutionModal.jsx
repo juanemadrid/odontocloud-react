@@ -938,13 +938,13 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                 <button
                                     type="button"
                                     onClick={() => setShowAIAssistant(!showAIAssistant)}
-                                    className={`px-3 py-1 rounded-none text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${
+                                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all duration-300 shadow-sm border ${
                                         showAIAssistant 
-                                            ? 'bg-rose-100 text-rose-600 border border-rose-200 animate-pulse' 
-                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100'
+                                            ? 'bg-rose-500 text-white border-rose-500 hover:bg-rose-600 active:scale-95 shadow-rose-100' 
+                                            : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 hover:shadow-md hover:shadow-indigo-100 active:scale-95'
                                     }`}
                                 >
-                                    🎙️ {showAIAssistant ? "Ocultar Asistente IA" : "Asistente IA de Voz"}
+                                    🎙️ {showAIAssistant ? "Ocultar Asistente" : "Asistente Nova"}
                                 </button>
                             </div>
                             
