@@ -32,11 +32,13 @@ import {
     FiX
 } from "react-icons/fi";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 import FirmaHuellaModal from "./components/FirmaHuellaModal";
 
 
 export default function Odontograma({ embeddedPatient }) {
     const toast = useToast();
+    const { userProfile } = useAuth();
 
     const [viewMode, setViewMode] = useState("LIST");
     const [sesiones, setSesiones] = useState([]);
@@ -164,35 +166,92 @@ export default function Odontograma({ embeddedPatient }) {
 
             const imgData = canvas.toDataURL("image/png");
 
+            const logoUrl = userProfile?.tenant?.logo || "";
+            const clinicName = userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || userProfile?.tenant?.name || "Clínica Dental";
+            const clinicNit = userProfile?.tenant?.nit || "—";
+            const clinicAddress = userProfile?.tenant?.direccion || "—";
+            const clinicPhone = userProfile?.tenant?.telefono || "—";
+            const clinicEmail = userProfile?.tenant?.email || "";
+
             const win = window.open("", "_blank");
             win.document.write(`
                 <html>
                 <head>
                     <title>Odontograma Clínico - ${embeddedPatient?.nombreCompleto}</title>
                     <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
                         body {
-                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                             margin: 0;
                             padding: 40px;
                             color: #334155;
                             background-color: #ffffff;
                         }
                         .header {
-                            border-bottom: 2px solid #e2e8f0;
-                            padding-bottom: 12px;
-                            margin-bottom: 24px;
                             display: flex;
                             justify-content: space-between;
+                            align-items: flex-start;
+                            border-bottom: 4px solid #2563eb;
+                            padding-bottom: 25px;
+                            margin-bottom: 30px;
+                            gap: 20px;
+                        }
+                        .logo-container {
+                            display: flex;
+                            gap: 25px;
                             align-items: center;
                         }
-                        .header h1 {
-                            font-size: 20px;
-                            margin: 0;
-                            color: #1e293b;
+                        .logo-text-placeholder {
+                            width: 80px;
+                            height: 80px;
+                            background: #2563eb;
+                            border-radius: 16px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 36px;
+                            font-weight: 900;
+                            text-transform: uppercase;
                         }
-                        .header .date {
+                        .clinic-title {
+                            margin: 0;
+                            font-size: 24px;
+                            font-weight: 900;
+                            color: #0f172a;
+                            text-transform: uppercase;
+                            letter-spacing: -1px;
+                        }
+                        .clinic-meta {
+                            margin: 2px 0;
                             font-size: 12px;
                             color: #64748b;
+                            font-weight: 500;
+                        }
+                        .doc-info {
+                            text-align: right;
+                        }
+                        .doc-badge {
+                            background: #eff6ff;
+                            padding: 12px 20px;
+                            border-radius: 16px;
+                            border: 2px solid #dbeafe;
+                            margin-bottom: 8px;
+                            display: inline-block;
+                        }
+                        .doc-badge span {
+                            font-size: 16px;
+                            font-weight: 900;
+                            color: #1d4ed8;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .doc-meta {
+                            margin: 0;
+                            font-size: 11px;
+                            color: #94a3b8;
+                            font-weight: 900;
+                            text-transform: uppercase;
                         }
                         .patient-info {
                             font-size: 13px;
@@ -236,8 +295,24 @@ export default function Odontograma({ embeddedPatient }) {
                 </head>
                 <body>
                     <div class="header">
-                        <h1>Odontograma Clínico</h1>
-                        <div class="date">Fecha de Impresión: ${new Date().toLocaleDateString("es-ES")}</div>
+                        <div class="logo-container">
+                            ${logoUrl 
+                                ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                                : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
+                            }
+                            <div>
+                                <h1 class="clinic-title">${clinicName}</h1>
+                                <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicNit}</p>
+                                <p class="clinic-meta">${clinicAddress}</p>
+                                <p class="clinic-meta">TEL: ${clinicPhone} | ${clinicEmail}</p>
+                            </div>
+                        </div>
+                        <div class="doc-info">
+                            <div class="doc-badge">
+                                <span>Odontograma Clínico</span>
+                            </div>
+                            <p class="doc-meta">FECHA IMPRESIÓN: ${new Date().toLocaleDateString("es-ES")}</p>
+                        </div>
                     </div>
                     <div class="patient-info">
                         <div><span>Paciente:</span> ${embeddedPatient?.nombreCompleto}</div>

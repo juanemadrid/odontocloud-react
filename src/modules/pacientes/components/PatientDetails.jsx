@@ -993,46 +993,71 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
         return () => unsub();
     }, [patient?.id, userProfile?.inquilino]);
 
-    // Compute active realized debt (items marked as done but not paid)
+    // Compute active realized debt (items marked as done but not paid) in real-time
     const [realizedDebt, setRealizedDebt] = useState(0);
+    const [realtimePlans, setRealtimePlans] = useState([]);
+    const [realtimePayments, setRealtimePayments] = useState([]);
+    const [realtimeEvos, setRealtimeEvos] = useState([]);
+
     useEffect(() => {
         if (!patient?.id) return;
-        const computeDebt = async () => {
-            try {
-                const [plansSnap, paymentsSnap, evosSnap] = await Promise.all([
-                    getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patient.id))),
-                    getDocs(query(collection(db, "pagos"), where("patientId", "==", patient.id))),
-                    getDocs(query(collection(db, "clinical_evolutions"), where("patientId", "==", patient.id)))
-                ]);
-                const plans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                const allPayments = paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== 'Anulado');
-                const evolutions = evosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                let totalDebt = 0;
-                plans.forEach(plan => {
-                    const planPayments = allPayments.filter(p => p.planId === plan.id);
-                    const planEvos = evolutions.filter(e => e.planId === plan.id);
-                    const paidMap = {};
-                    (plan.items || []).forEach(it => { paidMap[it.id] = 0; });
-                    planPayments.forEach(p => {
-                        if (p.itemPayments && p.itemPayments.length > 0) {
-                            p.itemPayments.forEach(ip => { if (paidMap[ip.itemId] !== undefined) paidMap[ip.itemId] += Number(ip.monto || 0); });
-                        }
-                    });
-                    (plan.items || []).forEach(item => {
-                        const realized = planEvos.some(e => e.plantillaItems?.[item.id]?.checked === true);
-                        if (!realized) return;
-                        const cost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
-                        const paid = paidMap[item.id] || 0;
-                        const debt = Math.max(0, cost - paid);
-                        totalDebt += debt;
-                    });
-                });
-                setRealizedDebt(totalDebt);
-            } catch (e) { console.error('Error computing realized debt:', e); }
+        const unsubPlans = onSnapshot(
+            query(collection(db, "treatment_plans"), where("patientId", "==", patient.id)),
+            (snap) => {
+                setRealtimePlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            },
+            (err) => console.error("Error listening to plans:", err)
+        );
+
+        const unsubPagos = onSnapshot(
+            query(collection(db, "pagos"), where("patientId", "==", patient.id)),
+            (snap) => {
+                setRealtimePayments(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== 'Anulado'));
+            },
+            (err) => console.error("Error listening to pagos:", err)
+        );
+
+        const unsubEvos = onSnapshot(
+            query(collection(db, "clinical_evolutions"), where("patientId", "==", patient.id)),
+            (snap) => {
+                setRealtimeEvos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            },
+            (err) => console.error("Error listening to evolutions:", err)
+        );
+
+        return () => {
+            unsubPlans();
+            unsubPagos();
+            unsubEvos();
         };
-        computeDebt();
-    }, [patient?.id, activeTab]);
+    }, [patient?.id]);
+
+    useEffect(() => {
+        let totalDebt = 0;
+        realtimePlans.forEach(plan => {
+            const planPayments = realtimePayments.filter(p => p.planId === plan.id);
+            const planEvos = realtimeEvos.filter(e => e.planId === plan.id);
+            const paidMap = {};
+            (plan.items || []).forEach(it => { paidMap[it.id] = 0; });
+            planPayments.forEach(p => {
+                if (p.itemPayments && p.itemPayments.length > 0) {
+                    p.itemPayments.forEach(ip => { 
+                        if (paidMap[ip.itemId] !== undefined) paidMap[ip.itemId] += Number(ip.monto || 0); 
+                    });
+                }
+            });
+            (plan.items || []).forEach(item => {
+                const realized = planEvos.some(e => e.plantillaItems?.[item.id]?.checked === true);
+                if (!realized) return;
+                const cost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+                const paid = paidMap[item.id] || 0;
+                const debt = Math.max(0, cost - paid);
+                totalDebt += debt;
+            });
+        });
+        setRealizedDebt(totalDebt);
+    }, [realtimePlans, realtimePayments, realtimeEvos]);
 
     // Cámara Handlers
     const [isCameraActive, setIsCameraActive] = useState(false);

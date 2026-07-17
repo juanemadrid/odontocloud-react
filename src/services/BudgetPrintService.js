@@ -72,18 +72,18 @@ export const BudgetPrintService = {
 
             if (tenantId) {
                 try {
-                    const configSnap = await getDoc(doc(db, "empresas", tenantId));
+                    const configSnap = await getDoc(doc(db, "tenants", tenantId));
                     if (configSnap.exists()) {
                         const clinicConfig = configSnap.data();
-                        dbLogoUrl = clinicConfig.logo || "";
-                        dbClinicName = clinicConfig.nombreComercial || clinicConfig.nombre || "";
+                        dbLogoUrl = clinicConfig.logo || clinicConfig.logoUrl || "";
+                        dbClinicName = clinicConfig.nombreComercial || clinicConfig.name || clinicConfig.nombre || "";
                         dbClinicNit = clinicConfig.nit || "";
-                        dbClinicAddress = clinicConfig.direccion || "";
-                        dbClinicPhone = clinicConfig.telefono || "";
+                        dbClinicAddress = clinicConfig.address || clinicConfig.direccion || "";
+                        dbClinicPhone = clinicConfig.phone || clinicConfig.telefono || "";
                         dbClinicEmail = clinicConfig.email || "";
                     }
                 } catch (err) {
-                    console.error("Error loading empresa config for budget print:", err);
+                    console.error("Error loading tenant config for budget print:", err);
                 }
             }
 

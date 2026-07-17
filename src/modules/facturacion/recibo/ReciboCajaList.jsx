@@ -50,10 +50,18 @@ export default function ReciboCajaList({ onNew }) {
         const totalStr = fmt(recibo.total);
         const ticketNum = recibo.nroConsecutivo || recibo.id.slice(0, 8).toUpperCase();
         const isAnulado = recibo.estado === "Anulado";
+
+        const logoUrl = userProfile?.tenant?.logo || "";
+        const clinicName = userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || userProfile?.tenant?.name || "Clínica Dental";
+        const clinicNit = userProfile?.tenant?.nit || "—";
+        const clinicAddress = userProfile?.tenant?.direccion || "—";
+        const clinicPhone = userProfile?.tenant?.telefono || "—";
+        const clinicEmail = userProfile?.tenant?.email || "";
+
         const anulStamp = isAnulado ? `
-            <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:90px;font-weight:900;color:rgba(239,68,68,0.13);text-transform:uppercase;letter-spacing:6px;pointer-events:none;z-index:0;white-space:nowrap;">ANULADO</div>` : "";
+            <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:90px;font-weight:900;color:rgba(239,68,68,0.13);text-transform:uppercase;letter-spacing:6px;pointer-events:none;z-index:9999;white-space:nowrap;">ANULADO</div>` : "";
         const anulBanner = isAnulado ? `
-            <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:12px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:flex-start;gap:12px;">
+            <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:12px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:flex-start;gap:12px;z-index:10;position:relative;">
                 <span style="font-size:22px;">🚫</span>
                 <div>
                     <div style="font-size:13px;font-weight:900;color:#dc2626;text-transform:uppercase;letter-spacing:1px;">Recibo Anulado</div>
@@ -68,22 +76,22 @@ export default function ReciboCajaList({ onNew }) {
             recibo.conceptos.forEach(c => {
                 conceptsHtml += `
                     <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #f1f5f9;"><strong>${c.concepto}</strong><br><small style="color: #64748b;">${c.descripcion || ""}</small></td>
-                        <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center;">${c.cantidad}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right;">${fmt(c.precioUnitario)}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right; color: #ef4444;">-${fmt(c.descuento)}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold;">${fmt(c.total)}</td>
+                        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9;"><strong>${c.concepto}</strong>${c.descripcion ? `<br><small style="color: #64748b; font-weight: normal;">${c.descripcion}</small>` : ""}</td>
+                        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold;">${c.cantidad}</td>
+                        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: right;">${fmt(c.precioUnitario)}</td>
+                        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: right; color: #ef4444;">-${fmt(c.descuento)}</td>
+                        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold; color: #0f172a;">${fmt(c.total)}</td>
                     </tr>
                 `;
             });
         } else {
             conceptsHtml = `
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9;"><strong>${recibo.concepto || "Abono a tratamiento"}</strong></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center;">1</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right;">${fmt(recibo.total)}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right; color: #ef4444;">$0</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold;">${fmt(recibo.total)}</td>
+                    <td style="padding: 14px 15px; border-bottom: 1px solid #f1f5f9;"><strong>${recibo.concepto || "Abono a tratamiento"}</strong></td>
+                    <td style="padding: 14px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold;">1</td>
+                    <td style="padding: 14px 15px; border-bottom: 1px solid #f1f5f9; text-align: right;">${fmt(recibo.total)}</td>
+                    <td style="padding: 14px 15px; border-bottom: 1px solid #f1f5f9; text-align: right; color: #ef4444;">$0</td>
+                    <td style="padding: 14px 15px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold; color: #0f172a;">${fmt(recibo.total)}</td>
                 </tr>
             `;
         }
@@ -93,59 +101,251 @@ export default function ReciboCajaList({ onNew }) {
                 <head>
                     <title>Recibo de Caja #${ticketNum}${isAnulado ? ' [ANULADO]' : ''}</title>
                     <style>
-                        body { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; line-height: 1.5; position: relative; }
-                        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${isAnulado ? '#fca5a5' : '#f1f5f9'}; padding-bottom: 20px; margin-bottom: 30px; }
-                        .title { font-size: 24px; font-weight: 900; text-transform: uppercase; color: ${isAnulado ? '#dc2626' : '#10b981'}; }
-                        .details { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px; font-size: 13px; }
-                        .table { border-collapse: collapse; margin-bottom: 30px; width: 100%; }
-                        .table th { background: #f8fafc; padding: 12px 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
-                        .total-row { display: flex; justify-content: flex-end; font-size: 16px; font-weight: 900; margin-top: 20px; padding-top: 20px; border-top: 2px solid #f1f5f9; }
-                        .footer { margin-top: 60px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+                        body { 
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+                            color: #1e293b; 
+                            padding: 30px; 
+                            line-height: 1.5; 
+                            position: relative;
+                            max-width: 850px;
+                            margin: 0 auto;
+                        }
+                        .header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            border-bottom: 4px solid #2563eb;
+                            padding-bottom: 25px;
+                            margin-bottom: 30px;
+                            gap: 20px;
+                        }
+                        .logo-container {
+                            display: flex;
+                            gap: 25px;
+                            align-items: center;
+                        }
+                        .logo-text-placeholder {
+                            width: 80px;
+                            height: 80px;
+                            background: #2563eb;
+                            border-radius: 16px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 36px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                        }
+                        .clinic-title {
+                            margin: 0;
+                            font-size: 24px;
+                            font-weight: 900;
+                            color: #0f172a;
+                            text-transform: uppercase;
+                            letter-spacing: -1px;
+                        }
+                        .clinic-meta {
+                            margin: 2px 0;
+                            font-size: 12px;
+                            color: #64748b;
+                            font-weight: 500;
+                        }
+                        .doc-info {
+                            text-align: right;
+                        }
+                        .doc-badge {
+                            background: #eff6ff;
+                            padding: 12px 20px;
+                            border-radius: 16px;
+                            border: 2px solid #dbeafe;
+                            margin-bottom: 8px;
+                            display: inline-block;
+                        }
+                        .doc-badge span {
+                            font-size: 16px;
+                            font-weight: 900;
+                            color: #1d4ed8;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .doc-meta {
+                            margin: 0;
+                            font-size: 11px;
+                            color: #94a3b8;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                        }
+                        .patient-card {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 16px;
+                            padding: 20px;
+                            margin-bottom: 25px;
+                            display: grid;
+                            grid-template-columns: 1.2fr 1fr;
+                            gap: 20px;
+                        }
+                        .table-container {
+                            margin-bottom: 30px;
+                        }
+                        .table { 
+                            border-collapse: collapse; 
+                            width: 100%; 
+                            border-radius: 16px;
+                            overflow: hidden;
+                            border-style: hidden;
+                            box-shadow: 0 0 0 1px #cbd5e1;
+                        }
+                        .table th { 
+                            background: #2563eb; 
+                            color: white;
+                            padding: 12px 15px; 
+                            font-size: 11px; 
+                            font-weight: 900; 
+                            text-transform: uppercase; 
+                            letter-spacing: 1px; 
+                            text-align: left; 
+                        }
+                        .total-card-container {
+                            display: flex;
+                            justify-content: space-between;
+                            gap: 40px;
+                            margin-bottom: 50px;
+                            align-items: flex-start;
+                        }
+                        .observations-box {
+                            flex: 1;
+                            border: 1px dashed #cbd5e1;
+                            border-radius: 20px;
+                            padding: 20px;
+                            background-color: #f8fafc;
+                            font-size: 11px;
+                            line-height: 1.6;
+                        }
+                        .totals-box {
+                            width: 280px;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 6px;
+                        }
+                        .footer { 
+                            margin-top: 80px; 
+                            text-align: center; 
+                            font-size: 9px; 
+                            color: #cbd5e1; 
+                            border-top: 1px solid #f1f5f9; 
+                            padding-top: 20px;
+                            text-transform: uppercase;
+                            letter-spacing: 4px;
+                        }
+                        .signatures-block {
+                            margin-top: 80px;
+                            display: flex;
+                            justify-content: space-between;
+                            gap: 80px;
+                            padding: 0 30px;
+                        }
                     </style>
                 </head>
                 <body>
                     ${anulStamp}
                     <div class="header">
-                        <div>
-                            <div class="title">Recibo de Caja${isAnulado ? ' — ANULADO' : ''}</div>
-                            <div style="font-size: 12px; color: #64748b; font-weight: bold; margin-top: 5px;">CLINICA DENTAL</div>
+                        <div class="logo-container">
+                            ${logoUrl 
+                                ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                                : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
+                            }
+                            <div>
+                                <h1 class="clinic-title">${clinicName}</h1>
+                                <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicNit}</p>
+                                <p class="clinic-meta">${clinicAddress}</p>
+                                <p class="clinic-meta">TEL: ${clinicPhone} | ${clinicEmail}</p>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: 900; font-size: 14px;">NRO: #${ticketNum}</div>
-                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">Fecha: ${dateStr}</div>
+                        <div class="doc-info">
+                            <div class="doc-badge" style="${isAnulado ? 'background:#fef2f2; border-color:#fca5a5;' : ''}">
+                                <span style="${isAnulado ? 'color:#dc2626;' : ''}">Recibo de Caja</span>
+                            </div>
+                            <p class="doc-meta">FECHA EMISIÓN: ${dateStr}</p>
+                            <p class="doc-meta" style="margin-top: 4px; font-family: monospace; font-size: 12px;">NRO: ${ticketNum}</p>
                         </div>
                     </div>
+
                     ${anulBanner}
-                    <div class="details">
-                        <div>
-                            <span style="color: #64748b; font-weight: bold;">PACIENTE / TERCERO:</span><br>
-                            <strong style="font-size: 14px;">${recibo.pacienteNombre}</strong>
+
+                    <div class="patient-card">
+                        <div style="border-right: 1px solid #cbd5e1; padding-right: 20px;">
+                            <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">Información del Paciente</span>
+                            <h2 style="margin: 0; font-size: 15px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">${recibo.pacienteNombre}</h2>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 10px; font-size: 11px;">
+                                <p style="margin: 0; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">ID / DOC:</strong> ${recibo.pacienteDocumento || "—"}</p>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <span style="color: #64748b; font-weight: bold;">MÉTODO / CONDICIÓN:</span><br>
-                            <strong style="font-size: 14px; text-transform: uppercase;">${recibo.condicionPago || "Contado"}</strong>
+                        <div style="padding-left: 10px;">
+                            <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">Detalles de Transacción</span>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 8px; font-size: 11px;">
+                                <p style="margin: 0; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Medio de Pago:</strong> <span style="text-transform: uppercase;">${recibo.medioPago || recibo.medio || "—"}</span></p>
+                                <p style="margin: 0; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Método:</strong> <span style="text-transform: uppercase;">${recibo.condicionPago || "Contado"}</span></p>
+                            </div>
                         </div>
                     </div>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Concepto</th>
-                                <th style="text-align: center;">Cant.</th>
-                                <th style="text-align: right;">P. Unitario</th>
-                                <th style="text-align: right;">Desc.</th>
-                                <th style="text-align: right;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${conceptsHtml}
-                        </tbody>
-                    </table>
-                    <div class="total-row">
-                        Total Pagado: <span style="color: #16a34a; margin-left: 10px;">${totalStr}</span>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 12px 15px;">Concepto</th>
+                                    <th style="text-align: center; padding: 12px 15px; width: 70px;">Cant.</th>
+                                    <th style="text-align: right; padding: 12px 15px; width: 120px;">P. Unitario</th>
+                                    <th style="text-align: right; padding: 12px 15px; width: 100px;">Desc.</th>
+                                    <th style="text-align: right; padding: 12px 15px; width: 130px;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody style="font-size: 12px; color: #334155; font-weight: 600;">
+                                ${conceptsHtml}
+                            </tbody>
+                        </table>
                     </div>
+
+                    <div class="total-card-container">
+                        <div class="observations-box">
+                            <span style="font-weight: 900; color: #475569; text-transform: uppercase; font-size: 9px; display: block; margin-bottom: 8px;">Notas y Observaciones:</span>
+                            <div style="font-weight: 500; color: #334155;">${recibo.notas || recibo.observaciones || "Sin observaciones adicionales."}</div>
+                        </div>
+                        <div class="totals-box">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #64748b; padding: 0 4px;">
+                                <span style="text-transform: uppercase; letter-spacing: 1px;">Subtotal</span>
+                                <span style="font-family: monospace; font-weight: bold;">${fmt(recibo.subtotal || recibo.total)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #ef4444; padding: 0 4px;">
+                                <span style="text-transform: uppercase; letter-spacing: 1px;">Descuentos</span>
+                                <span style="font-family: monospace; font-weight: bold;">-${fmt(recibo.descuento || 0)}</span>
+                            </div>
+                            <div style="height: 2px; background: #2563eb; margin: 6px 0;"></div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #2563eb; color: white; padding: 12px 18px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.2);">
+                                <span style="font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px;">TOTAL ABONADO</span>
+                                <span style="font-size: 18px; font-weight: 900;">${totalStr}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="signatures-block">
+                        <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center; font-size: 11px;">
+                            <p style="margin: 0; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Elaborado por</p>
+                            <p style="margin: 4px 0; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 9px;">Auxiliar / Cajero</p>
+                        </div>
+                        <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center; font-size: 11px;">
+                            <p style="margin: 0; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Aceptado por el Paciente</p>
+                            <p style="margin: 4px 0; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 9px;">Firma y Cédula</p>
+                        </div>
+                    </div>
+
                     <div class="footer">
-                        ¡Gracias por su confianza! · Documento impreso automáticamente desde OdontoCloud
+                        Documento oficial generado por OdontoCloud Elite Pro
                     </div>
+
                     <script>
                         window.onload = function() { window.print(); window.close(); }
                     </script>

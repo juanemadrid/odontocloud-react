@@ -342,45 +342,68 @@ export default function HistoriaClinicaContainer({ patient }) {
                     .header {
                         display: flex;
                         justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 2px solid #2563eb;
-                        padding-bottom: 15px;
-                        margin-bottom: 25px;
+                        align-items: flex-start;
+                        border-bottom: 4px solid #2563eb;
+                        padding-bottom: 25px;
+                        margin-bottom: 30px;
                         gap: 20px;
                     }
-                    .logo-area {
+                    .logo-container {
                         display: flex;
-                        justify-content: flex-start;
+                        gap: 25px;
                         align-items: center;
-                        max-width: 50%;
                     }
-                    .logo-text {
-                        font-size: 22px;
-                        font-weight: 800;
-                        color: #2563eb;
-                        letter-spacing: -0.04em;
+                    .logo-text-placeholder {
+                        width: 80px;
+                        height: 80px;
+                        background: #2563eb;
+                        border-radius: 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 36px;
+                        font-weight: 900;
                         text-transform: uppercase;
-                        line-height: 1;
                     }
-                    .doc-title {
-                        text-align: right;
-                        max-width: 50%;
-                    }
-                    .doc-title h1 {
-                        font-size: 18px;
-                        font-weight: 800;
-                        text-transform: uppercase;
+                    .clinic-title {
                         margin: 0;
-                        color: #1e3a8a;
-                        letter-spacing: 0.02em;
-                    }
-                    .doc-title p {
-                        font-size: 9px;
-                        font-weight: 700;
-                        color: #64748b;
+                        font-size: 24px;
+                        font-weight: 900;
+                        color: #0f172a;
                         text-transform: uppercase;
-                        margin: 4px 0 0 0;
-                        letter-spacing: 0.15em;
+                        letter-spacing: -1px;
+                    }
+                    .clinic-meta {
+                        margin: 2px 0;
+                        font-size: 12px;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+                    .doc-info {
+                        text-align: right;
+                    }
+                    .doc-badge {
+                        background: #eff6ff;
+                        padding: 12px 20px;
+                        border-radius: 16px;
+                        border: 2px solid #dbeafe;
+                        margin-bottom: 8px;
+                        display: inline-block;
+                    }
+                    .doc-badge span {
+                        font-size: 16px;
+                        font-weight: 900;
+                        color: #1d4ed8;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .doc-meta {
+                        margin: 0;
+                        font-size: 11px;
+                        color: #94a3b8;
+                        font-weight: 900;
+                        text-transform: uppercase;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -515,15 +538,24 @@ export default function HistoriaClinicaContainer({ patient }) {
             </head>
             <body>
                 <div class="header">
-                    <div class="logo-area">
+                    <div class="logo-container">
                         ${logoUrl 
-                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
-                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
+                            ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                            : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
                         }
+                        <div>
+                            <h1 class="clinic-title">${clinicName}</h1>
+                            <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicConfig?.nit || "—"}</p>
+                            <p class="clinic-meta">${clinicConfig?.address || clinicConfig?.direccion || "—"}</p>
+                            <p class="clinic-meta">TEL: ${clinicConfig?.phone || clinicConfig?.telefono || "—"} | ${clinicConfig?.email || ""}</p>
+                        </div>
                     </div>
-                    <div class="doc-title">
-                        <h1>${doc.tipoDocumento}${["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento) ? ' Médica' : ''}</h1>
-                        ${isTemplate ? '' : '<p>Registro Clínico Oficial</p>'}
+                    <div class="doc-info">
+                        <div class="doc-badge">
+                            <span>${doc.tipoDocumento}${["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento) ? ' Médica' : ''}</span>
+                        </div>
+                        <p class="doc-meta">FECHA EMISIÓN: ${new Date(doc.fechaIso).toLocaleDateString('es-CO')}</p>
+                        <p class="doc-meta" style="margin-top: 4px;">HISTORIA: #${patient.nroHistoria || 'S/N'}</p>
                     </div>
                 </div>
 
@@ -618,45 +650,68 @@ export default function HistoriaClinicaContainer({ patient }) {
                     .header {
                         display: flex;
                         justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 2px solid #2563eb;
-                        padding-bottom: 15px;
-                        margin-bottom: 25px;
+                        align-items: flex-start;
+                        border-bottom: 4px solid #2563eb;
+                        padding-bottom: 25px;
+                        margin-bottom: 30px;
                         gap: 20px;
                     }
-                    .logo-area {
+                    .logo-container {
                         display: flex;
-                        justify-content: flex-start;
+                        gap: 25px;
                         align-items: center;
-                        max-width: 50%;
                     }
-                    .logo-text {
-                        font-size: 22px;
-                        font-weight: 800;
-                        color: #2563eb;
-                        letter-spacing: -0.04em;
+                    .logo-text-placeholder {
+                        width: 80px;
+                        height: 80px;
+                        background: #2563eb;
+                        border-radius: 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 36px;
+                        font-weight: 900;
                         text-transform: uppercase;
-                        line-height: 1;
                     }
-                    .doc-title {
-                        text-align: right;
-                        max-width: 50%;
-                    }
-                    .doc-title h1 {
-                        font-size: 18px;
-                        font-weight: 800;
-                        text-transform: uppercase;
+                    .clinic-title {
                         margin: 0;
-                        color: #1e3a8a;
-                        letter-spacing: 0.02em;
-                    }
-                    .doc-title p {
-                        font-size: 9px;
-                        font-weight: 700;
-                        color: #64748b;
+                        font-size: 24px;
+                        font-weight: 900;
+                        color: #0f172a;
                         text-transform: uppercase;
-                        margin: 4px 0 0 0;
-                        letter-spacing: 0.15em;
+                        letter-spacing: -1px;
+                    }
+                    .clinic-meta {
+                        margin: 2px 0;
+                        font-size: 12px;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+                    .doc-info {
+                        text-align: right;
+                    }
+                    .doc-badge {
+                        background: #eff6ff;
+                        padding: 12px 20px;
+                        border-radius: 16px;
+                        border: 2px solid #dbeafe;
+                        margin-bottom: 8px;
+                        display: inline-block;
+                    }
+                    .doc-badge span {
+                        font-size: 16px;
+                        font-weight: 900;
+                        color: #1d4ed8;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .doc-meta {
+                        margin: 0;
+                        font-size: 11px;
+                        color: #94a3b8;
+                        font-weight: 900;
+                        text-transform: uppercase;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -789,15 +844,23 @@ export default function HistoriaClinicaContainer({ patient }) {
             </head>
             <body>
                 <div class="header">
-                    <div class="logo-area">
+                    <div class="logo-container">
                         ${logoUrl 
-                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
-                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
+                            ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                            : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
                         }
+                        <div>
+                            <h1 class="clinic-title">${clinicName}</h1>
+                            <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicConfig?.nit || "—"}</p>
+                            <p class="clinic-meta">${clinicConfig?.address || clinicConfig?.direccion || "—"}</p>
+                            <p class="clinic-meta">TEL: ${clinicConfig?.phone || clinicConfig?.telefono || "—"} | ${clinicConfig?.email || ""}</p>
+                        </div>
                     </div>
-                    <div class="doc-title">
-                        <h1>Historia Clínica Odontológica</h1>
-                        <p>Expediente Completo</p>
+                    <div class="doc-info">
+                        <div class="doc-badge">
+                            <span>Historia Clínica</span>
+                        </div>
+                        <p class="doc-meta">Expediente Completo</p>
                     </div>
                 </div>
 
