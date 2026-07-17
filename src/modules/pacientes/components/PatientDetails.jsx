@@ -250,10 +250,19 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                                     <option value="">Cargando ciudades...</option>
                                 </select>
                             ) : ciudadesNacimiento.length > 0 ? (
-                                <select {...register("ciudadNacimiento")} className="form-input text-sm w-full md:w-64">
-                                    <option value="">Seleccione...</option>
-                                    {ciudadesNacimiento.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
+                                <div className="relative w-full md:w-64">
+                                    <input 
+                                        type="text" 
+                                        {...register("ciudadNacimiento")} 
+                                        list="ciudadesNacimientoList"
+                                        className="form-input text-sm w-full font-medium" 
+                                        placeholder="Escriba o seleccione..." 
+                                        autoComplete="off"
+                                    />
+                                    <datalist id="ciudadesNacimientoList">
+                                        {ciudadesNacimiento.map(c => <option key={c} value={c} />)}
+                                    </datalist>
+                                </div>
                             ) : (
                                 <input 
                                     type="text" 
@@ -288,10 +297,19 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                                     <option value="">Cargando ciudades...</option>
                                 </select>
                             ) : ciudadesDomicilio.length > 0 ? (
-                                <select {...register("ciudadDomicilio")} className="form-input text-sm w-full md:w-64">
-                                    <option value="">Seleccione...</option>
-                                    {ciudadesDomicilio.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
+                                <div className="relative w-full md:w-64">
+                                    <input 
+                                        type="text" 
+                                        {...register("ciudadDomicilio")} 
+                                        list="ciudadesDomicilioList"
+                                        className="form-input text-sm w-full font-medium" 
+                                        placeholder="Escriba o seleccione..." 
+                                        autoComplete="off"
+                                    />
+                                    <datalist id="ciudadesDomicilioList">
+                                        {ciudadesDomicilio.map(c => <option key={c} value={c} />)}
+                                    </datalist>
+                                </div>
                             ) : (
                                 <input 
                                     type="text" 
