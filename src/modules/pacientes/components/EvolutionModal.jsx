@@ -1296,22 +1296,24 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                 </tbody>
                             </table>
 
-                            <div className="flex items-center gap-2 mt-4 pl-1">
-                                <input 
-                                    type="checkbox"
-                                    id="marcar-realizadas-chk"
-                                    className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
-                                    checked={allChecked}
-                                    onChange={(e) => {
-                                        const val = e.target.checked;
-                                        setAllChecked(val);
-                                        setPlantillaDetails(prev => {
-                                            const next = { ...prev };
-                                            Object.keys(next).forEach(k => next[k].checked = val);
-                                            return next;
-                                        });
-                                    }}
-                                />
+                            <div className="flex items-center mt-4">
+                                <div className="w-24 flex justify-center shrink-0">
+                                    <input 
+                                        type="checkbox"
+                                        id="marcar-realizadas-chk"
+                                        className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                        checked={allChecked}
+                                        onChange={(e) => {
+                                            const val = e.target.checked;
+                                            setAllChecked(val);
+                                            setPlantillaDetails(prev => {
+                                                const next = { ...prev };
+                                                Object.keys(next).forEach(k => next[k].checked = val);
+                                                return next;
+                                            });
+                                        }}
+                                    />
+                                </div>
                                 <label htmlFor="marcar-realizadas-chk" className="text-[11px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none">
                                     Marcar realizadas
                                 </label>
