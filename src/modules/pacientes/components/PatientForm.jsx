@@ -1100,24 +1100,39 @@ export default function PatientForm({
                                                              />
                                                          )}
                                                          {watch("remitidoPorType") === "Paciente" && (
-                                                             <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
-                                                                 <option value="">Seleccione un paciente...</option>
-                                                                 {pacientesRemision.map(p => (
-                                                                     <option key={p.id} value={p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}>
-                                                                         {p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim()}
-                                                                     </option>
-                                                                 ))}
-                                                             </select>
+                                                             <div className="relative w-full md:w-96">
+                                                                 <input 
+                                                                     type="text" 
+                                                                     {...register("remitidoPorValue")} 
+                                                                     list="remitidoPorPacientesList"
+                                                                     className="form-input text-sm w-full font-medium" 
+                                                                     placeholder="Escriba o seleccione el paciente..." 
+                                                                     autoComplete="off"
+                                                                 />
+                                                                 <datalist id="remitidoPorPacientesList">
+                                                                     {pacientesRemision.map(p => {
+                                                                         const name = p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim();
+                                                                         return <option key={p.id} value={name} />;
+                                                                     })}
+                                                                 </datalist>
+                                                             </div>
                                                          )}
                                                          {watch("remitidoPorType") === "Usuario" && (
-                                                             <select {...register("remitidoPorValue")} className="form-input text-sm w-full md:w-96">
-                                                                 <option value="">Seleccione un doctor...</option>
-                                                                 {profesionales.map(p => (
-                                                                     <option key={p.id} value={p.displayName}>
-                                                                         {p.displayName}
-                                                                     </option>
-                                                                 ))}
-                                                             </select>
+                                                             <div className="relative w-full md:w-96">
+                                                                 <input 
+                                                                     type="text" 
+                                                                     {...register("remitidoPorValue")} 
+                                                                     list="remitidoPorProfesionalesList"
+                                                                     className="form-input text-sm w-full font-medium" 
+                                                                     placeholder="Escriba o seleccione el doctor..." 
+                                                                     autoComplete="off"
+                                                                 />
+                                                                 <datalist id="remitidoPorProfesionalesList">
+                                                                     {profesionales.map(p => (
+                                                                         <option key={p.id} value={p.displayName} />
+                                                                     ))}
+                                                                 </datalist>
+                                                             </div>
                                                          )}
                                                      </div>
                                                  </div>
