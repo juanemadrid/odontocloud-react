@@ -797,9 +797,11 @@ export default function WebCms() {
                     {viewMode === 'desktop' ? (
                         /* DESKTOP BROWSER FRAME (IMAC/STUDIO DISPLAY STYLE) */
                         <div 
-                            className="w-[1460px] h-[980px] flex flex-col items-center shrink-0"
+                            className="w-[1460px] h-[980px] flex flex-col items-center shrink-0 absolute"
                             style={{ 
-                                transform: `scale(${scale})`,
+                                transform: `translate(-50%, -50%) scale(${scale})`,
+                                top: "50%",
+                                left: "50%",
                                 transformOrigin: "center center"
                             }}
                         >
@@ -902,9 +904,11 @@ export default function WebCms() {
                     ) : (
                         /* MOBILE PHONE FRAME */
                         <div 
-                            className="w-[375px] h-[667px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col relative rounded-[3.2rem] transition-all duration-700 shrink-0"
+                            className="w-[375px] h-[667px] bg-slate-950 shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[14px] border-slate-900 overflow-hidden flex flex-col absolute rounded-[3.2rem] transition-all duration-700 shrink-0"
                             style={{ 
-                                transform: `scale(${scale})`,
+                                transform: `translate(-50%, -50%) scale(${scale})`,
+                                top: "50%",
+                                left: "50%",
                                 transformOrigin: "center center"
                             }}
                         >

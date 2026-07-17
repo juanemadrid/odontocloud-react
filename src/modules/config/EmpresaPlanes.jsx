@@ -562,16 +562,28 @@ export default function EmpresaPlanes() {
                         </thead>
                         <tbody>
                             {loading && rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 animate-pulse">
-                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-blue-400">
-                                                <div className="w-6 h-6 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                                [1, 2, 3].map((n) => (
+                                    <tr key={n} className="animate-pulse">
+                                        <td className="px-8 py-4 border-b border-slate-50">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-slate-100 rounded-lg" />
+                                                <div className="h-4 bg-slate-100 rounded w-36" />
                                             </div>
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Cargando planes...</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </td>
+                                        <td className="px-8 py-4 border-b border-slate-50">
+                                            <div className="h-4 bg-slate-100 rounded w-28" />
+                                        </td>
+                                        <td className="px-8 py-4 border-b border-slate-50">
+                                            <div className="h-4 bg-slate-100 rounded w-24" />
+                                        </td>
+                                        <td className="px-8 py-4 border-b border-slate-50 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <div className="w-9 h-9 bg-slate-100 rounded-xl" />
+                                                <div className="w-9 h-9 bg-slate-100 rounded-xl" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
                             ) : filteredRows.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-8 py-20 text-center">
