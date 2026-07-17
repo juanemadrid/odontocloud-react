@@ -18,6 +18,7 @@ import {
     SEXOS, ESTADOS_CIVILES, ESTRATOS, ZONAS_RESIDENCIALES, PARENTESCOS, MEDIOS_CONOCIMIENTO
 } from "../constants/patientConstants";
 import { fetchCitiesForCountry, CIUDADES_COLOMBIA } from "../services/geoService";
+import SearchableSelect from "../../../components/ui/SearchableSelect";
 
 const FormRow = ({ label, required, children, error, helpText }) => (
     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 py-3 border-b border-slate-100/50 last:border-0 hover:bg-slate-50/50 transition-colors px-4">
@@ -748,19 +749,16 @@ export default function PatientForm({
                                                 <option value="">Cargando ciudades...</option>
                                             </select>
                                         ) : ciudadesNacimiento.length > 0 ? (
-                                            <div className="relative w-full md:w-64">
-                                                <input 
-                                                    type="text" 
-                                                    {...register("ciudadNacimiento")} 
-                                                    list="ciudadesNacimientoList"
-                                                    className="form-input text-sm w-full font-medium" 
-                                                    placeholder="Escriba o seleccione..." 
-                                                    autoComplete="off"
-                                                />
-                                                <datalist id="ciudadesNacimientoList">
-                                                    {ciudadesNacimiento.map(c => <option key={c} value={c} />)}
-                                                </datalist>
-                                            </div>
+                                            <SearchableSelect 
+                                                value={watch("ciudadNacimiento")}
+                                                onChange={(val) => setValue("ciudadNacimiento", val, { shouldDirty: true })}
+                                                options={ciudadesNacimiento}
+                                                placeholder="Seleccione..."
+                                                disabled={!paisNacimiento}
+                                                disabledPlaceholder="Seleccione primero un país..."
+                                                loading={loadingCiudadesNacimiento}
+                                                loadingPlaceholder="Cargando ciudades..."
+                                            />
                                         ) : (
                                             <input 
                                                 type="text" 
@@ -806,19 +804,16 @@ export default function PatientForm({
                                                 <option value="">Cargando ciudades...</option>
                                             </select>
                                         ) : ciudadesDomicilio.length > 0 ? (
-                                            <div className="relative w-full md:w-64">
-                                                <input 
-                                                    type="text" 
-                                                    {...register("ciudadDomicilio")} 
-                                                    list="ciudadesDomicilioList"
-                                                    className="form-input text-sm w-full font-medium" 
-                                                    placeholder="Escriba o seleccione..." 
-                                                    autoComplete="off"
-                                                />
-                                                <datalist id="ciudadesDomicilioList">
-                                                    {ciudadesDomicilio.map(c => <option key={c} value={c} />)}
-                                                </datalist>
-                                            </div>
+                                            <SearchableSelect 
+                                                value={watch("ciudadDomicilio")}
+                                                onChange={(val) => setValue("ciudadDomicilio", val, { shouldDirty: true })}
+                                                options={ciudadesDomicilio}
+                                                placeholder="Seleccione..."
+                                                disabled={!paisDomicilio}
+                                                disabledPlaceholder="Seleccione primero un país..."
+                                                loading={loadingCiudadesDomicilio}
+                                                loadingPlaceholder="Cargando ciudades..."
+                                            />
                                         ) : (
                                             <input 
                                                 type="text" 
@@ -1100,39 +1095,22 @@ export default function PatientForm({
                                                              />
                                                          )}
                                                          {watch("remitidoPorType") === "Paciente" && (
-                                                             <div className="relative w-full md:w-96">
-                                                                 <input 
-                                                                     type="text" 
-                                                                     {...register("remitidoPorValue")} 
-                                                                     list="remitidoPorPacientesList"
-                                                                     className="form-input text-sm w-full font-medium" 
-                                                                     placeholder="Escriba o seleccione el paciente..." 
-                                                                     autoComplete="off"
-                                                                 />
-                                                                 <datalist id="remitidoPorPacientesList">
-                                                                     {pacientesRemision.map(p => {
-                                                                         const name = p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim();
-                                                                         return <option key={p.id} value={name} />;
-                                                                     })}
-                                                                 </datalist>
-                                                             </div>
+                                                             <SearchableSelect 
+                                                                 value={watch("remitidoPorValue")}
+                                                                 onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
+                                                                 options={pacientesRemision.map(p => p.nombreCompleto || `${p.nombre || ""} ${p.apellido || ""}`.trim())}
+                                                                 placeholder="Seleccione un paciente..."
+                                                                 className="w-full md:w-96"
+                                                             />
                                                          )}
                                                          {watch("remitidoPorType") === "Usuario" && (
-                                                             <div className="relative w-full md:w-96">
-                                                                 <input 
-                                                                     type="text" 
-                                                                     {...register("remitidoPorValue")} 
-                                                                     list="remitidoPorProfesionalesList"
-                                                                     className="form-input text-sm w-full font-medium" 
-                                                                     placeholder="Escriba o seleccione el doctor..." 
-                                                                     autoComplete="off"
-                                                                 />
-                                                                 <datalist id="remitidoPorProfesionalesList">
-                                                                     {profesionales.map(p => (
-                                                                         <option key={p.id} value={p.displayName} />
-                                                                     ))}
-                                                                 </datalist>
-                                                             </div>
+                                                             <SearchableSelect 
+                                                                 value={watch("remitidoPorValue")}
+                                                                 onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
+                                                                 options={profesionales.map(p => p.displayName)}
+                                                                 placeholder="Seleccione un doctor..."
+                                                                 className="w-full md:w-96"
+                                                             />
                                                          )}
                                                      </div>
                                                  </div>
