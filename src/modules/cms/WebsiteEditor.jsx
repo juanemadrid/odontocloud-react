@@ -35,26 +35,25 @@ export default function WebCms() {
     const previewContainerRef = useRef(null);
     const [scale, setScale] = useState(1);
 
-    // Calculate scale factor to fit mockups within preview area height
+    // Calculate scale factor to fit mockups within preview area height and width
     useEffect(() => {
         if (!previewContainerRef.current) return;
         const resizeObserver = new ResizeObserver((entries) => {
             for (let entry of entries) {
                 const parentHeight = entry.contentRect.height;
+                const parentWidth = entry.contentRect.width;
                 if (viewMode === "desktop") {
-                    const targetHeight = parentHeight * 0.94;
-                    if (targetHeight < 980) {
-                        setScale(targetHeight / 980);
-                    } else {
-                        setScale(1);
-                    }
+                    const targetHeight = parentHeight * 0.92;
+                    const targetWidth = parentWidth * 0.92;
+                    const scaleH = targetHeight / 980;
+                    const scaleW = targetWidth / 1460;
+                    setScale(Math.min(scaleH, scaleW, 1));
                 } else {
-                    const targetHeight = parentHeight * 0.96;
-                    if (targetHeight < 795) {
-                        setScale(targetHeight / 795);
-                    } else {
-                        setScale(1);
-                    }
+                    const targetHeight = parentHeight * 0.94;
+                    const targetWidth = parentWidth * 0.94;
+                    const scaleH = targetHeight / 795;
+                    const scaleW = targetWidth / 403;
+                    setScale(Math.min(scaleH, scaleW, 1));
                 }
             }
         });
