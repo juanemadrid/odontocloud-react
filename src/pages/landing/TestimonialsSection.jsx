@@ -97,9 +97,13 @@ export default function TestimonialsSection({ config, dark = false }) {
 
                             <div className="flex items-center gap-4 mt-auto pt-6 border-t border-slate-100/10">
                                 <div className="relative">
-                                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-sky-500/20 shadow-md group-hover:border-sky-500 transition-colors">
-                                        <img src={t.image} alt={t.name} className="w-full h-full object-cover" />
-                                    </div>
+                                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-sky-500/20 shadow-md group-hover:border-sky-500 transition-colors flex items-center justify-center">
+                                         {t.image ? (
+                                             <img src={t.image} alt={t.name} className="w-full h-full object-cover" />
+                                         ) : (
+                                             <div className="w-full h-full bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold text-lg">{t.name?.charAt(0) || "P"}</div>
+                                         )}
+                                     </div>
                                     <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-1 rounded-full border-2 border-white">
                                         <FiActivity size={10} />
                                     </div>

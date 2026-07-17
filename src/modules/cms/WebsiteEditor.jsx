@@ -243,19 +243,22 @@ export default function WebCms() {
                     </p>
                 </div>
 
-                {/* Navigation Tabs (Vertical Pill Style) */}
-                <div className="px-8 pb-6 flex flex-wrap gap-2 shrink-0 border-b border-slate-50">
+                {/* Navigation Tabs (2-Column Grid Style) */}
+                <div className="px-8 pb-6 grid grid-cols-2 gap-2 shrink-0 border-b border-slate-50">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${activeTab === tab.id
-                                ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100 scale-105"
-                                : "bg-white text-slate-400 border-slate-100 hover:bg-slate-50 hover:text-slate-600"
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 border justify-start w-full truncate
+                                ${activeTab === tab.id
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100"
+                                    : "bg-slate-50/50 text-slate-500 border-slate-150 hover:bg-slate-100/70 hover:text-slate-700"
                                 }`}
                         >
-                            {tab.icon}
-                            <span className="hidden xl:inline">{tab.label}</span>
+                            <span className="shrink-0" style={{ color: activeTab === tab.id ? 'white' : '#6366f1' }}>
+                                {tab.icon}
+                            </span>
+                            <span className="truncate">{tab.label}</span>
                         </button>
                     ))}
                 </div>
@@ -379,6 +382,61 @@ export default function WebCms() {
                             {/* TAB: STYLE & BRAND */}
                             {activeTab === "style" && (
                                 <div className="space-y-8">
+                                    {/* Brand Identity / Nombre y Logo */}
+                                    <div className="bg-white rounded-[32px] p-8 border border-slate-200/60 shadow-sm space-y-6">
+                                        <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                                                <FiType size={18} />
+                                            </div>
+                                            Identidad de Marca
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Nombre de la Clínica</label>
+                                                <input
+                                                    className="w-full bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl outline-none focus:bg-white transition-all font-bold text-[13px] text-slate-800"
+                                                    value={config.name || ""}
+                                                    onChange={e => setConfig({ ...config, name: e.target.value })}
+                                                    placeholder="Ej: Clínica Dental Madrid"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Logotipo (Imagen)</label>
+                                                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                    {config.logo ? (
+                                                        <div className="relative w-16 h-16 bg-white rounded-xl border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                                                            <img src={config.logo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setConfig({ ...config, logo: "" })}
+                                                                className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 active:scale-90"
+                                                            >
+                                                                <FiTrash2 size={10} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-16 h-16 bg-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 shrink-0 border border-slate-300/40">
+                                                            <FiImage size={24} />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1">
+                                                        <label className="inline-flex px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl cursor-pointer shadow-md transition-all active:scale-95">
+                                                            Subir Imagen
+                                                            <input
+                                                                type="file"
+                                                                className="hidden"
+                                                                accept="image/*"
+                                                                onChange={(e) => handleSimpleImageUpload(e, 'logo')}
+                                                            />
+                                                        </label>
+                                                        <p className="text-[9px] font-medium text-slate-400 mt-2">Recomendado: Imagen PNG con fondo transparente (máx. 2MB).</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="bg-slate-50/50 rounded-[32px] p-8 border border-slate-100/60 shadow-inner group/card hover:bg-white hover:shadow-xl transition-all duration-500">
                                         <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 border border-slate-50 group-hover/card:rotate-12 transition-transform">
@@ -664,7 +722,7 @@ export default function WebCms() {
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between px-2">
                                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Opiniones de Pacientes</h3>
-                                            <button onClick={() => addItem('testimonials', { name: "Paciente", text: "Excelente servicio...", role: "Paciente" })} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-2">
+                                            <button onClick={() => addItem('testimonials', { name: "Paciente", text: "Excelente servicio...", role: "Paciente", image: "", stars: 5 })} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-2">
                                                 <FiPlus size={14} /> Testimonio
                                             </button>
                                         </div>
@@ -676,10 +734,26 @@ export default function WebCms() {
                                                     </button>
                                                     <div className="space-y-4">
                                                         <div className="flex gap-4 items-center">
-                                                            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xl border border-indigo-100 shadow-sm">{test.name?.charAt(0)}</div>
-                                                            <div className="flex-1">
-                                                                <label className="block text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 px-1">Nombre</label>
-                                                                <input className="w-full bg-transparent font-black text-[14px] text-slate-800 outline-none focus:border-b-2 focus:border-indigo-500 transition-all" value={test.name || ""} onChange={e => updateItem('testimonials', i, 'name', e.target.value)} />
+                                                            <div className="w-16 h-16 rounded-full bg-slate-50 overflow-hidden shrink-0 relative group/img border border-slate-200 shadow-sm flex items-center justify-center">
+                                                                {test.image ? (
+                                                                    <img src={test.image} alt="Paciente" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-indigo-600 font-black text-xl bg-indigo-50 border border-indigo-100 shadow-sm">{test.name?.charAt(0) || "P"}</div>
+                                                                )}
+                                                                <label className="absolute inset-0 bg-indigo-900/40 backdrop-blur-sm flex items-center justify-center text-white text-[8px] font-black opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer uppercase tracking-widest text-center px-1">
+                                                                    Subir
+                                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'testimonials', i, 'image')} />
+                                                                </label>
+                                                            </div>
+                                                            <div className="flex-1 space-y-2">
+                                                                <div>
+                                                                    <label className="block text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 px-1">Nombre</label>
+                                                                    <input className="w-full bg-transparent font-black text-[14px] text-slate-800 outline-none focus:border-b-2 focus:border-indigo-500 transition-all" value={test.name || ""} onChange={e => updateItem('testimonials', i, 'name', e.target.value)} />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 px-1">Rol / Cargo</label>
+                                                                    <input className="w-full bg-transparent font-bold text-[10px] text-indigo-500 outline-none focus:border-b-2 focus:border-indigo-200 transition-all uppercase tracking-wider" value={test.role || ""} onChange={e => updateItem('testimonials', i, 'role', e.target.value)} />
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div>
