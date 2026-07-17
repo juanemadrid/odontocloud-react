@@ -35,7 +35,6 @@ export default function WebCms() {
     const previewContainerRef = useRef(null);
     const [scale, setScale] = useState(1);
 
-    // Calculate scale factor to fit mockups within preview area height and width
     useEffect(() => {
         if (!previewContainerRef.current) return;
         const resizeObserver = new ResizeObserver((entries) => {
@@ -43,14 +42,14 @@ export default function WebCms() {
                 const parentHeight = entry.contentRect.height;
                 const parentWidth = entry.contentRect.width;
                 if (viewMode === "desktop") {
-                    const targetHeight = parentHeight * 0.92;
-                    const targetWidth = parentWidth * 0.92;
+                    const targetHeight = parentHeight * 0.80;
+                    const targetWidth = parentWidth * 0.80;
                     const scaleH = targetHeight / 980;
                     const scaleW = targetWidth / 1460;
                     setScale(Math.min(scaleH, scaleW, 1));
                 } else {
-                    const targetHeight = parentHeight * 0.94;
-                    const targetWidth = parentWidth * 0.94;
+                    const targetHeight = parentHeight * 0.84;
+                    const targetWidth = parentWidth * 0.84;
                     const scaleH = targetHeight / 795;
                     const scaleW = targetWidth / 403;
                     setScale(Math.min(scaleH, scaleW, 1));
@@ -875,6 +874,8 @@ export default function WebCms() {
                                     <iframe
                                         src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
                                         className="w-full h-full border-none"
+                                        style={{ overflowY: "auto" }}
+                                        scrolling="yes"
                                         title="OdontoCloud CMS Preview"
                                     />
                                 </div>
@@ -951,6 +952,8 @@ export default function WebCms() {
                                 <iframe
                                     src={`${import.meta.env.BASE_URL || "/odontocloud-react/"}preview`}
                                     className="w-full h-full border-none"
+                                    style={{ overflowY: "auto" }}
+                                    scrolling="yes"
                                     title="OdontoCloud CMS Preview Mobile"
                                 />
                             </div>

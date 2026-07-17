@@ -56,7 +56,7 @@ export default function App() {
   return (
     <Suspense fallback={<PremiumLoading />}>
       <ScrollToTop />
-      <Routes location={location} key={location.pathname}>
+      <Routes>
         {/* Public Routes with Isolated Layout */}
         <Route path="/login" element={
           user ? <RoleBridge /> : <Login />
