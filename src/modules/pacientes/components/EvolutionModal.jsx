@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCheck, FiTrash2 } from 'react-icons/fi';
+import { FiX, FiCheck, FiTrash2, FiPlus } from 'react-icons/fi';
 import { collection, doc, setDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { getPlansByPatient } from '../../../services/planService';
