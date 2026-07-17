@@ -286,90 +286,96 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                     </div>
 
                     {/* Navigation - High Density Slender Pro v2 */}
-                    <nav className="flex-1 px-3 py-4 space-y-1 relative z-10 overflow-x-hidden overflow-y-auto custom-scrollbar">
-                        {/* Global Search - Integrated in Sidebar */}
-                        <div className="px-1 mb-4 flex justify-center">
-                            <button
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
-                                className={`flex items-center justify-center transition-all duration-300 group shadow-sm bg-slate-100/50 hover:bg-blue-50 border border-slate-200/40 hover:border-blue-200 text-slate-400 hover:text-blue-600 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-4 py-3 rounded-xl'}`}
-                                title="Buscar..."
-                            >
-                                <FiSearch className="text-slate-400 group-hover:text-blue-600 shrink-0" size={16} />
-                                {!collapsedDesktop && (
-                                    <>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Buscar...</span>
-                                        <div className="ml-auto flex gap-1 opacity-40 group-hover:opacity-100 shrink-0">
-                                            <kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-500">Ctrl</kbd>
-                                            <kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-500">K</kbd>
-                                        </div>
-                                    </>
-                                )}
-                            </button>
+                    <nav className="flex-1 px-3 py-4 relative z-10 overflow-x-hidden overflow-y-auto custom-scrollbar">
+                        {/* Global Search & Notifications */}
+                        <div className="space-y-3 mb-10">
+                            {/* Global Search - Integrated in Sidebar */}
+                            <div className="px-1 flex justify-center">
+                                <button
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
+                                    className={`flex items-center justify-center transition-all duration-300 group shadow-sm bg-slate-100/50 hover:bg-blue-50 border border-slate-200/40 hover:border-blue-200 text-slate-400 hover:text-blue-600 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-4 py-3 rounded-xl'}`}
+                                    title="Buscar..."
+                                >
+                                    <FiSearch className="text-slate-400 group-hover:text-blue-600 shrink-0" size={16} />
+                                    {!collapsedDesktop && (
+                                        <>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Buscar...</span>
+                                            <div className="ml-auto flex gap-1 opacity-40 group-hover:opacity-100 shrink-0">
+                                                <kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-500">Ctrl</kbd>
+                                                <kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-500">K</kbd>
+                                            </div>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Notificaciones Button */}
+                            <div className="px-1 flex justify-center">
+                                <button
+                                    onClick={() => {
+                                        notificaciones.forEach(n => {
+                                            if (!n.read) updateDoc(doc(db, "notificaciones", n.id), { read: true });
+                                        });
+                                        setNotificationsOpen(true);
+                                    }}
+                                    className={`relative flex items-center justify-center transition-all duration-300 group shadow-sm bg-slate-100/50 hover:bg-blue-50 border border-slate-200/40 hover:border-blue-200 text-slate-400 hover:text-blue-600 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-4 py-3 rounded-xl'}`}
+                                    title="Notificaciones"
+                                >
+                                    <FiBell className="text-slate-400 group-hover:text-blue-600 shrink-0" size={16} />
+                                    {notificaciones.some(n => !n.read) && (
+                                        <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white animate-pulse" />
+                                    )}
+                                    {!collapsedDesktop && (
+                                        <>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Notificaciones</span>
+                                            {notificaciones.filter(n => !n.read).length > 0 && (
+                                                <span className="ml-auto bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                                                    {notificaciones.filter(n => !n.read).length}
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Notificaciones Button */}
-                        <div className="px-1 mb-4 flex justify-center">
-                            <button
-                                onClick={() => {
-                                    notificaciones.forEach(n => {
-                                        if (!n.read) updateDoc(doc(db, "notificaciones", n.id), { read: true });
-                                    });
-                                    setNotificationsOpen(true);
-                                }}
-                                className={`relative flex items-center justify-center transition-all duration-300 group shadow-sm bg-slate-100/50 hover:bg-blue-50 border border-slate-200/40 hover:border-blue-200 text-slate-400 hover:text-blue-600 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-4 py-3 rounded-xl'}`}
-                                title="Notificaciones"
-                            >
-                                <FiBell className="text-slate-400 group-hover:text-blue-600 shrink-0" size={16} />
-                                {notificaciones.some(n => !n.read) && (
-                                    <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white animate-pulse" />
-                                )}
-                                {!collapsedDesktop && (
-                                    <>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Notificaciones</span>
-                                        {notificaciones.filter(n => !n.read).length > 0 && (
-                                            <span className="ml-auto bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
-                                                {notificaciones.filter(n => !n.read).length}
-                                            </span>
-                                        )}
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mt-10 mb-6 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
+                        {/* Menú Principal Section Header */}
+                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-6 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
                             <span className="whitespace-nowrap">Menú Principal</span>
                         </div>
                         
-                        {filteredNavItems.map((item) => {
-                            const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
-                            const fullPath = item.id === 'Inicio' ? safeBasePath : `${safeBasePath}/${item.id}`;
-                            const isActive = location.pathname === fullPath || (item.id !== 'Inicio' && location.pathname.startsWith(fullPath));
+                        <div className="space-y-2">
+                            {filteredNavItems.map((item) => {
+                                const safeBasePath = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+                                const fullPath = item.id === 'Inicio' ? safeBasePath : `${safeBasePath}/${item.id}`;
+                                const isActive = location.pathname === fullPath || (item.id !== 'Inicio' && location.pathname.startsWith(fullPath));
 
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleNavClick(item.id)}
-                                    title={collapsedDesktop ? item.label : ""}
-                                    className={`
-                                        relative flex items-center ${collapsedDesktop ? 'justify-center w-10 h-10 mx-auto mb-2' : 'gap-3 w-full py-2.5 px-4 mb-2'} rounded-xl transition-all duration-300 group
-                                        ${isActive
-                                            ? 'bg-blue-600/5 text-blue-600'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
-                                    `}
-                                >
-                                    {/* Active Indicator Bar */}
-                                    {isActive && !collapsedDesktop && (
-                                        <div className="absolute left-0 w-1 bg-blue-600 rounded-r-full h-5" />
-                                    )}
-                                    <item.icon className={`text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-blue-600' : ''}`} />
-                                    {!collapsedDesktop && (
-                                        <span className={`text-[11px] font-bold tracking-wider uppercase transition-colors whitespace-nowrap ${isActive ? 'text-blue-600' : ''}`}>
-                                            {item.label}
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => handleNavClick(item.id)}
+                                        title={collapsedDesktop ? item.label : ""}
+                                        className={`
+                                            relative flex items-center ${collapsedDesktop ? 'justify-center w-10 h-10 mx-auto' : 'gap-3 w-full py-2.5 px-4'} rounded-xl transition-all duration-300 group
+                                            ${isActive
+                                                ? 'bg-blue-600/5 text-blue-600'
+                                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+                                        `}
+                                    >
+                                        {/* Active Indicator Bar */}
+                                        {isActive && !collapsedDesktop && (
+                                            <div className="absolute left-0 w-1 bg-blue-600 rounded-r-full h-5" />
+                                        )}
+                                        <item.icon className={`text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-blue-600' : ''}`} />
+                                        {!collapsedDesktop && (
+                                            <span className={`text-[11px] font-bold tracking-wider uppercase transition-colors whitespace-nowrap ${isActive ? 'text-blue-600' : ''}`}>
+                                                {item.label}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </nav>
 
 
