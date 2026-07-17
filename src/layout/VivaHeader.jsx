@@ -110,7 +110,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                             <IconPhone /> <span className="hidden md:inline">{config?.isMaster ? "Soporte: " : "Citas: "}</span> <span>{config?.contactPhone || "3001234567"}</span>
                         </a>
                         <Link 
-                            to={isPreview ? "#" : (config?.isMaster ? "/servicios" : "/sedes")} 
+                            to={isPreview ? "#" : (config?.isMaster ? "/servicios" : `${clinicBase}/sedes`)} 
                             onClick={(e) => {
                                 if (isPreview) {
                                     e.preventDefault();
