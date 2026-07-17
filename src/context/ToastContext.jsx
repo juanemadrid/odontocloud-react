@@ -28,6 +28,27 @@ export function ToastProvider({ children }) {
         info: (msg) => addToast(msg, "info"),
     };
 
+    React.useEffect(() => {
+        const originalAlert = window.alert;
+        window.alert = (message) => {
+            if (message === undefined || message === null) return;
+            const strMsg = String(message);
+            const lower = strMsg.toLowerCase();
+            if (lower.includes("error") || lower.includes("falló") || lower.includes("incorrecto") || lower.includes("no se pudo") || lower.includes("❌")) {
+                addToast(strMsg, "error");
+            } else if (lower.includes("guardado") || lower.includes("exito") || lower.includes("creado") || lower.includes("actualizado") || lower.includes("eliminado") || lower.includes("✅")) {
+                addToast(strMsg, "success");
+            } else if (lower.includes("obligatorio") || lower.includes("debe") || lower.includes("selecciona") || lower.includes("advertencia") || lower.includes("⚠️")) {
+                addToast(strMsg, "warning");
+            } else {
+                addToast(strMsg, "info");
+            }
+        };
+        return () => {
+            window.alert = originalAlert;
+        };
+    }, [addToast]);
+
     return (
         <ToastContext.Provider value={value}>
             {children}
