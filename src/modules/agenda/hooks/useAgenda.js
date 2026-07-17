@@ -344,6 +344,14 @@ export function useAgenda() {
     const updateAppointment = async (id, patch) => {
         let finalPatch = { ...patch };
 
+        // Synchronize status and estado fields
+        if (patch.status !== undefined && patch.estado === undefined) {
+            finalPatch.estado = patch.status;
+        }
+        if (patch.estado !== undefined && patch.status === undefined) {
+            finalPatch.status = patch.estado;
+        }
+
         // Synchronize string fields if start date is updated (e.g. via drag & drop)
         if (patch.start && patch.start instanceof Date) {
             const y = patch.start.getFullYear();

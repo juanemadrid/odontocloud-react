@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 export default function CommandPalette() {
     const [isOpen, setIsOpen] = useState(false);
+    const [startWithVoice, setStartWithVoice] = useState(false);
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [searching, setSearching] = useState(false);
@@ -64,8 +65,11 @@ export default function CommandPalette() {
             }
         };
 
-        const handleOpenGlobalSearch = () => {
+        const handleOpenGlobalSearch = (e) => {
             setIsOpen(true);
+            if (e?.detail?.voice) {
+                setStartWithVoice(true);
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown, true);
@@ -76,6 +80,14 @@ export default function CommandPalette() {
             window.removeEventListener('open-global-search', handleOpenGlobalSearch);
         };
     }, []);
+
+    useEffect(() => {
+        if (isOpen && startWithVoice) {
+            resetTranscript();
+            startListening();
+            setStartWithVoice(false);
+        }
+    }, [isOpen, startWithVoice, startListening, resetTranscript]);
 
     useEffect(() => {
         if (isOpen) {

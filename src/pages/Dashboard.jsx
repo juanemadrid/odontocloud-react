@@ -667,7 +667,7 @@ function Overview({
     const completedCount = docAppointments.filter(
       (c) => {
         const est = (c.estado || "").toLowerCase();
-        return est === "completada" || est === "atendido";
+        return est === "completada" || est === "atendido" || est === "atendida" || est === "atendiendo" || est === "completed";
       }
     ).length;
 
@@ -805,56 +805,63 @@ function Overview({
               </div>
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-                {docAppointments.map((c) => (
-                  <div key={c.id} className="p-4 hover:bg-slate-50 border-2 border-slate-100 hover:border-blue-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-sm font-black bg-blue-600 text-white px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
-                          {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border-2
-                          ${((c.estado || "").toLowerCase() === "en espera" || (c.estado || "").toLowerCase() === "waiting") ? "bg-amber-50 text-amber-700 border-amber-200" :
-                            ((c.estado || "").toLowerCase() === "completada" || (c.estado || "").toLowerCase() === "atendido") ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            "bg-blue-50 text-blue-700 border-blue-200"}
-                        `}>
-                          {c.estado}
-                        </span>
-                        {c.consultorio && (
-                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
-                            📍 {c.consultorio}
+                {docAppointments.map((c) => {
+                  const isCompleted = ["completada", "atendido", "atendida", "atendiendo", "completed"].includes((c.estado || "").toLowerCase());
+                  return (
+                    <div key={c.id} className="p-4 hover:bg-slate-50 border-2 border-slate-100 hover:border-blue-200 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-sm font-black bg-blue-600 text-white px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
+                            {c.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                        )}
+                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border-2
+                            ${((c.estado || "").toLowerCase() === "en espera" || (c.estado || "").toLowerCase() === "waiting") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                              "bg-blue-50 text-blue-700 border-blue-200"}
+                          `}>
+                            {c.estado}
+                          </span>
+                          {c.consultorio && (
+                            <span className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
+                              📍 {c.consultorio}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-black text-slate-800 text-base">{c.pacienteNombre}</div>
+                        {c.motivo && <div className="text-xs text-slate-500 flex items-start gap-2"><span>💬</span><span className="italic">{c.motivo}</span></div>}
                       </div>
-                      <div className="font-black text-slate-800 text-base">{c.pacienteNombre}</div>
-                      {c.motivo && <div className="text-xs text-slate-500 flex items-start gap-2"><span>💬</span><span className="italic">{c.motivo}</span></div>}
-                    </div>
 
-                    {/* Quick Access to Clinical Actions */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
-                        className="text-[10px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-all"
-                        title="Ver Historia Clínica"
-                      >
-                        📋 Historia
-                      </button>
-                      <button
-                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=odonto`)}
-                        className="text-[10px] font-black uppercase tracking-wider bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-all"
-                        title="Ver Odontograma"
-                      >
-                        🦷 Odontograma
-                      </button>
-                      <button
-                        onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=evo`)}
-                        className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition-all shadow-sm"
-                        title="Registrar Evolución"
-                      >
-                        ✍️ Evolución
-                      </button>
+                      {/* Quick Access to Clinical Actions */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
+                          className="text-[10px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-all"
+                          title="Ver Historia Clínica"
+                        >
+                          📋 Historia
+                        </button>
+                        <button
+                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=odonto`)}
+                          className="text-[10px] font-black uppercase tracking-wider bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-all"
+                          title="Ver Odontograma"
+                        >
+                          🦷 Odontograma
+                        </button>
+                        <button
+                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=evo`)}
+                          className={`text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-lg transition-all shadow-sm
+                            ${isCompleted 
+                              ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200/50 hover:bg-emerald-100/70' 
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                          title={isCompleted ? "Ver Evolución" : "Registrar Evolución"}
+                        >
+                          {isCompleted ? "✓ Atendido" : "✍️ Evolución"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -870,14 +877,17 @@ function Overview({
                     <FiMic size={20} />
                   </div>
                   <div>
-                    <h4 className="font-black text-sm uppercase tracking-wider">Anita VOX</h4>
+                    <h4 className="font-black text-sm uppercase tracking-wider">OdontoVox</h4>
                     <p className="text-[10px] text-indigo-100">Asistente de Voz</p>
                   </div>
                 </div>
                 <p className="text-xs text-indigo-100 mb-4 leading-relaxed">
                   Dicta tus evoluciones clínicas manos libres mientras atiendes al paciente.
                 </p>
-                <button className="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-sm">
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-global-search', { detail: { voice: true } }))}
+                  className="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-sm"
+                >
                   Activar Micrófono
                 </button>
               </div>
@@ -1259,7 +1269,7 @@ export default function Dashboard() {
       fechaDate = new Date();
     }
     const pacienteNombre = data.pacienteNombre || data.paciente || "Paciente";
-    const estado = (data.estado && String(data.estado)) || "programada";
+    const estado = (data.estado && String(data.estado)) || (data.status && String(data.status)) || "programada";
     return {
       id: docSnap.id,
       fecha: fechaDate,
