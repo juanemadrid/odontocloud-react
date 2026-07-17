@@ -593,7 +593,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                     <div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                              <div className="flex items-center gap-2">
-                                <FiActivity className="text-indigo-600" /> Plan de Tratamiento Pro-forma
+                                <FiActivity className="text-indigo-600" /> Plan de Tratamiento
                              </div>
                              <span className="hidden sm:inline mx-2 text-slate-200">|</span>
                              <div className="flex items-center gap-2">
@@ -687,17 +687,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             </div>
                         </div>
                     )}
-                    {hasRealizedDebt && (
-                        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex items-center gap-4 text-rose-800 shrink-0 animate-fadeIn shadow-sm">
-                            <FiAlertCircle size={24} className="text-rose-500 shrink-0 animate-bounce" />
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-widest leading-none text-rose-600 mb-1">Paciente tiene deuda activa</p>
-                                <p className="text-[10px] font-bold text-rose-500/80 uppercase tracking-wider leading-normal">
-                                    Este presupuesto contiene procedimientos completados en la evolución clínica que aún no han sido cancelados.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+
                     <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50/50 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
                             <div className="flex items-center gap-2">
@@ -881,10 +871,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                             <div className="flex items-center justify-end gap-1 bg-slate-50 px-2 h-9 rounded-lg border border-slate-100 w-28 ml-auto font-sans">
                                                 <span className="text-slate-300 text-[10px] font-bold">$</span>
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     className="w-full bg-transparent text-right outline-none font-black text-slate-700 text-[12px]"
-                                                    value={item.amount}
-                                                    onChange={(e) => updateItem(item.id, 'amount', Number(e.target.value))}
+                                                    value={Number(item.amount || 0) === 0 ? "" : Number(item.amount || 0).toLocaleString('es-CO')}
+                                                    onChange={(e) => {
+                                                        const cleanVal = e.target.value.replace(/\D/g, '');
+                                                        updateItem(item.id, 'amount', cleanVal ? Number(cleanVal) : 0);
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -896,10 +889,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                             <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-9 rounded-lg border border-rose-100 w-20 ml-auto font-sans">
                                                 <span className="text-rose-300 text-[10px] font-bold">$</span>
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     className="w-full bg-transparent text-right outline-none font-black text-rose-600 text-[12px]"
-                                                    value={item.descuento || 0}
-                                                    onChange={(e) => updateItem(item.id, 'descuento', Number(e.target.value))}
+                                                    value={Number(item.descuento || 0) === 0 ? "0" : Number(item.descuento || 0).toLocaleString('es-CO')}
+                                                    onChange={(e) => {
+                                                        const cleanVal = e.target.value.replace(/\D/g, '');
+                                                        updateItem(item.id, 'descuento', cleanVal ? Number(cleanVal) : 0);
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -988,16 +984,12 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                   </div>
                                   <div className="h-px bg-slate-100 my-2" />
                                   <div className="flex justify-between items-center">
-                                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">Total Inversión</span>
+                                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">Total a Pagar</span>
                                       <span className="text-3xl font-black text-indigo-600 tracking-tighter">
                                           <span className="text-sm mr-1 text-slate-300">$</span>
                                           {calculateTotal().toLocaleString('es-CO')}
                                       </span>
                                   </div>
-                              </div>
-                              <div className="mt-2 text-emerald-500 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100">
-                                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                   Cálculo en tiempo real
                               </div>
                          </div>
                     </div>
