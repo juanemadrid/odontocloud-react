@@ -162,14 +162,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     const hasInstitutionalContext = Boolean(userProfile?.tenant?.esIps || patient?.nombreEps || patient?.convenioBeneficio || entidades.length > 0);
 
     const openModal = (type) => {
-        const defaultPaymentMode = hasInstitutionalContext ? 'entidad' : 'particular';
         setModalType(type);
         setFormData({
             nombre: '',
             profesional: currentUserFullName || (profesionalesDropdown.length > 0 ? profesionalesDropdown[0] : ''),
             vigencia: 30,
             observaciones: '',
-            paymentMode: defaultPaymentMode,
+            paymentMode: 'particular',
             epsName: patient?.nombreEps || patient?.eps || '',
             entidadId: '',
             tarifaId: '',
