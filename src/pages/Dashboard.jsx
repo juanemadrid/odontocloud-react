@@ -644,6 +644,17 @@ function AdminMegaMenu({
     </>
   );
 }
+
+const getStatusLabel = (est) => {
+  const clean = (est || "").toLowerCase().trim();
+  if (clean === "attended" || clean === "atendido" || clean === "atendida") return "ATENDIDO";
+  if (clean === "waiting" || clean === "en espera") return "EN ESPERA";
+  if (clean === "confirmed" || clean === "confirmada" || clean === "confirmado") return "CONFIRMADA";
+  if (clean === "pending" || clean === "sin confirmar") return "SIN CONFIRMAR";
+  if (clean === "cancelled" || clean === "cancelado" || clean === "cancelada") return "CANCELADO";
+  return String(est).toUpperCase();
+};
+
 /* =============== Componente de portada (Inicio) =============== */
 function Overview({
   t, companyName, companyLogo, userName, role, darkMode,
@@ -1231,16 +1242,6 @@ export default function Dashboard() {
         .replace(".", "");
     return `${fmt(start)} – ${fmt(end)}`;
   }, [locale]);
-
-  const getStatusLabel = (est) => {
-    const clean = (est || "").toLowerCase().trim();
-    if (clean === "attended" || clean === "atendido" || clean === "atendida") return "ATENDIDO";
-    if (clean === "waiting" || clean === "en espera") return "EN ESPERA";
-    if (clean === "confirmed" || clean === "confirmada" || clean === "confirmado") return "CONFIRMADA";
-    if (clean === "pending" || clean === "sin confirmar") return "SIN CONFIRMAR";
-    if (clean === "cancelled" || clean === "cancelado" || clean === "cancelada") return "CANCELADO";
-    return String(est).toUpperCase();
-  };
 
   const normalizeCita = (docSnap) => {
     const data = docSnap.data() || {};
