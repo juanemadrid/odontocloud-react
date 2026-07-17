@@ -68,10 +68,13 @@ export default function PatientForm({
     const [profesionales, setProfesionales] = useState([]);
     const [sucursales, setSucursales] = useState([]);
     const [epsList, setEpsList] = useState([]);
+    const [barrioList, setBarrioList] = useState([]);
     const [loadingPlanes, setLoadingPlanes] = useState(false);
     const [loadingProfesionales, setLoadingProfesionales] = useState(false);
     const [loadingEps, setLoadingEps] = useState(false);
+    const [loadingBarrios, setLoadingBarrios] = useState(false);
     const [showEpsSuggestions, setShowEpsSuggestions] = useState(false);
+    const [showBarrioSuggestions, setShowBarrioSuggestions] = useState(false);
     const [showPrefijoDrop, setShowPrefijoDrop] = useState(false);
     const [prefijoSearch, setPrefijoSearch] = useState("");
     const [fotoFile, setFotoFile] = useState(null);
@@ -307,6 +310,22 @@ export default function PatientForm({
             }
         };
 
+        const loadBarrios = async () => {
+            if (!inquilino) return;
+            setLoadingBarrios(true);
+            try {
+                const q = query(collection(db, "barrios_catalogo"), where("inquilino", "==", inquilino));
+                const snap = await getDocs(q);
+                const data = snap.docs.map(d => d.data().nombre);
+                const uniqueBarrios = [...new Set(data)].sort((a, b) => a.localeCompare(b));
+                setBarrioList(uniqueBarrios);
+            } catch (e) {
+                console.error("Error loading Barrio catalog:", e);
+            } finally {
+                setLoadingBarrios(false);
+            }
+        };
+
         const loadSucursales = async () => {
             if (!inquilino) return;
             try {
@@ -341,6 +360,7 @@ export default function PatientForm({
         loadPlanes();
         loadProfesionales();
         loadEps();
+        loadBarrios();
         loadSucursales();
         loadRemisionData();
     }, [inquilino]);
@@ -419,6 +439,7 @@ export default function PatientForm({
     const docNum = watch("nroDocumento");
     const birthDate = watch("fechaNacimiento");
     const epsValue = watch("nombreEps");
+    const barrioValue = watch("barrio");
 
     const filteredEps = useMemo(() => {
         if (!epsValue || epsValue.length < 1) return [];
@@ -427,6 +448,14 @@ export default function PatientForm({
             e.toLowerCase() !== epsValue.toLowerCase()
         ).slice(0, 5);
     }, [epsValue, epsList]);
+
+    const filteredBarrios = useMemo(() => {
+        if (!barrioValue || barrioValue.length < 1) return [];
+        return barrioList.filter(b => 
+            b.toLowerCase().includes(barrioValue.toLowerCase()) && 
+            b.toLowerCase() !== barrioValue.toLowerCase()
+        ).slice(0, 5);
+    }, [barrioValue, barrioList]);
 
     useEffect(() => {
         if (nombres || apellidos) {
@@ -592,6 +621,64 @@ export default function PatientForm({
         reader.readAsDataURL(file);
     };
 
+    const handleAgregarEps = async () => {
+        const epsInput = watch("nombreEps");
+        if (!epsInput || !epsInput.trim()) {
+            toast.error("Por favor, ingrese un nombre de EPS");
+            return;
+        }
+        const normalizedEps = epsInput.trim();
+        if (epsList.map(e => e.toLowerCase()).includes(normalizedEps.toLowerCase())) {
+            toast.info("Esta EPS ya se encuentra registrada");
+            return;
+        }
+        if (!inquilino) {
+            toast.error("Inquilino no identificado");
+            return;
+        }
+        try {
+            await addDoc(collection(db, "eps_catalogo"), {
+                nombre: normalizedEps,
+                inquilino: inquilino,
+                createdAt: new Date().toISOString()
+            });
+            setEpsList(prev => [...prev, normalizedEps].sort((a, b) => a.localeCompare(b)));
+            toast.success("EPS agregada al catálogo con éxito");
+        } catch (err) {
+            console.error("Error saving new EPS to catalog:", err);
+            toast.error("Error al guardar la EPS en el catálogo");
+        }
+    };
+
+    const handleAgregarBarrio = async () => {
+        const barrioInput = watch("barrio");
+        if (!barrioInput || !barrioInput.trim()) {
+            toast.error("Por favor, ingrese un nombre de barrio");
+            return;
+        }
+        const normalizedBarrio = barrioInput.trim();
+        if (barrioList.map(b => b.toLowerCase()).includes(normalizedBarrio.toLowerCase())) {
+            toast.info("Este barrio ya se encuentra registrado");
+            return;
+        }
+        if (!inquilino) {
+            toast.error("Inquilino no identificado");
+            return;
+        }
+        try {
+            await addDoc(collection(db, "barrios_catalogo"), {
+                nombre: normalizedBarrio,
+                inquilino: inquilino,
+                createdAt: new Date().toISOString()
+            });
+            setBarrioList(prev => [...prev, normalizedBarrio].sort((a, b) => a.localeCompare(b)));
+            toast.success("Barrio agregado al catálogo con éxito");
+        } catch (err) {
+            console.error("Error saving new barrio to catalog:", err);
+            toast.error("Error al guardar el barrio en el catálogo");
+        }
+    };
+
     const onValidSubmit = async (data) => {
         const selectedPlan = planes.find(p => p.id === data.planId);
         const selectedProf = profesionales.find(p => p.id === data.profesionalId);
@@ -607,6 +694,21 @@ export default function PatientForm({
                     });
                 } catch (e) {
                     console.error("Error saving new EPS to catalog:", e);
+                }
+            }
+        }
+
+        if (data.barrio && inquilino) {
+            const normalizedBarrio = data.barrio.trim();
+            if (!barrioList.map(b => b.toLowerCase()).includes(normalizedBarrio.toLowerCase())) {
+                try {
+                    await addDoc(collection(db, "barrios_catalogo"), {
+                        nombre: normalizedBarrio,
+                        inquilino: inquilino,
+                        createdAt: new Date().toISOString()
+                    });
+                } catch (e) {
+                    console.error("Error saving new barrio to catalog:", e);
                 }
             }
         }
@@ -824,10 +926,33 @@ export default function PatientForm({
                                 )}
 
                                 {isVisible("barrioDomicilio") && (
-                                    <FormRow label="Barrio" required={isRequired("barrioDomicilio", true)} error={errors.barrio}>
-                                        <input {...register("barrio")} className="form-input text-sm w-full md:w-64" placeholder="Barrio del paciente" />
-                                    </FormRow>
-                                )}
+                                     <FormRow label="Barrio" required={isRequired("barrioDomicilio", true)} error={errors.barrio}>
+                                         <div className="flex gap-2">
+                                             <div className="relative flex-1 max-w-[16rem]">
+                                                 <input 
+                                                     {...register("barrio")} 
+                                                     onFocus={() => setShowBarrioSuggestions(true)}
+                                                     onBlur={() => setTimeout(() => setShowBarrioSuggestions(false), 200)}
+                                                     placeholder="Barrio del paciente"
+                                                     className="form-input text-sm w-full"
+                                                 />
+                                                 {loadingBarrios && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
+                                                 {showBarrioSuggestions && filteredBarrios.length > 0 && (
+                                                     <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
+                                                         {filteredBarrios.map(b => (
+                                                             <button key={b} type="button" onMouseDown={() => setValue("barrio", b, { shouldDirty: true })} className="w-full px-4 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 text-slate-700 transition-colors">
+                                                                 {b}
+                                                             </button>
+                                                         ))}
+                                                     </div>
+                                                 )}
+                                             </div>
+                                             <button type="button" onClick={handleAgregarBarrio} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20" title="Agregar barrio al catálogo">
+                                                 <FiPlus size={20} />
+                                             </button>
+                                         </div>
+                                     </FormRow>
+                                 )}
 
                                 {isVisible("lugarResidencia") && (
                                     <FormRow label="Lugar de residencia" required={isRequired("lugarResidencia", true)} error={errors.lugarResidencia}>
@@ -975,28 +1100,33 @@ export default function PatientForm({
                                     <SectionTitle num="3" title="EPS y Aseguramiento" />
                                     <div className="pl-0 md:pl-4 space-y-1">
                                         {isVisible("nombreEps") && (
-                                            <FormRow label="Nombre de la EPS" required={isRequired("nombreEps", true)} error={errors.nombreEps}>
-                                                <div className="relative">
-                                                    <input 
-                                                        {...register("nombreEps")} 
-                                                        onFocus={() => setShowEpsSuggestions(true)}
-                                                        onBlur={() => setTimeout(() => setShowEpsSuggestions(false), 200)}
-                                                        placeholder="Escriba el nombre..."
-                                                        className="form-input text-sm w-full md:w-64"
-                                                    />
-                                                    {loadingEps && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
-                                                    {showEpsSuggestions && filteredEps.length > 0 && (
-                                                        <div className="absolute z-50 w-full md:w-80 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
-                                                            {filteredEps.map(eps => (
-                                                                <button key={eps} type="button" onClick={() => setValue("nombreEps", eps)} className="w-full px-4 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 text-slate-700 transition-colors">
-                                                                    {eps}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </FormRow>
-                                        )}
+                                             <FormRow label="Nombre de la EPS" required={isRequired("nombreEps", true)} error={errors.nombreEps}>
+                                                 <div className="flex gap-2">
+                                                     <div className="relative flex-1 max-w-[16rem]">
+                                                         <input 
+                                                             {...register("nombreEps")} 
+                                                             onFocus={() => setShowEpsSuggestions(true)}
+                                                             onBlur={() => setTimeout(() => setShowEpsSuggestions(false), 200)}
+                                                             placeholder="Escriba el nombre..."
+                                                             className="form-input text-sm w-full"
+                                                         />
+                                                         {loadingEps && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}
+                                                         {showEpsSuggestions && filteredEps.length > 0 && (
+                                                             <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
+                                                                 {filteredEps.map(eps => (
+                                                                     <button key={eps} type="button" onMouseDown={() => setValue("nombreEps", eps, { shouldDirty: true })} className="w-full px-4 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 text-slate-700 transition-colors">
+                                                                         {eps}
+                                                                     </button>
+                                                                 ))}
+                                                             </div>
+                                                         )}
+                                                     </div>
+                                                     <button type="button" onClick={handleAgregarEps} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20" title="Agregar EPS al catálogo">
+                                                         <FiPlus size={20} />
+                                                     </button>
+                                                 </div>
+                                             </FormRow>
+                                         )}
                                         {isVisible("tipoVinculacion") && (
                                             <FormRow label="Tipo de Vinculación" required={isRequired("tipoVinculacion", true)} error={errors.tipoVinculacion}>
                                                 <select {...register("tipoVinculacion")} className="form-input text-sm w-full md:w-64">

@@ -90,6 +90,67 @@ const FormDatosPersonales = ({ patient, photoState }) => {
         return formConfig[key]?.visible !== false;
     };
 
+    const toast = useToast();
+    const [barrioList, setBarrioList] = React.useState([]);
+    const [loadingBarrios, setLoadingBarrios] = React.useState(false);
+    const [showBarrioSuggestions, setShowBarrioSuggestions] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!inquilino) return;
+        setLoadingBarrios(true);
+        getDocs(query(collection(db, "barrios_catalogo"), where("inquilino", "==", inquilino)))
+            .then(snap => {
+                const data = snap.docs.map(d => d.data().nombre);
+                const uniqueBarrios = [...new Set(data)].sort((a, b) => a.localeCompare(b));
+                setBarrioList(uniqueBarrios);
+            })
+            .catch(e => console.error("Error loading Barrio catalog:", e))
+            .finally(() => setLoadingBarrios(false));
+    }, [inquilino]);
+
+    const barrioValue = watch("barrio");
+    const filteredBarrios = React.useMemo(() => {
+        if (!barrioValue || barrioValue.length < 1) return [];
+        return barrioList.filter(b => 
+            b.toLowerCase().includes(barrioValue.toLowerCase()) && 
+            b.toLowerCase() !== barrioValue.toLowerCase()
+        ).slice(0, 5);
+    }, [barrioValue, barrioList]);
+
+    const handleAgregarBarrio = async (e) => {
+        e.preventDefault();
+        const barrioInput = watch("barrio");
+        if (!barrioInput || !barrioInput.trim()) {
+            toast?.error("Por favor, ingrese un nombre de barrio");
+            return;
+        }
+
+        const normalizedBarrio = barrioInput.trim();
+        
+        if (barrioList.map(b => b.toLowerCase()).includes(normalizedBarrio.toLowerCase())) {
+            toast?.info("Este barrio ya se encuentra registrado");
+            return;
+        }
+
+        if (!inquilino) {
+            toast?.error("Inquilino no identificado");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "barrios_catalogo"), {
+                nombre: normalizedBarrio,
+                inquilino: inquilino,
+                createdAt: new Date().toISOString()
+            });
+            setBarrioList(prev => [...prev, normalizedBarrio].sort((a, b) => a.localeCompare(b)));
+            toast?.success("Barrio agregado al catálogo con éxito");
+        } catch (err) {
+            console.error("Error saving new barrio to catalog:", err);
+            toast?.error("Error al guardar el barrio en el catálogo");
+        }
+    };
+
     const birthDate = watch("fechaNacimiento");
     const age = React.useMemo(() => {
         return calculateAgeStr(birthDate);
@@ -319,7 +380,29 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                             )}
                         </FormRow>
                         <FormRow label="Barrio" required error={errors.barrio}>
-                            <input {...register("barrio")} className="form-input text-sm w-full md:w-64" placeholder="Barrio" />
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 max-w-[16rem]">
+                                    <input 
+                                        {...register("barrio")} 
+                                        onFocus={() => setShowBarrioSuggestions(true)}
+                                        onBlur={() => setTimeout(() => setShowBarrioSuggestions(false), 200)}
+                                        className="form-input text-sm w-full"
+                                        placeholder="Barrio"
+                                    />
+                                    {showBarrioSuggestions && filteredBarrios.length > 0 && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden py-1">
+                                            {filteredBarrios.map(b => (
+                                                <button key={b} type="button" onMouseDown={() => setValue("barrio", b, { shouldDirty: true })} className="w-full px-4 py-2 text-left text-[13px] hover:bg-slate-50 text-slate-700">
+                                                    {b}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button type="button" onClick={handleAgregarBarrio} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20" title="Agregar barrio al catálogo">
+                                    <FiPlus size={20} />
+                                </button>
+                            </div>
                         </FormRow>
                         <FormRow label="Lugar de residencia" required error={errors.lugarResidencia}>
                             <input {...register("lugarResidencia")} className="form-input text-sm w-full" placeholder="Dirección completa" />
@@ -1138,6 +1221,26 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         edad: calculateAgeStr(data.fechaNacimiento),
                         registroCompleto: true
                     };
+
+                    if (data.barrio && userProfile?.inquilino) {
+                        try {
+                            const qBar = query(collection(db, "barrios_catalogo"), 
+                                where("inquilino", "==", userProfile.inquilino), 
+                                where("nombre", "==", data.barrio.trim())
+                            );
+                            const snapBar = await getDocs(qBar);
+                            if (snapBar.empty) {
+                                await addDoc(collection(db, "barrios_catalogo"), {
+                                    nombre: data.barrio.trim(),
+                                    inquilino: userProfile.inquilino,
+                                    createdAt: new Date().toISOString()
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error auto-saving barrio in submitForm:", e);
+                        }
+                    }
+
                     const saved = await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
                     
                     // Audit log
@@ -1167,6 +1270,26 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                         ...allValues,
                         edad: calculateAgeStr(allValues.fechaNacimiento)
                     };
+
+                    if (allValues.nombreEps && userProfile?.inquilino) {
+                        try {
+                            const qEps = query(collection(db, "eps_catalogo"), 
+                                where("inquilino", "==", userProfile.inquilino), 
+                                where("nombre", "==", allValues.nombreEps.trim())
+                            );
+                            const snapEps = await getDocs(qEps);
+                            if (snapEps.empty) {
+                                await addDoc(collection(db, "eps_catalogo"), {
+                                    nombre: allValues.nombreEps.trim(),
+                                    inquilino: userProfile.inquilino,
+                                    createdAt: new Date().toISOString()
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error auto-saving EPS in handlePartialSave:", e);
+                        }
+                    }
+
                     const saved = await createOrUpdatePatient(userProfile.inquilino, finalPayload, false, fotoFile);
                     
                     // Audit log
