@@ -59,6 +59,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
     const [inventarioMeds, setInventarioMeds] = useState([]);
     const [planPayments, setPlanPayments] = useState([]); // payments for the selected plan
     const [showProcedureSelector, setShowProcedureSelector] = useState(false);
+    const [pastEvolutions, setPastEvolutions] = useState([]);
 
     const getLocalISOStrings = () => {
         const d = new Date();
@@ -375,7 +376,14 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                  // Initialize checklist state
                  const initDetails = {};
                  srvs.forEach(s => {
-                     initDetails[s.id] = { checked: false, observation: '' };
+                     if (initialData?.plantillaItems?.[s.id]) {
+                         initDetails[s.id] = { 
+                             checked: initialData.plantillaItems[s.id].checked || false, 
+                             observation: initialData.plantillaItems[s.id].observation || '' 
+                         };
+                     } else {
+                         initDetails[s.id] = { checked: false, observation: '' };
+                     }
                  });
                  setPlantillaDetails(initDetails);
                  setAllChecked(false);
@@ -412,6 +420,40 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
         };
         loadPlanPayments();
     }, [watchPlanId, patient?.id]);
+
+    // Load past evolutions to determine which items are already completed
+    useEffect(() => {
+        const loadPastEvolutions = async () => {
+            if (!patient?.id) return;
+            try {
+                const q = query(
+                    collection(db, "clinical_evolutions"),
+                    where("patientId", "==", patient.id)
+                );
+                const snap = await getDocs(q);
+                setPastEvolutions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (e) {
+                console.error("Error loading past evolutions:", e);
+            }
+        };
+        loadPastEvolutions();
+    }, [patient?.id, isOpen]);
+
+    const realizedItemIds = React.useMemo(() => {
+        const completedSet = new Set();
+        pastEvolutions.forEach(evo => {
+            // Ignore the current evolution if we are in edit mode
+            if (initialData?.id && evo.id === initialData.id) return;
+            if (evo.plantillaItems) {
+                Object.keys(evo.plantillaItems).forEach(itemId => {
+                    if (evo.plantillaItems[itemId]?.checked) {
+                        completedSet.add(itemId);
+                    }
+                });
+            }
+        });
+        return completedSet;
+    }, [pastEvolutions, initialData?.id]);
 
     // Build paid map for selected plan items
     const planPaidMap = React.useMemo(() => {
@@ -1266,21 +1308,37 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                             : svcStatus === 'unpaid' ? `Deuda: $${cost.toLocaleString('es-CO')}`
                                             : 'Sin valor';
 
+                                        const isPastRealized = realizedItemIds.has(s.id);
+                                        const isChecked = isPastRealized || (plantillaDetails[s.id]?.checked || false);
+
                                         return (
-                                            <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <tr key={s.id} className={`hover:bg-slate-50/50 transition-colors ${isPastRealized ? 'opacity-60 bg-slate-50/40' : ''}`}>
                                                 <td className="py-3 text-center align-middle">
-                                                    <input 
-                                                        type="checkbox"
-                                                        className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
-                                                        checked={plantillaDetails[s.id]?.checked || false}
-                                                        onChange={(e) => setPlantillaDetails(prev => ({
-                                                            ...prev,
-                                                            [s.id]: { ...prev[s.id], checked: e.target.checked }
-                                                        }))}
-                                                    />
+                                                    {isPastRealized ? (
+                                                        <div className="flex justify-center text-emerald-500" title="Procedimiento ya completado en una sesión anterior">
+                                                            <FiCheck size={16} strokeWidth={3} />
+                                                        </div>
+                                                    ) : (
+                                                        <input 
+                                                            type="checkbox"
+                                                            className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
+                                                            checked={isChecked}
+                                                            onChange={(e) => setPlantillaDetails(prev => ({
+                                                                ...prev,
+                                                                [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                            }))}
+                                                        />
+                                                    )}
                                                 </td>
                                                 <td className="py-3 align-middle text-[11px] font-bold text-slate-700">
-                                                    {idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{idx + 1}. {s.desc || s.procedimiento || s.nombre || 'Servicio sin nombre'}</span>
+                                                        {isPastRealized && (
+                                                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[7px] font-black tracking-widest uppercase">
+                                                                Ya Realizado
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 text-center align-middle">
                                                     <div className="flex justify-center">
@@ -1308,7 +1366,11 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                             setAllChecked(val);
                                             setPlantillaDetails(prev => {
                                                 const next = { ...prev };
-                                                Object.keys(next).forEach(k => next[k].checked = val);
+                                                Object.keys(next).forEach(k => {
+                                                    if (!realizedItemIds.has(k)) {
+                                                        next[k].checked = val;
+                                                    }
+                                                });
                                                 return next;
                                             });
                                         }}
