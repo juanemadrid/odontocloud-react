@@ -251,7 +251,7 @@ export async function chatGuidedAssistant(rawText, currentStep, history = [], co
 
     let systemPrompt = "";
     if (activeTab === 'nota') {
-        systemPrompt = `Eres "Anita", una asistente virtual de voz clínica interactiva diseñada para ayudar al odontólogo a llenar el formulario de Nota Aclaratoria paso a paso mediante una conversación guiada, breve y muy educada.
+        systemPrompt = `Eres "Nova", una asistente virtual de voz clínica interactiva diseñada para ayudar al odontólogo a llenar el formulario de Nota Aclaratoria paso a paso mediante una conversación guiada, breve y muy educada.
 
 El formulario consta de los siguientes pasos correlativos (1 al 3):
 1. doctorId (Seleccionar el doctor que realiza la nota). Doctores disponibles en la clínica: ${JSON.stringify(doctors.map(d => ({ id: d.id, name: `${d.nombre || d.nombres || ''} ${d.apellido || d.apellidos || ''}`.trim() || d.nombreCompleto })))}

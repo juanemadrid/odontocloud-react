@@ -336,7 +336,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                             </button>
                         </div>
 
-                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mt-8 mb-4 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
+                        <div className={`px-4 text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mt-10 mb-6 flex items-center justify-center lg:justify-between gap-2 overflow-hidden transition-all duration-500 ${collapsedDesktop ? 'opacity-0 h-0 hidden' : 'opacity-100 h-auto'}`}>
                             <span className="whitespace-nowrap">Menú Principal</span>
                         </div>
                         
@@ -351,7 +351,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                                     onClick={() => handleNavClick(item.id)}
                                     title={collapsedDesktop ? item.label : ""}
                                     className={`
-                                        relative flex items-center ${collapsedDesktop ? 'justify-center w-10 h-10 mx-auto' : 'gap-3 w-full py-2.5 px-4'} rounded-xl transition-all duration-300 group
+                                        relative flex items-center ${collapsedDesktop ? 'justify-center w-10 h-10 mx-auto mb-2' : 'gap-3 w-full py-2.5 px-4 mb-2'} rounded-xl transition-all duration-300 group
                                         ${isActive
                                             ? 'bg-blue-600/5 text-blue-600'
                                             : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}

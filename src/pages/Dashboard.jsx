@@ -868,31 +868,6 @@ function Overview({
 
           {/* Quick Actions Panel */}
           <div className="space-y-4">
-            {/* Voice Assistant Card */}
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <FiMic size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-sm uppercase tracking-wider">OdontoVox</h4>
-                    <p className="text-[10px] text-indigo-100">Asistente de Voz</p>
-                  </div>
-                </div>
-                <p className="text-xs text-indigo-100 mb-4 leading-relaxed">
-                  Dicta tus evoluciones clínicas manos libres mientras atiendes al paciente.
-                </p>
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-global-search', { detail: { voice: true } }))}
-                  className="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-sm"
-                >
-                  Activar Micrófono
-                </button>
-              </div>
-            </div>
-
             {/* Quick Links */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <h4 className="font-black text-slate-800 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -1308,7 +1283,7 @@ export default function Dashboard() {
     const unsubStr = onSnapshot(
       qTodayStr,
       (snap) => {
-        const temp = new Map(cacheMap);
+        const temp = new Map();
         snap.docs.forEach((d) => temp.set(d.id, normalizeCita(d)));
         cacheMap = temp;
         commit();
