@@ -665,7 +665,8 @@ function Overview({
   onGoAgenda,
   softwareLogo, // NEW PROP
   isDoc,
-  currentDoctorId
+  currentDoctorId,
+  basePath // NEW PROP
 }) {
   const navigate = useNavigate();
 
@@ -846,21 +847,21 @@ function Overview({
                       {/* Quick Access to Clinical Actions */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
-                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
+                          onClick={() => navigate(`${basePath}/pacientes?id=${c.pacienteId}&tab=anamnesis`)}
                           className="text-[10px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-all"
                           title="Ver Historia Clínica"
                         >
                           📋 Historia
                         </button>
                         <button
-                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=odonto`)}
+                          onClick={() => navigate(`${basePath}/pacientes?id=${c.pacienteId}&tab=odonto`)}
                           className="text-[10px] font-black uppercase tracking-wider bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-all"
                           title="Ver Odontograma"
                         >
                           🦷 Odontograma
                         </button>
                         <button
-                          onClick={() => navigate(`/dashboard/pacientes?id=${c.pacienteId}&tab=evo`)}
+                          onClick={() => navigate(`${basePath}/pacientes?id=${c.pacienteId}&tab=evo`)}
                           className={`text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-lg transition-all shadow-sm
                             ${isCompleted 
                               ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200/50 hover:bg-emerald-100/70' 
@@ -888,21 +889,21 @@ function Overview({
               </h4>
               <div className="space-y-2">
                 <button 
-                  onClick={() => navigate('/dashboard/pacientes')}
+                  onClick={() => navigate(`${basePath}/pacientes`)}
                   className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
                 >
                   <span className="text-sm font-bold text-slate-700">Buscar Paciente</span>
                   <FiUsers className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
                 </button>
                 <button 
-                  onClick={() => navigate('/dashboard/agenda')}
+                  onClick={() => navigate(`${basePath}/agenda`)}
                   className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
                 >
                   <span className="text-sm font-bold text-slate-700">Mi Agenda Completa</span>
                   <FiCalendar className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
                 </button>
                 <button 
-                  onClick={() => navigate('/dashboard/reportes')}
+                  onClick={() => navigate(`${basePath}/reportes`)}
                   className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
                 >
                   <span className="text-sm font-bold text-slate-700">Mis Estadísticas</span>
@@ -1658,6 +1659,7 @@ export default function Dashboard() {
             onGoAgenda={() => setActiveModule("Agenda")}
             isDoc={isDoc}
             currentDoctorId={currentDoctorId}
+            basePath={basePath}
           />
         )}
     </DashboardLayout>

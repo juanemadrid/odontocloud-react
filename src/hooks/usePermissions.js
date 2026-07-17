@@ -79,7 +79,7 @@ export function usePermissions() {
             if (rol === "administrador") return true;
 
             if (rol === "doctor" || rol === "odontologo") {
-                const allowed = ["Agenda", "Pacientes", "Odontograma", "Documentos clínicos", "Historia clínica"];
+                const allowed = ["Agenda", "Pacientes", "Odontograma", "Documentos clínicos", "Historia clínica", "Gestion Reportes"];
                 const normAllowed = allowed.map(normalizeKey);
                 if (normAllowed.includes(queryKey) && action === "consultar") return true;
                 if (moduleName === "Agenda" && action === "consultar") return true;
