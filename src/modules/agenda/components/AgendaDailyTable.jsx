@@ -92,9 +92,27 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
             const doc = doctors.find(d => d.id === apt.doctorId);
             const branch = branches.find(b => b.id === apt.sucursalId);
             const chair = chairs.find(c => c.id === apt.consultorioId);
+            
+            let doctorDisplayName = "S/A";
+            if (doc) {
+                const firstName = (doc.nombre || doc.nombres || "").trim().split(/\s+/)[0];
+                const firstLastName = (doc.apellido || doc.apellidos || "").trim().split(/\s+/)[0];
+                doctorDisplayName = `${firstName} ${firstLastName}`.trim() || doc.nombre || "S/A";
+            } else {
+                const rawName = apt.doctor || apt.doctorName || "";
+                if (rawName) {
+                    const parts = rawName.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                        doctorDisplayName = `${parts[0]} ${parts[1]}`;
+                    } else {
+                        doctorDisplayName = rawName;
+                    }
+                }
+            }
+
             return {
                 ...apt,
-                doctorDisplayName: doc?.nombre || apt.doctor || apt.doctorName || "S/A",
+                doctorDisplayName,
                 sucursalDisplayName: branch?.nombre || apt.sucursal || apt.sucursalId || "PRINCIPAL",
                 chairDisplayName: chair?.nombre || apt.consultorioName || apt.consultorioId || "BOX 1"
             };

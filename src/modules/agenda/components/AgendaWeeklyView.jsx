@@ -73,7 +73,7 @@ function DraggableEvent({ appointment, style: initialStyle, onClick }) {
                 {/* Only show extra details if tall enough */}
                 {parseInt(initialStyle.height) > 40 && (
                     <div className={`mt-auto text-[8px] font-bold uppercase tracking-wider opacity-70 truncate ${isConfirmed ? 'text-blue-100' : 'text-slate-400'}`}>
-                        {appointment.doctorName || "S/A"}
+                        {appointment.doctorDisplayName || "S/A"}
                     </div>
                 )}
             </div>
@@ -85,7 +85,8 @@ export default function AgendaWeeklyView({
     date,
     appointments,
     onSlotClick,
-    onEventClick
+    onEventClick,
+    doctors = []
 }) {
     const startOfWeek = new Date(date);
     const day = startOfWeek.getDay(); // 0 (Sun) to 6 (Sat)
@@ -203,14 +204,36 @@ export default function AgendaWeeklyView({
                                         const aptDate = new Date(apt.start);
                                         return aptDate.toDateString() === dayDate.toDateString();
                                     })
-                                    .map(apt => (
-                                        <DraggableEvent
-                                            key={apt.id}
-                                            appointment={apt}
-                                            style={getEventStyle(apt)}
-                                            onClick={onEventClick}
-                                        />
-                                    ))}
+                                    .map(apt => {
+                                        const doc = doctors.find(d => d.id === apt.doctorId);
+                                        let doctorDisplayName = "S/A";
+                                        if (doc) {
+                                            const firstName = (doc.nombre || doc.nombres || "").trim().split(/\s+/)[0];
+                                            const firstLastName = (doc.apellido || doc.apellidos || "").trim().split(/\s+/)[0];
+                                            doctorDisplayName = `${firstName} ${firstLastName}`.trim() || doc.nombre || "S/A";
+                                        } else {
+                                            const rawName = apt.doctor || apt.doctorName || "";
+                                            if (rawName) {
+                                                const parts = rawName.trim().split(/\s+/);
+                                                if (parts.length >= 2) {
+                                                    doctorDisplayName = `${parts[0]} ${parts[1]}`;
+                                                } else {
+                                                    doctorDisplayName = rawName;
+                                                }
+                                            }
+                                        }
+                                        return (
+                                            <DraggableEvent
+                                                key={apt.id}
+                                                appointment={{
+                                                    ...apt,
+                                                    doctorDisplayName
+                                                }}
+                                                style={getEventStyle(apt)}
+                                                onClick={onEventClick}
+                                            />
+                                        );
+                                    })}
                             </div>
                         </div>
                     ))}

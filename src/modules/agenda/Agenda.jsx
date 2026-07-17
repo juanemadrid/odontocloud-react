@@ -600,7 +600,7 @@ export default function Agenda() {
                                 }}
                             />
                         )}
-                        {viewMode === 'week' && <AgendaWeeklyView date={selectedDate} appointments={appointments} onSlotClick={handleSlotClick} onEventClick={handleEventClick} />}
+                        {viewMode === 'week' && <AgendaWeeklyView date={selectedDate} appointments={appointments} onSlotClick={handleSlotClick} onEventClick={handleEventClick} doctors={doctors} />}
                         {viewMode === 'detail' && <AgendaDetailView appointments={appointments} doctors={doctors} />}
                     </div>
                 </div>

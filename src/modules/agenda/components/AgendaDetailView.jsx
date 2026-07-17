@@ -59,9 +59,14 @@ export default function AgendaDetailView({ appointments, doctors }) {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profesional</label>
                         <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 font-bold text-xs uppercase focus:outline-none focus:border-blue-500 transition-all">
                             <option value="">Todos los profesionales</option>
-                            {doctors.map(d => (
-                                <option key={d.id} value={d.id}>{d.nombre}</option>
-                            ))}
+                            {doctors.map(d => {
+                                const firstName = (d.nombre || d.nombres || "").trim().split(/\s+/)[0];
+                                const firstLastName = (d.apellido || d.apellidos || "").trim().split(/\s+/)[0];
+                                const displayName = `${firstName} ${firstLastName}`.trim() || d.nombre || "Doctor";
+                                return (
+                                    <option key={d.id} value={d.id}>{displayName}</option>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
@@ -105,7 +110,23 @@ export default function AgendaDetailView({ appointments, doctors }) {
                                         {apt.pacienteNombre || apt.paciente}
                                     </td>
                                     <td className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">
-                                        {apt.doctorName}
+                                        {(() => {
+                                            const doc = doctors.find(d => d.id === apt.doctorId);
+                                            if (doc) {
+                                                const firstName = (doc.nombre || doc.nombres || "").trim().split(/\s+/)[0];
+                                                const firstLastName = (doc.apellido || doc.apellidos || "").trim().split(/\s+/)[0];
+                                                return `${firstName} ${firstLastName}`.trim() || doc.nombre || "S/A";
+                                            }
+                                            const rawName = apt.doctor || apt.doctorName || "";
+                                            if (rawName) {
+                                                const parts = rawName.trim().split(/\s+/);
+                                                if (parts.length >= 2) {
+                                                    return `${parts[0]} ${parts[1]}`;
+                                                }
+                                                return rawName;
+                                            }
+                                            return "S/A";
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${apt.status === 'confirmed' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
