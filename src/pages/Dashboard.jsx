@@ -902,13 +902,6 @@ function Overview({
                   <span className="text-sm font-bold text-slate-700">Mi Agenda Completa</span>
                   <FiCalendar className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
                 </button>
-                <button 
-                  onClick={() => navigate(`${basePath}/reportes`)}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between group"
-                >
-                  <span className="text-sm font-bold text-slate-700">Mis Estadísticas</span>
-                  <FiPieChart className="text-slate-400 group-hover:text-blue-600 transition-colors" size={18} />
-                </button>
               </div>
             </div>
 
