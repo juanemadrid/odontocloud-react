@@ -50,12 +50,16 @@ export default function HeroSection({ config = {}, onShowTrial }) {
 
     const activeImage = getImageUrl(activeSlide.image);
 
-    const rawTitle = activeSlide.title || config.heroTitle || (config.isMaster ? "Gestión Integral|Clínica Dental" : `${config.name}|Clínica Dental`);
+    const rawTitle = (activeSlide && typeof activeSlide.title === 'string') 
+        ? activeSlide.title 
+        : (config.heroTitle || (config.isMaster ? "Gestión Integral|Clínica Dental" : `${config.name}|Clínica Dental`));
     const parts = rawTitle.split('|');
-    const titlePart1 = parts[0]?.trim();
+    const titlePart1 = parts[0]?.trim() || "";
     const titlePart2 = parts[1]?.trim() || "";
 
-    const activeSubtitle = activeSlide.subtitle || config.heroSubtitle || "Optimiza cada aspecto de tu práctica con nuestra suite de gestión.";
+    const activeSubtitle = (activeSlide && typeof activeSlide.subtitle === 'string')
+        ? activeSlide.subtitle
+        : (config.heroSubtitle || "Optimiza cada aspecto de tu práctica con nuestra suite de gestión.");
 
     return (
         <section
