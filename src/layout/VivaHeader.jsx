@@ -172,7 +172,7 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                 <div className="w-full mx-auto px-4 md:px-8 flex justify-between items-center h-full max-w-[1600px]">
 
                     {/* LEFT: LOGO */}
-                    <div className="flex-shrink-0 flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
+                    <div className="flex-shrink-0 flex items-center gap-3 cursor-pointer group" onClick={() => navigate(config?.isMaster ? '/' : (clinicBase || '/'))}>
                         <img
                             src={config?.logo?.startsWith('/') ? `${import.meta.env.BASE_URL}${config.logo.slice(1)}` : (config?.logo || `${import.meta.env.BASE_URL}assets/logo.png`)}
                             alt="Logo"
