@@ -236,10 +236,12 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                     <SectionTitle num="2" title="Datos de contacto & Ubicación" />
                     <div className="pl-0 md:pl-4 space-y-1">
                         <FormRow label="País de nacimiento" required error={errors.paisNacimiento}>
-                            <select {...register("paisNacimiento")} className="form-input text-sm w-full md:w-64">
-                                <option value="">Seleccione...</option>
-                                {PAISES.map(p => <option key={typeof p === "object" ? p.pais : p} value={typeof p === "object" ? p.pais : p}>{typeof p === "object" ? p.pais : p}</option>)}
-                            </select>
+                            <SearchableSelect 
+                                value={watch("paisNacimiento")}
+                                onChange={(val) => setValue("paisNacimiento", val, { shouldDirty: true })}
+                                options={PAISES.map(p => typeof p === "object" ? p.pais : p)}
+                                placeholder="Seleccione..."
+                            />
                         </FormRow>
                         <FormRow label="Ciudad de nacimiento">
                             {!paisNacimiento ? (
@@ -280,10 +282,12 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                         </FormRow>
 
                         <FormRow label="País de domicilio" required error={errors.paisDomicilio}>
-                            <select {...register("paisDomicilio")} className="form-input text-sm w-full md:w-64">
-                                <option value="">Seleccione...</option>
-                                {PAISES.map(p => <option key={typeof p === "object" ? p.pais : p} value={typeof p === "object" ? p.pais : p}>{typeof p === "object" ? p.pais : p}</option>)}
-                            </select>
+                            <SearchableSelect 
+                                value={watch("paisDomicilio")}
+                                onChange={(val) => setValue("paisDomicilio", val, { shouldDirty: true })}
+                                options={PAISES.map(p => typeof p === "object" ? p.pais : p)}
+                                placeholder="Seleccione..."
+                            />
                         </FormRow>
                         <FormRow label="Ciudad de domicilio" required error={errors.ciudadDomicilio}>
                             {!paisDomicilio ? (

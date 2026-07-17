@@ -728,13 +728,12 @@ export default function PatientForm({
                             <div className="pl-0 md:pl-4 space-y-1">
                                 {isVisible("paisNacimiento") && (
                                     <FormRow label="País de nacimiento" required={isRequired("paisNacimiento", true)} error={errors.paisNacimiento}>
-                                        <select {...register("paisNacimiento")} className="form-input text-sm w-full md:w-64">
-                                            <option value="">Seleccione...</option>
-                                            {PAISES.map(p => {
-                                                const label = typeof p === 'object' ? p.pais : p;
-                                                return <option key={label} value={label}>{label}</option>;
-                                            })}
-                                        </select>
+                                        <SearchableSelect 
+                                            value={watch("paisNacimiento")}
+                                            onChange={(val) => setValue("paisNacimiento", val, { shouldDirty: true })}
+                                            options={PAISES.map(p => typeof p === "object" ? p.pais : p)}
+                                            placeholder="Seleccione..."
+                                        />
                                     </FormRow>
                                 )}
 
@@ -783,13 +782,12 @@ export default function PatientForm({
 
                                 {isVisible("paisDomicilio") && (
                                     <FormRow label="País de domicilio" required={isRequired("paisDomicilio", true)} error={errors.paisDomicilio}>
-                                        <select {...register("paisDomicilio")} className="form-input text-sm w-full md:w-64">
-                                            <option value="">Seleccione...</option>
-                                            {PAISES.map(p => {
-                                                const label = typeof p === 'object' ? p.pais : p;
-                                                return <option key={label} value={label}>{label}</option>;
-                                            })}
-                                        </select>
+                                        <SearchableSelect 
+                                            value={watch("paisDomicilio")}
+                                            onChange={(val) => setValue("paisDomicilio", val, { shouldDirty: true })}
+                                            options={PAISES.map(p => typeof p === "object" ? p.pais : p)}
+                                            placeholder="Seleccione..."
+                                        />
                                     </FormRow>
                                 )}
 

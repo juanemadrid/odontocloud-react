@@ -63,13 +63,13 @@ export default function SearchableSelect({
                 type="button"
                 disabled={disabled || loading}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full flex items-center justify-between bg-white border rounded-xl px-4 py-2 text-sm text-left font-bold transition-all ${
+                className={`w-full flex items-center justify-between bg-white border rounded-xl px-4 py-2 text-sm text-left font-medium transition-all ${
                     disabled || loading
                         ? "border-slate-100 bg-slate-50/50 text-slate-400 cursor-not-allowed"
                         : "border-slate-200 text-slate-800 hover:border-slate-300 active:scale-[0.99] cursor-pointer shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30"
                 }`}
             >
-                <span className="truncate uppercase tracking-tight">
+                <span className="truncate text-slate-700">
                     {value || displayPlaceholder}
                 </span>
                 <FiChevronDown
@@ -93,14 +93,14 @@ export default function SearchableSelect({
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Buscar..."
-                            className="w-full bg-slate-50 border border-slate-100 rounded-lg pl-8 pr-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-400 transition-all placeholder:text-slate-400"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-lg pl-8 pr-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-400 transition-all placeholder:text-slate-400"
                         />
                     </div>
 
                     {/* Scrollable options list */}
                     <div className="overflow-y-auto max-h-48 custom-scrollbar space-y-0.5 pr-0.5">
                         {filteredOptions.length === 0 ? (
-                            <div className="text-center py-4 text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">
+                            <div className="text-center py-4 text-xs font-medium text-slate-400 leading-none">
                                 No se encontraron resultados
                             </div>
                         ) : (
@@ -112,9 +112,9 @@ export default function SearchableSelect({
                                         onChange(opt);
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg transition-colors duration-200 uppercase tracking-tight ${
+                                    className={`w-full text-left px-3 py-2 text-xs font-medium rounded-lg transition-colors duration-200 ${
                                         value === opt
-                                            ? "bg-blue-50 text-blue-600 font-extrabold"
+                                            ? "bg-blue-50 text-blue-600 font-bold"
                                             : "text-slate-700 hover:bg-slate-50"
                                     }`}
                                 >
