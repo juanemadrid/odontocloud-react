@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FiAlertCircle, FiSearch, FiPlus, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
 import { updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
 import { v4 as uuidv4 } from 'uuid';
+import { searchPatients } from '../../../services/patientService';
 
 export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
     const toast = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Modal states
+    // Autocomplete states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+    const dropdownRef = useRef(null);
+
+    // Modal states for manual edit/add
     const [isOpen, setIsOpen] = useState(false);
     const [currentBen, setCurrentBen] = useState(null);
     const [formVal, setFormVal] = useState({ nombre: '', documento: '', direccion: '', telefono: '' });
@@ -24,6 +31,49 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
         if (onSwitchTab) onSwitchTab('eps'); 
     };
 
+    // Close search dropdown on click outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Search patients in the system
+    useEffect(() => {
+        const fetchPatients = async () => {
+            if (searchQuery.trim().length < 2) {
+                setSearchResults([]);
+                return;
+            }
+            try {
+                const results = await searchPatients(patient.inquilino, searchQuery);
+                // Exclude current patient from results
+                const filteredResults = results.filter(p => p.id !== patient.id);
+                setSearchResults(filteredResults);
+            } catch (e) {
+                console.error("Error searching patients:", e);
+            }
+        };
+
+        const timer = setTimeout(fetchPatients, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, patient.inquilino, patient.id]);
+
+    // Clear selected patient if user manually edits search query
+    useEffect(() => {
+        if (selectedPatient) {
+            const nombre = selectedPatient.nombreCompleto || `${selectedPatient.nombres || ""} ${selectedPatient.apellidos || ""}`.trim();
+            if (searchQuery !== nombre) {
+                setSelectedPatient(null);
+            }
+        }
+    }, [searchQuery]);
+
+    // Save/Add manual entry
     const handleOpenAdd = () => {
         setCurrentBen(null);
         setFormVal({ nombre: '', documento: '', direccion: '', telefono: '' });
@@ -53,10 +103,8 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
         try {
             let updatedList;
             if (currentBen) {
-                // Edit existing
                 updatedList = beneficiarios.map(b => b.id === currentBen.id ? { ...b, ...formVal } : b);
             } else {
-                // Add new
                 const newBen = {
                     id: uuidv4(),
                     ...formVal,
@@ -75,6 +123,49 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
         } catch (e) {
             console.error(e);
             toast.error("Error al guardar beneficiario");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Add selected autocomplete patient
+    const handleAddClick = async () => {
+        if (!selectedPatient) {
+            // Fallback: If no patient is selected, open manual modal
+            handleOpenAdd();
+            return;
+        }
+
+        // Check if already in the list
+        const exists = beneficiarios.some(b => b.id === selectedPatient.id);
+        if (exists) {
+            toast.warn("Este beneficiario ya está agregado");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const newBen = {
+                id: selectedPatient.id,
+                nombre: selectedPatient.nombreCompleto || `${selectedPatient.nombres || ""} ${selectedPatient.apellidos || ""}`.trim(),
+                documento: selectedPatient.nroDocumento || '',
+                direccion: selectedPatient.barrio || selectedPatient.lugarResidencia || '',
+                telefono: selectedPatient.celular || '',
+                createdAt: Date.now()
+            };
+            const updatedList = [...beneficiarios, newBen];
+
+            await updateDoc(doc(db, "pacientes", patient.id), {
+                beneficiarios: updatedList,
+                actualizado: serverTimestamp()
+            });
+            onUpdate && onUpdate({ ...patient, beneficiarios: updatedList });
+            toast.success("Beneficiario agregado");
+            setSearchQuery('');
+            setSelectedPatient(null);
+        } catch (e) {
+            console.error(e);
+            toast.error("Error al agregar beneficiario");
         } finally {
             setIsSubmitting(false);
         }
@@ -99,11 +190,6 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
             setIsSubmitting(false);
         }
     };
-
-    const filtered = beneficiarios.filter(b => 
-        b.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.documento?.includes(searchTerm)
-    );
 
     // Si NO tiene convenio, mostrar un "Modal" o Empty State bloqueante en vez de la tabla
     if (!hasConvenio) {
@@ -141,18 +227,45 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                 
                 {/* TOOLBAR */}
                 <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 shrink-0">
-                    <div className="relative w-full md:w-80">
+                    <div ref={dropdownRef} className="relative w-full md:w-96">
                         <input 
                             type="text" 
                             className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-700"
                             placeholder="Buscar beneficiario..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setShowDropdown(true);
+                            }}
+                            onFocus={() => setShowDropdown(true)}
                         />
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+
+                        {showDropdown && searchResults.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto">
+                                {searchResults.map(p => {
+                                    const nombre = p.nombreCompleto || `${p.nombres || ""} ${p.apellidos || ""}`.trim();
+                                    return (
+                                        <button 
+                                            key={p.id} 
+                                            type="button" 
+                                            onClick={() => {
+                                                setSelectedPatient(p);
+                                                setSearchQuery(nombre);
+                                                setShowDropdown(false);
+                                            }}
+                                            className="w-full px-4 py-2 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                                        >
+                                            <div className="text-xs font-bold text-slate-700">{nombre}</div>
+                                            <div className="text-[10px] text-slate-400 mt-0.5">- {p.nroDocumento || p.id}</div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                     <button 
-                        onClick={handleOpenAdd}
+                        onClick={handleAddClick}
                         disabled={isSubmitting}
                         className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 flex items-center gap-2 transition-all active:scale-95 shrink-0"
                     >
@@ -173,8 +286,8 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filtered.length > 0 ? (
-                                filtered.map(ben => (
+                            {beneficiarios.length > 0 ? (
+                                beneficiarios.map(ben => (
                                     <tr key={ben.id} className="hover:bg-slate-50/50 transition-colors group">
                                         <td className="py-4 px-6 font-bold text-sm text-slate-800">{ben.nombre}</td>
                                         <td className="py-4 px-6 text-sm text-slate-600">{ben.documento || '---'}</td>
