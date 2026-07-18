@@ -68,36 +68,36 @@ function EvolutionCard({ evo, onEdit, onDelete, onSignDoctor, onSignPatient, pat
                     {/* FIRMA DOCTOR (D) */}
                     {isSignedDoc ? (
                         <span
-                            className="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100 text-[10px] font-black cursor-help"
+                            className="h-7 px-2 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100 text-[10px] font-black gap-1 cursor-help"
                             title={`Firmado por Doctor: ${evo.doctorSignature.signature}`}
                         >
-                            D✓
+                            <FiCheck size={11} strokeWidth={3} /> D
                         </span>
                     ) : (
                         <button
                             onClick={() => onSignDoctor(evo)}
-                            className="w-7 h-7 bg-slate-50 text-slate-500 hover:bg-indigo-600 hover:text-white rounded-lg flex items-center justify-center transition-all border border-slate-100 text-[10px] font-black"
+                            className="h-7 px-2 bg-slate-50 text-slate-500 hover:bg-indigo-600 hover:text-white rounded-lg flex items-center justify-center gap-1 transition-all border border-slate-100 text-[10px] font-black"
                             title="Firmar como Doctor (D)"
                         >
-                            D
+                            <FiPenTool size={11} /> D
                         </button>
                     )}
 
                     {/* FIRMA PACIENTE (P) */}
                     {isSignedPat ? (
                         <span
-                            className="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100 text-[10px] font-black cursor-help"
+                            className="h-7 px-2 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100 text-[10px] font-black gap-1 cursor-help"
                             title="Firmado por Paciente"
                         >
-                            P✓
+                            <FiCheck size={11} strokeWidth={3} /> P
                         </span>
                     ) : (
                         <button
                             onClick={() => onSignPatient(evo)}
-                            className="w-7 h-7 bg-slate-50 text-slate-500 hover:bg-blue-600 hover:text-white rounded-lg flex items-center justify-center transition-all border border-slate-100 text-[10px] font-black"
+                            className="h-7 px-2 bg-slate-50 text-slate-500 hover:bg-blue-600 hover:text-white rounded-lg flex items-center justify-center gap-1 transition-all border border-slate-100 text-[10px] font-black"
                             title="Firmar como Paciente (P)"
                         >
-                            P
+                            <FiPenTool size={11} /> P
                         </button>
                     )}
 
@@ -183,7 +183,6 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
         const { x, y } = getCoordinates(e);
         const ctx = canvasRef.current.getContext('2d');
         
-        // Guardar estado actual antes de pintar
         const canvas = canvasRef.current;
         const state = ctx.getImageData(0, 0, canvas.width, canvas.height);
         setHistory(prev => [...prev, state]);
@@ -241,7 +240,6 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
             const canvas = canvasRef.current;
             const dataUrl = canvas.toDataURL('image/png');
             
-            // Verificar si el lienzo está en blanco (si no dibujó nada y no tenía firma previa)
             const blank = document.createElement('canvas');
             blank.width = canvas.width;
             blank.height = canvas.height;
@@ -297,50 +295,115 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
                 {/* Body Content */}
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
                     
-                    {/* PDF Preview Frame (Simulado como hoja clínica profesional) */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-slate-50 p-6 max-h-[360px] overflow-y-auto custom-scrollbar">
-                        <div className="bg-white border border-slate-100 p-8 shadow-sm rounded-lg max-w-2xl mx-auto font-sans text-slate-800">
+                    {/* PDF Preview Frame (Simulado como hoja clínica profesional idéntico a OralDrive) */}
+                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-slate-50 p-6 max-h-[380px] overflow-y-auto custom-scrollbar">
+                        <div className="bg-white border border-slate-100 p-8 shadow-sm rounded-lg max-w-3xl mx-auto font-sans text-slate-800">
+                            
                             {/* Cabecera Clínica */}
-                            <div className="flex justify-between items-start border-b pb-4 mb-4">
-                                <div>
-                                    <h2 className="text-sm font-black uppercase text-slate-800 leading-tight">ATM Centro del Dolor Orofacial</h2>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Nit: 900.123.456-7 · Calle 14 #11-63</p>
+                            <div className="flex justify-between items-center pb-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-xl border flex items-center justify-center font-black text-indigo-600 text-xs shadow-inner">
+                                        ATM
+                                    </div>
+                                    <div>
+                                        <h2 className="text-[12px] font-black uppercase text-slate-800 leading-tight">ATM Centro del Dolor Orofacial</h2>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">64576359-3 · Calle 16 #17-68</p>
+                                    </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100 uppercase">Historial Clínico</span>
+                                    <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-widest">Evolución</span>
                                 </div>
                             </div>
 
-                            {/* Info Paciente en Tabla */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[10px] bg-slate-50 p-3 rounded-lg border border-slate-100 mb-6">
-                                <div>
-                                    <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Nombre</span>
-                                    <span className="font-bold text-slate-700">{patient?.nombreCompleto || patient?.nombre}</span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Identificación</span>
-                                    <span className="font-bold text-slate-700">{patient?.tipoDocumento || 'C.C'} {patient?.documento || patient?.cedula || 'N/A'}</span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Edad</span>
-                                    <span className="font-bold text-slate-700">{getEdad()} años</span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 font-bold block uppercase text-[8px] tracking-wider">Profesional</span>
-                                    <span className="font-bold text-slate-700">{evolution?.profesional}</span>
-                                </div>
+                            {/* Info Completa Paciente en Tabla Cuadrícula (Replicando la estructura de OralDrive) */}
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'sans-serif', fontSize: '9px', color: '#334155', marginBottom: '15px', border: '1px solid #cbd5e1' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', width: '18%', backgroundColor: '#f8fafc' }}>Nombre del paciente</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '32%' }}>{patient?.nombreCompleto || patient?.nombre}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', width: '15%', backgroundColor: '#f8fafc' }}>Edad</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '15%' }}>{getEdad()}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', width: '10%', backgroundColor: '#f8fafc' }}>Nro Historia</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '10%' }}>{patient?.documento || patient?.cedula || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Tipo documento</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.tipoDocumento || 'Cédula de ciudadanía'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Nro de documento</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="3">{patient?.documento || patient?.cedula || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Sexo</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.genero || patient?.sexo || 'Femenino'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Fecha y lugar de nacimiento</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="3">
+                                            {patient?.fechaNacimiento ? new Date(patient.fechaNacimiento).toLocaleDateString('es-CO') : '12/04/1996'} · {patient?.lugarNacimiento || 'Colombia - Sincelejo'}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Correo</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.email || patient?.correo || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Ocupación</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.ocupacion || 'Asistente Administrativo'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Fecha impresión</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{new Date().toLocaleDateString('es-CO')}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Teléfonos</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.celular || patient?.telefono || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Estado civil</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="3">{patient?.estadoCivil || 'Soltero'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Nombre responsable</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.nombreResponsable || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>EPS</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.nombreEps || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Doctor/Profesional</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{evolution?.profesional || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Parentesco responsable</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.parentesco || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Nombre acompañante</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="3">{patient?.nombreAcompanante || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Teléfono responsable</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{patient?.celularResponsable || 'N/A'}</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Tel. Acompañante</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="3">{patient?.telefonoAcompanante || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 'bold', backgroundColor: '#f8fafc' }}>Dirección residencia</td>
+                                        <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }} colSpan="5">{patient?.direccion || patient?.direccionResidencia || 'N/A'}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            {/* Separador Evoluciones */}
+                            <div className="flex items-center justify-center my-4">
+                                <div className="border-t border-dashed border-slate-300 w-full" />
+                                <span className="px-4 text-[9px] font-black uppercase text-slate-400 tracking-widest whitespace-nowrap">Evoluciones</span>
+                                <div className="border-t border-dashed border-slate-300 w-full" />
                             </div>
 
-                            {/* Evolución clínica */}
-                            <div className="space-y-3">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-1">Registro de Evolución</h3>
-                                <div className="text-[11px] font-bold text-slate-500 flex justify-between">
-                                    <span>Fecha: {new Date(evolution?.date).toLocaleDateString('es-CO')}</span>
-                                    <span>Plan: {evolution?.treatment || 'N/A'}</span>
-                                </div>
-                                <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-dashed border-slate-200">
+                            {/* Contenido Evolución */}
+                            <div className="space-y-2 mt-4 text-left">
+                                <p className="text-[10px] font-black text-slate-800">
+                                    {patient?.nombreCompleto || patient?.nombre} ({evolution?.profesional})
+                                    <span className="font-medium text-slate-400 block mt-0.5">
+                                        {new Date(evolution?.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })} — {new Date(evolution?.date).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                    </span>
+                                </p>
+                                <p className="text-[10px] text-slate-600 leading-relaxed font-semibold bg-slate-50 p-2.5 rounded border border-slate-100">
                                     {evolution?.description || evolution?.comentario}
                                 </p>
+                                {evolution?.treatment && (
+                                    <p className="text-[9px] font-bold text-slate-500 mt-2 uppercase tracking-wide">
+                                        {evolution?.treatment}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -524,9 +587,8 @@ export default function EvolutionList({ patientId, patientName, patientObj, onEd
         fetchPlans();
     }, [evolutions]);
 
-    // Firma Doctor
+    // Firma Doctor (Eliminada confirmación innecesaria al dar clic)
     const handleSignEvolutionDoctor = async (evoObj) => {
-        if (!window.confirm("¿Desea firmar digitalmente esta evolución como profesional?")) return;
         try {
             await updateDoc(doc(db, "clinical_evolutions", evoObj.id), {
                 doctorSignature: {
