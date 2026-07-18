@@ -729,7 +729,12 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                                     checked={plantillaDetails[s.id]?.realizado || false}
                                                                     onChange={(e) => setPlantillaDetails(prev => ({
                                                                         ...prev,
-                                                                        [s.id]: { ...prev[s.id], realizado: e.target.checked }
+                                                                        [s.id]: { 
+                                                                            ...prev[s.id], 
+                                                                            realizado: e.target.checked,
+                                                                            desc: s.desc || s.procedimiento || s.nombre || '',
+                                                                            dientes: s.dientes || ''
+                                                                        }
                                                                     }))}
                                                                 />
                                                                 <span className="md:hidden ml-2 text-[10px] font-bold tracking-widest uppercase text-slate-400">Finalizado</span>
@@ -1295,7 +1300,12 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                             checked={isChecked}
                                                             onChange={(e) => setPlantillaDetails(prev => ({
                                                                 ...prev,
-                                                                [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                                [s.id]: { 
+                                                                    ...prev[s.id], 
+                                                                    checked: e.target.checked,
+                                                                    desc: s.desc || s.procedimiento || s.nombre || '',
+                                                                    dientes: s.dientes || ''
+                                                                }
                                                             }))}
                                                         />
                                                     )}

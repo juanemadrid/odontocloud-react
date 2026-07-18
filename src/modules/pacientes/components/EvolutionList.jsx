@@ -38,9 +38,9 @@ function EvolutionCard({ evo, onEdit, onDelete, onSignDoctor, onSignPatient, pat
     });
 
     const procedureNames = procedures.map(p =>
-        p.dientes ? `[${p.dientes}] ${p.desc}` : p.desc
+        p.dientes ? `[Diente ${p.dientes}] ${p.desc}` : p.desc
     );
-    const infoLine = [evo.treatment, ...procedureNames].filter(Boolean).join(' · ');
+    const infoLine = [evo.treatment, procedureNames.join(', ')].filter(Boolean).join(' - ');
 
     return (
         <div className="bg-white rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all p-4">
@@ -226,8 +226,7 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
     };
 
     const handleAddHuella = () => {
-        setHuellaImage(FINGERPRINT_SVG);
-        toast.success("Huella digital leída con éxito (Simulado)");
+        toast.error("No se detectó huella. Dispositivo lector (huellero) no conectado.");
     };
 
     const handleRemoveHuella = () => {
@@ -436,13 +435,6 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
                                     className="px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors border border-rose-100"
                                 >
                                     Borrar firma
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleUndo}
-                                    className="px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors border border-rose-100"
-                                >
-                                    Deshacer
                                 </button>
                             </div>
                         </div>
