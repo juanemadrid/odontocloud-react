@@ -164,7 +164,7 @@ export default function EvolutionList({ patientId, patientName, onEdit, searchTe
             const lookup = {};
             await Promise.all(planIds.map(async (planId) => {
                 try {
-                    const planSnap = await getDoc(doc(db, "planes", planId));
+                    const planSnap = await getDoc(doc(db, "treatment_plans", planId));
                     if (planSnap.exists()) {
                         const planData = planSnap.data();
                         lookup[planId] = {};
