@@ -6,7 +6,7 @@ import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
 import { db } from '../../../firebase/firebaseConfig';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 
 export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditingPlan }) {
     const patientId = patient?.id;
@@ -260,6 +260,44 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     };
 
+    const handleGenerateInvoice = async (plan) => {
+        try {
+            // Check if invoice already exists
+            const q = query(
+                collection(db, "facturas"),
+                where("planId", "==", plan.id)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                toast.warning("Ya se ha generado una factura para este plan de tratamiento.");
+                return;
+            }
+
+            // Create new invoice document
+            const invoiceData = {
+                patientId: patientId,
+                inquilino: userProfile?.inquilino || "",
+                planId: plan.id,
+                nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
+                fechaISO: new Date().toISOString(),
+                total: Number(plan.total || 0),
+                estado: getPlanStatus(plan) === 'paid' ? 'Pagada' : 'Pendiente',
+                items: (plan.items || []).map(item => ({
+                    nombre: item.nombre || item.concepto || "Servicio Dental",
+                    precio: Number(item.amount || item.precio || 0),
+                    cantidad: Number(item.qty || 1)
+                }))
+            };
+
+            await addDoc(collection(db, "facturas"), invoiceData);
+            toast.success("¡Factura de venta generada exitosamente! Ya la puedes emitir desde la pestaña 'Histórico facturas'.");
+            loadData();
+        } catch (err) {
+            console.error("Error al generar la factura:", err);
+            toast.error("Ocurrió un error al generar la factura de venta.");
+        }
+    };
+
     if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Cargando registros...</div>;
 
     return (
@@ -428,6 +466,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 title="Ver Plan"
                                             >
                                                 <FiEdit3 size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleGenerateInvoice(p); }} 
+                                                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" 
+                                                title="Generar Factura de Venta"
+                                            >
+                                                <FiFileText size={14} />
                                             </button>
                                             <button 
                                                 onClick={(e) => handlePrint(e, p)} 
