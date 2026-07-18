@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { FiActivity, FiEdit3, FiTrash2, FiPenTool, FiCheck, FiFileText } from 'react-icons/fi';
 
-// Extraer procedimientos seleccionados de plantillaItems
-const getSelectedProcedures = (plantillaItems) => {
+// Extraer procedimientos seleccionados, con fallback a planItemsLookup para registros antiguos
+const getSelectedProcedures = (plantillaItems, planItemsLookup = {}) => {
     if (!plantillaItems) return [];
     return Object.entries(plantillaItems)
         .filter(([, v]) => v?.checked === true)
-        .map(([, v]) => v.desc || v.procedimiento || v.nombre || '')
-        .filter(Boolean);
+        .map(([itemId, v]) => {
+            const desc = v.desc || v.procedimiento || v.nombre
+                || planItemsLookup[itemId]?.desc  // fallback para registros antiguos
+                || '';
+            const dientes = v.dientes || planItemsLookup[itemId]?.dientes || '';
+            return { desc, dientes };
+        })
+        .filter(p => p.desc);
 };
 
-function EvolutionCard({ evo, onEdit, onDelete, onSign, patientName }) {
+function EvolutionCard({ evo, onEdit, onDelete, onSign, patientName, planItemsLookup }) {
     const isRemission = evo.type === 'remission';
-    const procedures = getSelectedProcedures(evo.plantillaItems);
+    const procedures = getSelectedProcedures(evo.plantillaItems, planItemsLookup);
     const isSigned = !!evo.doctorSignature?.signature;
     const text = evo.description || evo.comentario || '';
 
@@ -26,6 +32,12 @@ function EvolutionCard({ evo, onEdit, onDelete, onSign, patientName }) {
     const timeStr = evo.date.toLocaleTimeString('es-CO', {
         hour: '2-digit', minute: '2-digit', hour12: true
     });
+
+    // Construir linea "plan · procedimiento1 · procedimiento2"
+    const procedureNames = procedures.map(p =>
+        p.dientes ? `[${p.dientes}] ${p.desc}` : p.desc
+    );
+    const infoLine = [evo.treatment, ...procedureNames].filter(Boolean).join(' · ');
 
     return (
         <div className="bg-white rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all p-4">
@@ -96,12 +108,9 @@ function EvolutionCard({ evo, onEdit, onDelete, onSign, patientName }) {
             )}
 
             {/* FILA 4: Plan · Procedimientos */}
-            {(evo.treatment || procedures.length > 0) && (
+            {infoLine && (
                 <p className="text-[11px] font-bold text-slate-500">
-                    {[
-                        evo.treatment,
-                        ...procedures
-                    ].filter(Boolean).join(' · ')}
+                    {infoLine}
                 </p>
             )}
         </div>
@@ -112,6 +121,7 @@ export default function EvolutionList({ patientId, patientName, onEdit, searchTe
     const { userProfile } = useAuth();
     const [evolutions, setEvolutions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [planItemsLookup, setPlanItemsLookup] = useState({}); // planId -> { itemId -> {desc, dientes} }
     const toast = useToast();
 
     useEffect(() => {
@@ -138,6 +148,41 @@ export default function EvolutionList({ patientId, patientName, onEdit, searchTe
 
         return () => unsubscribe();
     }, [patientId]);
+
+    // Cargar planes para resoler nombres de procedimientos en registros antiguos
+    useEffect(() => {
+        if (evolutions.length === 0) return;
+
+        const planIds = [...new Set(
+            evolutions
+                .filter(e => e.planId)
+                .map(e => e.planId)
+        )];
+        if (planIds.length === 0) return;
+
+        const fetchPlans = async () => {
+            const lookup = {};
+            await Promise.all(planIds.map(async (planId) => {
+                try {
+                    const planSnap = await getDoc(doc(db, "planes", planId));
+                    if (planSnap.exists()) {
+                        const planData = planSnap.data();
+                        lookup[planId] = {};
+                        (planData.items || []).forEach(item => {
+                            lookup[planId][item.id] = {
+                                desc: item.desc || item.procedimiento || item.nombre || '',
+                                dientes: item.dientes || ''
+                            };
+                        });
+                    }
+                } catch (e) {
+                    // Plan no encontrado o sin permisos, ignorar
+                }
+            }));
+            setPlanItemsLookup(lookup);
+        };
+        fetchPlans();
+    }, [evolutions]);
 
     const handleSignEvolution = async (evoObj) => {
         if (!window.confirm("¿Desea firmar digitalmente esta evolución?")) return;
@@ -188,7 +233,8 @@ export default function EvolutionList({ patientId, patientName, onEdit, searchTe
     const filtered = evolutions.filter(evo => {
         if (!searchTerm) return true;
         const q = searchTerm.toLowerCase();
-        const procedures = getSelectedProcedures(evo.plantillaItems).join(' ');
+        const lookup = evo.planId ? (planItemsLookup[evo.planId] || {}) : {};
+        const procedures = getSelectedProcedures(evo.plantillaItems, lookup).map(p => p.desc).join(' ');
         return (
             (evo.description || '').toLowerCase().includes(q) ||
             (evo.profesional || '').toLowerCase().includes(q) ||
@@ -210,16 +256,20 @@ export default function EvolutionList({ patientId, patientName, onEdit, searchTe
             </div>
 
             <div className="space-y-3">
-                {filtered.map((evo) => (
-                    <EvolutionCard
-                        key={evo.id}
-                        evo={evo}
-                        patientName={patientName || evo.patientName || 'Paciente'}
-                        onEdit={onEdit}
-                        onDelete={handleDelete}
-                        onSign={handleSignEvolution}
-                    />
-                ))}
+                {filtered.map((evo) => {
+                    const lookup = evo.planId ? (planItemsLookup[evo.planId] || {}) : {};
+                    return (
+                        <EvolutionCard
+                            key={evo.id}
+                            evo={evo}
+                            patientName={patientName || evo.patientName || 'Paciente'}
+                            planItemsLookup={lookup}
+                            onEdit={onEdit}
+                            onDelete={handleDelete}
+                            onSign={handleSignEvolution}
+                        />
+                    );
+                })}
                 {filtered.length === 0 && searchTerm && (
                     <div className="text-center py-10 text-slate-400 text-xs font-bold uppercase tracking-widest">
                         No se encontraron coincidencias.
