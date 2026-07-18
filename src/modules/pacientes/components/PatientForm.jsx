@@ -1230,15 +1230,24 @@ export default function PatientForm({
 
                                         {isVisible("convenioBeneficio") && (
                                              <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
-                                                 <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
-                                                     <option value="">Ninguno / Particular</option>
-                                                     {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
-                                                 </select>
+                                                 <SearchableSelect
+                                                     value={watch("convenioBeneficio")}
+                                                     onChange={(val) => setValue("convenioBeneficio", val === "Ninguno / Particular" ? "" : val, { shouldDirty: true })}
+                                                     options={["Ninguno / Particular", ...conveniosList]}
+                                                     placeholder="Ninguno / Particular"
+                                                     className="w-full md:w-64"
+                                                 />
                                              </FormRow>
                                          )}
                                         {isVisible("convenioPago") && (
                                             <FormRow label="Convenio de Pago">
-                                                <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
+                                                <SearchableSelect
+                                                     value={watch("convenioPago")}
+                                                     onChange={(val) => setValue("convenioPago", val === "Ninguno" ? "" : val, { shouldDirty: true })}
+                                                     options={["Ninguno", ...conveniosList]}
+                                                     placeholder="Referencia"
+                                                     className="w-full md:w-64"
+                                                 />
                                             </FormRow>
                                         )}
                                     </div>

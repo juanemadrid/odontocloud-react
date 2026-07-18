@@ -770,13 +770,22 @@ const FormAseguramiento = ({ conveniosList = [] }) => {
                         <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-80" placeholder="Póliza de salud del paciente" />
                     </FormRow>
                     <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
-                        <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
-                            <option value="">Ninguno / Particular</option>
-                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchableSelect
+                            value={watch("convenioBeneficio")}
+                            onChange={(val) => setValue("convenioBeneficio", val === "Ninguno / Particular" ? "" : val, { shouldDirty: true })}
+                            options={["Ninguno / Particular", ...conveniosList]}
+                            placeholder="Ninguno / Particular"
+                            className="w-full md:w-64"
+                        />
                     </FormRow>
                     <FormRow label="Convenio de Pago" error={errors.convenioPago}>
-                        <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
+                        <SearchableSelect
+                            value={watch("convenioPago")}
+                            onChange={(val) => setValue("convenioPago", val === "Ninguno" ? "" : val, { shouldDirty: true })}
+                            options={["Ninguno", ...conveniosList]}
+                            placeholder="Referencia"
+                            className="w-full md:w-64"
+                        />
                     </FormRow>
                 </div>
             </div>
@@ -819,17 +828,23 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [], conveniosLi
                 <SectionTitle num="4" title="Estrategia de Mercadeo" />
                 <div className="pl-0 md:pl-4 space-y-1">
                     <FormRow label="Convenio beneficio">
-                        <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
-                            <option value="">Seleccione...</option>
-                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchableSelect
+                            value={watch("convenioBeneficio")}
+                            onChange={(val) => setValue("convenioBeneficio", val === "Ninguno" ? "" : val, { shouldDirty: true })}
+                            options={["Ninguno", ...conveniosList]}
+                            placeholder="Seleccione..."
+                            className="w-full md:w-64"
+                        />
                     </FormRow>
 
                     <FormRow label="Convenio de pago">
-                        <select {...register("convenioPago")} className="form-input text-sm w-full md:w-64">
-                            <option value="">Seleccione...</option>
-                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchableSelect
+                            value={watch("convenioPago")}
+                            onChange={(val) => setValue("convenioPago", val === "Ninguno" ? "" : val, { shouldDirty: true })}
+                            options={["Ninguno", ...conveniosList]}
+                            placeholder="Seleccione..."
+                            className="w-full md:w-64"
+                        />
                     </FormRow>
 
                     <FormRow label="Cómo nos conoció">
