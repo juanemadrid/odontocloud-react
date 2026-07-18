@@ -32,6 +32,14 @@
         { "fieldPath": "inquilino", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "facturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "order": "ASCENDING" },
+        { "fieldPath": "fechaISO", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

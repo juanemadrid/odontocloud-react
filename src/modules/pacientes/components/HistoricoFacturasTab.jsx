@@ -54,7 +54,8 @@ export default function HistoricoFacturasTab({ patientId, patient }) {
                             factusClientSecret: data.factusClientSecret,
                             username: data.factusUsername,
                             password: data.factusPassword,
-                            factusTestMode: data.factusTestMode !== undefined ? data.factusTestMode : true
+                            factusTestMode: data.factusTestMode !== undefined ? data.factusTestMode : true,
+                            factusNumberingRangeId: data.factusNumberingRangeId || 1
                         });
                     }
                 }

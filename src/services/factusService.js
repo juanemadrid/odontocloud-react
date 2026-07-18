@@ -87,19 +87,15 @@ export const getNumberingRanges = async (token, testMode = true) => {
  * Enviar factura a Factus para validación y emisión ante la DIAN
  */
 export const sendInvoice = async (invoice, patient, credentials) => {
-    const { factusClientId, factusClientSecret, username, password, factusTestMode } = credentials;
+    const { factusClientId, factusClientSecret, username, password, factusTestMode, factusNumberingRangeId } = credentials;
     
     // 1. Obtener Token
     const authData = await getAccessToken(factusClientId, factusClientSecret, username, password, factusTestMode);
     const token = authData.access_token;
     
-    // 2. Obtener Rango de Numeración Activo de Factus
-    const rangesData = await getNumberingRanges(token, factusTestMode);
-    const activeRange = rangesData?.data?.find(r => r.is_active) || rangesData?.data?.[0];
-    
-    if (!activeRange) {
-        throw new Error("No se encontró ningún rango de numeración activo en tu cuenta de Factus.");
-    }
+    // 2. Usar el Rango de Numeración guardado en configuración.
+    // En Sandbox de Factus, el ID por defecto es 1 (puedes consultarlo en tu panel de Factus → Configuración → Numeración).
+    const numberingRangeId = factusNumberingRangeId || 1;
     
     // 3. Formatear items de la factura para Factus
     const factusItems = (invoice.items || []).map((item, idx) => {
@@ -143,7 +139,7 @@ export const sendInvoice = async (invoice, patient, credentials) => {
 
     const payload = {
         document: "01", // Factura Electrónica de Venta
-        numbering_range_id: activeRange.id,
+        numbering_range_id: numberingRangeId,
         reference_code: `FACT-${invoice.id.slice(-6).toUpperCase()}-${Date.now()}`,
         observation: invoice.observaciones || "Emitido desde OdontoCloud",
         payment_form: 1, // Pago de contado

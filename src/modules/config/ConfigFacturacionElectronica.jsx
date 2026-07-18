@@ -23,6 +23,7 @@ export default function ConfigFacturacionElectronica() {
         factusUsername: "",
         factusPassword: "",
         factusTestMode: true,
+        factusNumberingRangeId: "",
         dianResolucion: "",
         dianPrefijo: "",
         dianRangoDesde: 1,
@@ -50,6 +51,7 @@ export default function ConfigFacturacionElectronica() {
                     factusUsername: data.factusUsername || "",
                     factusPassword: data.factusPassword || "",
                     factusTestMode: data.factusTestMode !== undefined ? data.factusTestMode : true,
+                    factusNumberingRangeId: data.factusNumberingRangeId || "",
                     dianResolucion: data.dianResolucion || "",
                     dianPrefijo: data.dianPrefijo || "",
                     dianRangoDesde: data.dianRangoDesde || 1,
@@ -219,6 +221,17 @@ export default function ConfigFacturacionElectronica() {
                                 <span className="text-xs font-black uppercase tracking-wide text-slate-700 block">Modo de Pruebas (Sandbox)</span>
                                 <span className="text-[10px] font-medium text-slate-400">Mantener activado para realizar facturas ficticias de prueba sin validez legal.</span>
                             </div>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID del Rango de Numeración Factus</label>
+                            <Input
+                                type="number"
+                                value={formData.factusNumberingRangeId}
+                                onChange={e => setFormData({ ...formData, factusNumberingRangeId: Number(e.target.value) })}
+                                placeholder="Ej: 1 (Sandbox por defecto) — consúltalo en Factus → Configuración → Numeración"
+                            />
+                            <p className="text-[10px] font-bold text-slate-400 ml-1">Ingresa el ID numérico del rango de numeración habilitado en tu cuenta de Factus. Para el Sandbox de pruebas el valor por defecto es <strong>1</strong>.</p>
                         </div>
                     </div>
                 </div>
