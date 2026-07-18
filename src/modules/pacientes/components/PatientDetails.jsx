@@ -779,13 +779,7 @@ const FormAseguramiento = ({ conveniosList = [] }) => {
                         />
                     </FormRow>
                     <FormRow label="Convenio de Pago" error={errors.convenioPago}>
-                        <SearchableSelect
-                            value={watch("convenioPago")}
-                            onChange={(val) => setValue("convenioPago", val === "Ninguno" ? "" : val, { shouldDirty: true })}
-                            options={["Ninguno", ...conveniosList]}
-                            placeholder="Referencia"
-                            className="w-full md:w-64"
-                        />
+                        <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
                     </FormRow>
                 </div>
             </div>
@@ -838,13 +832,7 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [], conveniosLi
                     </FormRow>
 
                     <FormRow label="Convenio de pago">
-                        <SearchableSelect
-                            value={watch("convenioPago")}
-                            onChange={(val) => setValue("convenioPago", val === "Ninguno" ? "" : val, { shouldDirty: true })}
-                            options={["Ninguno", ...conveniosList]}
-                            placeholder="Seleccione..."
-                            className="w-full md:w-64"
-                        />
+                        <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Convenio de pago paciente" />
                     </FormRow>
 
                     <FormRow label="Cómo nos conoció">
