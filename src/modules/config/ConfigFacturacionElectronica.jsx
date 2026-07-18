@@ -242,12 +242,11 @@ export default function ConfigFacturacionElectronica() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resolución DIAN Nº *</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resolución DIAN Nº</label>
                             <Input
                                 value={formData.dianResolucion}
                                 onChange={e => setFormData({ ...formData, dianResolucion: e.target.value })}
                                 placeholder="Número de resolución autorizada"
-                                required
                             />
                         </div>
                         <div className="space-y-2">
@@ -260,33 +259,30 @@ export default function ConfigFacturacionElectronica() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rango Desde *</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rango Desde</label>
                                 <Input
                                     type="number"
                                     value={formData.dianRangoDesde}
                                     onChange={e => setFormData({ ...formData, dianRangoDesde: parseInt(e.target.value) || 1 })}
-                                    required
                                     min="1"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rango Hasta *</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rango Hasta</label>
                                 <Input
                                     type="number"
                                     value={formData.dianRangoHasta}
                                     onChange={e => setFormData({ ...formData, dianRangoHasta: parseInt(e.target.value) || 1000 })}
-                                    required
                                     min="1"
                                 />
                             </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave Técnica DIAN *</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave Técnica DIAN</label>
                             <Input
                                 value={formData.dianClaveTecnica}
                                 onChange={e => setFormData({ ...formData, dianClaveTecnica: e.target.value })}
                                 placeholder="Clave técnica de facturación electrónica"
-                                required
                             />
                         </div>
                     </div>
