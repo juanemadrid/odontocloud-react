@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
-import { FiFileText, FiCalendar, FiActivity, FiArrowRight, FiPrinter, FiEye, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
+import factusService from '../../../services/factusService';
+import { FiFileText, FiCalendar, FiActivity, FiArrowRight, FiPrinter, FiEye, FiCheckCircle, FiClock, FiXCircle, FiCloudLightning } from 'react-icons/fi';
 import { formatCurrency } from '../../../utils/formatters';
 
-export default function HistoricoFacturasTab({ patientId }) {
+export default function HistoricoFacturasTab({ patientId, patient }) {
+    const { userProfile } = useAuth();
+    const toast = useToast();
     const [facturas, setFacturas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [credentials, setCredentials] = useState(null);
+    const [emittingIds, setEmittingIds] = useState({});
 
     useEffect(() => {
         if (!patientId) return;
@@ -32,6 +39,67 @@ export default function HistoricoFacturasTab({ patientId }) {
 
         return () => unsubscribe();
     }, [patientId]);
+
+    useEffect(() => {
+        if (!userProfile?.inquilino) return;
+        const loadCredentials = async () => {
+            try {
+                const docRef = doc(db, "tenants", userProfile.inquilino);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.factusClientId && data.factusClientSecret) {
+                        setCredentials({
+                            factusClientId: data.factusClientId,
+                            factusClientSecret: data.factusClientSecret,
+                            username: data.factusUsername,
+                            password: data.factusPassword,
+                            factusTestMode: data.factusTestMode !== undefined ? data.factusTestMode : true
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Error loading Factus credentials:", err);
+            }
+        };
+        loadCredentials();
+    }, [userProfile]);
+
+    const handleEmitInvoice = async (invoice) => {
+        if (!credentials) {
+            toast.error("Por favor configura tus credenciales de Factus en la sección de Configuración antes de emitir facturas.");
+            return;
+        }
+        if (!patient?.documento && !patient?.identificacion) {
+            toast.error("El paciente debe tener registrado su Documento/NIT para poder facturar ante la DIAN.");
+            return;
+        }
+
+        setEmittingIds(prev => ({ ...prev, [invoice.id]: true }));
+        try {
+            const result = await factusService.sendInvoice(invoice, patient, credentials);
+            
+            if (result && result.data) {
+                const factRef = doc(db, "facturas", invoice.id);
+                await updateDoc(factRef, {
+                    factusEstado: "Emitido",
+                    factusUuid: result.data.uuid || null,
+                    factusNumero: result.data.number || null,
+                    factusPdfUrl: result.data.pdf || null,
+                    factusQr: result.data.qr || null,
+                    factusCufe: result.data.cufe || null,
+                    nroFactura: result.data.number || invoice.nroFactura || null
+                });
+                
+                toast.success(`Factura electrónica emitida con éxito. Número oficial: ${result.data.number}`);
+            }
+        } catch (error) {
+            console.error("Error emitiendo factura en Factus:", error);
+            toast.error(`Error de emisión en Factus: ${error.message}`);
+        } finally {
+            setEmittingIds(prev => ({ ...prev, [invoice.id]: false }));
+        }
+    };
 
     const getStatusStyles = (status) => {
         const s = (status || "pendiente").toLowerCase();
@@ -122,6 +190,26 @@ export default function HistoricoFacturasTab({ patientId }) {
                                  </div>
 
                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[22px]">
+                                      {fact.factusEstado === "Emitido" ? (
+                                          <a
+                                              href={fact.factusPdfUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              title="Ver PDF Oficial Factus"
+                                              className="w-11 h-11 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-[16px] flex items-center justify-center transition-all shadow-sm"
+                                          >
+                                              <FiFileText size={18} />
+                                          </a>
+                                      ) : (
+                                          <button
+                                              onClick={() => handleEmitInvoice(fact)}
+                                              disabled={emittingIds[fact.id]}
+                                              title="Emitir Factura Electrónica (DIAN / Factus)"
+                                              className="w-11 h-11 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white disabled:opacity-50 rounded-[16px] flex items-center justify-center transition-all shadow-sm"
+                                          >
+                                              <FiCloudLightning size={18} className={emittingIds[fact.id] ? "animate-bounce" : ""} />
+                                          </button>
+                                      )}
                                       <button
                                           onClick={() => alert("Mostrando detalle...")}
                                           title="Ver detalle"

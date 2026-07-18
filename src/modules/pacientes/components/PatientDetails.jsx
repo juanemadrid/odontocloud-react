@@ -1641,7 +1641,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     {activeTab === "saldo" && <SaldoTab patient={patient} />}
                                     {activeTab === "pago" && <PagoTab patient={patient} />}
                                     {activeTab === "hist_pago" && <HistoricoPagosTab patientId={patient.id} />}
-                                    {activeTab === "hist_fact" && <HistoricoFacturasTab patientId={patient.id} />}
+                                    {activeTab === "hist_fact" && <HistoricoFacturasTab patientId={patient.id} patient={patient} />}
                                     
                                     {["citas", "fact"].includes(activeTab) && (
                                         <div className="flex flex-col items-center justify-center min-h-[400px] p-10 text-center opacity-40">
