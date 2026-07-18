@@ -84,7 +84,7 @@ export default function EvolucionesTab({ patient }) {
 
             {/* Timeline Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30">
-                <EvolutionList patientId={patient?.id} onEdit={handleEdit} searchTerm={searchTerms} />
+                <EvolutionList patientId={patient?.id} patientName={patient?.nombreCompleto || patient?.nombre || ''} onEdit={handleEdit} searchTerm={searchTerms} />
             </div>
 
             {/* Float Modal Container */}
