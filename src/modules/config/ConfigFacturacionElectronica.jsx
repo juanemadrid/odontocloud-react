@@ -5,18 +5,23 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { FiSave, FiInfo, FiFileText, FiEye, FiEyeOff, FiKey } from "react-icons/fi";
 import Input from "../../components/ui/Input";
+import factusService from "../../services/factusService";
 
 export default function ConfigFacturacionElectronica() {
     const { userProfile } = useAuth();
     const toast = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [testingConnection, setTestingConnection] = useState(false);
     const [showSecret, setShowSecret] = useState(false);
+    const [showApiPassword, setShowApiPassword] = useState(false);
 
     // Estado del formulario
     const [formData, setFormData] = useState({
         factusClientId: "",
         factusClientSecret: "",
+        factusUsername: "",
+        factusPassword: "",
         factusTestMode: true,
         dianResolucion: "",
         dianPrefijo: "",
@@ -42,6 +47,8 @@ export default function ConfigFacturacionElectronica() {
                 setFormData({
                     factusClientId: data.factusClientId || "",
                     factusClientSecret: data.factusClientSecret || "",
+                    factusUsername: data.factusUsername || "",
+                    factusPassword: data.factusPassword || "",
                     factusTestMode: data.factusTestMode !== undefined ? data.factusTestMode : true,
                     dianResolucion: data.dianResolucion || "",
                     dianPrefijo: data.dianPrefijo || "",
@@ -56,6 +63,33 @@ export default function ConfigFacturacionElectronica() {
             toast.error("Error al cargar configuración");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTestConnection = async () => {
+        if (!formData.factusClientId || !formData.factusClientSecret || !formData.factusUsername || !formData.factusPassword) {
+            toast.error("Por favor ingresa todos los campos de credenciales de la API Factus (Client ID, Secret, Usuario y Contraseña) antes de probar la conexión.");
+            return;
+        }
+
+        setTestingConnection(true);
+        try {
+            const res = await factusService.testConnection({
+                factusClientId: formData.factusClientId,
+                factusClientSecret: formData.factusClientSecret,
+                username: formData.factusUsername,
+                password: formData.factusPassword,
+                factusTestMode: formData.factusTestMode
+            });
+
+            if (res.success) {
+                toast.success("¡Conexión establecida con éxito con Factus! Credenciales válidas.");
+            }
+        } catch (error) {
+            console.error("Error al probar la conexión con Factus:", error);
+            toast.error(`Error de conexión con Factus: ${error.message}`);
+        } finally {
+            setTestingConnection(false);
         }
     };
 
@@ -140,6 +174,36 @@ export default function ConfigFacturacionElectronica() {
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                                 >
                                     {showSecret ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuario / Correo API *</label>
+                            <Input
+                                value={formData.factusUsername}
+                                onChange={e => setFormData({ ...formData, factusUsername: e.target.value })}
+                                placeholder="Ingrese el usuario o correo de la API"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contraseña API *</label>
+                            <div className="relative">
+                                <Input
+                                    type={showApiPassword ? "text" : "password"}
+                                    value={formData.factusPassword}
+                                    onChange={e => setFormData({ ...formData, factusPassword: e.target.value })}
+                                    placeholder="Ingrese la contraseña de la API"
+                                    required
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowApiPassword(!showApiPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                >
+                                    {showApiPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
                                 </button>
                             </div>
                         </div>
@@ -239,11 +303,20 @@ export default function ConfigFacturacionElectronica() {
                     </div>
                 </div>
 
-                {/* Guardar */}
-                <div className="flex justify-end pt-4 border-t border-slate-100 pb-16">
+                {/* Guardar y Probar Conexión */}
+                <div className="flex justify-end items-center gap-4 pt-4 border-t border-slate-100 pb-16">
+                    <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={testingConnection || saving}
+                        className="flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-sm"
+                    >
+                        <FiKey size={16} />
+                        <span>{testingConnection ? "Probando..." : "Probar Conexión"}</span>
+                    </button>
                     <button
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || testingConnection}
                         className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black uppercase tracking-widest transition-all shadow-md shadow-indigo-100 disabled:opacity-50"
                     >
                         <FiSave size={16} />
