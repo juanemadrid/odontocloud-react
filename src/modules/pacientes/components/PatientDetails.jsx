@@ -769,18 +769,6 @@ const FormAseguramiento = ({ conveniosList = [] }) => {
                     <FormRow label="Póliza de salud">
                         <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-80" placeholder="Póliza de salud del paciente" />
                     </FormRow>
-                    <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
-                        <SearchableSelect
-                            value={watch("convenioBeneficio")}
-                            onChange={(val) => setValue("convenioBeneficio", val === "Ninguno / Particular" ? "" : val, { shouldDirty: true })}
-                            options={["Ninguno / Particular", ...conveniosList]}
-                            placeholder="Ninguno / Particular"
-                            className="w-full md:w-64"
-                        />
-                    </FormRow>
-                    <FormRow label="Convenio de Pago" error={errors.convenioPago}>
-                        <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
-                    </FormRow>
                 </div>
             </div>
             {/* Action button mimicking the image bottom guard */}

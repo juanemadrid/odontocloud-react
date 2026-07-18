@@ -1181,7 +1181,7 @@ export default function PatientForm({
                                 )}
                             </div>
 
-                            {(isVisible("nombreEps") || isVisible("tipoVinculacion") || isVisible("polizaSalud") || isVisible("convenioBeneficio") || isVisible("convenioPago")) && (
+                            {(isVisible("nombreEps") || isVisible("tipoVinculacion") || isVisible("polizaSalud")) && (
                                 <>
                                     <SectionTitle num="3" title="EPS y Aseguramiento" />
                                     <div className="pl-0 md:pl-4 space-y-1">
@@ -1204,7 +1204,7 @@ export default function PatientForm({
                                                                          {eps}
                                                                      </button>
                                                                  ))}
-                                                             </div>
+                                                                 </div>
                                                          )}
                                                      </div>
                                                      <button type="button" onClick={handleAgregarEps} className="w-10 h-10 shrink-0 bg-[#8CC63F] text-white rounded-xl flex items-center justify-center hover:bg-[#7bb335] transition-colors shadow-md shadow-[#8CC63F]/20" title="Agregar EPS al catálogo">
@@ -1227,23 +1227,6 @@ export default function PatientForm({
                                                 <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-64" placeholder="Número de contrato o póliza" />
                                             </FormRow>
                                         )}
-
-                                        {isVisible("convenioBeneficio") && (
-                                             <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
-                                                 <SearchableSelect
-                                                     value={watch("convenioBeneficio")}
-                                                     onChange={(val) => setValue("convenioBeneficio", val === "Ninguno / Particular" ? "" : val, { shouldDirty: true })}
-                                                     options={["Ninguno / Particular", ...conveniosList]}
-                                                     placeholder="Ninguno / Particular"
-                                                     className="w-full md:w-64"
-                                                 />
-                                             </FormRow>
-                                         )}
-                                         {isVisible("convenioPago") && (
-                                             <FormRow label="Convenio de Pago">
-                                                 <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
-                                             </FormRow>
-                                         )}
                                     </div>
                                 </>
                             )}
