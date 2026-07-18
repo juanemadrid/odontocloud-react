@@ -398,11 +398,25 @@ function SignatureModal({ isOpen, onClose, evolution, patient, onSaveSignature }
                                 <p className="text-[10px] text-slate-600 leading-relaxed font-semibold bg-slate-50 p-2.5 rounded border border-slate-100">
                                     {evolution?.description || evolution?.comentario}
                                 </p>
-                                {evolution?.treatment && (
-                                    <p className="text-[9px] font-bold text-slate-500 mt-2 uppercase tracking-wide">
-                                        {evolution?.treatment}
-                                    </p>
-                                )}
+                                {/* Plan de tratamiento - Procedimientos (formato OralDrive) */}
+                                {(() => {
+                                    const items = evolution?.plantillaItems ? Object.values(evolution.plantillaItems).filter(v => v?.checked) : [];
+                                    const planName = evolution?.treatment || '';
+                                    return items.length > 0 ? items.map((item, i) => {
+                                        const procName = item.desc || item.procedimiento || item.nombre || '';
+                                        if (!procName) return null;
+                                        const line = planName ? `${planName} - ${i + 1}. ${procName.toUpperCase()}` : `${i + 1}. ${procName.toUpperCase()}`;
+                                        return (
+                                            <p key={i} className="text-[10px] font-bold text-slate-700 mt-1">
+                                                {line}
+                                            </p>
+                                        );
+                                    }) : planName ? (
+                                        <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide">
+                                            {planName}
+                                        </p>
+                                    ) : null;
+                                })()}
                             </div>
                         </div>
                     </div>
