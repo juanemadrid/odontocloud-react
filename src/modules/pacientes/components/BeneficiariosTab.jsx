@@ -19,7 +19,6 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
 
     // Modal states for manual edit/add
     const [isOpen, setIsOpen] = useState(false);
-    const [currentBen, setCurrentBen] = useState(null);
     const [formVal, setFormVal] = useState({ nombre: '', documento: '', direccion: '', telefono: '' });
     const [errors, setErrors] = useState({});
 
@@ -75,20 +74,7 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
 
     // Save/Add manual entry
     const handleOpenAdd = () => {
-        setCurrentBen(null);
         setFormVal({ nombre: '', documento: '', direccion: '', telefono: '' });
-        setErrors({});
-        setIsOpen(true);
-    };
-
-    const handleOpenEdit = (ben) => {
-        setCurrentBen(ben);
-        setFormVal({
-            nombre: ben.nombre || '',
-            documento: ben.documento || '',
-            direccion: ben.direccion || '',
-            telefono: ben.telefono || ''
-        });
         setErrors({});
         setIsOpen(true);
     };
@@ -101,24 +87,19 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
 
         setIsSubmitting(true);
         try {
-            let updatedList;
-            if (currentBen) {
-                updatedList = beneficiarios.map(b => b.id === currentBen.id ? { ...b, ...formVal } : b);
-            } else {
-                const newBen = {
-                    id: uuidv4(),
-                    ...formVal,
-                    createdAt: Date.now()
-                };
-                updatedList = [...beneficiarios, newBen];
-            }
+            const newBen = {
+                id: uuidv4(),
+                ...formVal,
+                createdAt: Date.now()
+            };
+            const updatedList = [...beneficiarios, newBen];
 
             await updateDoc(doc(db, "pacientes", patient.id), {
                 beneficiarios: updatedList,
                 actualizado: serverTimestamp()
             });
             onUpdate && onUpdate({ ...patient, beneficiarios: updatedList });
-            toast.success(currentBen ? "Beneficiario actualizado" : "Beneficiario agregado");
+            toast.success("Beneficiario agregado");
             setIsOpen(false);
         } catch (e) {
             console.error(e);
@@ -288,19 +269,13 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                         <tbody className="divide-y divide-slate-100">
                             {beneficiarios.length > 0 ? (
                                 beneficiarios.map(ben => (
-                                    <tr key={ben.id} className="hover:bg-slate-50/50 transition-colors group">
+                                    <tr key={ben.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="py-4 px-6 font-bold text-sm text-slate-800">{ben.nombre}</td>
                                         <td className="py-4 px-6 text-sm text-slate-600">{ben.documento || '---'}</td>
                                         <td className="py-4 px-6 text-sm text-slate-600">{ben.direccion || '---'}</td>
                                         <td className="py-4 px-6 text-sm text-slate-600">{ben.telefono || '---'}</td>
                                         <td className="py-4 px-6 text-center">
-                                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button 
-                                                    onClick={() => handleOpenEdit(ben)}
-                                                    className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
-                                                >
-                                                    <FiEdit2 size={14} />
-                                                </button>
+                                            <div className="flex items-center justify-center gap-2">
                                                 <button 
                                                     className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
                                                     onClick={() => handleDelete(ben.id)}
@@ -330,7 +305,7 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                     <div className="bg-white rounded-3xl w-full max-w-lg border border-slate-100 shadow-2xl p-6 md:p-8 animate-scaleUp">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
-                                {currentBen ? "Editar Beneficiario" : "Agregar Beneficiario"}
+                                Agregar Beneficiario
                             </h3>
                             <button 
                                 type="button" 
