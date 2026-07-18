@@ -29,6 +29,7 @@ const CONFIG_ITEMS = [
     { label: "Cargas", slug: "cargas", icon: FiSettings },
     { label: "Impuestos", slug: "impuestos", icon: FiCreditCard },
     { label: "Catálogo de cuentas", slug: "catalogo-cuentas", icon: FiList },
+    { label: "Facturación electrónica", slug: "facturacion-electronica", icon: FiFileText },
     { label: "Suscripción", slug: "suscripcion", icon: FiAward },
 ];
 
