@@ -156,7 +156,7 @@ export const sendInvoice = async (invoice, patient, credentials) => {
     };
 
     const baseUrl = getBaseUrl(factusTestMode);
-    const response = await fetch(`${baseUrl}/v1/bills/validate`, {
+    const response = await fetch(`${baseUrl}/v2/bills/validate`, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
