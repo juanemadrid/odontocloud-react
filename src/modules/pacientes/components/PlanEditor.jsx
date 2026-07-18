@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../../context/ToastContext';
 import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
-import { doc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, limit, updateDoc } from 'firebase/firestore';
 import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle } from 'react-icons/fi';
 import { useFormContext } from 'react-hook-form';
 import { useAuth } from '../../../context/AuthContext';
@@ -107,6 +107,10 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     }, [patientId, initialData?.id]);
 
     const isItemRealized = (itemId) => {
+        // 1. Check direct realizado flag on the item itself (set from plan editor)
+        const itemDirectly = items.find(i => i.id === itemId);
+        if (itemDirectly?.realizado === true) return true;
+        // 2. Check clinical evolutions (set from evolution modal)
         return evolutions.some(evo => 
             evo.planId === initialData?.id && 
             // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
@@ -174,9 +178,17 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     }, [payments]);
 
     const getItemRealizedDate = (itemId) => {
+        // 1. Check direct fechaRealizado on item itself
+        const itemDirectly = items.find(i => i.id === itemId);
+        if (itemDirectly?.realizado && itemDirectly?.fechaRealizado) {
+            try {
+                const d = new Date(itemDirectly.fechaRealizado);
+                return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            } catch { /* fall through */ }
+        }
+        // 2. Check clinical evolutions
         const evo = evolutions.find(e =>
             e.planId === initialData?.id &&
-            // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
             (e.plantillaItems?.[itemId]?.realizado === true ||
              (e.plantillaItems?.[itemId]?.realizado === undefined && e.plantillaItems?.[itemId]?.checked === true))
         );
@@ -185,6 +197,88 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             const d = evo.date?.toDate ? evo.date.toDate() : new Date(evo.date);
             return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
         } catch { return null; }
+    };
+
+    const [togglingItem, setTogglingItem] = useState(null);
+
+    const toggleItemRealized = async (itemId) => {
+        const item = items.find(i => i.id === itemId);
+        if (!item) return;
+
+        // Cannot un-realize if it was realized via a clinical evolution
+        const realizedByEvolution = evolutions.some(evo =>
+            evo.planId === initialData?.id &&
+            (evo.plantillaItems?.[itemId]?.realizado === true ||
+             (evo.plantillaItems?.[itemId]?.realizado === undefined && evo.plantillaItems?.[itemId]?.checked === true))
+        );
+        if (realizedByEvolution && item.realizado) {
+            toast.error("Este procedimiento fue marcado como realizado desde una evolución clínica y no puede desmarcarse desde aquí.");
+            return;
+        }
+
+        const nowRealized = !item.realizado;
+        const newDate = nowRealized ? new Date().toISOString() : null;
+        const updatedItems = items.map(i =>
+            i.id === itemId
+                ? { ...i, realizado: nowRealized, fechaRealizado: newDate }
+                : i
+        );
+        setItems(updatedItems);
+
+        // Save immediately to Firestore if plan exists
+        if (initialData?.id) {
+            setTogglingItem(itemId);
+            try {
+                await updateDoc(doc(db, 'treatment_plans', initialData.id), {
+                    items: updatedItems
+                });
+                toast.success(nowRealized
+                    ? `✅ "${item.desc}" marcado como realizado`
+                    : `↩️ "${item.desc}" desmarcado`
+                );
+            } catch (e) {
+                console.error('Error toggling realizado:', e);
+                toast.error('Error al guardar el estado del procedimiento');
+                // Revert
+                setItems(items);
+            } finally {
+                setTogglingItem(null);
+            }
+        } else {
+            toast.success(nowRealized ? `✅ "${item.desc}" marcado como realizado (se guardará al aprobar)` : `↩️ Desmarcado`);
+        }
+    };
+
+    const handleGenerateItemInvoice = async (item) => {
+        if (!initialData?.id) {
+            toast.error('Guarda el plan antes de generar la factura.');
+            return;
+        }
+        const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
+        try {
+            const { addDoc } = await import('firebase/firestore');
+            const invoiceData = {
+                patientId,
+                inquilino: inquilino || '',
+                planId: initialData.id,
+                itemId: item.id,
+                nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
+                fechaISO: new Date().toISOString(),
+                total: totalCost,
+                estado: (paidMap[item.id] || 0) >= totalCost ? 'Pagada' : 'Pendiente',
+                items: [{
+                    nombre: item.desc || 'Servicio Dental',
+                    precio: Number(item.amount || 0),
+                    cantidad: Number(item.qty || 1),
+                    descuento: Number(item.descuento || 0)
+                }]
+            };
+            await addDoc(collection(db, 'facturas'), invoiceData);
+            toast.success(`Factura generada para "${item.desc}". Disponible en Histórico de Facturas.`);
+        } catch (err) {
+            console.error(err);
+            toast.error('Error al generar la factura del procedimiento.');
+        }
     };
 
     // Returns: 'none' | 'debt' | 'partial' | 'paid'
@@ -850,6 +944,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Valor Unit.</th>
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Subtotal</th>
+                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-28">Realizado</th>
                                     <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Estado</th>
                                     <th className="px-4 py-3 w-12"></th>
                                 </tr>
@@ -958,6 +1053,42 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     <td className="px-4 py-3 align-middle text-right font-black text-[13px] text-slate-700 tracking-tight font-mono">
                                         <span className="text-[11px] font-bold text-slate-300 mr-0.5">$</span>
                                         {((item.qty * item.amount) - (item.descuento || 0)).toLocaleString('es-CO')}
+                                    </td>
+                                    {/* Columna Realizado: checkbox visual + fecha + botón factura */}
+                                    <td className="px-4 py-3 align-middle text-center w-28">
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="flex items-center gap-1.5">
+                                                {/* Botón toggle realizado */}
+                                                <button
+                                                    onClick={() => toggleItemRealized(item.id)}
+                                                    disabled={togglingItem === item.id}
+                                                    title={isItemRealized(item.id) ? 'Marcado como realizado — clic para desmarcar' : 'Marcar como realizado'}
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-2 shrink-0 ${
+                                                        isItemRealized(item.id)
+                                                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-200'
+                                                            : 'bg-white border-slate-200 text-slate-300 hover:border-emerald-400 hover:text-emerald-400'
+                                                    } ${togglingItem === item.id ? 'opacity-50 cursor-wait' : ''}`}
+                                                >
+                                                    <FiCheck size={13} strokeWidth={3} />
+                                                </button>
+                                                {/* Botón generar factura — solo cuando está realizado */}
+                                                {isItemRealized(item.id) && (
+                                                    <button
+                                                        onClick={() => handleGenerateItemInvoice(item)}
+                                                        title="Generar factura para este procedimiento"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-50 border-2 border-indigo-200 text-indigo-500 hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-all shrink-0 shadow-sm"
+                                                    >
+                                                        <FiFileText size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {/* Fecha realizado */}
+                                            {realizedDate && (
+                                                <span className="text-[8px] font-bold text-emerald-600 leading-none tracking-tight">
+                                                    {realizedDate}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     {/* Estado semáforo */}
                                     <td className="px-4 py-3 align-middle text-center w-20">
