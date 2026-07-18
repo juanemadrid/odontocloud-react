@@ -50,12 +50,16 @@ export const PARENTESCOS = [
 ];
 
 export const MEDIOS_CONOCIMIENTO = [
-    "Redes Sociales (Instagram, Facebook, etc.)",
-    "Recomendación de un amigo/familiar",
-    "Página Web",
-    "Publicidad exterior (Valla, pendón)",
-    "Convenio empresarial",
-    "Buscador (Google, Bing)",
+    "Fachada",
+    "Referido",
+    "Tik Tok",
+    "Radio",
+    "Facebook",
+    "Instagram",
+    "Youtube",
+    "Google",
+    "Volante",
+    "Prensa",
     "Otro"
 ];
 

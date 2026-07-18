@@ -731,8 +731,8 @@ const FormAseguramiento = ({ conveniosList = [] }) => {
 
     return (
         <div className="p-4 md:p-8 animate-fadeIn max-w-4xl mx-auto">
-            <div className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm pb-8">
-                <div className="flex items-center gap-4 bg-slate-50 px-6 py-4 border-b border-slate-200 mb-2">
+            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm pb-32">
+                <div className="flex items-center gap-4 bg-slate-50 px-6 py-4 border-b border-slate-200 mb-2 rounded-t-[32px]">
                     <h3 className="text-[14px] font-black text-slate-700 uppercase tracking-widest">EPS</h3>
                 </div>
                 <div className="pl-0 md:pl-4 space-y-1 mt-4">
@@ -818,7 +818,7 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [], conveniosLi
 
     return (
         <div className="p-4 md:p-8 animate-fadeIn max-w-4xl mx-auto">
-            <div className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm pb-8">
+            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm pb-32">
                 <SectionTitle num="4" title="Estrategia de Mercadeo" />
                 <div className="pl-0 md:pl-4 space-y-1">
                     <FormRow label="Convenio beneficio">
