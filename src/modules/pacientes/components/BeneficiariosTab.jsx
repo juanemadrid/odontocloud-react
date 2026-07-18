@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiAlertCircle, FiSearch, FiPlus, FiTrash2, FiEdit2 } from 'react-icons/fi';
+import { FiAlertCircle, FiSearch, FiPlus, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
 import { updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
 import { useToast } from '../../../context/ToastContext';
@@ -10,43 +10,71 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+    // Modal states
+    const [isOpen, setIsOpen] = useState(false);
+    const [currentBen, setCurrentBen] = useState(null);
+    const [formVal, setFormVal] = useState({ nombre: '', documento: '', direccion: '', telefono: '' });
+    const [errors, setErrors] = useState({});
+
     // Check if patient actually has a "convenioBeneficio" string or assigned field
     const hasConvenio = patient?.convenioBeneficio && patient.convenioBeneficio.trim() !== "";
     const beneficiarios = patient?.beneficiarios || [];
 
     const handleAssignClick = () => {
-        // Se asume que el convenio se edita en la pestaña "EPS" o "datos"
         if (onSwitchTab) onSwitchTab('eps'); 
     };
 
-    const handleAddSimulated = async () => {
-        const nombre = prompt("Nombre del beneficiario:");
-        if (!nombre) return;
-        const documento = prompt("Nro documento:");
-        const direccion = prompt("Dirección:");
-        const telefono = prompt("Teléfono:");
+    const handleOpenAdd = () => {
+        setCurrentBen(null);
+        setFormVal({ nombre: '', documento: '', direccion: '', telefono: '' });
+        setErrors({});
+        setIsOpen(true);
+    };
 
-        const newBen = {
-            id: uuidv4(),
-            nombre,
-            documento,
-            direccion,
-            telefono,
-            createdAt: Date.now()
-        };
+    const handleOpenEdit = (ben) => {
+        setCurrentBen(ben);
+        setFormVal({
+            nombre: ben.nombre || '',
+            documento: ben.documento || '',
+            direccion: ben.direccion || '',
+            telefono: ben.telefono || ''
+        });
+        setErrors({});
+        setIsOpen(true);
+    };
+
+    const handleSave = async () => {
+        if (!formVal.nombre.trim()) {
+            setErrors({ nombre: "El nombre es obligatorio" });
+            return;
+        }
 
         setIsSubmitting(true);
         try {
-            const updatedList = [...beneficiarios, newBen];
+            let updatedList;
+            if (currentBen) {
+                // Edit existing
+                updatedList = beneficiarios.map(b => b.id === currentBen.id ? { ...b, ...formVal } : b);
+            } else {
+                // Add new
+                const newBen = {
+                    id: uuidv4(),
+                    ...formVal,
+                    createdAt: Date.now()
+                };
+                updatedList = [...beneficiarios, newBen];
+            }
+
             await updateDoc(doc(db, "pacientes", patient.id), {
                 beneficiarios: updatedList,
                 actualizado: serverTimestamp()
             });
             onUpdate && onUpdate({ ...patient, beneficiarios: updatedList });
-            toast.success("Beneficiario agregado");
+            toast.success(currentBen ? "Beneficiario actualizado" : "Beneficiario agregado");
+            setIsOpen(false);
         } catch (e) {
             console.error(e);
-            toast.error("Error al agregar beneficiario");
+            toast.error("Error al guardar beneficiario");
         } finally {
             setIsSubmitting(false);
         }
@@ -124,7 +152,7 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     </div>
                     <button 
-                        onClick={handleAddSimulated}
+                        onClick={handleOpenAdd}
                         disabled={isSubmitting}
                         className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 flex items-center gap-2 transition-all active:scale-95 shrink-0"
                     >
@@ -154,7 +182,10 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                                         <td className="py-4 px-6 text-sm text-slate-600">{ben.telefono || '---'}</td>
                                         <td className="py-4 px-6 text-center">
                                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
+                                                <button 
+                                                    onClick={() => handleOpenEdit(ben)}
+                                                    className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                                                >
                                                     <FiEdit2 size={14} />
                                                 </button>
                                                 <button 
@@ -179,6 +210,99 @@ export default function BeneficiariosTab({ patient, onUpdate, onSwitchTab }) {
                 </div>
 
             </div>
+
+            {/* MODAL FOR ADD/EDIT */}
+            {isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fadeIn">
+                    <div className="bg-white rounded-3xl w-full max-w-lg border border-slate-100 shadow-2xl p-6 md:p-8 animate-scaleUp">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
+                                {currentBen ? "Editar Beneficiario" : "Agregar Beneficiario"}
+                            </h3>
+                            <button 
+                                type="button" 
+                                onClick={() => setIsOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <FiX size={18} />
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Nombre Completo <span className="text-rose-500">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formVal.nombre}
+                                    onChange={(e) => setFormVal({...formVal, nombre: e.target.value})}
+                                    placeholder="Ej: Juan Pérez"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400"
+                                />
+                                {errors.nombre && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-wider mt-1">{errors.nombre}</p>}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Número de Documento
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formVal.documento}
+                                    onChange={(e) => setFormVal({...formVal, documento: e.target.value})}
+                                    placeholder="Ej: 12345678"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Dirección
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formVal.direccion}
+                                    onChange={(e) => setFormVal({...formVal, direccion: e.target.value})}
+                                    placeholder="Ej: Calle 123 #45-67"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Teléfono
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formVal.telefono}
+                                    onChange={(e) => setFormVal({...formVal, telefono: e.target.value})}
+                                    placeholder="Ej: 3001234567"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 mt-8">
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(false)}
+                                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSubmitting}
+                                className="flex-1 py-3 bg-[#8CC63F] hover:bg-[#7bb335] text-white text-[11px] font-black uppercase tracking-wider rounded-xl shadow-lg shadow-[#8CC63F]/20 transition-all disabled:opacity-50"
+                            >
+                                {isSubmitting ? "Guardando..." : "Guardar"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
