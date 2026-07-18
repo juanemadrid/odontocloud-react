@@ -33,6 +33,7 @@ const MENU_ITEMS = [
     { label: "Cargas", slug: "cargas", icon: FiUploadCloud },
     { label: "Impuestos", slug: "impuestos", icon: FiPercent },
     { label: "Catálogo de cuentas", slug: "catalogo-cuentas", icon: FiBook },
+    { label: "Facturación electrónica", slug: "facturacion-electronica", icon: FiFileText },
     { label: "Suscripción", slug: "suscripcion", icon: FiStar },
 ];
 

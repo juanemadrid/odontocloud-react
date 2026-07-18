@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { doc, onSnapshot, collection, query, where, getDocs, addDoc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where, getDocs, addDoc, getDoc, limit } from "firebase/firestore";
 import { db, storage } from "../../../firebase/firebaseConfig";
 import { formatCurrency, calculateAgeStr } from "../../../utils/formatters";
 import { useAuth } from "../../../context/AuthContext";
@@ -63,11 +63,46 @@ const SectionTitle = ({ title, num }) => (
 );
 
 const FormDatosPersonales = ({ patient, photoState }) => {
-    const { register, watch, setValue, formState: { errors } } = useFormContext();
+    const { register, watch, setValue, setError, clearErrors, formState: { errors } } = useFormContext();
     const { isCameraActive, fotoPreview, startCamera, stopCamera, takePhoto, onFotoChange, videoRef, canvasRef } = photoState;
 
     const { userProfile } = useAuth();
     const inquilino = userProfile?.inquilino;
+
+    const checkDocumentDuplication = async (e) => {
+        const val = e.target.value?.trim();
+        if (!val) return;
+        if (patient?.nroDocumento === val) {
+            clearErrors("nroDocumento");
+            return;
+        }
+        
+        try {
+            const q = query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("nroDocumento", "==", val),
+                limit(1)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const foundDoc = snap.docs[0];
+                if (foundDoc.id !== patient?.id) {
+                    setError("nroDocumento", {
+                        type: "manual",
+                        message: `Ya existe un paciente registrado con el número de documento ${val}`
+                    });
+                    toast?.error(`Atención: Ya existe un paciente con el número de documento ${val}`);
+                } else {
+                    clearErrors("nroDocumento");
+                }
+            } else {
+                clearErrors("nroDocumento");
+            }
+        } catch (err) {
+            console.error("Error checking document duplication:", err);
+        }
+    };
     const [formConfig, setFormConfig] = React.useState(null);
 
     React.useEffect(() => {
@@ -100,8 +135,16 @@ const FormDatosPersonales = ({ patient, photoState }) => {
         setLoadingBarrios(true);
         getDocs(query(collection(db, "barrios_catalogo"), where("inquilino", "==", inquilino)))
             .then(snap => {
-                const data = snap.docs.map(d => d.data().nombre);
-                const uniqueBarrios = [...new Set(data)].sort((a, b) => a.localeCompare(b));
+                const data = snap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                const uniqueBarrios = [];
+                const seen = new Set();
+                data.forEach(item => {
+                    if (!seen.has(item.toLowerCase())) {
+                        seen.add(item.toLowerCase());
+                        uniqueBarrios.push(item);
+                    }
+                });
+                uniqueBarrios.sort((a, b) => a.localeCompare(b));
                 setBarrioList(uniqueBarrios);
             })
             .catch(e => console.error("Error loading Barrio catalog:", e))
@@ -260,7 +303,15 @@ const FormDatosPersonales = ({ patient, photoState }) => {
                             </select>
                         </FormRow>
                         <FormRow label="Nro. de documento" required error={errors.nroDocumento}>
-                            <input {...register("nroDocumento")} className="form-input text-sm w-full md:w-64" placeholder="Nro. documento" />
+                            <input 
+                                {...register("nroDocumento")} 
+                                onBlur={(e) => {
+                                    register("nroDocumento").onBlur(e);
+                                    checkDocumentDuplication(e);
+                                }}
+                                className="form-input text-sm w-full md:w-64" 
+                                placeholder="Nro. documento" 
+                            />
                         </FormRow>
                         <FormRow label="Número de Historia">
                             <input {...register("nroHistoria")} className="form-input text-sm w-full md:w-64" placeholder="Nro. historia" />
@@ -624,7 +675,19 @@ const FormAseguramiento = () => {
     useEffect(() => {
         if(userProfile?.inquilino) {
             getDocs(query(collection(db, "eps_catalogo"), where("inquilino", "==", userProfile.inquilino)))
-                .then(snap => setEpsList(snap.docs.map(d => d.data().nombre)));
+                .then(snap => {
+                    const data = snap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                    const uniqueEps = [];
+                    const seen = new Set();
+                    data.forEach(item => {
+                        if (!seen.has(item.toLowerCase())) {
+                            seen.add(item.toLowerCase());
+                            uniqueEps.push(item);
+                        }
+                    });
+                    uniqueEps.sort((a, b) => a.localeCompare(b));
+                    setEpsList(uniqueEps);
+                });
         }
     }, [userProfile?.inquilino]);
 
@@ -1224,12 +1287,10 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
                     if (data.barrio && userProfile?.inquilino) {
                         try {
-                            const qBar = query(collection(db, "barrios_catalogo"), 
-                                where("inquilino", "==", userProfile.inquilino), 
-                                where("nombre", "==", data.barrio.trim())
-                            );
+                            const qBar = query(collection(db, "barrios_catalogo"), where("inquilino", "==", userProfile.inquilino));
                             const snapBar = await getDocs(qBar);
-                            if (snapBar.empty) {
+                            const barExists = snapBar.docs.some(doc => doc.data().nombre?.trim().toLowerCase() === data.barrio.trim().toLowerCase());
+                            if (!barExists) {
                                 await addDoc(collection(db, "barrios_catalogo"), {
                                     nombre: data.barrio.trim(),
                                     inquilino: userProfile.inquilino,
@@ -1273,12 +1334,10 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
                     if (allValues.nombreEps && userProfile?.inquilino) {
                         try {
-                            const qEps = query(collection(db, "eps_catalogo"), 
-                                where("inquilino", "==", userProfile.inquilino), 
-                                where("nombre", "==", allValues.nombreEps.trim())
-                            );
+                            const qEps = query(collection(db, "eps_catalogo"), where("inquilino", "==", userProfile.inquilino));
                             const snapEps = await getDocs(qEps);
-                            if (snapEps.empty) {
+                            const epsExists = snapEps.docs.some(doc => doc.data().nombre?.trim().toLowerCase() === allValues.nombreEps.trim().toLowerCase());
+                            if (!epsExists) {
                                 await addDoc(collection(db, "eps_catalogo"), {
                                     nombre: allValues.nombreEps.trim(),
                                     inquilino: userProfile.inquilino,

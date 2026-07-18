@@ -8,7 +8,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, addDoc, limit } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
@@ -300,8 +300,16 @@ export default function PatientForm({
             try {
                 const q = query(collection(db, "eps_catalogo"), where("inquilino", "==", inquilino));
                 const snap = await getDocs(q);
-                const data = snap.docs.map(d => d.data().nombre);
-                const uniqueEps = [...new Set(data)].sort((a, b) => a.localeCompare(b));
+                const data = snap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                const uniqueEps = [];
+                const seen = new Set();
+                data.forEach(item => {
+                    if (!seen.has(item.toLowerCase())) {
+                        seen.add(item.toLowerCase());
+                        uniqueEps.push(item);
+                    }
+                });
+                uniqueEps.sort((a, b) => a.localeCompare(b));
                 setEpsList(uniqueEps);
             } catch (e) {
                 console.error("Error loading EPS catalog:", e);
@@ -316,8 +324,16 @@ export default function PatientForm({
             try {
                 const q = query(collection(db, "barrios_catalogo"), where("inquilino", "==", inquilino));
                 const snap = await getDocs(q);
-                const data = snap.docs.map(d => d.data().nombre);
-                const uniqueBarrios = [...new Set(data)].sort((a, b) => a.localeCompare(b));
+                const data = snap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                const uniqueBarrios = [];
+                const seen = new Set();
+                data.forEach(item => {
+                    if (!seen.has(item.toLowerCase())) {
+                        seen.add(item.toLowerCase());
+                        uniqueBarrios.push(item);
+                    }
+                });
+                uniqueBarrios.sort((a, b) => a.localeCompare(b));
                 setBarrioList(uniqueBarrios);
             } catch (e) {
                 console.error("Error loading Barrio catalog:", e);
@@ -371,6 +387,8 @@ export default function PatientForm({
         watch,
         setValue,
         reset,
+        setError,
+        clearErrors,
         formState: { errors, isSubmitting, isDirty }
     } = useForm({
         defaultValues: {
@@ -396,6 +414,41 @@ export default function PatientForm({
             setValue("nroHistoria", nroDocumentoValue);
         }
     }, [nroDocumentoValue, setValue]);
+
+    const checkDocumentDuplication = async (e) => {
+        const val = e.target.value?.trim();
+        if (!val) return;
+        if (initialData?.nroDocumento === val) {
+            clearErrors("nroDocumento");
+            return;
+        }
+        
+        try {
+            const q = query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("nroDocumento", "==", val),
+                limit(1)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const foundDoc = snap.docs[0];
+                if (foundDoc.id !== initialData?.id) {
+                    setError("nroDocumento", {
+                        type: "manual",
+                        message: `Ya existe un paciente registrado con el número de documento ${val}`
+                    });
+                    toast.error(`Atención: Ya existe un paciente con el número de documento ${val}`);
+                } else {
+                    clearErrors("nroDocumento");
+                }
+            } else {
+                clearErrors("nroDocumento");
+            }
+        } catch (err) {
+            console.error("Error checking document duplication:", err);
+        }
+    };
 
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -779,7 +832,15 @@ export default function PatientForm({
                                 </FormRow>
 
                                 <FormRow label="Nro. de documento" required error={errors.nroDocumento}>
-                                    <input {...register("nroDocumento")} className="form-input text-sm w-full md:w-64" placeholder="Nro. documento paciente" />
+                                    <input 
+                                        {...register("nroDocumento")} 
+                                        onBlur={(e) => {
+                                            register("nroDocumento").onBlur(e);
+                                            checkDocumentDuplication(e);
+                                        }}
+                                        className="form-input text-sm w-full md:w-64" 
+                                        placeholder="Nro. documento paciente" 
+                                    />
                                 </FormRow>
 
                                 <FormRow label="Número de Historia">
