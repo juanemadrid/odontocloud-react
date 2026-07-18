@@ -249,6 +249,18 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
     const presupuestos = plans.filter(p => !p.type || p.type === 'presupuesto'); // Fallback viejo a presupuesto
     const planesTrat = plans.filter(p => p.type === 'plan');
 
+    // Verifica si algún ítem del plan fue marcado como realizado en cualquier evolución
+    const isPlanRealized = (plan) => {
+        return (plan.items || []).some(item =>
+            evolutions.some(evo =>
+                evo.planId === plan.id &&
+                (evo.plantillaItems?.[item.id]?.realizado === true ||
+                 (evo.plantillaItems?.[item.id]?.realizado === undefined &&
+                  evo.plantillaItems?.[item.id]?.checked === true))
+            )
+        );
+    };
+
     const handleFinalizarPlan = async (e, plan) => {
         e.stopPropagation();
         if (plan.finalizado) {
@@ -374,8 +386,13 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
-                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm" 
-                                                title="Eliminar"
+                                                disabled={isPlanRealized(p)}
+                                                className={`p-2 rounded-lg transition-all shadow-sm ${
+                                                    isPlanRealized(p)
+                                                        ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
+                                                        : 'bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white'
+                                                }`}
+                                                title={isPlanRealized(p) ? 'No se puede eliminar: tiene procedimientos marcados como realizados' : 'Eliminar'}
                                             >
                                                 <FiTrash2 size={14} />
                                             </button>
@@ -494,8 +511,17 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
-                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm" 
-                                                title="Eliminar"
+                                                disabled={getPlanStatus(p) !== 'pending' || isPlanRealized(p)}
+                                                className={`p-2 rounded-lg transition-all shadow-sm ${
+                                                    (getPlanStatus(p) !== 'pending' || isPlanRealized(p))
+                                                        ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
+                                                        : 'bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white'
+                                                }`}
+                                                title={
+                                                    getPlanStatus(p) !== 'pending' ? 'No se puede eliminar: tiene pagos registrados' :
+                                                    isPlanRealized(p) ? 'No se puede eliminar: tiene procedimientos marcados como realizados' :
+                                                    'Eliminar'
+                                                }
                                             >
                                                 <FiTrash2 size={14} />
                                             </button>

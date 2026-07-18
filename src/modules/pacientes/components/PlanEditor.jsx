@@ -731,6 +731,17 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             </div>
                         </div>
                     )}
+                    {!hasPayments && items.some(it => isItemRealized(it.id)) && (
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-5 flex items-center gap-4 shrink-0 animate-fadeIn shadow-sm">
+                            <FiCheck size={24} className="text-indigo-500 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-widest leading-none text-indigo-600 mb-1">Procedimientos Realizados</p>
+                                <p className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider leading-normal">
+                                    Algunos procedimientos ya fueron marcados como realizados en una evolución clínica y no pueden eliminarse ni modificarse. Sí puede editar el valor de los que aún no están realizados.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50/50 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
@@ -927,7 +938,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                         )}
                                     </td>
                                     <td className="px-4 py-3 align-middle text-right font-black font-mono text-rose-600 text-xs">
-                                        {paidMap[item.id] > 0 ? (
+                                        {(paidMap[item.id] > 0 || isItemRealized(item.id)) ? (
                                             <span>$ {Number(item.descuento || 0).toLocaleString('es-CO')}</span>
                                         ) : (
                                             <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-9 rounded-lg border border-rose-100 w-20 ml-auto font-sans">
@@ -964,14 +975,21 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 align-middle text-center w-12">
-                                        {paidMap[item.id] === 0 && (
+                                        {isItemRealized(item.id) ? (
+                                            <div
+                                                title="No se puede eliminar: este procedimiento ya fue marcado como realizado en una evolución"
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-200 cursor-not-allowed opacity-60 group-hover:opacity-100"
+                                            >
+                                                <FiTrash2 size={16} />
+                                            </div>
+                                        ) : paidMap[item.id] === 0 ? (
                                             <button
                                                 onClick={() => removeItem(item.id)}
                                                 className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
                                             >
                                                 <FiTrash2 size={16} />
                                             </button>
-                                        )}
+                                        ) : null}
                                     </td>
                                 </tr>
                                     );
