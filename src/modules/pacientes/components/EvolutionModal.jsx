@@ -377,12 +377,18 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                  const initDetails = {};
                  srvs.forEach(s => {
                      if (initialData?.plantillaItems?.[s.id]) {
+                         const saved = initialData.plantillaItems[s.id];
+                         // Compatibilidad retroactiva: en el formato antiguo, checked=true significaba
+                         // tanto "seleccionado" como "realizado". Ahora los separamos:
+                         // checked = seleccionado para esta sesión (visible en tabla)
+                         // realizado = procedimiento completamente terminado
                          initDetails[s.id] = { 
-                             checked: initialData.plantillaItems[s.id].checked || false, 
-                             observation: initialData.plantillaItems[s.id].observation || '' 
+                             checked: saved.checked !== undefined ? saved.checked : false,
+                             realizado: saved.realizado !== undefined ? saved.realizado : (saved.checked || false),
+                             observation: saved.observation || '' 
                          };
                      } else {
-                         initDetails[s.id] = { checked: false, observation: '' };
+                         initDetails[s.id] = { checked: false, realizado: false, observation: '' };
                      }
                  });
                  setPlantillaDetails(initDetails);
@@ -446,7 +452,10 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
             if (initialData?.id && evo.id === initialData.id) return;
             if (evo.plantillaItems) {
                 Object.keys(evo.plantillaItems).forEach(itemId => {
-                    if (evo.plantillaItems[itemId]?.checked) {
+                    const item = evo.plantillaItems[itemId];
+                    // Compatibilidad retroactiva: registros nuevos usan `realizado`,
+                    // registros antiguos usaban solo `checked` para indicar que fue completado.
+                    if (item?.realizado === true || (item?.realizado === undefined && item?.checked === true)) {
                         completedSet.add(itemId);
                     }
                 });
@@ -704,17 +713,17 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                             />
                                                         </td>
                                                         <td className="px-4 py-2 align-middle text-center">
-                                                            <div className="flex items-center justify-start md:justify-center">
+                                                            <div className="flex items-center justify-start md:justify-center" title="Marque cuando este procedimiento quede completamente terminado en esta sesión">
                                                                 <input 
                                                                     type="checkbox"
                                                                     className="w-4 h-4 rounded text-[#8dc63f] border-slate-300 focus:ring-[#8dc63f] cursor-pointer"
-                                                                    checked={plantillaDetails[s.id]?.checked || false}
+                                                                    checked={plantillaDetails[s.id]?.realizado || false}
                                                                     onChange={(e) => setPlantillaDetails(prev => ({
                                                                         ...prev,
-                                                                        [s.id]: { ...prev[s.id], checked: e.target.checked }
+                                                                        [s.id]: { ...prev[s.id], realizado: e.target.checked }
                                                                     }))}
                                                                 />
-                                                                <span className="md:hidden ml-2 text-[10px] font-bold tracking-widest uppercase text-slate-400">Realizado</span>
+                                                                <span className="md:hidden ml-2 text-[10px] font-bold tracking-widest uppercase text-slate-400">Finalizado</span>
                                                             </div>
                                                         </td>
                                                     </tr>

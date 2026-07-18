@@ -109,7 +109,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const isItemRealized = (itemId) => {
         return evolutions.some(evo => 
             evo.planId === initialData?.id && 
-            evo.plantillaItems?.[itemId]?.checked === true
+            // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
+            (evo.plantillaItems?.[itemId]?.realizado === true ||
+             (evo.plantillaItems?.[itemId]?.realizado === undefined && evo.plantillaItems?.[itemId]?.checked === true))
         );
     };
 
@@ -174,7 +176,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const getItemRealizedDate = (itemId) => {
         const evo = evolutions.find(e =>
             e.planId === initialData?.id &&
-            e.plantillaItems?.[itemId]?.checked === true
+            // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
+            (e.plantillaItems?.[itemId]?.realizado === true ||
+             (e.plantillaItems?.[itemId]?.realizado === undefined && e.plantillaItems?.[itemId]?.checked === true))
         );
         if (!evo) return null;
         try {

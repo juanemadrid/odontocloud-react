@@ -229,7 +229,11 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
 
         // Check if any realized item has debt
         const hasRealizedDebt = (plan.items || []).some(item => {
-            const realized = planEvolutions.some(e => e.plantillaItems?.[item.id]?.checked === true);
+            // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
+            const realized = planEvolutions.some(e =>
+                e.plantillaItems?.[item.id]?.realizado === true ||
+                (e.plantillaItems?.[item.id]?.realizado === undefined && e.plantillaItems?.[item.id]?.checked === true)
+            );
             if (!realized) return false;
             const itemCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
             const itemPaid = paidMap[item.id] || 0;
