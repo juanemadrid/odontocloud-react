@@ -385,10 +385,19 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                          initDetails[s.id] = { 
                              checked: saved.checked !== undefined ? saved.checked : false,
                              realizado: saved.realizado !== undefined ? saved.realizado : (saved.checked || false),
-                             observation: saved.observation || '' 
+                             observation: saved.observation || '',
+                             // Guardar nombre y dientes para mostrarlo en el historial
+                             desc: saved.desc || s.desc || s.procedimiento || s.nombre || '',
+                             dientes: saved.dientes || s.dientes || ''
                          };
                      } else {
-                         initDetails[s.id] = { checked: false, realizado: false, observation: '' };
+                         initDetails[s.id] = {
+                             checked: false,
+                             realizado: false,
+                             observation: '',
+                             desc: s.desc || s.procedimiento || s.nombre || '',
+                             dientes: s.dientes || ''
+                         };
                      }
                  });
                  setPlantillaDetails(initDetails);
