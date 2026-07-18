@@ -249,37 +249,8 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         }
     };
 
-    const handleGenerateItemInvoice = async (item) => {
-        if (!initialData?.id) {
-            toast.error('Guarda el plan antes de generar la factura.');
-            return;
-        }
-        const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
-        try {
-            const { addDoc } = await import('firebase/firestore');
-            const invoiceData = {
-                patientId,
-                inquilino: inquilino || '',
-                planId: initialData.id,
-                itemId: item.id,
-                nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
-                fechaISO: new Date().toISOString(),
-                total: totalCost,
-                estado: (paidMap[item.id] || 0) >= totalCost ? 'Pagada' : 'Pendiente',
-                items: [{
-                    nombre: item.desc || 'Servicio Dental',
-                    precio: Number(item.amount || 0),
-                    cantidad: Number(item.qty || 1),
-                    descuento: Number(item.descuento || 0)
-                }]
-            };
-            await addDoc(collection(db, 'facturas'), invoiceData);
-            toast.success(`Factura generada para "${item.desc}". Disponible en Histórico de Facturas.`);
-        } catch (err) {
-            console.error(err);
-            toast.error('Error al generar la factura del procedimiento.');
-        }
-    };
+    const handleGenerateItemInvoice = null; // Removed: use plan-level invoice from PlanList
+
 
     // Returns: 'none' | 'debt' | 'partial' | 'paid'
     const getItemStatus = (item) => {
@@ -1054,34 +1025,22 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                         <span className="text-[11px] font-bold text-slate-300 mr-0.5">$</span>
                                         {((item.qty * item.amount) - (item.descuento || 0)).toLocaleString('es-CO')}
                                     </td>
-                                    {/* Columna Realizado: checkbox visual + fecha + botón factura */}
+                                    {/* Columna Realizado: checkbox visual + fecha */}
                                     <td className="px-4 py-3 align-middle text-center w-28">
                                         <div className="flex flex-col items-center gap-1">
-                                            <div className="flex items-center gap-1.5">
-                                                {/* Botón toggle realizado */}
-                                                <button
-                                                    onClick={() => toggleItemRealized(item.id)}
-                                                    disabled={togglingItem === item.id}
-                                                    title={isItemRealized(item.id) ? 'Marcado como realizado — clic para desmarcar' : 'Marcar como realizado'}
-                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-2 shrink-0 ${
-                                                        isItemRealized(item.id)
-                                                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-200'
-                                                            : 'bg-white border-slate-200 text-slate-300 hover:border-emerald-400 hover:text-emerald-400'
-                                                    } ${togglingItem === item.id ? 'opacity-50 cursor-wait' : ''}`}
-                                                >
-                                                    <FiCheck size={13} strokeWidth={3} />
-                                                </button>
-                                                {/* Botón generar factura — solo cuando está realizado */}
-                                                {isItemRealized(item.id) && (
-                                                    <button
-                                                        onClick={() => handleGenerateItemInvoice(item)}
-                                                        title="Generar factura para este procedimiento"
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-50 border-2 border-indigo-200 text-indigo-500 hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-all shrink-0 shadow-sm"
-                                                    >
-                                                        <FiFileText size={12} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                            {/* Botón toggle realizado */}
+                                            <button
+                                                onClick={() => toggleItemRealized(item.id)}
+                                                disabled={togglingItem === item.id}
+                                                title={isItemRealized(item.id) ? 'Marcado como realizado — clic para desmarcar' : 'Marcar como realizado'}
+                                                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-2 shrink-0 ${
+                                                    isItemRealized(item.id)
+                                                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-200'
+                                                        : 'bg-white border-slate-200 text-slate-300 hover:border-emerald-400 hover:text-emerald-400'
+                                                } ${togglingItem === item.id ? 'opacity-50 cursor-wait' : ''}`}
+                                            >
+                                                <FiCheck size={13} strokeWidth={3} />
+                                            </button>
                                             {/* Fecha realizado */}
                                             {realizedDate && (
                                                 <span className="text-[8px] font-bold text-emerald-600 leading-none tracking-tight">
