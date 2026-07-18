@@ -26,9 +26,12 @@ export default function MarketingTab({ patient }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                <InfoField label="Convenio / Beneficio" value={patient.convenioBeneficio} />
+                <InfoField label="Convenio de Pago" value={patient.convenioPago} />
                 <InfoField label="¿Cómo nos conoció?" value={patient.comoConocio} required />
                 <InfoField label="Campaña Relacionada" value={patient.campania} />
                 <InfoField label="Remitido por" value={`${patient.remitidoPorType || ''} ${patient.remitidoPorValue || ''}`.trim()} />
+                <InfoField label="Asesor comercial" value={`${patient.asesorComercialType || ''} ${patient.asesorComercialValue || ''}`.trim()} />
                 <InfoField label="Permite Publicidad" value={patient.permitePublicidad !== false ? "SÍ" : "NO"} />
             </div>
 
@@ -42,6 +45,7 @@ export default function MarketingTab({ patient }) {
                     <p className="text-[12px] font-bold opacity-80 leading-relaxed uppercase">
                         El paciente ingresó al sistema vía <span className="underline decoration-indigo-300 decoration-2">{patient.comoConocio || 'REFERENCIA DIRECTA'}</span>.
                         {patient.campania ? ` Asociado a la campaña: ${patient.campania}.` : ' No asociado a campañas activas.'}
+                        {patient.asesorComercialValue ? ` Asignado al asesor: ${patient.asesorComercialValue}.` : ''}
                     </p>
                 </div>
             </div>

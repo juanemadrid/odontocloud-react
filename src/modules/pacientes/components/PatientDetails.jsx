@@ -666,7 +666,7 @@ const FormDatosPersonales = ({ patient, photoState }) => {
     );
 };
 
-const FormAseguramiento = () => {
+const FormAseguramiento = ({ conveniosList = [] }) => {
     const { register, watch, setValue, formState: { errors } } = useFormContext();
     const [epsList, setEpsList] = useState([]);
     const { userProfile } = useAuth();
@@ -769,6 +769,15 @@ const FormAseguramiento = () => {
                     <FormRow label="Póliza de salud">
                         <input {...register("polizaSalud")} className="form-input text-sm w-full md:w-80" placeholder="Póliza de salud del paciente" />
                     </FormRow>
+                    <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
+                        <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
+                            <option value="">Ninguno / Particular</option>
+                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </FormRow>
+                    <FormRow label="Convenio de Pago" error={errors.convenioPago}>
+                        <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
+                    </FormRow>
                 </div>
             </div>
             {/* Action button mimicking the image bottom guard */}
@@ -781,7 +790,7 @@ const FormAseguramiento = () => {
     );
 };
 
-const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
+const FormMarketing = ({ pacientesRemision = [], profesionales = [], conveniosList = [] }) => {
     const { register, watch, setValue } = useFormContext();
 
     const remitidoPorType = watch("remitidoPorType");
@@ -794,34 +803,60 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
         }
     }, [remitidoPorType, setValue]);
 
+    const asesorComercialType = watch("asesorComercialType");
+    const initialAsesorRef = React.useRef(true);
+    useEffect(() => {
+        if (initialAsesorRef.current) {
+            initialAsesorRef.current = false;
+        } else {
+            setValue("asesorComercialValue", "");
+        }
+    }, [asesorComercialType, setValue]);
+
     return (
         <div className="p-4 md:p-8 animate-fadeIn max-w-4xl mx-auto">
             <div className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm pb-8">
                 <SectionTitle num="4" title="Estrategia de Mercadeo" />
                 <div className="pl-0 md:pl-4 space-y-1">
-                    <FormRow label="¿Cómo nos conoció?">
+                    <FormRow label="Convenio beneficio">
+                        <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
+                            <option value="">Seleccione...</option>
+                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </FormRow>
+
+                    <FormRow label="Convenio de pago">
+                        <select {...register("convenioPago")} className="form-input text-sm w-full md:w-64">
+                            <option value="">Seleccione...</option>
+                            {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </FormRow>
+
+                    <FormRow label="Cómo nos conoció">
                         <select {...register("comoConocio")} className="form-input text-sm w-full md:w-64">
                             <option value="">Seleccione...</option>
                             {MEDIOS_CONOCIMIENTO.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                     </FormRow>
-                    <FormRow label="Campaña Relacionada">
-                        <input {...register("campania")} className="form-input text-sm w-full" />
+
+                    <FormRow label="Campaña">
+                        <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña relacionada con el paciente" />
                     </FormRow>
+
                     <FormRow label="Remitido por">
                         <div className="flex flex-col gap-3 w-full">
                             {/* Segmented Control / Selector de tipo de remisión */}
                             <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
                                 <button
                                     type="button"
-                                    onClick={() => setValue("remitidoPorType", "Libre")}
+                                    onClick={() => setValue("remitidoPorType", "Usuario")}
                                     className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                        remitidoPorType === "Libre"
+                                        remitidoPorType === "Usuario"
                                             ? "bg-white text-indigo-600 shadow-sm"
                                             : "text-slate-500 hover:text-slate-800"
                                     }`}
                                 >
-                                    Texto Libre
+                                    Usuario
                                 </button>
                                 <button
                                     type="button"
@@ -836,24 +871,26 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setValue("remitidoPorType", "Usuario")}
+                                    onClick={() => setValue("remitidoPorType", "Libre")}
                                     className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                        remitidoPorType === "Usuario"
+                                        remitidoPorType === "Libre"
                                             ? "bg-white text-indigo-600 shadow-sm"
                                             : "text-slate-500 hover:text-slate-800"
                                     }`}
                                 >
-                                    Doctor
+                                    Libre
                                 </button>
                             </div>
 
                             {/* Campo de valor de remisión */}
                             <div className="flex gap-2">
-                                {remitidoPorType === "Libre" && (
-                                    <input
-                                        {...register("remitidoPorValue")}
-                                        className="form-input text-sm w-full md:w-96"
-                                        placeholder="Nombre de la persona que refiere"
+                                {remitidoPorType === "Usuario" && (
+                                    <SearchableSelect 
+                                        value={watch("remitidoPorValue")}
+                                        onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
+                                        options={profesionales.map(p => p.displayName)}
+                                        placeholder="Seleccione un doctor..."
+                                        className="w-full md:w-96"
                                     />
                                 )}
                                 {remitidoPorType === "Paciente" && (
@@ -865,18 +902,67 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
                                         className="w-full md:w-96"
                                     />
                                 )}
-                                {remitidoPorType === "Usuario" && (
-                                    <SearchableSelect 
-                                        value={watch("remitidoPorValue")}
-                                        onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
-                                        options={profesionales.map(p => p.displayName)}
-                                        placeholder="Seleccione un doctor..."
-                                        className="w-full md:w-96"
+                                {remitidoPorType === "Libre" && (
+                                    <input
+                                        {...register("remitidoPorValue")}
+                                        className="form-input text-sm w-full md:w-96"
+                                        placeholder="Nombre de la persona que refiere"
                                     />
                                 )}
                             </div>
                         </div>
                     </FormRow>
+
+                    <FormRow label="Asesor comercial">
+                        <div className="flex flex-col gap-3 w-full">
+                            {/* Segmented Control / Selector de tipo de asesor */}
+                            <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("asesorComercialType", "Usuario")}
+                                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                        asesorComercialType === "Usuario"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    Usuario
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("asesorComercialType", "Libre")}
+                                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                        asesorComercialType === "Libre"
+                                            ? "bg-white text-indigo-600 shadow-sm"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    Libre
+                                </button>
+                            </div>
+
+                            {/* Campo de valor de asesor */}
+                            <div className="flex gap-2">
+                                {asesorComercialType === "Usuario" && (
+                                    <SearchableSelect 
+                                        value={watch("asesorComercialValue")}
+                                        onChange={(val) => setValue("asesorComercialValue", val, { shouldDirty: true })}
+                                        options={profesionales.map(p => p.displayName)}
+                                        placeholder="Seleccione un asesor..."
+                                        className="w-full md:w-96"
+                                    />
+                                )}
+                                {asesorComercialType === "Libre" && (
+                                    <input
+                                        {...register("asesorComercialValue")}
+                                        className="form-input text-sm w-full md:w-96"
+                                        placeholder="Nombre del asesor comercial"
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    </FormRow>
+
                     <FormRow label="Permite Publicidad">
                         <label className="flex items-center gap-3 cursor-pointer group py-2">
                              <div className="relative">
@@ -890,7 +976,7 @@ const FormMarketing = ({ pacientesRemision = [], profesionales = [] }) => {
             </div>
         </div>
     );
-}
+};
 
 const SidebarButton = ({ label, active, onClick, icon: Icon, badge }) => (
     <button
@@ -977,6 +1063,7 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
 
     const [pacientesRemision, setPacientesRemision] = useState([]);
     const [profesionales, setProfesionales] = useState([]);
+    const [conveniosList, setConveniosList] = useState([]);
     const inquilino = userProfile?.inquilino;
 
     useEffect(() => {
@@ -995,6 +1082,11 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                     displayName: d.data().nombreCompleto || d.data().nombre 
                 })).sort((a, b) => a.displayName.localeCompare(b.displayName));
                 setProfesionales(doctors);
+
+                const cSnap = await getDocs(query(collection(db, "convenios"), where("inquilino", "==", inquilino), where("activo", "==", true)));
+                const convenios = cSnap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                convenios.sort((a, b) => a.localeCompare(b));
+                setConveniosList(convenios);
             } catch (e) {
                 console.error("Error loading remision catalogs in PatientDetails:", e);
             }
@@ -1524,8 +1616,8 @@ export default function PatientDetails({ initialData, onClose, onDelete }) {
                                     </div>
                                     <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/20">
                                         {activeTab === "datos" && <FormDatosPersonales patient={patient} photoState={{isCameraActive, fotoPreview, startCamera, stopCamera, takePhoto, onFotoChange, videoRef, canvasRef}} />}
-                                        {activeTab === "mark" && <FormMarketing pacientesRemision={pacientesRemision} profesionales={profesionales} />}
-                                        {activeTab === "eps" && <FormAseguramiento />}
+                                        {activeTab === "mark" && <FormMarketing pacientesRemision={pacientesRemision} profesionales={profesionales} conveniosList={conveniosList} />}
+                                        {activeTab === "eps" && <FormAseguramiento conveniosList={conveniosList} />}
                                     </div>
                                 </form>
                             ) : (

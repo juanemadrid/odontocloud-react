@@ -10,8 +10,14 @@ import { useToast } from "../../../context/ToastContext";
 import { 
   FiCheckSquare, FiPlus, FiSearch, FiEdit3, FiTrash2, 
   FiSave, FiAlertCircle, FiArrowRight, FiArrowLeft, 
-  FiEye, FiEyeOff, FiToggleLeft, FiToggleRight, FiInfo 
+  FiEye, FiEyeOff, FiToggleLeft, FiToggleRight, FiInfo, FiPercent
 } from "react-icons/fi";
+
+const formatNumberWithDots = (num) => {
+  if (num === undefined || num === null || num === "" || num === 0) return "";
+  const parts = String(Math.round(Number(num) || 0)).replace(/\D/g, "");
+  return parts.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
 
 export default function Convenios() {
   const { userProfile } = useAuth();
@@ -859,12 +865,12 @@ export default function Convenios() {
                             <div className="relative inline-block w-36">
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                               <input
-                                type="number"
-                                min="0"
-                                max={originalPrice}
-                                step="any"
-                                value={disc.descuento || ""}
-                                onChange={(e) => handleDiscountChange(item.id, originalPrice, "descuento", e.target.value)}
+                                type="text"
+                                value={disc.descuento ? formatNumberWithDots(disc.descuento) : ""}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/\D/g, "");
+                                  handleDiscountChange(item.id, originalPrice, "descuento", raw);
+                                }}
                                 placeholder="0"
                                 className="w-full text-right pr-2 pl-6 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-blue-400"
                               />

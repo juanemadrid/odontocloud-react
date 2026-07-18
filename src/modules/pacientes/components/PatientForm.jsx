@@ -69,6 +69,7 @@ export default function PatientForm({
     const [sucursales, setSucursales] = useState([]);
     const [epsList, setEpsList] = useState([]);
     const [barrioList, setBarrioList] = useState([]);
+    const [conveniosList, setConveniosList] = useState([]);
     const [loadingPlanes, setLoadingPlanes] = useState(false);
     const [loadingProfesionales, setLoadingProfesionales] = useState(false);
     const [loadingEps, setLoadingEps] = useState(false);
@@ -373,12 +374,26 @@ export default function PatientForm({
             }
         };
 
+        const loadConvenios = async () => {
+            if (!inquilino) return;
+            try {
+                const q = query(collection(db, "convenios"), where("inquilino", "==", inquilino), where("activo", "==", true));
+                const snap = await getDocs(q);
+                const data = snap.docs.map(d => d.data().nombre?.trim()).filter(Boolean);
+                data.sort((a, b) => a.localeCompare(b));
+                setConveniosList(data);
+            } catch (e) {
+                console.error("Error loading convenios:", e);
+            }
+        };
+
         loadPlanes();
         loadProfesionales();
         loadEps();
         loadBarrios();
         loadSucursales();
         loadRemisionData();
+        loadConvenios();
     }, [inquilino]);
 
     const {
@@ -525,6 +540,16 @@ export default function PatientForm({
             setValue("remitidoPorValue", "");
         }
     }, [remitidoPorType, setValue]);
+
+    const asesorComercialType = watch("asesorComercialType");
+    const initialAsesorRef = React.useRef(true);
+    useEffect(() => {
+        if (initialAsesorRef.current) {
+            initialAsesorRef.current = false;
+        } else {
+            setValue("asesorComercialValue", "");
+        }
+    }, [asesorComercialType, setValue]);
 
     const paisNacimiento = watch("paisNacimiento");
     const paisDomicilio = watch("paisDomicilio");
@@ -1204,10 +1229,13 @@ export default function PatientForm({
                                         )}
 
                                         {isVisible("convenioBeneficio") && (
-                                            <FormRow label="Convenio / Beneficio">
-                                                <input {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64" placeholder="Ej: Ecopetrol" />
-                                            </FormRow>
-                                        )}
+                                             <FormRow label="Convenio / Beneficio" error={errors.convenioBeneficio}>
+                                                 <select {...register("convenioBeneficio")} className="form-input text-sm w-full md:w-64">
+                                                     <option value="">Ninguno / Particular</option>
+                                                     {conveniosList.map(c => <option key={c} value={c}>{c}</option>)}
+                                                 </select>
+                                             </FormRow>
+                                         )}
                                         {isVisible("convenioPago") && (
                                             <FormRow label="Convenio de Pago">
                                                 <input {...register("convenioPago")} className="form-input text-sm w-full md:w-64" placeholder="Referencia" />
@@ -1217,7 +1245,7 @@ export default function PatientForm({
                                 </>
                             )}
 
-                            {(isVisible("comoNosConocio") || isVisible("campana") || isVisible("remitidoPor")) && (
+                            {(isVisible("comoNosConocio") || isVisible("campana") || isVisible("remitidoPor") || isVisible("asesorComercial")) && (
                                 <>
                                     <SectionTitle num="4" title="Estrategia de Mercadeo" />
                                     <div className="pl-0 md:pl-4 space-y-1">
@@ -1231,7 +1259,7 @@ export default function PatientForm({
                                         )}
                                         {isVisible("campana") && (
                                             <FormRow label="Campaña Relacionada">
-                                                <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña publicitaria" />
+                                                <input {...register("campania")} className="form-input text-sm w-full" placeholder="Campaña relacionada con el paciente" />
                                             </FormRow>
                                         )}
                                         {isVisible("remitidoPor") && (
@@ -1241,14 +1269,14 @@ export default function PatientForm({
                                                      <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
                                                          <button
                                                              type="button"
-                                                             onClick={() => setValue("remitidoPorType", "Libre")}
+                                                             onClick={() => setValue("remitidoPorType", "Usuario")}
                                                              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                                                 watch("remitidoPorType") === "Libre"
+                                                                 watch("remitidoPorType") === "Usuario"
                                                                      ? "bg-white text-indigo-600 shadow-sm"
                                                                      : "text-slate-500 hover:text-slate-800"
                                                              }`}
                                                          >
-                                                             Texto Libre
+                                                             Usuario
                                                          </button>
                                                          <button
                                                              type="button"
@@ -1263,24 +1291,26 @@ export default function PatientForm({
                                                          </button>
                                                          <button
                                                              type="button"
-                                                             onClick={() => setValue("remitidoPorType", "Usuario")}
+                                                             onClick={() => setValue("remitidoPorType", "Libre")}
                                                              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                                                 watch("remitidoPorType") === "Usuario"
+                                                                 watch("remitidoPorType") === "Libre"
                                                                      ? "bg-white text-indigo-600 shadow-sm"
                                                                      : "text-slate-500 hover:text-slate-800"
                                                              }`}
                                                          >
-                                                             Doctor
+                                                             Libre
                                                          </button>
                                                      </div>
 
                                                      {/* Campo de valor de remisión */}
                                                      <div className="flex gap-2">
-                                                         {watch("remitidoPorType") === "Libre" && (
-                                                             <input
-                                                                 {...register("remitidoPorValue")}
-                                                                 className="form-input text-sm w-full md:w-96"
-                                                                 placeholder="Nombre de la persona que refiere"
+                                                         {watch("remitidoPorType") === "Usuario" && (
+                                                             <SearchableSelect 
+                                                                 value={watch("remitidoPorValue")}
+                                                                 onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
+                                                                 options={profesionales.map(p => p.displayName)}
+                                                                 placeholder="Seleccione un doctor..."
+                                                                 className="w-full md:w-96"
                                                              />
                                                          )}
                                                          {watch("remitidoPorType") === "Paciente" && (
@@ -1292,18 +1322,67 @@ export default function PatientForm({
                                                                  className="w-full md:w-96"
                                                              />
                                                          )}
-                                                         {watch("remitidoPorType") === "Usuario" && (
-                                                             <SearchableSelect 
-                                                                 value={watch("remitidoPorValue")}
-                                                                 onChange={(val) => setValue("remitidoPorValue", val, { shouldDirty: true })}
-                                                                 options={profesionales.map(p => p.displayName)}
-                                                                 placeholder="Seleccione un doctor..."
-                                                                 className="w-full md:w-96"
+                                                         {watch("remitidoPorType") === "Libre" && (
+                                                             <input
+                                                                 {...register("remitidoPorValue")}
+                                                                 className="form-input text-sm w-full md:w-96"
+                                                                 placeholder="Nombre de la persona que refiere"
                                                              />
                                                          )}
                                                      </div>
                                                  </div>
                                              </FormRow>
+                                        )}
+                                        {isVisible("asesorComercial") && (
+                                            <FormRow label="Asesor comercial">
+                                                <div className="flex flex-col gap-3 w-full">
+                                                    {/* Segmented Control / Selector de tipo de asesor */}
+                                                    <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setValue("asesorComercialType", "Usuario")}
+                                                            className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                                                watch("asesorComercialType") === "Usuario"
+                                                                    ? "bg-white text-indigo-600 shadow-sm"
+                                                                    : "text-slate-500 hover:text-slate-800"
+                                                            }`}
+                                                        >
+                                                            Usuario
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setValue("asesorComercialType", "Libre")}
+                                                            className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                                                watch("asesorComercialType") === "Libre"
+                                                                    ? "bg-white text-indigo-600 shadow-sm"
+                                                                    : "text-slate-500 hover:text-slate-800"
+                                                            }`}
+                                                        >
+                                                            Libre
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Campo de valor de asesor */}
+                                                    <div className="flex gap-2">
+                                                        {watch("asesorComercialType") === "Usuario" && (
+                                                            <SearchableSelect 
+                                                                value={watch("asesorComercialValue")}
+                                                                onChange={(val) => setValue("asesorComercialValue", val, { shouldDirty: true })}
+                                                                options={profesionales.map(p => p.displayName)}
+                                                                placeholder="Seleccione un asesor..."
+                                                                className="w-full md:w-96"
+                                                            />
+                                                        )}
+                                                        {watch("asesorComercialType") === "Libre" && (
+                                                            <input
+                                                                {...register("asesorComercialValue")}
+                                                                className="form-input text-sm w-full md:w-96"
+                                                                placeholder="Nombre del asesor comercial"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </FormRow>
                                         )}
                                     </div>
                                 </>
