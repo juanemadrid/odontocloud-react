@@ -8,19 +8,20 @@ const getBaseUrl = (testMode = true) => {
 export const getAccessToken = async (clientId, clientSecret, username, password, testMode = true) => {
     const baseUrl = getBaseUrl(testMode);
     
+    const params = new URLSearchParams();
+    params.append("grant_type", "password");
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
+    params.append("username", username);
+    params.append("password", password);
+
     const response = await fetch(`${baseUrl}/oauth/token`, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: JSON.stringify({
-            grant_type: "password",
-            client_id: clientId,
-            client_secret: clientSecret,
-            username: username,
-            password: password
-        })
+        body: params.toString()
     });
     
     const data = await response.json();
