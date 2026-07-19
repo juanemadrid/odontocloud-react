@@ -905,19 +905,20 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                              </div>
                         </div>
 
-                        <table className="w-full text-left table-fixed">
+                        <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-white border-b border-slate-50">
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-10">#</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-1/3">Tratamiento / Descripción</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-16">Cant.</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Dientes</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Valor Unit.</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-32">Subtotal</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-28">Realizado</th>
-                                    <th className="px-4 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Estado</th>
-                                    <th className="px-4 py-3 w-12"></th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center">#</th>
+                                    <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center"></th>
+                                    <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center" title="Marcar como realizado">✓</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest">Procedimiento</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Dientes</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-24">Realizado</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-14">Cant.</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-28">Valor Unit.</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-24">Desc.</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-right w-28">Sub</th>
+                                    <th className="px-3 py-3 w-10"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -937,151 +938,139 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     const sc = statusConfig[itemStatus];
 
                                     return (
-                                    <tr key={item.id} className="group hover:bg-slate-50/5 transition-colors">
-                                        <td className="px-4 py-3 text-[10px] font-black text-slate-300 text-center">{index + 1}</td>
-                                        <td className="px-4 py-3 align-middle">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight">
-                                                    {item.code && <span className="text-indigo-400 mr-2 text-[9px] font-mono">{item.code}</span>}
-                                                    {item.desc}
-                                                </div>
-                                                {itemStatus !== 'none' && (
-                                                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ml-1 animate-fadeIn ${
-                                                        itemStatus === 'debt'    ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                                                        itemStatus === 'partial' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                                                                                   'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                                    }`}>
-                                                        {itemStatus === 'debt' ? '⚠️ SIN PAGAR' : itemStatus === 'partial' ? '⏳ PARCIAL' : '✓ PAGADO'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    <td className="px-4 py-3 align-middle text-center">
-                                        <input
-                                            type="number"
-                                            disabled={paidMap[item.id] > 0}
-                                            className="w-12 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-700 text-xs transition-all disabled:opacity-75 disabled:cursor-not-allowed"
-                                            value={item.qty}
-                                            onChange={(e) => updateItem(item.id, 'qty', Number(e.target.value))}
-                                            min="1"
-                                        />
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <input
-                                                type="text"
-                                                disabled={paidMap[item.id] > 0}
-                                                className="w-16 h-9 text-center bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white font-black text-slate-500 text-[10px] transition-all uppercase disabled:opacity-75 disabled:cursor-not-allowed"
-                                                value={item.dientes || ""}
-                                                onChange={(e) => updateItem(item.id, 'dientes', e.target.value)}
+                                    <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50">
+                                        {/* # */}
+                                        <td className="px-3 py-2.5 text-[10px] font-black text-slate-300 text-center">{index + 1}</td>
+                                        {/* Status dot */}
+                                        <td className="px-2 py-2.5 text-center">
+                                            <div
+                                                className={`w-3.5 h-3.5 rounded-full mx-auto ${sc.color} ${itemStatus === 'debt' ? 'animate-pulse' : ''} ring-2 ${sc.ring} ring-offset-1 cursor-help`}
+                                                title={sc.tooltip}
                                             />
-                                            {paidMap[item.id] === 0 && (
-                                                <button 
-                                                    onClick={() => openToothSelector(item)}
-                                                    className="text-indigo-500 hover:text-indigo-700 transition-colors"
-                                                >
-                                                    <FiPlusCircle size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-right font-black font-mono text-slate-700 text-xs">
-                                        {paidMap[item.id] > 0 ? (
-                                            <span>$ {Number(item.amount || 0).toLocaleString('es-CO')}</span>
-                                        ) : (
-                                            <div className="flex items-center justify-end gap-1 bg-slate-50 px-2 h-9 rounded-lg border border-slate-100 w-28 ml-auto font-sans">
-                                                <span className="text-slate-300 text-[10px] font-bold">$</span>
-                                                <input
-                                                    type="text"
-                                                    className="w-full bg-transparent text-right outline-none font-black text-slate-700 text-[12px]"
-                                                    value={Number(item.amount || 0) === 0 ? "" : Number(item.amount || 0).toLocaleString('es-CO')}
-                                                    onChange={(e) => {
-                                                        const cleanVal = e.target.value.replace(/\D/g, '');
-                                                        updateItem(item.id, 'amount', cleanVal ? Number(cleanVal) : 0);
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-right font-black font-mono text-rose-600 text-xs">
-                                        {(paidMap[item.id] > 0 || isItemRealized(item.id)) ? (
-                                            <span>$ {Number(item.descuento || 0).toLocaleString('es-CO')}</span>
-                                        ) : (
-                                            <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-9 rounded-lg border border-rose-100 w-20 ml-auto font-sans">
-                                                <span className="text-rose-300 text-[10px] font-bold">$</span>
-                                                <input
-                                                    type="text"
-                                                    className="w-full bg-transparent text-right outline-none font-black text-rose-600 text-[12px]"
-                                                    value={Number(item.descuento || 0) === 0 ? "0" : Number(item.descuento || 0).toLocaleString('es-CO')}
-                                                    onChange={(e) => {
-                                                        const cleanVal = e.target.value.replace(/\D/g, '');
-                                                        updateItem(item.id, 'descuento', cleanVal ? Number(cleanVal) : 0);
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-right font-black text-[13px] text-slate-700 tracking-tight font-mono">
-                                        <span className="text-[11px] font-bold text-slate-300 mr-0.5">$</span>
-                                        {((item.qty * item.amount) - (item.descuento || 0)).toLocaleString('es-CO')}
-                                    </td>
-                                    {/* Columna Realizado: checkbox visual + fecha */}
-                                    <td className="px-4 py-3 align-middle text-center w-28">
-                                        <div className="flex flex-col items-center gap-1">
-                                            {/* Botón toggle realizado */}
+                                        </td>
+                                        {/* Checkbox realizado */}
+                                        <td className="px-2 py-2.5 text-center">
                                             <button
                                                 onClick={() => toggleItemRealized(item.id)}
                                                 disabled={togglingItem === item.id}
                                                 title={isItemRealized(item.id) ? 'Marcado como realizado — clic para desmarcar' : 'Marcar como realizado'}
-                                                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-2 shrink-0 ${
+                                                className={`w-6 h-6 rounded flex items-center justify-center transition-all border-2 mx-auto ${
                                                     isItemRealized(item.id)
-                                                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-200'
-                                                        : 'bg-white border-slate-200 text-slate-300 hover:border-emerald-400 hover:text-emerald-400'
+                                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                        : 'bg-white border-slate-200 text-transparent hover:border-emerald-400'
                                                 } ${togglingItem === item.id ? 'opacity-50 cursor-wait' : ''}`}
                                             >
-                                                <FiCheck size={13} strokeWidth={3} />
+                                                <FiCheck size={12} strokeWidth={3} />
                                             </button>
-                                            {/* Fecha realizado */}
-                                            {realizedDate && (
-                                                <span className="text-[8px] font-bold text-emerald-600 leading-none tracking-tight">
-                                                    {realizedDate}
-                                                </span>
+                                        </td>
+                                        {/* Descripción del procedimiento */}
+                                        <td className="px-3 py-2.5 align-middle">
+                                            <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-tight">
+                                                {item.code && <span className="text-indigo-400 mr-1.5 text-[9px] font-mono">{item.code}</span>}
+                                                {item.desc}
+                                            </div>
+                                        </td>
+                                        {/* Dientes */}
+                                        <td className="px-3 py-2.5 align-middle text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <input
+                                                    type="text"
+                                                    disabled={paidMap[item.id] > 0}
+                                                    className="w-14 h-8 text-center bg-slate-50 border border-slate-100 rounded outline-none focus:bg-white font-black text-slate-500 text-[10px] transition-all uppercase disabled:opacity-75 disabled:cursor-not-allowed"
+                                                    value={item.dientes || ""}
+                                                    onChange={(e) => updateItem(item.id, 'dientes', e.target.value)}
+                                                />
+                                                {paidMap[item.id] === 0 && (
+                                                    <button
+                                                        onClick={() => openToothSelector(item)}
+                                                        className="text-indigo-400 hover:text-indigo-600 transition-colors"
+                                                    >
+                                                        <FiPlusCircle size={13} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                        {/* Fecha realizado */}
+                                        <td className="px-3 py-2.5 align-middle text-center">
+                                            {realizedDate ? (
+                                                <span className="text-[9px] font-bold text-emerald-600 leading-none">{realizedDate}</span>
+                                            ) : (
+                                                <span className="text-[9px] text-slate-200 font-bold">—</span>
                                             )}
-                                        </div>
-                                    </td>
-                                    {/* Estado semáforo */}
-                                    <td className="px-4 py-3 align-middle text-center w-20">
-                                        <div className="flex items-center justify-center" title={sc.tooltip}>
-                                            <div className={`relative w-4 h-4 rounded-full ${sc.color} ${itemStatus === 'debt' ? 'animate-pulse' : ''} ring-2 ${sc.ring} ring-offset-1 cursor-help`}>
-                                            </div>
-                                        </div>
-                                        <div className={`text-center text-[7px] font-black uppercase tracking-wider mt-0.5 ${
-                                            itemStatus === 'none'    ? 'text-slate-300' :
-                                            itemStatus === 'debt'    ? 'text-rose-400' :
-                                            itemStatus === 'partial' ? 'text-amber-500' :
-                                                                       'text-emerald-500'
-                                        }`}>
-                                            {itemStatus === 'none' ? 'Pendiente' : itemStatus === 'debt' ? 'Sin pagar' : itemStatus === 'partial' ? 'Parcial' : 'Pagado'}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-center w-12">
-                                        {isItemRealized(item.id) ? (
-                                            <div
-                                                title="No se puede eliminar: este procedimiento ya fue marcado como realizado en una evolución"
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-200 cursor-not-allowed opacity-60 group-hover:opacity-100"
-                                            >
-                                                <FiTrash2 size={16} />
-                                            </div>
-                                        ) : paidMap[item.id] === 0 ? (
-                                            <button
-                                                onClick={() => removeItem(item.id)}
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
-                                            >
-                                                <FiTrash2 size={16} />
-                                            </button>
-                                        ) : null}
-                                    </td>
-                                </tr>
+                                        </td>
+                                        {/* Cantidad */}
+                                        <td className="px-3 py-2.5 align-middle text-center">
+                                            <input
+                                                type="number"
+                                                disabled={paidMap[item.id] > 0}
+                                                className="w-11 h-8 text-center bg-slate-50 border border-slate-100 rounded outline-none focus:bg-white font-black text-slate-700 text-xs transition-all disabled:opacity-75 disabled:cursor-not-allowed"
+                                                value={item.qty}
+                                                onChange={(e) => updateItem(item.id, 'qty', Number(e.target.value))}
+                                                min="1"
+                                            />
+                                        </td>
+                                        {/* Valor unitario */}
+                                        <td className="px-3 py-2.5 align-middle text-right font-black font-mono text-slate-700 text-xs">
+                                            {paidMap[item.id] > 0 ? (
+                                                <span>$ {Number(item.amount || 0).toLocaleString('es-CO')}</span>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1 bg-slate-50 px-2 h-8 rounded border border-slate-100 w-24 ml-auto font-sans">
+                                                    <span className="text-slate-300 text-[10px] font-bold">$</span>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full bg-transparent text-right outline-none font-black text-slate-700 text-[11px]"
+                                                        value={Number(item.amount || 0) === 0 ? "" : Number(item.amount || 0).toLocaleString('es-CO')}
+                                                        onChange={(e) => {
+                                                            const cleanVal = e.target.value.replace(/\D/g, '');
+                                                            updateItem(item.id, 'amount', cleanVal ? Number(cleanVal) : 0);
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </td>
+                                        {/* Descuento */}
+                                        <td className="px-3 py-2.5 align-middle text-right font-black font-mono text-rose-500 text-xs">
+                                            {(paidMap[item.id] > 0 || isItemRealized(item.id)) ? (
+                                                <span>$ {Number(item.descuento || 0).toLocaleString('es-CO')}</span>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1 bg-rose-50 px-2 h-8 rounded border border-rose-100 w-20 ml-auto font-sans">
+                                                    <span className="text-rose-300 text-[10px] font-bold">$</span>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full bg-transparent text-right outline-none font-black text-rose-500 text-[11px]"
+                                                        value={Number(item.descuento || 0) === 0 ? "0" : Number(item.descuento || 0).toLocaleString('es-CO')}
+                                                        onChange={(e) => {
+                                                            const cleanVal = e.target.value.replace(/\D/g, '');
+                                                            updateItem(item.id, 'descuento', cleanVal ? Number(cleanVal) : 0);
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </td>
+                                        {/* Subtotal fila */}
+                                        <td className="px-3 py-2.5 align-middle text-right font-black text-[12px] text-slate-700 font-mono">
+                                            <span className="text-[10px] font-bold text-slate-300 mr-0.5">$</span>
+                                            {((item.qty * item.amount) - (item.descuento || 0)).toLocaleString('es-CO')}
+                                        </td>
+                                        {/* Acciones (eliminar) */}
+                                        <td className="px-3 py-2.5 align-middle text-center">
+                                            {isItemRealized(item.id) ? (
+                                                <div
+                                                    title="No se puede eliminar: procedimiento ya realizado"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-200 cursor-not-allowed opacity-60 group-hover:opacity-100 mx-auto"
+                                                >
+                                                    <FiTrash2 size={14} />
+                                                </div>
+                                            ) : paidMap[item.id] === 0 ? (
+                                                <button
+                                                    onClick={() => removeItem(item.id)}
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 mx-auto"
+                                                >
+                                                    <FiTrash2 size={14} />
+                                                </button>
+                                            ) : null}
+                                        </td>
+                                    </tr>
                                     );
                                 })}
                         </tbody>
@@ -1105,7 +1094,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                         </button>
                     </div>
 
-                    {/* Summary Block */}
+                    {/* Summary Block - estilo OralDrive */}
                     <div className="grid grid-cols-1 md:grid-cols-2 bg-white p-6 gap-8 border-t border-slate-100">
                          <div className="space-y-4">
                               <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -1124,25 +1113,50 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                   Guardar Observaciones
                               </button>
                          </div>
-                         <div className="flex flex-col items-end justify-center space-y-4 pr-6">
-                              <div className="w-full max-w-[280px] space-y-2">
-                                  <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
-                                      <span className="uppercase tracking-widest">Subtotal</span>
-                                      <span className="font-mono">$ {calculateSubtotal().toLocaleString('es-CO')}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-[11px] font-bold text-rose-400">
-                                      <span className="uppercase tracking-widest">Descuentos</span>
-                                      <span className="font-mono">-$ {calculateDiscounts().toLocaleString('es-CO')}</span>
-                                  </div>
-                                  <div className="h-px bg-slate-100 my-2" />
-                                  <div className="flex justify-between items-center">
-                                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">Total a Pagar</span>
-                                      <span className="text-3xl font-black text-indigo-600 tracking-tighter">
-                                          <span className="text-sm mr-1 text-slate-300">$</span>
-                                          {calculateTotal().toLocaleString('es-CO')}
-                                      </span>
-                                  </div>
-                              </div>
+                         <div className="flex flex-col justify-center space-y-1.5">
+                              {(() => {
+                                  const subtotal = calculateSubtotal();
+                                  const descuentos = calculateDiscounts();
+                                  const total = calculateTotal();
+                                  const abono = payments.reduce((s, p) => s + Number(p.monto || 0), 0);
+                                  const saldoPendiente = Math.max(0, total - abono);
+                                  // Saldo facturado: sum of items that are realized and have paidMap > 0
+                                  const saldoFacturado = (items || []).reduce((s, it) => {
+                                      if (isItemRealized(it.id)) return s + (paidMap[it.id] || 0);
+                                      return s;
+                                  }, 0);
+                                  const valorAFacturar = (items || []).reduce((s, it) => {
+                                      if (isItemRealized(it.id)) {
+                                          const cost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                                          return s + Math.max(0, cost - (paidMap[it.id] || 0));
+                                      }
+                                      return s;
+                                  }, 0);
+                                  const row = (label, value, cls = 'text-slate-500') => (
+                                      <div className="flex justify-between items-center text-[11px] font-bold">
+                                          <span className="uppercase tracking-widest text-slate-400">{label}</span>
+                                          <span className={`font-mono ${cls}`}>$ {value.toLocaleString('es-CO')}</span>
+                                      </div>
+                                  );
+                                  return (
+                                      <>
+                                          {row('Subtotal', subtotal)}
+                                          {row('Descuentos', descuentos, 'text-rose-400')}
+                                          <div className="h-px bg-slate-100 my-1" />
+                                          {row('Total', total, 'text-slate-800 font-black text-sm')}
+                                          {row('Abono', abono, 'text-emerald-600')}
+                                          <div className="h-px bg-slate-100 my-1" />
+                                          <div className="flex justify-between items-center">
+                                              <span className="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Saldo pendiente</span>
+                                              <span className={`font-mono font-black text-sm ${saldoPendiente > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                                                  $ {saldoPendiente.toLocaleString('es-CO')}
+                                              </span>
+                                          </div>
+                                          {row('Saldo facturado', saldoFacturado, 'text-indigo-500')}
+                                          {row('Valor a facturar', valorAFacturar, 'text-amber-600 font-black')}
+                                      </>
+                                  );
+                              })()}
                          </div>
                     </div>
                 </div>
