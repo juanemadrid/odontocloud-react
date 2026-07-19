@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getPlansByPatient, deletePlan } from '../../../services/planService';
 import { getPatientById } from '../../../services/patientService';
-import { FiFileText, FiPlus, FiPrinter, FiEdit3, FiTrash2, FiActivity, FiX, FiAlertCircle, FiShield, FiCheckCircle } from "react-icons/fi";
+import { FiPlus, FiPrinter, FiEdit3, FiTrash2, FiX, FiAlertCircle, FiShield } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
 import { db } from '../../../firebase/firebaseConfig';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditingPlan }) {
     const patientId = patient?.id;
@@ -261,59 +261,6 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
         );
     };
 
-    const handleFinalizarPlan = async (e, plan) => {
-        e.stopPropagation();
-        if (plan.finalizado) {
-            // Reactivar
-            await updateDoc(doc(db, "treatment_plans", plan.id), { finalizado: false, fechaFinalizacion: null });
-            toast.success("Plan reactivado");
-        } else {
-            await updateDoc(doc(db, "treatment_plans", plan.id), { finalizado: true, fechaFinalizacion: new Date().toISOString() });
-            toast.success("Plan marcado como finalizado ✅");
-        }
-        // Reload plans
-        const snap = await getDocs(query(collection(db, "treatment_plans"), where("patientId", "==", patientId)));
-        setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    };
-
-    const handleGenerateInvoice = async (plan) => {
-        try {
-            // Check if invoice already exists
-            const q = query(
-                collection(db, "facturas"),
-                where("planId", "==", plan.id)
-            );
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                toast.warning("Ya se ha generado una factura para este plan de tratamiento.");
-                return;
-            }
-
-            // Create new invoice document
-            const invoiceData = {
-                patientId: patientId,
-                inquilino: userProfile?.inquilino || "",
-                planId: plan.id,
-                nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
-                fechaISO: new Date().toISOString(),
-                total: Number(plan.total || 0),
-                estado: getPlanStatus(plan) === 'paid' ? 'Pagada' : 'Pendiente',
-                items: (plan.items || []).map(item => ({
-                    nombre: item.nombre || item.concepto || "Servicio Dental",
-                    precio: Number(item.amount || item.precio || 0),
-                    cantidad: Number(item.qty || 1)
-                }))
-            };
-
-            await addDoc(collection(db, "facturas"), invoiceData);
-            toast.success("¡Factura de venta generada exitosamente! Ya la puedes emitir desde la pestaña 'Histórico facturas'.");
-            loadData();
-        } catch (err) {
-            console.error("Error al generar la factura:", err);
-            toast.error("Ocurrió un error al generar la factura de venta.");
-        }
-    };
-
     if (loading) return <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Cargando registros...</div>;
 
     return (
@@ -489,25 +436,11 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 <FiEdit3 size={14} />
                                             </button>
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); handleGenerateInvoice(p); }} 
-                                                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" 
-                                                title="Generar Factura de Venta"
-                                            >
-                                                <FiFileText size={14} />
-                                            </button>
-                                            <button 
                                                 onClick={(e) => handlePrint(e, p)} 
                                                 className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
                                                 title="Imprimir"
                                             >
                                                 <FiPrinter size={14} />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => handleFinalizarPlan(e, p)}
-                                                className={`p-2 rounded-lg transition-all shadow-sm ${p.finalizado ? 'bg-amber-50 text-amber-500 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}
-                                                title={p.finalizado ? "Reactivar plan" : "Marcar como finalizado"}
-                                            >
-                                                <FiCheckCircle size={14} />
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 

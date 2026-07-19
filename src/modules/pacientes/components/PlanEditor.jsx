@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../../context/ToastContext';
 import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
-import { doc, getDoc, collection, getDocs, query, where, limit, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, limit, updateDoc, onSnapshot } from 'firebase/firestore';
 import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle } from 'react-icons/fi';
 import { useFormContext } from 'react-hook-form';
 import { useAuth } from '../../../context/AuthContext';
@@ -80,30 +80,37 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     }, [inquilino]);
 
     useEffect(() => {
-        const fetchEvolutionsAndPayments = async () => {
-            if (!patientId) return;
-            try {
-                // 1. Fetch clinical evolutions
-                const evoSnap = await getDocs(query(
-                    collection(db, "clinical_evolutions"),
-                    where("patientId", "==", patientId)
-                ));
-                setEvolutions(evoSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!patientId) return;
 
-                // 2. Fetch payments if this plan has an ID
-                if (initialData?.id) {
-                    const paySnap = await getDocs(query(
-                        collection(db, "pagos"),
-                        where("patientId", "==", patientId),
-                        where("planId", "==", initialData.id)
-                    ));
-                    setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== "Anulado"));
-                }
+        // Real-time listener so that when an evolution is saved/updated,
+        // isItemRealized() reflects the change immediately without a page reload.
+        const evoQuery = query(
+            collection(db, "clinical_evolutions"),
+            where("patientId", "==", patientId)
+        );
+        const unsubscribeEvo = onSnapshot(evoQuery, (snap) => {
+            setEvolutions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (err) => {
+            console.error("Error listening to clinical evolutions:", err);
+        });
+
+        // Payments are less time-critical — a one-time fetch is fine
+        const fetchPayments = async () => {
+            if (!initialData?.id) return;
+            try {
+                const paySnap = await getDocs(query(
+                    collection(db, "pagos"),
+                    where("patientId", "==", patientId),
+                    where("planId", "==", initialData.id)
+                ));
+                setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== "Anulado"));
             } catch (err) {
-                console.error("Error fetching clinical data for plan editor:", err);
+                console.error("Error fetching payments for plan editor:", err);
             }
         };
-        fetchEvolutionsAndPayments();
+        fetchPayments();
+
+        return () => unsubscribeEvo();
     }, [patientId, initialData?.id]);
 
     const isItemRealized = (itemId) => {
@@ -199,7 +206,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         } catch { return null; }
     };
 
-    const [togglingItem, setTogglingItem] = useState(null);
     const [selectedForInvoice, setSelectedForInvoice] = useState(new Set());
 
     const toggleInvoiceSelection = (itemId) => {
@@ -275,57 +281,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             toast.error('Error al generar la factura.');
         }
     };
-
-    const toggleItemRealized = async (itemId) => {
-        const item = items.find(i => i.id === itemId);
-        if (!item) return;
-
-        // Cannot un-realize if it was realized via a clinical evolution
-        const realizedByEvolution = evolutions.some(evo =>
-            evo.planId === initialData?.id &&
-            (evo.plantillaItems?.[itemId]?.realizado === true ||
-             (evo.plantillaItems?.[itemId]?.realizado === undefined && evo.plantillaItems?.[itemId]?.checked === true))
-        );
-        if (realizedByEvolution && item.realizado) {
-            toast.error("Este procedimiento fue marcado como realizado desde una evolución clínica y no puede desmarcarse desde aquí.");
-            return;
-        }
-
-        const nowRealized = !item.realizado;
-        const newDate = nowRealized ? new Date().toISOString() : null;
-        const updatedItems = items.map(i =>
-            i.id === itemId
-                ? { ...i, realizado: nowRealized, fechaRealizado: newDate }
-                : i
-        );
-        setItems(updatedItems);
-
-        // Save immediately to Firestore if plan exists
-        if (initialData?.id) {
-            setTogglingItem(itemId);
-            try {
-                await updateDoc(doc(db, 'treatment_plans', initialData.id), {
-                    items: updatedItems
-                });
-                toast.success(nowRealized
-                    ? `✅ "${item.desc}" marcado como realizado`
-                    : `↩️ "${item.desc}" desmarcado`
-                );
-            } catch (e) {
-                console.error('Error toggling realizado:', e);
-                toast.error('Error al guardar el estado del procedimiento');
-                // Revert
-                setItems(items);
-            } finally {
-                setTogglingItem(null);
-            }
-        } else {
-            toast.success(nowRealized ? `✅ "${item.desc}" marcado como realizado (se guardará al aprobar)` : `↩️ Desmarcado`);
-        }
-    };
-
-    const handleGenerateItemInvoice = null; // Removed: use plan-level invoice from PlanList
-
 
     // Returns: 'none' | 'debt' | 'partial' | 'paid'
     const getItemStatus = (item) => {
@@ -985,7 +940,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                 <tr className="bg-white border-b border-slate-50">
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center">#</th>
                                     <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center"></th>
-                                    <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center" title="Marcar como realizado">✓</th>
                                     <th className="px-2 py-3 w-8 text-center relative group/th cursor-help">
                                         <div className="w-5 h-5 mx-auto rounded border-2 border-slate-200 bg-white flex items-center justify-center">
                                             <FiFileText size={10} className="text-slate-300" />
@@ -1031,21 +985,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                                 className={`w-3.5 h-3.5 rounded-full mx-auto ${sc.color} ${itemStatus === 'debt' ? 'animate-pulse' : ''} ring-2 ${sc.ring} ring-offset-1 cursor-help`}
                                                 title={sc.tooltip}
                                             />
-                                        </td>
-                                        {/* Checkbox realizado */}
-                                        <td className="px-2 py-2.5 text-center">
-                                            <button
-                                                onClick={() => toggleItemRealized(item.id)}
-                                                disabled={togglingItem === item.id}
-                                                title={isItemRealized(item.id) ? 'Marcado como realizado — clic para desmarcar' : 'Marcar como realizado'}
-                                                className={`w-6 h-6 rounded flex items-center justify-center transition-all border-2 mx-auto ${
-                                                    isItemRealized(item.id)
-                                                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                        : 'bg-white border-slate-200 text-transparent hover:border-emerald-400'
-                                                } ${togglingItem === item.id ? 'opacity-50 cursor-wait' : ''}`}
-                                            >
-                                                <FiCheck size={12} strokeWidth={3} />
-                                            </button>
                                         </td>
                                         {/* Checkbox seleccionar para facturar */}
                                         <td className="px-2 py-2.5 text-center">

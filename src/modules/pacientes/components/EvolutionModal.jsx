@@ -731,6 +731,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                                         ...prev,
                                                                         [s.id]: { 
                                                                             ...prev[s.id], 
+                                                                            checked: e.target.checked,
                                                                             realizado: e.target.checked,
                                                                             desc: s.desc || s.procedimiento || s.nombre || '',
                                                                             dientes: s.dientes || ''
@@ -1303,6 +1304,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                                 [s.id]: { 
                                                                     ...prev[s.id], 
                                                                     checked: e.target.checked,
+                                                                    realizado: e.target.checked,
                                                                     desc: s.desc || s.procedimiento || s.nombre || '',
                                                                     dientes: s.dientes || ''
                                                                 }
@@ -1349,6 +1351,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                 Object.keys(next).forEach(k => {
                                                     if (!realizedItemIds.has(k)) {
                                                         next[k].checked = val;
+                                                        next[k].realizado = val;
                                                     }
                                                 });
                                                 return next;
