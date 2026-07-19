@@ -220,24 +220,20 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
         const selectedItems = items.filter(it => selectedForInvoice.has(it.id));
 
-        // Calcular saldo a facturar por cada ítem: totalCost - pagado - ya facturado
-        const itemsConSaldo = selectedItems.map(it => {
-            const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
-            const pagado = paidMap[it.id] || 0;
-            const yaFacturado = Number(it.montoFacturado || 0);
-            const saldo = Math.max(0, totalCost - pagado - yaFacturado);
-            return { ...it, _saldoFacturar: saldo, _totalCost: totalCost };
-        });
-
-        // Bloqueo: no se puede facturar si ya no hay saldo pendiente
-        const sinSaldo = itemsConSaldo.filter(it => it._saldoFacturar <= 0);
-        if (sinSaldo.length > 0) {
-            toast.error(`❌ ${sinSaldo.length} procedimiento(s) ya no tienen saldo pendiente de facturación.`);
+        // Bloqueo: no se puede facturar un ítem que ya tiene factura emitida
+        const yaFacturados = selectedItems.filter(it => it.facturado === true);
+        if (yaFacturados.length > 0) {
+            toast.error(`❌ ${yaFacturados.length} procedimiento(s) ya tienen factura emitida.`);
             setSelectedForInvoice(new Set());
             return;
         }
 
-        const totalFactura = itemsConSaldo.reduce((s, it) => s + it._saldoFacturar, 0);
+        // La factura es por el VALOR TOTAL del ítem (sin restar abonos/pagos)
+        // Los pagos son independientes de la factura electrónica
+        const totalFactura = selectedItems.reduce((s, it) => {
+            const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+            return s + totalCost;
+        }, 0);
 
         try {
             const { addDoc, updateDoc: updDoc, doc: docRef } = await import('firebase/firestore');
@@ -249,36 +245,30 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 fechaISO: new Date().toISOString(),
                 total: totalFactura,
                 estado: 'Pendiente',
-                items: itemsConSaldo.map(it => ({
-                    itemId: it.id,
-                    nombre: it.desc || 'Servicio Dental',
-                    precio: Number(it.amount || 0),
-                    cantidad: Number(it.qty || 1),
-                    descuento: Number(it.descuento || 0),
-                    montoFacturado: it._saldoFacturar
-                }))
+                items: selectedItems.map(it => {
+                    const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                    return {
+                        itemId: it.id,
+                        nombre: it.desc || 'Servicio Dental',
+                        precio: Number(it.amount || 0),
+                        cantidad: Number(it.qty || 1),
+                        descuento: Number(it.descuento || 0),
+                        totalLinea: totalCost
+                    };
+                })
             };
             await addDoc(collection(db, 'facturas'), invoiceData);
 
-            // ✅ Acumular montoFacturado en cada ítem — permite facturar saldos restantes
-            const updatedItems = items.map(it => {
-                if (!selectedForInvoice.has(it.id)) return it;
-                const itConSaldo = itemsConSaldo.find(x => x.id === it.id);
-                const nuevoMonto = Number(it.montoFacturado || 0) + (itConSaldo?._saldoFacturar || 0);
-                const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
-                const pagado = paidMap[it.id] || 0;
-                const totalFacturado = nuevoMonto + pagado >= totalCost;
-                return {
-                    ...it,
-                    montoFacturado: nuevoMonto,
-                    facturadoCompleto: totalFacturado,
-                    fechaFacturado: new Date().toISOString()
-                };
-            });
+            // ✅ Marcar como facturado — un ítem con factura emitida NO se puede facturar de nuevo
+            const updatedItems = items.map(it =>
+                selectedForInvoice.has(it.id)
+                    ? { ...it, facturado: true, fechaFacturado: new Date().toISOString() }
+                    : it
+            );
             await updDoc(docRef(db, 'treatment_plans', initialData.id), { items: updatedItems });
             setItems(updatedItems);
 
-            toast.success(`✅ Factura generada por $${totalFactura.toLocaleString('es-CO')} para ${selectedItems.length} procedimiento(s).`);
+            toast.success(`✅ Factura emitida por $${totalFactura.toLocaleString('es-CO')} (valor total de ${selectedItems.length} procedimiento(s)).`);
             setSelectedForInvoice(new Set());
         } catch (err) {
             console.error(err);
@@ -1057,36 +1047,33 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                                 <FiCheck size={12} strokeWidth={3} />
                                             </button>
                                         </td>
-                                        {/* Checkbox seleccionar para facturar - grayed-out si ya pagado (igual a OralDrive) */}
+                                        {/* Checkbox seleccionar para facturar */}
                                         <td className="px-2 py-2.5 text-center">
                                             {(() => {
                                                 const realized = isItemRealized(item.id);
-                                                const pagado = paidMap[item.id] || 0;
-                                                const yaFacturado = Number(item.montoFacturado || 0);
-                                                // Saldo que aún se puede facturar
-                                                const saldoFacturable = Math.max(0, totalCost - pagado - yaFacturado);
-                                                const blocked = !realized || saldoFacturable <= 0;
+                                                // Bloqueado si ya tiene factura emitida (independiente de pagos)
+                                                const yaFacturado = item.facturado === true;
 
                                                 if (!realized) {
                                                     // No realizado: espacio vacío
                                                     return <span className="w-6 h-6 block mx-auto" />;
                                                 }
-                                                if (saldoFacturable <= 0) {
-                                                    // Sin saldo por facturar: grayed-out bloqueado
+                                                if (yaFacturado) {
+                                                    // Ya tiene factura: grayed-out bloqueado (igual a OralDrive)
                                                     return (
                                                         <span
-                                                            title={`Sin saldo por facturar${item.facturadoCompleto ? ' — facturado completo' : ''}`}
+                                                            title="Ya tiene factura electrónica emitida"
                                                             className="w-6 h-6 rounded border-2 border-slate-200 bg-slate-100 flex items-center justify-center mx-auto text-slate-300 cursor-not-allowed"
                                                         >
                                                             <FiCheck size={11} strokeWidth={3} />
                                                         </span>
                                                     );
                                                 }
-                                                // Tiene saldo por facturar
+                                                // Realizado y sin factura: se puede seleccionar
                                                 return (
                                                     <button
                                                         onClick={() => toggleInvoiceSelection(item.id)}
-                                                        title={`Seleccionar para facturar — Saldo: $${saldoFacturable.toLocaleString('es-CO')}`}
+                                                        title={`Seleccionar para facturar — Valor: $${totalCost.toLocaleString('es-CO')}`}
                                                         className={`w-6 h-6 rounded border-2 flex items-center justify-center mx-auto transition-all ${
                                                             selectedForInvoice.has(item.id)
                                                                 ? 'bg-indigo-500 border-indigo-500 text-white'
@@ -1256,17 +1243,18 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                   const abono = payments.reduce((s, p) => s + Number(p.monto || 0), 0);
                                   const saldoPendiente = Math.max(0, total - abono);
                                   const saldoFacturado = (items || []).reduce((s, it) => {
-                                      // Saldo ya facturado = monto emitido en facturas por ítems realizados
-                                      if (isItemRealized(it.id)) return s + Number(it.montoFacturado || 0);
+                                      // Saldo facturado = valor total de ítems que ya tienen factura emitida
+                                      if (isItemRealized(it.id) && it.facturado === true) {
+                                          const cost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                                          return s + cost;
+                                      }
                                       return s;
                                   }, 0);
                                   const valorAFacturar = (items || []).reduce((s, it) => {
-                                      if (isItemRealized(it.id)) {
+                                      // Valor a facturar = valor total de ítems realizados que aún NO tienen factura
+                                      if (isItemRealized(it.id) && it.facturado !== true) {
                                           const cost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
-                                          const pagado = paidMap[it.id] || 0;
-                                          const yaFacturado = Number(it.montoFacturado || 0);
-                                          // Saldo a facturar = lo que queda sin pagar y sin facturar
-                                          return s + Math.max(0, cost - pagado - yaFacturado);
+                                          return s + cost;
                                       }
                                       return s;
                                   }, 0);
