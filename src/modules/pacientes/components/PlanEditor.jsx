@@ -200,6 +200,53 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const [togglingItem, setTogglingItem] = useState(null);
+    const [selectedForInvoice, setSelectedForInvoice] = useState(new Set());
+
+    const toggleInvoiceSelection = (itemId) => {
+        setSelectedForInvoice(prev => {
+            const next = new Set(prev);
+            if (next.has(itemId)) next.delete(itemId);
+            else next.add(itemId);
+            return next;
+        });
+    };
+
+    const handleGenerateSelectedInvoice = async () => {
+        if (selectedForInvoice.size === 0) return;
+        if (!initialData?.id) {
+            toast.error('Guarda el plan antes de generar la factura.');
+            return;
+        }
+        const selectedItems = items.filter(it => selectedForInvoice.has(it.id));
+        const totalFactura = selectedItems.reduce((s, it) => {
+            const cost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+            return s + Math.max(0, cost - (paidMap[it.id] || 0));
+        }, 0);
+        try {
+            const { addDoc } = await import('firebase/firestore');
+            const invoiceData = {
+                patientId,
+                inquilino: inquilino || '',
+                planId: initialData.id,
+                nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
+                fechaISO: new Date().toISOString(),
+                total: totalFactura,
+                estado: 'Pendiente',
+                items: selectedItems.map(it => ({
+                    nombre: it.desc || 'Servicio Dental',
+                    precio: Number(it.amount || 0),
+                    cantidad: Number(it.qty || 1),
+                    descuento: Number(it.descuento || 0)
+                }))
+            };
+            await addDoc(collection(db, 'facturas'), invoiceData);
+            toast.success(`✅ Factura generada por $${totalFactura.toLocaleString('es-CO')} para ${selectedItems.length} procedimiento(s). Disponible en Histórico de Facturas.`);
+            setSelectedForInvoice(new Set());
+        } catch (err) {
+            console.error(err);
+            toast.error('Error al generar la factura.');
+        }
+    };
 
     const toggleItemRealized = async (itemId) => {
         const item = items.find(i => i.id === itemId);
@@ -911,6 +958,15 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center">#</th>
                                     <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center"></th>
                                     <th className="px-2 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest w-8 text-center" title="Marcar como realizado">✓</th>
+                                    <th className="px-2 py-3 w-8 text-center relative group/th cursor-help">
+                                        <div className="w-5 h-5 mx-auto rounded border-2 border-slate-200 bg-white flex items-center justify-center">
+                                            <FiFileText size={10} className="text-slate-300" />
+                                        </div>
+                                        {/* Tooltip estilo OralDrive */}
+                                        <div className="hidden group-hover/th:block absolute top-full left-0 mt-1 z-50 w-56 bg-slate-800 text-white text-[10px] font-bold rounded-xl p-3 shadow-xl leading-relaxed">
+                                            <span className="text-yellow-300">Seleccionar para facturar:</span> Puede seleccionar ítems que hayan sido realizados o aún no hayan sido facturados en su totalidad.
+                                        </div>
+                                    </th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest">Procedimiento</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-20">Dientes</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center w-24">Realizado</th>
@@ -962,6 +1018,26 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                             >
                                                 <FiCheck size={12} strokeWidth={3} />
                                             </button>
+                                        </td>
+                                        {/* Checkbox seleccionar para facturar */}
+                                        <td className="px-2 py-2.5 text-center">
+                                            {(() => {
+                                                const canSelectForInvoice = isItemRealized(item.id) && (paidMap[item.id] || 0) < totalCost;
+                                                if (!canSelectForInvoice) return <span className="w-6 h-6 block mx-auto" />;
+                                                return (
+                                                    <button
+                                                        onClick={() => toggleInvoiceSelection(item.id)}
+                                                        title="Seleccionar para incluir en factura"
+                                                        className={`w-6 h-6 rounded border-2 flex items-center justify-center mx-auto transition-all ${
+                                                            selectedForInvoice.has(item.id)
+                                                                ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                                : 'bg-white border-slate-300 text-transparent hover:border-indigo-400 hover:text-indigo-400'
+                                                        }`}
+                                                    >
+                                                        <FiCheck size={11} strokeWidth={3} />
+                                                    </button>
+                                                );
+                                            })()}
                                         </td>
                                         {/* Descripción del procedimiento */}
                                         <td className="px-3 py-2.5 align-middle">
@@ -1120,7 +1196,6 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                   const total = calculateTotal();
                                   const abono = payments.reduce((s, p) => s + Number(p.monto || 0), 0);
                                   const saldoPendiente = Math.max(0, total - abono);
-                                  // Saldo facturado: sum of items that are realized and have paidMap > 0
                                   const saldoFacturado = (items || []).reduce((s, it) => {
                                       if (isItemRealized(it.id)) return s + (paidMap[it.id] || 0);
                                       return s;
@@ -1154,6 +1229,21 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                           </div>
                                           {row('Saldo facturado', saldoFacturado, 'text-indigo-500')}
                                           {row('Valor a facturar', valorAFacturar, 'text-amber-600 font-black')}
+                                          {/* Botón Generar Factura - solo aparece cuando hay ítems seleccionados */}
+                                          {selectedForInvoice.size > 0 && (
+                                              <div className="mt-3 pt-3 border-t border-slate-100">
+                                                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                                      {selectedForInvoice.size} ítem(s) seleccionado(s) para facturar
+                                                  </div>
+                                                  <button
+                                                      onClick={handleGenerateSelectedInvoice}
+                                                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
+                                                  >
+                                                      <FiFileText size={13} />
+                                                      Generar Factura
+                                                  </button>
+                                              </div>
+                                          )}
                                       </>
                                   );
                               })()}
