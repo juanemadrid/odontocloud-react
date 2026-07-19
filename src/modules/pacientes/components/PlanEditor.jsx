@@ -1019,11 +1019,29 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                                 <FiCheck size={12} strokeWidth={3} />
                                             </button>
                                         </td>
-                                        {/* Checkbox seleccionar para facturar */}
+                                        {/* Checkbox seleccionar para facturar - grayed-out si ya pagado (igual a OralDrive) */}
                                         <td className="px-2 py-2.5 text-center">
                                             {(() => {
-                                                const canSelectForInvoice = isItemRealized(item.id) && (paidMap[item.id] || 0) < totalCost;
-                                                if (!canSelectForInvoice) return <span className="w-6 h-6 block mx-auto" />;
+                                                const realized = isItemRealized(item.id);
+                                                const fullyPaid = (paidMap[item.id] || 0) >= totalCost && totalCost > 0;
+                                                const canSelect = realized && !fullyPaid;
+
+                                                if (!realized) {
+                                                    // No realizado: espacio vacío
+                                                    return <span className="w-6 h-6 block mx-auto" />;
+                                                }
+                                                if (fullyPaid) {
+                                                    // Ya pagado completo: grayed-out igual a OralDrive
+                                                    return (
+                                                        <span
+                                                            title="Ya facturado/pagado en su totalidad"
+                                                            className="w-6 h-6 rounded border-2 border-slate-200 bg-slate-100 flex items-center justify-center mx-auto text-slate-300 cursor-not-allowed"
+                                                        >
+                                                            <FiCheck size={11} strokeWidth={3} />
+                                                        </span>
+                                                    );
+                                                }
+                                                // Puede seleccionar para facturar
                                                 return (
                                                     <button
                                                         onClick={() => toggleInvoiceSelection(item.id)}
