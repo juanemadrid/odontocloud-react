@@ -217,13 +217,24 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             toast.error('Guarda el plan antes de generar la factura.');
             return;
         }
+
         const selectedItems = items.filter(it => selectedForInvoice.has(it.id));
+
+        // Bloqueo: no se puede facturar un ítem que ya fue facturado
+        const yaFacturados = selectedItems.filter(it => it.facturado === true);
+        if (yaFacturados.length > 0) {
+            toast.error(`❌ ${yaFacturados.length} procedimiento(s) ya fueron facturados anteriormente.`);
+            setSelectedForInvoice(new Set());
+            return;
+        }
+
         const totalFactura = selectedItems.reduce((s, it) => {
             const cost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
             return s + Math.max(0, cost - (paidMap[it.id] || 0));
         }, 0);
+
         try {
-            const { addDoc } = await import('firebase/firestore');
+            const { addDoc, updateDoc: updDoc, doc: docRef } = await import('firebase/firestore');
             const invoiceData = {
                 patientId,
                 inquilino: inquilino || '',
@@ -233,6 +244,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 total: totalFactura,
                 estado: 'Pendiente',
                 items: selectedItems.map(it => ({
+                    itemId: it.id,
                     nombre: it.desc || 'Servicio Dental',
                     precio: Number(it.amount || 0),
                     cantidad: Number(it.qty || 1),
@@ -240,7 +252,17 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 }))
             };
             await addDoc(collection(db, 'facturas'), invoiceData);
-            toast.success(`✅ Factura generada por $${totalFactura.toLocaleString('es-CO')} para ${selectedItems.length} procedimiento(s). Disponible en Histórico de Facturas.`);
+
+            // ✅ Marcar como facturado en Firestore — evita doble facturación
+            const updatedItems = items.map(it =>
+                selectedForInvoice.has(it.id)
+                    ? { ...it, facturado: true, fechaFacturado: new Date().toISOString() }
+                    : it
+            );
+            await updDoc(docRef(db, 'treatment_plans', initialData.id), { items: updatedItems });
+            setItems(updatedItems);
+
+            toast.success(`✅ Factura generada por $${totalFactura.toLocaleString('es-CO')} para ${selectedItems.length} procedimiento(s).`);
             setSelectedForInvoice(new Set());
         } catch (err) {
             console.error(err);
@@ -1023,18 +1045,19 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                         <td className="px-2 py-2.5 text-center">
                                             {(() => {
                                                 const realized = isItemRealized(item.id);
+                                                const alreadyInvoiced = item.facturado === true;
                                                 const fullyPaid = (paidMap[item.id] || 0) >= totalCost && totalCost > 0;
-                                                const canSelect = realized && !fullyPaid;
+                                                const blocked = !realized || alreadyInvoiced || fullyPaid;
 
                                                 if (!realized) {
                                                     // No realizado: espacio vacío
                                                     return <span className="w-6 h-6 block mx-auto" />;
                                                 }
-                                                if (fullyPaid) {
-                                                    // Ya pagado completo: grayed-out igual a OralDrive
+                                                if (alreadyInvoiced || fullyPaid) {
+                                                    // Ya facturado o totalmente pagado: grayed-out bloqueado
                                                     return (
                                                         <span
-                                                            title="Ya facturado/pagado en su totalidad"
+                                                            title={alreadyInvoiced ? 'Ya fue facturado — no se puede facturar de nuevo' : 'Ya pagado en su totalidad'}
                                                             className="w-6 h-6 rounded border-2 border-slate-200 bg-slate-100 flex items-center justify-center mx-auto text-slate-300 cursor-not-allowed"
                                                         >
                                                             <FiCheck size={11} strokeWidth={3} />
