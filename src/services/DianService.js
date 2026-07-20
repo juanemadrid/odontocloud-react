@@ -1,83 +1,115 @@
-import { DIAN_MOCK_ENABLED } from "../config/runtimeFlags";
+/**
+ * DianService.js
+ * Delegates electronic invoice emission to Factus (via factusService).
+ * If Factus credentials are missing, returns NO_CONFIGURADA status.
+ */
+
+import factusService from "./factusService";
 
 /**
- * Emits an electronic invoice through a backend or authorized provider.
- * DIAN signing secrets must never live in the frontend bundle.
+ * Emit an electronic invoice through Factus → DIAN.
+ *
+ * @param {Object} factura        - Invoice data (items, total, medioPago, etc.)
+ * @param {Object} patient        - Patient data (documento, tipoDocumento, email, etc.)
+ * @param {Object|null} tenantCredentials - Factus credentials from Firestore tenants doc
  */
-export const emitirFacturaDian = async (factura) => {
-    const providerUrl = import.meta.env.VITE_DIAN_PROVIDER_URL || "";
+export const emitirFacturaDian = async (
+  factura,
+  patient = {},
+  tenantCredentials = null
+) => {
+  // No credentials → return graceful no-config response
+  if (
+    !tenantCredentials ||
+    !tenantCredentials.factusClientId ||
+    !tenantCredentials.factusClientSecret ||
+    !tenantCredentials.factusUsername ||
+    !tenantCredentials.factusPassword
+  ) {
+    return {
+      success: false,
+      dianStatus: "NO_CONFIGURADA",
+      cufe: null,
+      qrCode: null,
+      factusInvoiceNumber: null,
+      factusResponse: null,
+      message:
+        "Facturación electrónica no configurada. Configure las credenciales Factus en Configuración → Facturación Electrónica.",
+      timestamp: new Date().toISOString(),
+    };
+  }
 
-    if (providerUrl) {
-        const response = await fetch(providerUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ factura }),
-        });
+  try {
+    const result = await factusService.sendInvoice(factura, patient, tenantCredentials);
 
-        if (!response.ok) {
-            throw new Error(`Proveedor DIAN rechazo la factura (${response.status})`);
-        }
+    // Extract key fields from Factus response
+    const bill = result?.data?.bill || result?.bill || result;
+    const cufe =
+      bill?.cufe ||
+      bill?.cude ||
+      result?.data?.cufe ||
+      result?.cufe ||
+      null;
+    const qrCode =
+      bill?.qr_code ||
+      bill?.qr ||
+      result?.data?.qr_code ||
+      result?.qr_code ||
+      null;
+    const invoiceNumber =
+      bill?.number ||
+      bill?.invoice_number ||
+      result?.data?.number ||
+      result?.number ||
+      null;
 
-        return response.json();
-    }
-
-    if (DIAN_MOCK_ENABLED) {
-        return simulateDianEmission(factura);
-    }
+    const isTestMode = tenantCredentials.factusTestMode ?? true;
 
     return {
-        success: false,
-        dianStatus: "NO_CONFIGURADA",
-        cufe: null,
-        qr: null,
-        xmlUrl: null,
-        message: "Facturacion electronica DIAN no configurada. Este documento no tiene validez fiscal.",
-        timestamp: new Date().toISOString(),
+      success: true,
+      dianStatus: isTestMode ? "SIMULADA" : "ACEPTADA",
+      cufe,
+      qrCode,
+      factusInvoiceNumber: invoiceNumber,
+      factusResponse: result,
+      message: isTestMode
+        ? "Factura emitida en modo sandbox (sin validez fiscal)."
+        : "Factura aceptada por la DIAN.",
+      timestamp: new Date().toISOString(),
     };
+  } catch (error) {
+    return {
+      success: false,
+      dianStatus: "RECHAZADA",
+      cufe: null,
+      qrCode: null,
+      factusInvoiceNumber: null,
+      factusResponse: null,
+      message: error.message || "Error al emitir la factura electrónica.",
+      timestamp: new Date().toISOString(),
+    };
+  }
 };
 
+/**
+ * Returns display label + CSS color classes for a DIAN status string.
+ */
 export const getDianStatusLabel = (status) => {
-    switch (status) {
-        case "ACEPTADA":
-            return { label: "DIAN Aceptada", color: "bg-green-100 text-green-700" };
-        case "RECHAZADA":
-            return { label: "DIAN Rechazada", color: "bg-red-100 text-red-700" };
-        case "PROCESANDO":
-            return { label: "Enviando...", color: "bg-yellow-100 text-yellow-700" };
-        case "NO_CONFIGURADA":
-            return { label: "DIAN no configurada", color: "bg-orange-100 text-orange-700" };
-        case "SIMULADA":
-            return { label: "DIAN simulada", color: "bg-amber-100 text-amber-700" };
-        default:
-            return { label: "No Emitida", color: "bg-slate-100 text-slate-500" };
-    }
-};
-
-const simulateDianEmission = (factura) => new Promise((resolve) => {
-    setTimeout(() => {
-        const mockCufe = generateMockCufe(factura);
-        const mockQr = `https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=${mockCufe}`;
-
-        resolve({
-            success: true,
-            dianStatus: "SIMULADA",
-            cufe: mockCufe,
-            qr: mockQr,
-            message: "Simulacion local DIAN para desarrollo. No tiene validez fiscal.",
-            xmlUrl: null,
-            timestamp: new Date().toISOString(),
-        });
-    }, 800);
-});
-
-const generateMockCufe = (factura) => {
-    const raw = `${factura.id}-${factura.total}-${Date.now()}`;
-    let hash = "";
-    const chars = "0123456789abcdef";
-
-    for (let i = 0; i < 96; i++) {
-        hash += chars[Math.floor(Math.random() * chars.length)];
-    }
-
-    return hash || raw;
+  switch (status) {
+    case "ACEPTADA":
+      return { label: "DIAN Aceptada", color: "bg-green-100 text-green-700" };
+    case "RECHAZADA":
+      return { label: "DIAN Rechazada", color: "bg-red-100 text-red-700" };
+    case "PROCESANDO":
+      return { label: "Enviando...", color: "bg-yellow-100 text-yellow-700" };
+    case "NO_CONFIGURADA":
+      return {
+        label: "Sin configurar",
+        color: "bg-orange-100 text-orange-700",
+      };
+    case "SIMULADA":
+      return { label: "Simulada", color: "bg-amber-100 text-amber-700" };
+    default:
+      return { label: "No emitida", color: "bg-slate-100 text-slate-500" };
+  }
 };

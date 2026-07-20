@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import { isSubscriptionExpired } from "../utils/subscriptionHelper";
 
 /**
  * Hook to check if the current user has permission for a specific feature and action.
@@ -17,7 +18,7 @@ export function usePermissions() {
         if (rolActual === "superadmin") return true;
 
         // 2. Subscription Check
-        if (userProfile?.subscriptionStatus === "expired") return false;
+        if (isSubscriptionExpired(userProfile?.tenant)) return false;
 
         // 3. Special "Editor Web" Plan Check
         // CMS access is restricted to Premium/Corporativo plans or specific feature enablement.

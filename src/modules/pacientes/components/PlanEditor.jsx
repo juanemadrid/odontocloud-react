@@ -3,12 +3,13 @@ import { useToast } from '../../../context/ToastContext';
 import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where, limit, updateDoc, onSnapshot } from 'firebase/firestore';
-import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle, FiLoader, FiSend } from 'react-icons/fi';
 import { useFormContext } from 'react-hook-form';
 import { useAuth } from '../../../context/AuthContext';
 import ProcedureAdditionModal from './ProcedureAdditionModal';
 import ToothSelectorModal from './ToothSelectorModal';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
+import factusService from '../../../services/factusService';
 
 export default function PlanEditor({ patient: dbPatient, initialData, onClose, onSaved }) {
     const { watch: watchPatient } = useFormContext() || { watch: () => ({}) };
@@ -57,6 +58,33 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const [loadingPlanItems, setLoadingPlanItems] = useState(false);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
     const [convenioDescuentos, setConvenioDescuentos] = useState({});
+
+    // ── Factus / DIAN ──
+    const [factusCredentials, setFactusCredentials] = useState(null);
+    const [emittingInvoice, setEmittingInvoice] = useState(false);
+
+    // Load Factus credentials from tenant
+    useEffect(() => {
+        if (!inquilino) return;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(db, 'tenants', inquilino));
+                if (snap.exists()) {
+                    const d = snap.data();
+                    if (d.factusClientId && d.factusClientSecret) {
+                        setFactusCredentials({
+                            factusClientId:         d.factusClientId,
+                            factusClientSecret:     d.factusClientSecret,
+                            username:               d.factusUsername,
+                            password:               d.factusPassword,
+                            factusTestMode:         d.factusTestMode !== undefined ? d.factusTestMode : true,
+                            factusNumberingRangeId: d.factusNumberingRangeId || null,
+                        });
+                    }
+                }
+            } catch (e) { console.error('Error loading Factus credentials:', e); }
+        })();
+    }, [inquilino]);
 
     useEffect(() => {
         const fetchPlanes = async () => {
@@ -234,38 +262,72 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             return;
         }
 
+        if (!factusCredentials) {
+            // Try centralized credentials
+            const { getFactusAdminCredentials } = await import('../../../services/factusAdminService');
+            const adminCreds = await getFactusAdminCredentials();
+            if (!adminCreds) {
+                toast.error('La facturación electrónica no está configurada. Contacta al administrador del sistema.');
+                return;
+            }
+        }
+        if (!patient?.nroDocumento && !patient?.documento && !patient?.identificacion) {
+            toast.error('El paciente debe tener número de documento registrado para facturar ante la DIAN.');
+            return;
+        }
+
+        // ── Verificar cuota disponible ──
+        const { canTenantEmit } = await import('../../../services/factusAdminService');
+        const tieneDisponibles = await canTenantEmit(inquilino);
+        if (!tieneDisponibles) {
+            toast.error('❌ No tienes facturas electrónicas disponibles. Contacta al administrador para adquirir más.');
+            return;
+        }
+
         // La factura es por el VALOR TOTAL del ítem (sin restar abonos/pagos)
-        // Los pagos son independientes de la factura electrónica
         const totalFactura = selectedItems.reduce((s, it) => {
             const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
             return s + totalCost;
         }, 0);
 
+        setEmittingInvoice(true);
         try {
             const { addDoc, updateDoc: updDoc, doc: docRef } = await import('firebase/firestore');
+
+            // Build the invoice document
+            const invoiceItems = selectedItems.map(it => {
+                const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
+                return {
+                    itemId:      it.id,
+                    nombre:      it.desc || 'Servicio Dental',
+                    descripcion: it.desc || 'Servicio Dental',
+                    precio:      Number(it.amount || 0),
+                    precioUnitario: Number(it.amount || 0),
+                    cantidad:    Number(it.qty || 1),
+                    descuento:   Number(it.descuento || 0),
+                    totalLinea:  totalCost
+                };
+            });
+
             const invoiceData = {
                 patientId,
-                inquilino: inquilino || '',
-                planId: initialData.id,
+                inquilino:  inquilino || '',
+                planId:     initialData.id,
                 nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
-                fechaISO: new Date().toISOString(),
-                total: totalFactura,
-                estado: 'Pendiente',
-                items: selectedItems.map(it => {
-                    const totalCost = (Number(it.amount || 0) * Number(it.qty || 1)) - Number(it.descuento || 0);
-                    return {
-                        itemId: it.id,
-                        nombre: it.desc || 'Servicio Dental',
-                        precio: Number(it.amount || 0),
-                        cantidad: Number(it.qty || 1),
-                        descuento: Number(it.descuento || 0),
-                        totalLinea: totalCost
-                    };
-                })
+                fechaISO:   new Date().toISOString(),
+                total:      totalFactura,
+                medioPago:  '10', // Efectivo por defecto; se puede cambiar
+                condicionPago: '1',
+                estado:     'Pendiente',
+                factusEstado: 'Pendiente',
+                profesional: initialData?.profesionalId || initialData?.profesional || userProfile?.nombreCompleto || 'Profesional',
+                items:      invoiceItems,
             };
-            await addDoc(collection(db, 'facturas'), invoiceData);
 
-            // ✅ Marcar como facturado — un ítem con factura emitida NO se puede facturar de nuevo
+            // 1️⃣ Save to Firestore first (so we don't lose it if Factus fails)
+            const invoiceRef = await addDoc(collection(db, 'facturas'), invoiceData);
+
+            // 2️⃣ Mark plan items as invoiced immediately
             const updatedItems = items.map(it =>
                 selectedForInvoice.has(it.id)
                     ? { ...it, facturado: true, fechaFacturado: new Date().toISOString() }
@@ -274,11 +336,63 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             await updDoc(docRef(db, 'treatment_plans', initialData.id), { items: updatedItems });
             setItems(updatedItems);
 
-            toast.success(`✅ Factura emitida por $${totalFactura.toLocaleString('es-CO')} (valor total de ${selectedItems.length} procedimiento(s)).`);
+            // 3️⃣ Emit to DIAN via Factus
+            try {
+                toast.info('Emitiendo factura ante la DIAN…');
+                // Build a patient-compatible object for factusService
+                const patientForFactus = {
+                    ...patient,
+                    documento:      patient?.nroDocumento || patient?.documento || patient?.identificacion,
+                    identificacion: patient?.nroDocumento || patient?.documento || patient?.identificacion,
+                    nombre:         patient?.nombres || patient?.nombre || (patient?.nombreCompleto || '').split(' ')[0] || 'Cliente',
+                    apellido:       patient?.apellidos || patient?.apellido || (patient?.nombreCompleto || '').split(' ').slice(1).join(' ') || 'OdontoCloud',
+                    email:          patient?.email || patient?.correo || 'sin.email@odontocloud.com',
+                    telefono:       patient?.celular || patient?.telefono || '3000000000',
+                    direccion:      patient?.direccion || 'Dirección no registrada',
+                    ciudad:         patient?.ciudad || '',
+                };
+
+                const result = await factusService.sendInvoice(
+                    { ...invoiceData, id: invoiceRef.id },
+                    patientForFactus,
+                    factusCredentials
+                );
+
+                const bill = result?.data?.bill || result?.bill || result?.data || {};
+                const updates = {
+                    factusEstado:      'Emitido',
+                    estado:            'Emitido',
+                    factusUuid:        bill?.uuid    || result?.data?.uuid    || null,
+                    factusNumero:      bill?.number  || bill?.invoice_number  || result?.data?.number || null,
+                    factusPdfUrl:      bill?.pdf_download_url || bill?.pdf   || result?.data?.pdf_download_url || null,
+                    factusQr:          bill?.qr_code || bill?.qr             || result?.data?.qr_code || null,
+                    factusCufe:        bill?.cufe    || bill?.cude            || result?.data?.cufe   || null,
+                    nroFactura:        bill?.number  || bill?.invoice_number  || result?.data?.number || invoiceData.nroFactura,
+                    factusRawResponse: result?.data  || null,
+                };
+                await updDoc(invoiceRef, updates);
+
+                // ── Consumir una factura de la cuota del tenant ──
+                try {
+                    const { consumeOneInvoice } = await import('../../../services/factusAdminService');
+                    await consumeOneInvoice(inquilino);
+                } catch (e) {
+                    console.warn('Could not decrement invoice quota:', e.message);
+                }
+
+                toast.success(`✅ Factura emitida ante la DIAN.${ updates.nroFactura ? ` N.º: ${updates.nroFactura}` : '' }`);
+            } catch (factusErr) {
+                // Factus failed — invoice saved as Pendiente, user can retry from Historial
+                console.error('Factus error:', factusErr);
+                toast.error(`Factura guardada pero NO emitida a la DIAN: ${factusErr.message}. Reintenta desde Historial de Facturas.`);
+            }
+
             setSelectedForInvoice(new Set());
         } catch (err) {
             console.error(err);
             toast.error('Error al generar la factura.');
+        } finally {
+            setEmittingInvoice(false);
         }
     };
 
@@ -1220,20 +1334,29 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                           {row('Saldo facturado', saldoFacturado, 'text-indigo-500')}
                                           {row('Valor a facturar', valorAFacturar, 'text-amber-600 font-black')}
                                           {/* Botón Generar Factura - solo aparece cuando hay ítems seleccionados */}
-                                          {selectedForInvoice.size > 0 && (
-                                              <div className="mt-3 pt-3 border-t border-slate-100">
-                                                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                                      {selectedForInvoice.size} ítem(s) seleccionado(s) para facturar
-                                                  </div>
-                                                  <button
-                                                      onClick={handleGenerateSelectedInvoice}
-                                                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
-                                                  >
-                                                      <FiFileText size={13} />
-                                                      Generar Factura
-                                                  </button>
-                                              </div>
-                                          )}
+                                           {selectedForInvoice.size > 0 && (
+                                               <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                                                   <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                                       {selectedForInvoice.size} ítem(s) seleccionado(s) para facturar
+                                                   </div>
+                                                   {!factusCredentials && (
+                                                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                                                           <FiAlertCircle size={10} />
+                                                           Configura Factus en Configuración → Facturación Electrónica
+                                                       </div>
+                                                   )}
+                                                   <button
+                                                       onClick={handleGenerateSelectedInvoice}
+                                                       disabled={emittingInvoice}
+                                                       className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
+                                                   >
+                                                       {emittingInvoice
+                                                           ? <><FiLoader size={13} className="animate-spin" /> Emitiendo ante DIAN…</>
+                                                           : <><FiSend size={13} /> Emitir Factura DIAN</>
+                                                       }
+                                                   </button>
+                                               </div>
+                                           )}
                                       </>
                                   );
                               })()}

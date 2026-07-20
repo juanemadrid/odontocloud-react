@@ -6,6 +6,7 @@ import { useToast } from "../../context/ToastContext";
 import { getPlans, getPaymentMethods, getGlobalConfig } from "../../services/adminService";
 import { FiPackage, FiZap, FiCheckCircle, FiClock, FiStar, FiCreditCard, FiSmartphone, FiArrowRight } from "react-icons/fi";
 import { FaWhatsapp, FaUniversity } from "react-icons/fa";
+import { isSubscriptionExpired } from "../../utils/subscriptionHelper";
 
 export default function ConfigSuscripcion() {
     const { userProfile } = useAuth();
@@ -138,7 +139,7 @@ export default function ConfigSuscripcion() {
         </div>
     );
 
-    const isExpired = userProfile?.subscriptionStatus === "expired";
+    const isExpired = isSubscriptionExpired(userProfile?.tenant);
 
     return (
         <div className="p-2 md:p-6 space-y-8 animate-fade-in">

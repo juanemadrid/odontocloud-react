@@ -12,8 +12,9 @@ import ServicesSection from "./landing/ServicesSection";
 import PageHeader from "../components/common/PageHeader";
 import TestimonialsSection from "./landing/TestimonialsSection";
 import { getPlans } from "../services/adminService";
-import { FiMessageCircle } from "react-icons/fi";
+import { FiMessageCircle, FiAlertTriangle } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
+import { isAccessBlocked } from "../utils/subscriptionHelper";
 import TrialModal from "../components/landing/TrialModal";
 import "../styles/modern.css";
 
@@ -31,6 +32,7 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
     const [plans, setPlans] = useState([]);
     const [showTrialModal, setShowTrialModal] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState("");
+    const [tenantInfo, setTenantInfo] = useState(null);
 
     useEffect(() => {
         // Handle Hash Scroll
@@ -143,6 +145,7 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
                     if (!qSnap.empty) {
                         const tenantData = qSnap.docs[0].data();
                         const inquilino = qSnap.docs[0].id;
+                        setTenantInfo({ id: inquilino, ...tenantData });
                         const webRef = doc(db, "website_config", inquilino);
                         const webSnap = await getDoc(webRef);
 
@@ -172,6 +175,31 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
     }, [previewConfig, isMaster, clinicSlug]);
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-pulse flex space-x-2"><div className="h-3 w-3 bg-slate-200 rounded-full"></div><div className="h-3 w-3 bg-slate-200 rounded-full"></div></div></div>;
+
+    if (clinicSlug && tenantInfo && isAccessBlocked(tenantInfo)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-6 relative overflow-hidden font-sans">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black opacity-80" />
+                <div className="bg-slate-800/40 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-700/50 p-10 max-w-md w-full text-center space-y-6 relative z-10 animate-fade-in">
+                    <div className="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto text-rose-500 border border-rose-500/20">
+                        <FiAlertTriangle size={32} />
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-black text-slate-100 uppercase tracking-tight">Sitio temporalmente inactivo</h2>
+                        <p className="text-sm text-slate-400">
+                            El sitio web de <strong>{tenantInfo.name || "la clínica"}</strong> no se encuentra disponible en este momento.
+                        </p>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                        Si eres el administrador de esta clínica, ponte en contacto con soporte de OdontoCloud para reactivar tu cuenta.
+                    </p>
+                    <div className="border-t border-slate-700/50 pt-6">
+                        <p className="text-xs text-indigo-400 font-bold tracking-widest uppercase">OdontoCloud Platform</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const brandStyle = {
         '--color-primary': config.primaryColor || '#0f172a',

@@ -2,10 +2,11 @@ import React, { useState, useLayoutEffect } from "react";
 import TenantsPanelV2 from "../modules/superadmin/TenantsPanelV2";
 import PlanManagement from "../modules/superadmin/PlanManagement";
 import PaymentManagement from "../modules/superadmin/PaymentManagement";
+import FacturasQuotaPanel from "../modules/superadmin/FacturasQuotaPanel";
 import WebCms from "../modules/cms/WebsiteEditor";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { FiHome, FiSettings, FiCreditCard, FiActivity, FiGlobe, FiLogOut } from "react-icons/fi";
+import { FiHome, FiSettings, FiCreditCard, FiActivity, FiGlobe, FiLogOut, FiFileText } from "react-icons/fi";
 import "../styles/modern.css";
 import "../styles/utilities.css";
 import "../styles/theme.css";
@@ -120,6 +121,16 @@ export default function SuperAdminPanel() {
                     <div className="pt-4 mt-4 border-t border-slate-100">
                         <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Configuración</p>
                         <button
+                            onClick={() => setActiveTab("facturacion")}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium ${activeTab === "facturacion"
+                                ? "bg-slate-100 text-slate-900 border border-slate-200"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                }`}
+                        >
+                            <FiFileText className={`w-4 h-4 ${activeTab === "facturacion" ? "text-blue-700" : "text-slate-400"}`} />
+                            <span>Facturación Electrónica</span>
+                        </button>
+                        <button
                             onClick={() => setActiveTab("site")}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium ${activeTab === "site"
                                 ? "bg-slate-100 text-slate-900 border border-slate-200"
@@ -163,7 +174,7 @@ export default function SuperAdminPanel() {
                     {activeTab !== 'site' && (
                         <header className="mb-6 pb-6 border-b border-slate-200">
                             <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
-                                {activeTab === "clinics" ? "Control de Clínicas" : activeTab === "plans" ? "Gestión de Planes" : activeTab === "payments" ? "Motor de Recaudo" : "Editor Sitio Oficial"}
+                                {activeTab === "clinics" ? "Control de Clínicas" : activeTab === "plans" ? "Gestión de Planes" : activeTab === "payments" ? "Motor de Recaudo" : activeTab === "facturacion" ? "Facturación Electrónica" : "Editor Sitio Oficial"}
                             </h2>
                             <p className="text-slate-500 font-medium text-xs mt-2">
                                 {activeTab === "clinics"
@@ -172,7 +183,9 @@ export default function SuperAdminPanel() {
                                         ? "Configuración estratégica de niveles de suscripción."
                                         : activeTab === "payments"
                                             ? "Administración de cuentas bancarias y contacto de soporte."
-                                            : "Personalización avanzada de la landing page corporativa de OdontoCloud."}
+                                            : activeTab === "facturacion"
+                                                ? "Credenciales Factus centralizadas y cuotas de facturación por clínica."
+                                                : "Personalización avanzada de la landing page corporativa de OdontoCloud."}
                             </p>
                         </header>
                     )}
@@ -182,6 +195,7 @@ export default function SuperAdminPanel() {
                         {activeTab === "clinics" && <TenantsPanelV2 />}
                         {activeTab === "plans" && <PlanManagement />}
                         {activeTab === "payments" && <PaymentManagement />}
+                        {activeTab === "facturacion" && <FacturasQuotaPanel />}
                         {activeTab === "site" && <WebCms />}
                     </section>
                 </main>

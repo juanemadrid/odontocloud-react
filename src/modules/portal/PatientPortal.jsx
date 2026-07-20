@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { DEFAULT_CONFIG } from "../../constants/DefaultConfig";
 import { FiArrowLeft, FiLogOut, FiCalendar, FiDollarSign, FiActivity, FiMessageCircle, FiX, FiPhone, FiUser, FiShield, FiAlertTriangle, FiHeart, FiFileText, FiBell } from "react-icons/fi";
 import { toast } from "sonner";
+import { isAccessBlocked } from "../../utils/subscriptionHelper";
 
 // ── Modal genérico del portal ─────────────────────────────────────────────────
 function PortalModal({ title, icon: Icon, color, onClose, children }) {
@@ -46,6 +47,7 @@ export default function PatientPortal() {
     const [config, setConfig] = useState(DEFAULT_CONFIG);
     const [loadingConfig, setLoadingConfig] = useState(!!clinicSlug);
     const [inquilinoId, setInquilinoId] = useState(null);
+    const [tenantInfo, setTenantInfo] = useState(null);
 
     // Modal states
     const [activeModal, setActiveModal] = useState(null); // 'cita' | 'pagos' | 'tratamiento' | 'soporte'
@@ -133,6 +135,7 @@ export default function PatientPortal() {
                     const tenantData = qSnap.docs[0].data();
                     const inq = qSnap.docs[0].id;
                     setInquilinoId(inq);
+                    setTenantInfo({ id: inq, ...tenantData });
                     const webSnap = await getDoc(doc(db, "website_config", inq));
                     setConfig(webSnap.exists()
                         ? { ...DEFAULT_CONFIG, ...webSnap.data(), name: tenantData.name, slug: clinicSlug, phone: tenantData.phone || "" }
@@ -295,6 +298,29 @@ export default function PatientPortal() {
         setPlanes([]);
         setNotificaciones([]);
     };
+
+    // ── Suspension/Expiration Block check ──
+    if (clinicSlug && tenantInfo && isAccessBlocked(tenantInfo)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center space-y-6 animate-fadeIn">
+                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500 shadow-inner">
+                        <FiAlertTriangle size={32} />
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Portal no disponible</h2>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            El portal de pacientes de <strong>{tenantInfo.name || "la clínica"}</strong> se encuentra temporalmente fuera de servicio.
+                        </p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">¿Necesitas agendar o consultar?</p>
+                        <p className="text-xs text-slate-500 font-medium">Por favor comunícate directamente con la clínica a través de sus canales de atención oficiales.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // ── Login screen ─────────────────────────────────────────────────────────
     if (!auth) {

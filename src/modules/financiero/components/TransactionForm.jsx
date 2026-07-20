@@ -7,6 +7,7 @@ import { useToast } from '../../../context/ToastContext';
 export default function TransactionForm({ onClose, onSaved }) {
     const toast = useToast();
     const [loading, setLoading] = useState(false);
+    const [amountDisplay, setAmountDisplay] = useState('');
     const [formData, setFormData] = useState({
         type: 'income', // 'income' | 'expense'
         amount: '',
@@ -19,6 +20,15 @@ export default function TransactionForm({ onClose, onSaved }) {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAmountChange = (e) => {
+        // Strip everything except digits
+        const raw = e.target.value.replace(/\D/g, '');
+        // Format with thousand separators (dots for COP)
+        const formatted = raw ? Number(raw).toLocaleString('es-CO') : '';
+        setAmountDisplay(formatted);
+        setFormData(prev => ({ ...prev, amount: raw }));
     };
 
     const handleSubmit = async (e) => {
@@ -88,10 +98,11 @@ export default function TransactionForm({ onClose, onSaved }) {
                 <Input
                     label="Monto"
                     name="amount"
-                    type="number"
-                    value={formData.amount}
-                    onChange={handleChange}
-                    placeholder="0.00"
+                    type="text"
+                    inputMode="numeric"
+                    value={amountDisplay}
+                    onChange={handleAmountChange}
+                    placeholder="0"
                     autoFocus
                 />
 

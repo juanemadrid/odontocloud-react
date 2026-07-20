@@ -1304,7 +1304,6 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                                 [s.id]: { 
                                                                     ...prev[s.id], 
                                                                     checked: e.target.checked,
-                                                                    realizado: e.target.checked,
                                                                     desc: s.desc || s.procedimiento || s.nombre || '',
                                                                     dientes: s.dientes || ''
                                                                 }
@@ -1350,6 +1349,9 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                                                 const next = { ...prev };
                                                 Object.keys(next).forEach(k => {
                                                     if (!realizedItemIds.has(k)) {
+                                                        // "Marcar realizadas" marks as both selected AND realized
+                                                        // Unmarking only removes the selection, not the realized status
+                                                        // if it was already individually marked
                                                         next[k].checked = val;
                                                         next[k].realizado = val;
                                                     }
