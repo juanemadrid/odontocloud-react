@@ -3,12 +3,19 @@ import EvolutionList from "./EvolutionList";
 import EvolutionModal from "./EvolutionModal";
 import RemissionModal from "./RemissionModal";
 import { FiPlus, FiPrinter, FiSearch, FiHome } from "react-icons/fi";
+import { EvolutionPrintService } from "../../../services/EvolutionPrintService";
+import { useAuth } from "../../../context/AuthContext";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "../../../firebase/firebaseConfig";
+import { toast } from "sonner";
 
 export default function EvolucionesTab({ patient }) {
+    const { userProfile } = useAuth();
     const [modalOpen, setModalOpen] = useState(false);
     const [modalType, setModalType] = useState(null); // 'evolution' | 'remission'
     const [editingEvo, setEditingEvo] = useState(null);
     const [searchTerms, setSearchTerms] = useState("");
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const handleOpenEvolution = () => {
         setEditingEvo(null);
@@ -26,6 +33,50 @@ export default function EvolucionesTab({ patient }) {
         setEditingEvo(evo);
         setModalType(evo.type === 'remission' ? 'remission' : 'evolution');
         setModalOpen(true);
+    };
+
+    const handlePrintAll = async () => {
+        if (!patient?.id) {
+            toast.error("Seleccione un paciente primero.");
+            return;
+        }
+
+        setIsPrinting(true);
+        try {
+            let evos = [];
+            try {
+                const q = query(
+                    collection(db, "clinical_evolutions"),
+                    where("patientId", "==", patient.id),
+                    orderBy("date", "desc")
+                );
+                const snap = await getDocs(q);
+                evos = snap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data(),
+                    date: d.data().date?.toDate() || new Date()
+                }));
+            } catch (err) {
+                console.warn("Index query warning, executing un-indexed fetch fallback:", err);
+                const qFallback = query(
+                    collection(db, "clinical_evolutions"),
+                    where("patientId", "==", patient.id)
+                );
+                const snapFallback = await getDocs(qFallback);
+                evos = snapFallback.docs.map(d => ({
+                    id: d.id,
+                    ...d.data(),
+                    date: d.data().date?.toDate() || new Date()
+                })).sort((a, b) => b.date - a.date);
+            }
+
+            await EvolutionPrintService.generatePDF(evos, patient, {}, userProfile);
+        } catch (error) {
+            console.error("Error printing evolutions history:", error);
+            toast.error("Error al obtener evoluciones para imprimir");
+        } finally {
+            setIsPrinting(false);
+        }
     };
 
     return (
@@ -48,8 +99,13 @@ export default function EvolucionesTab({ patient }) {
                         </div>
                     </div>
                     
-                    <button type="button" className="shrink-0 px-4 sm:px-6 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-lime-500/20 transition-all active:scale-95 flex items-center gap-2">
-                         <FiPrinter size={12} className="hidden sm:block" /> Imprimir
+                    <button 
+                        type="button" 
+                        onClick={handlePrintAll}
+                        disabled={isPrinting}
+                        className="shrink-0 px-4 sm:px-6 py-2 bg-lime-500 hover:bg-lime-600 disabled:opacity-50 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-lime-500/20 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                         <FiPrinter size={12} className="hidden sm:block" /> {isPrinting ? "Generando..." : "Imprimir"}
                     </button>
                 </div>
 

@@ -315,6 +315,7 @@ Paso 1 – Doctor: Seleccionar el profesional que atiende.
 
 Paso 2 – Plan de tratamiento: Seleccionar el plan activo del paciente.
   Planes disponibles: ${JSON.stringify(planes.map(p => ({ id: p.id, name: p.title || p.nombre || `Plan #${p.id.slice(-4)}` })))}
+  Al seleccionar el plan, menciona brevemente los procedimientos disponibles de ese plan (${serviciosText}) y pregunta al doctor cuáles de ellos se realizaron hoy o si se completaron todos.
 
 Paso 3 – Hora de inicio: Registrar la hora exacta en que inició el procedimiento.
   Hora actual de referencia: ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.
@@ -329,6 +330,7 @@ Paso 4 – Dictado clínico completo: El doctor dicta en un solo mensaje todos l
   complicacion, finalidad, ambito, modalidadAtencion, personalAtiende,
   medicamentos[], esterilizaciones[], completarProcedimientos[], plantillaObservaciones[].
   ${serviciosText}
+  Si el doctor menciona realizar "todos los procedimientos", establece extraUpdates.completarProcedimientos: ["todos"].
   Al avanzar al paso 5, pregunta brevemente: "¿Desea confirmar los procedimientos de la plantilla que marcamos como realizados?" (solo si hay plantilla con procedimientos).
 
 Paso 5 – Confirmación de procedimientos de plantilla (solo si hay plan con servicios):

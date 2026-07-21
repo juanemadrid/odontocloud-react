@@ -42,8 +42,8 @@ const getSpanishVoice = () => {
     return voice;
 };
 
-const INTERIM_FLUSH_DELAY_MS = 1800;
-const CONVERSATION_SILENCE_DELAY_MS = 1600;
+const INTERIM_FLUSH_DELAY_MS = 3000;
+const CONVERSATION_SILENCE_DELAY_MS = 2200;
 
 export default function ClinicalAIAssistant({ 
     onApply, 
@@ -262,7 +262,7 @@ export default function ClinicalAIAssistant({
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(greeting);
                 utterance.lang = 'es-ES';
-                utterance.rate = 1.1; // Velocidad un poco más rápida para mayor agilidad profesional
+                utterance.rate = 0.98; // Velocidad pausada y natural para clínica profesional
                 const spanishVoice = getSpanishVoice();
                 if (spanishVoice) {
                     utterance.voice = spanishVoice;
@@ -301,7 +301,7 @@ export default function ClinicalAIAssistant({
         }
     }, [isConversational, userProfile, setValue, activeTab]);
 
-    // Conversational Mode: Debounced speech processor (waits for 800ms of silence before calling Gemini)
+    // Conversational Mode: Debounced speech processor (waits for 2200ms of silence before calling Gemini)
     useEffect(() => {
         if (!isConversational || !transcript.trim() || isLoadingRef.current) return;
 
@@ -418,32 +418,57 @@ export default function ClinicalAIAssistant({
                                     const next = { ...prev };
                                     if (val.includes("todos") || val.includes("all")) {
                                         Object.keys(next).forEach(k => {
-                                            next[k] = { ...next[k], checked: true };
+                                            const srv = serviciosRef.current.find(s => s.id === k);
+                                            next[k] = { 
+                                                ...next[k], 
+                                                checked: true, 
+                                                realizado: true,
+                                                desc: srv?.desc || srv?.procedimiento || srv?.nombre || next[k]?.desc || '',
+                                                dientes: srv?.dientes || next[k]?.dientes || ''
+                                            };
                                         });
                                     } else if (val.includes("ninguno") || val.includes("none")) {
                                         Object.keys(next).forEach(k => {
-                                            next[k] = { ...next[k], checked: false };
+                                            next[k] = { ...next[k], checked: false, realizado: false };
                                         });
                                     } else {
                                         val.forEach(item => {
                                             if (typeof item === 'number') {
                                                 const srv = serviciosRef.current[item - 1];
                                                 if (srv && next[srv.id]) {
-                                                    next[srv.id] = { ...next[srv.id], checked: true };
+                                                    next[srv.id] = { 
+                                                        ...next[srv.id], 
+                                                        checked: true, 
+                                                        realizado: true,
+                                                        desc: srv.desc || srv.procedimiento || srv.nombre || '',
+                                                        dientes: srv.dientes || ''
+                                                    };
                                                 }
                                             } else if (typeof item === 'string') {
                                                 const idx = parseInt(item, 10);
                                                 if (!isNaN(idx)) {
                                                     const srv = serviciosRef.current[idx - 1];
                                                     if (srv && next[srv.id]) {
-                                                        next[srv.id] = { ...next[srv.id], checked: true };
+                                                        next[srv.id] = { 
+                                                            ...next[srv.id], 
+                                                            checked: true, 
+                                                            realizado: true,
+                                                            desc: srv.desc || srv.procedimiento || srv.nombre || '',
+                                                            dientes: srv.dientes || ''
+                                                        };
                                                     }
                                                 } else {
                                                     const srv = serviciosRef.current.find(s => 
                                                         (s.desc || s.procedimiento || s.nombre || '').toLowerCase().includes(item.toLowerCase())
                                                     );
                                                     if (srv && next[srv.id]) {
-                                                        next[srv.id] = { ...next[srv.id], checked: true };
+                                                        next[srv.id] = { 
+                                                            ...next[srv.id], 
+                                                            checked: true, 
+                                                            realizado: true,
+                                                            desc: srv.desc || srv.procedimiento || srv.nombre || '',
+                                                            dientes: srv.dientes || ''
+                                                        };
                                                     }
                                                 }
                                             }

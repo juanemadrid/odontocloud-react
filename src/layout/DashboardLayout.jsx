@@ -13,8 +13,11 @@ import { collection, query, where, onSnapshot, orderBy, limit, doc, updateDoc, a
 import { usePermissions } from "../hooks/usePermissions";
 import CommandPalette from "../components/CommandPalette";
 
+import UserProfileModal from "../components/UserProfileModal";
+
 export default function DashboardLayout({ children, title, subtitle, basePath = "/dashboard_admin" }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [pendingNavigationPath, setPendingNavigationPath] = useState(null);
     const [collapsedDesktop, setCollapsedDesktop] = useState(() => {
         try {
@@ -23,6 +26,12 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
             return false;
         }
     });
+
+    useEffect(() => {
+        const handleOpenProfile = () => setProfileModalOpen(true);
+        window.addEventListener("open-user-profile", handleOpenProfile);
+        return () => window.removeEventListener("open-user-profile", handleOpenProfile);
+    }, []);
 
     useEffect(() => {
         try {
@@ -381,13 +390,24 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
 
 
                     {/* User Profile / Logout - Refined v2 */}
-                    <div className="p-4 relative group/user mt-auto flex justify-center">
+                    <div className="p-4 relative group/user mt-auto flex flex-col gap-2 justify-center">
                         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-100/80 to-transparent" />
+
+                        <button
+                            onClick={() => setProfileModalOpen(true)}
+                            title={collapsedDesktop ? "Perfil de usuario / Firma" : ""}
+                            className={`flex items-center justify-center transition-all duration-300 active:scale-95 group shadow-sm bg-blue-50/50 border border-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-5 py-3 rounded-[18px]'}`}
+                        >
+                            <FiUser className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+                            {!collapsedDesktop && (
+                                <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Perfil de usuario</span>
+                            )}
+                        </button>
 
                         <button
                             onClick={handleLogout}
                             title={collapsedDesktop ? "Cerrar sesión" : ""}
-                            className={`flex items-center justify-center transition-all duration-500 active:scale-95 group shadow-sm bg-red-50/50 border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-5 py-3.5 rounded-[18px]'}`}
+                            className={`flex items-center justify-center transition-all duration-300 active:scale-95 group shadow-sm bg-red-50/50 border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 ${collapsedDesktop ? 'w-10 h-10 rounded-xl px-0' : 'w-full gap-3 px-5 py-3 rounded-[18px]'}`}
                         >
                             <FiLogOut className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-1" />
                             {!collapsedDesktop && (
@@ -435,6 +455,7 @@ export default function DashboardLayout({ children, title, subtitle, basePath = 
                 </main>
             </div>
             <CommandPalette />
+            <UserProfileModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
 
             {/* Notifications Slide-over Panel */}
             {notificationsOpen && (

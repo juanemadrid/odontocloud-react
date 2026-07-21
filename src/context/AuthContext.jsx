@@ -46,13 +46,13 @@ export const AuthProvider = ({ children }) => {
                 nombreCompleto: s.email === "diegomadrid_doc@odontocloud.com" ? "Diego Madrid" : s.email === "mariarroyo@hotmail.com" ? "Maria Arroyo" : undefined,
                 esDoctor: s.email === "diegomadrid_doc@odontocloud.com",
                 profileId: s.email === "diegomadrid_doc@odontocloud.com" ? "rIgm7MxjxZZ7ML59zfb5" : undefined,
-                inquilino: 'odontosalud-h9ff3',
+                inquilino: 'dI7oB6d14pkGZSjqrjY9',
                 tenant: {
-                    id: 'odontosalud-h9ff3',
-                    nombre: "Clínica Dental",
-                    nombreComercial: "Clínica Dental",
-                    direccion: "Calle 123",
-                    telefono: "3001234567"
+                    id: 'dI7oB6d14pkGZSjqrjY9',
+                    nombre: "Clinica Dental",
+                    nombreComercial: "Clinica Dental",
+                    direccion: "Calle Falsa 123",
+                    telefono: "601234567"
                 }
             };
 

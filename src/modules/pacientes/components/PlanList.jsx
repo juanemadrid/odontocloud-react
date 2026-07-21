@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getPlansByPatient, deletePlan } from '../../../services/planService';
+import { getPlansByPatient, deletePlan, updatePlan, createPlan } from '../../../services/planService';
 import { getPatientById } from '../../../services/patientService';
-import { FiPlus, FiPrinter, FiEdit3, FiTrash2, FiX, FiAlertCircle, FiShield, FiFileText } from "react-icons/fi";
+import { FiPlus, FiPrinter, FiEdit3, FiTrash2, FiX, FiAlertCircle, FiShield, FiFileText, FiArrowRight, FiCopy } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';
@@ -156,6 +156,51 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
 
         // Pass userProfile to generatePDF to use as fallback for professional name
         await BudgetPrintService.generatePDF(plan, patient, clinic, userProfile);
+    };
+
+    const handleConvertToPlan = async (e, plan) => {
+        if (e) e.stopPropagation();
+        try {
+            await updatePlan(plan.id, {
+                ...plan,
+                type: 'plan',
+                status: 'accepted',
+                convertedAt: new Date()
+            });
+            toast.success(`Presupuesto "${plan.title || plan.nombre}" convertido a Plan de Tratamiento`);
+            loadData();
+        } catch (err) {
+            console.error("Error converting plan:", err);
+            toast.error("Error al convertir el presupuesto");
+        }
+    };
+
+    const handleDuplicate = async (e, plan) => {
+        if (e) e.stopPropagation();
+        try {
+            const duplicatedData = {
+                patientId: plan.patientId,
+                title: `${plan.title || plan.nombre || 'Presupuesto'} (Copia)`,
+                items: plan.items || [],
+                total: plan.total || 0,
+                subtotal: plan.subtotal || 0,
+                totalDescuento: plan.totalDescuento || 0,
+                status: 'draft',
+                type: plan.type || 'presupuesto',
+                profesionalId: plan.profesionalId || '',
+                vigencia: plan.vigencia || 30,
+                observaciones: plan.observaciones || '',
+                cobertura: plan.cobertura || {},
+                inquilino: plan.inquilino || '',
+                baseListId: plan.baseListId || null
+            };
+            await createPlan(duplicatedData);
+            toast.success("Presupuesto duplicado correctamente");
+            loadData();
+        } catch (err) {
+            console.error("Error duplicating plan:", err);
+            toast.error("Error al duplicar el presupuesto");
+        }
     };
 
     const currentUserFullName = userProfile?.nombreCompleto || `${userProfile?.nombre || ''} ${userProfile?.apellido || ''}`.trim() || userProfile?.displayName || '';
@@ -315,8 +360,15 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                     </td>
                                     <td className="px-3 py-3.5 text-center text-slate-500">{validUntil.toLocaleDateString()}</td>
                                     <td className="px-3 py-3.5 text-right font-black text-slate-900 font-mono whitespace-nowrap align-middle">$ {Number(p.total || 0).toLocaleString('es-CO')}</td>
-                                    <td className="px-3 py-3.5">
+                                    <td className="px-3 py-3.5" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-center gap-1.5">
+                                            <button 
+                                                onClick={(e) => handleConvertToPlan(e, p)} 
+                                                className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm" 
+                                                title="Convertir a Plan de Tratamiento"
+                                            >
+                                                <FiArrowRight size={14} />
+                                            </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
                                                 className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
@@ -325,11 +377,11 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 <FiEdit3 size={14} />
                                             </button>
                                             <button 
-                                                onClick={(e) => handlePrint(e, p)} 
-                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
-                                                title="Imprimir"
+                                                onClick={(e) => handleDuplicate(e, p)} 
+                                                className="p-2 bg-teal-50 text-teal-600 rounded-lg hover:bg-teal-600 hover:text-white transition-all shadow-sm" 
+                                                title="Duplicar"
                                             >
-                                                <FiPrinter size={14} />
+                                                <FiCopy size={14} />
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
@@ -337,7 +389,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 className={`p-2 rounded-lg transition-all shadow-sm ${
                                                     isPlanRealized(p)
                                                         ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                                                        : 'bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white'
+                                                        : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
                                                 }`}
                                                 title={isPlanRealized(p) ? 'No se puede eliminar: tiene procedimientos marcados como realizados' : 'Eliminar'}
                                             >
@@ -430,17 +482,10 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                         <div className="flex items-center justify-center gap-1.5">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
-                                                className="p-2 bg-[#8CC63F] text-white rounded-lg hover:bg-[#7bb335] transition-all shadow-sm" 
+                                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
                                                 title="Ver Plan"
                                             >
                                                 <FiEdit3 size={14} />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => handlePrint(e, p)} 
-                                                className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" 
-                                                title="Imprimir"
-                                            >
-                                                <FiPrinter size={14} />
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }} 
@@ -448,7 +493,7 @@ export default function PlanList({ patient, refreshKey, onEdit, onNew, setEditin
                                                 className={`p-2 rounded-lg transition-all shadow-sm ${
                                                     (getPlanStatus(p) !== 'pending' || isPlanRealized(p))
                                                         ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                                                        : 'bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white'
+                                                        : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
                                                 }`}
                                                 title={
                                                     getPlanStatus(p) !== 'pending' ? 'No se puede eliminar: tiene pagos registrados' :

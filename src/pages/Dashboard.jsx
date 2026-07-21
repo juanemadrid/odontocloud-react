@@ -996,17 +996,24 @@ function Overview({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl flex items-center gap-4">
+            <button 
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-user-profile"))}
+              title="Click para ver/editar Perfil de usuario y Firma Electrónica"
+              className="bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl flex items-center gap-4 transition-all active:scale-95 text-left group"
+            >
               <div className="flex flex-col">
-                <span className="text-[8px] font-bold text-blue-300/50 uppercase tracking-widest">Operador</span>
-                <span className="text-xs font-bold text-white uppercase tracking-tight">{userName}</span>
+                <span className="text-[8px] font-bold text-blue-300/50 uppercase tracking-widest group-hover:text-blue-300">Usuario</span>
+                <span className="text-xs font-bold text-white uppercase tracking-tight flex items-center gap-1.5">
+                  {userName}
+                </span>
               </div>
               <div className="w-px h-6 bg-white/10" />
               <div className="flex flex-col">
-                <span className="text-[8px] font-bold text-blue-300/50 uppercase tracking-widest">Nivel</span>
+                <span className="text-[8px] font-bold text-blue-300/50 uppercase tracking-widest group-hover:text-blue-300">Perfil / Firma</span>
                 <span className="text-xs font-bold text-blue-400 uppercase tracking-tight">{role || "Admin"}</span>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -1179,7 +1186,7 @@ export default function Dashboard() {
   const isSuperAdmin = userProfile?.rol === "superadmin";
   const companyName = isSuperAdmin ? "OdontoCloud Central" : (userProfile?.tenant?.name || "OdontoCloud");
   const companyLogo = isSuperAdmin ? null : (userProfile?.tenant?.logo || logo);
-  const userName = userProfile?.nombre || user?.displayName || user?.email || "Usuario";
+  const userName = userProfile?.nombreCompleto || userProfile?.nombre || user?.displayName || user?.email || "Usuario";
 
   const isDoc = userProfile?.esDoctor || userProfile?.rol === "doctor" || userProfile?.rol === "odontologo";
   const [currentDoctorId, setCurrentDoctorId] = useState(userProfile?.uid || null);

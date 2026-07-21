@@ -172,13 +172,17 @@ export default function Agenda() {
         setSelectedDate(d);
     };
 
-    const handleDownload = async () => {
+    const handleDownload = async (actionType = "download") => {
         if (appointments.length === 0) {
             toast.error("No hay citas para exportar en esta fecha");
             return;
         }
 
-        const toastId = toast.loading("Generando documento PDF institucional...");
+        const toastId = toast.loading(
+            actionType === "print"
+                ? "Preparando vista de impresión institucional..."
+                : "Generando documento PDF institucional..."
+        );
         
         try {
             // 1. Create a hidden container for PDF generation with refined styling
@@ -193,26 +197,40 @@ export default function Agenda() {
             printElement.style.color = "#1e293b";
             printElement.style.fontFamily = "'Inter', sans-serif";
             
-            // 2. Build a CUSTOM professional header for the PDF
+            const rawLogoUrl = userProfile?.tenant?.logo || "";
+            const isLocalDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            const logoUrl = (isLocalDev && rawLogoUrl && rawLogoUrl.includes('firebasestorage.googleapis.com'))
+                ? `/odontocloud-react/api/proxy-logo?url=${encodeURIComponent(rawLogoUrl)}`
+                : rawLogoUrl;
+
+            // 2. Build a CUSTOM professional header for the PDF (Matching Budget/Receipt premium style)
+            const logoHTML = logoUrl 
+                ? `<img src="${logoUrl}" style="width: 80px; height: 80px; object-fit: contain; border-radius: 16px;" crossOrigin="anonymous" />`
+                : `<div style="width: 80px; height: 80px; background: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 900;">${userProfile?.tenant?.nombre?.substring(0, 1) || "O"}</div>`;
+
             const headerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 5px solid #2563eb; padding-bottom: 30px; margin-bottom: 45px;">
-                    <div style="display: flex; gap: 30px; align-items: center;">
-                        ${userProfile?.tenant?.logo 
-                            ? `<img src="${userProfile.tenant.logo}" style="width: 110px; height: 110px; object-fit: contain; border-radius: 20px;" />`
-                            : `<div style="width: 110px; height: 110px; background: #2563eb; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 48px; font-weight: 900;">${userProfile?.tenant?.nombre?.substring(0, 1) || "O"}</div>`
-                        }
+                <div style="position: relative; padding-bottom: 25px; margin-bottom: 35px; border-bottom: 2px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <!-- Sleek Gradient Bar -->
+                    <div style="position: absolute; top: -60px; left: -60px; right: -60px; height: 8px; background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);"></div>
+                    
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        ${logoHTML}
                         <div>
-                            <h1 style="margin: 0; font-size: 32px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: -1px;">${userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || userProfile?.tenant?.name || "OdontoCloud Clínica"}</h1>
-                            <p style="margin: 6px 0; font-size: 14px; color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">NIT: ${userProfile?.tenant?.nit || "NIT NO CONFIGURADO"}</p>
-                            <p style="margin: 3px 0; font-size: 13px; color: #64748b; font-weight: 500;">${userProfile?.tenant?.direccion || userProfile?.tenant?.address || "DIRECCIÓN NO CONFIGURADA"}</p>
-                            <p style="margin: 3px 0; font-size: 13px; color: #64748b; font-weight: 500;">TEL: ${userProfile?.tenant?.telefono || userProfile?.tenant?.phone || "---"} | EMAIL: ${userProfile?.tenant?.email || "---"}</p>
+                            <h1 style="margin: 0; font-size: 26px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: -0.5px;">${userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || "Clínica Dental"}</h1>
+                            <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Nit:</strong> ${userProfile?.tenant?.nit || "---"}</p>
+                            <p style="margin: 2px 0 0 0; font-size: 10px; color: #64748b; font-weight: 500;"><strong style="color: #94a3b8; font-size: 8px; text-transform: uppercase; margin-right: 5px;">Dirección:</strong> ${userProfile?.tenant?.direccion || "---"}</p>
+                            <p style="margin: 2px 0 0 0; font-size: 10px; color: #64748b; font-weight: 500;"><strong style="color: #94a3b8; font-size: 8px; text-transform: uppercase; margin-right: 5px;">Tel:</strong> ${userProfile?.tenant?.telefono || "---"} <span style="color: #cbd5e1; margin: 0 5px;">|</span> <strong style="color: #94a3b8; font-size: 8px; text-transform: uppercase; margin-right: 5px;">Email:</strong> ${userProfile?.tenant?.email || "---"}</p>
                         </div>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="background: #eff6ff; padding: 15px 30px; border-radius: 20px; border: 2px solid #dbeafe; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                            <span style="font-size: 18px; font-weight: 900; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.5px;">${selectedDate.toLocaleDateString("es-CO", { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 12px 25px; border-radius: 14px; text-align: center; box-shadow: 0 4px 6px -1px rgba(37,99,235,0.05);">
+                            <span style="font-size: 11px; font-weight: 900; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; display: block;">Reporte de Agenda</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #94a3b8; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">Reporte Institucional de Agenda</p>
+                        <div style="text-align: right;">
+                            <p style="margin: 0; font-size: 9px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 7px; text-transform: uppercase; margin-right: 5px;">Fecha de Agenda:</strong> ${selectedDate.toLocaleDateString("es-CO", { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p style="margin: 2px 0 0 0; font-size: 9px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 7px; text-transform: uppercase; margin-right: 5px;">Emisión:</strong> ${new Date().toLocaleDateString("es-CO", { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -316,21 +334,21 @@ export default function Agenda() {
                 }
             }
 
-            // 4. Build Footer
+            // 4. Build Footer (Matching Budget/Receipt signature blocks)
             const footerHTML = `
-                <div style="margin-top: 80px; display: flex; justify-content: space-between; gap: 100px; padding: 0 40px;">
-                    <div style="flex: 1; border-top: 2px solid #e2e8f0; padding-top: 20px; text-align: center;">
-                        <p style="margin: 0; font-size: 14px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Profesional</p>
-                        <p style="margin: 8px 0; font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Sello y Registro Médico</p>
+                <div style="margin-top: 80px; display: flex; justify-content: space-between; gap: 80px; padding: 0 30px;">
+                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center;">
+                        <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Profesional</p>
+                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Sello y Registro Médico</p>
                     </div>
-                    <div style="flex: 1; border-top: 2px solid #e2e8f0; padding-top: 20px; text-align: center;">
-                        <p style="margin: 0; font-size: 14px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Responsable de Agenda</p>
-                        <p style="margin: 8px 0; font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">GENERADO POR: ${userProfile?.nombre?.toUpperCase() || userProfile?.email?.toUpperCase()}</p>
+                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center;">
+                        <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Responsable de Agenda</p>
+                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
                     </div>
                 </div>
-                <div style="margin-top: 60px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 25px;">
-                    <p style="margin: 0; font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; letter-spacing: 3px;">
-                        OdontoCloud Management System • Reporte Generado el ${new Date().toLocaleString()}
+                <div style="margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                    <p style="margin: 0; font-size: 9px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; letter-spacing: 4px;">
+                        Documento oficial generado por OdontoCloud Elite Pro
                     </p>
                 </div>
             `;
@@ -339,35 +357,50 @@ export default function Agenda() {
             printElement.innerHTML = headerHTML + tableContainer.innerHTML + footerHTML;
             document.body.appendChild(printElement);
 
+            // Wait for all images to load before rendering canvas
+            const images = printElement.querySelectorAll("img");
+            await Promise.all(Array.from(images).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            }));
+
             // 5. High-quality Capture
             const canvas = await html2canvas(printElement, {
-                scale: 3, // Even higher scale for professional printing
+                scale: 2.5, // High resolution matching budget/receipt
                 useCORS: true,
                 logging: false,
                 backgroundColor: "#ffffff",
                 windowWidth: 1200 // Match element width
             });
 
-            const imgData = canvas.toDataURL('image/png', 1.0);
-            
             // 6. Professional PDF Construction
             const pdf = new jsPDF({
                 orientation: 'portrait',
-                unit: 'mm',
+                unit: 'pt',
                 format: 'a4'
             });
 
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            pdf.save(`Reporte_Agenda_${userProfile?.tenant?.nombre?.replace(/\s+/g, '_')}_${dateStr}.pdf`);
+            if (actionType === "print") {
+                const pdfBlob = pdf.output('bloburl');
+                window.open(pdfBlob, '_blank');
+                toast.success("Vista de impresión generada con éxito", { id: toastId });
+            } else {
+                const dateStr = selectedDate.toISOString().split('T')[0];
+                pdf.save(`Reporte_Agenda_${userProfile?.tenant?.nombre?.replace(/\s+/g, '_')}_${dateStr}.pdf`);
+                toast.success("Documento PDF institucional generado con éxito", { id: toastId });
+            }
             
             // Cleanup
             document.body.removeChild(printElement);
-            toast.success("Documento PDF institucional generado con éxito", { id: toastId });
         } catch (error) {
             console.error("Error generating professional PDF:", error);
             toast.error("Error al procesar el documento institucional", { id: toastId });
@@ -466,16 +499,16 @@ export default function Agenda() {
 
                         <div className="flex items-center gap-3">
                             <button 
-                                onClick={() => window.print()}
+                                onClick={() => handleDownload("print")}
                                 className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-90"
                                 title="Imprimir Agenda"
                             >
                                 <FiPrinter size={18} />
                             </button>
                             <button 
-                                onClick={handleDownload}
+                                onClick={() => handleDownload("download")}
                                 className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all active:scale-90"
-                                title="Descargar Excel"
+                                title="Descargar Reporte PDF"
                             >
                                 <FiDownload size={18} />
                             </button>

@@ -21,6 +21,24 @@ export default function EmpresaUsuarios() {
     const { userProfile } = useAuth();
     const toast = useToast();
 
+    const getDisplayName = (u) => {
+        if (u.nombreCompleto && !u.nombreCompleto.toLowerCase().includes("undefined")) {
+            return u.nombreCompleto;
+        }
+        if (u.nombre || u.apellido) {
+            const first = u.nombre || "";
+            const last = u.apellido || "";
+            const combined = `${first} ${last}`.trim();
+            if (combined && !combined.toLowerCase().includes("undefined")) {
+                return combined;
+            }
+        }
+        if (u.displayName && !u.displayName.toLowerCase().includes("undefined")) {
+            return u.displayName;
+        }
+        return u.rol === "administrador" ? "Administrador (Propietario)" : "Usuario Sin Nombre";
+    };
+
     // Data States
     const [users, setUsers] = useState([]);
     const [filtered, setFiltered] = useState([]);
@@ -139,7 +157,7 @@ export default function EmpresaUsuarios() {
         if (search.trim()) {
             const lower = search.toLowerCase();
             res = res.filter(u =>
-                (u.nombreCompleto || "").toLowerCase().includes(lower) ||
+                getDisplayName(u).toLowerCase().includes(lower) ||
                 (u.email || "").toLowerCase().includes(lower)
             );
         }
@@ -166,10 +184,23 @@ export default function EmpresaUsuarios() {
     const handleOpenModal = async (user = null) => {
         if (user) {
             setEditId(user.id);
+            
+            let userNombre = user.nombre || "";
+            let userApellido = user.apellido || "";
+            if (!userNombre && !userApellido && user.displayName) {
+                const parts = user.displayName.trim().split(/\s+/);
+                if (parts.length >= 2) {
+                    userNombre = parts[0];
+                    userApellido = parts.slice(1).join(" ");
+                } else if (parts.length === 1) {
+                    userNombre = parts[0];
+                }
+            }
+
             setFormData({
                 ...initialForm,
-                nombre: user.nombre || "",
-                apellido: user.apellido || "",
+                nombre: userNombre,
+                apellido: userApellido,
                 email: user.email || "",
                 tipoDocumento: user.tipoDocumento || "CC",
                 numeroDocumento: user.numeroDocumento || "",
@@ -210,7 +241,8 @@ export default function EmpresaUsuarios() {
 
     const handleSubmitForm = async (e) => {
         e.preventDefault();
-        if (!formData.email || !formData.nombre || !formData.profileId) {
+        const isEditingAdmin = editId && users.find(u => u.id === editId)?.rol === "administrador";
+        if (!formData.email || !formData.nombre || (!formData.profileId && !isEditingAdmin)) {
             return toast.warning("Complete los campos obligatorios");
         }
         if (!editId && !formData.password) {
@@ -282,9 +314,10 @@ export default function EmpresaUsuarios() {
                 sucursales: formData.sucursales,
                 especialidades: formData.esDoctor ? formData.especialidades : [],
 
-                profileId: selectedProfile?.id || "",
-                profileName: selectedProfile?.nombre || "",
+                profileId: isEditingAdmin ? "" : (selectedProfile?.id || ""),
+                profileName: isEditingAdmin ? "Administrador" : (selectedProfile?.nombre || ""),
                 rol: (() => {
+                    if (isEditingAdmin) return "administrador";
                     const r = (selectedProfile?.baseRole || selectedProfile?.rol || "").trim().toLowerCase();
                     if (r) return r;
                     const n = (selectedProfile?.nombre || "").toLowerCase();
@@ -503,10 +536,17 @@ export default function EmpresaUsuarios() {
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-[15px] shadow-sm transform group-hover:scale-110 transition-transform duration-500 ${u.activo === false ? 'bg-slate-200 text-slate-500' : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'}`}>
-                                                    {(u.nombre?.charAt(0) || "") + (u.apellido?.charAt(0) || "")}
+                                                    {(() => {
+                                                        const name = getDisplayName(u);
+                                                        const parts = name.split(" ");
+                                                        if (parts.length >= 2) {
+                                                            return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+                                                        }
+                                                        return name.charAt(0).toUpperCase();
+                                                    })()}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[14px] font-extrabold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{u.nombreCompleto || `${u.nombre} ${u.apellido}`}</span>
+                                                    <span className="text-[14px] font-extrabold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{getDisplayName(u)}</span>
                                                     <span className="text-[11px] font-bold text-slate-400 lowercase tracking-tight">{u.email}</span>
                                                 </div>
                                             </div>
@@ -772,12 +812,27 @@ export default function EmpresaUsuarios() {
 
                                             <div className="space-y-2.5">
                                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de perfil *</label>
-                                                <select required value={formData.profileId} onChange={e => setFormData({ ...formData, profileId: e.target.value })} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg px-3 font-black text-[11px] text-slate-700 focus:border-blue-500 transition-all">
-                                                    <option value="">Seleccione perfil...</option>
-                                                    {rolesDisponibles.map(p => (
-                                                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                                                    ))}
-                                                </select>
+                                                {(() => {
+                                                    const isEditingAdmin = editId && users.find(u => u.id === editId)?.rol === "administrador";
+                                                    if (isEditingAdmin) {
+                                                        return (
+                                                            <input 
+                                                                type="text" 
+                                                                readOnly 
+                                                                value="Administrador (Propietario)" 
+                                                                className="w-full h-10 bg-slate-100 border border-slate-200 rounded-xl px-4 font-black text-[11px] text-slate-500 cursor-not-allowed outline-none"
+                                                            />
+                                                        );
+                                                    }
+                                                    return (
+                                                        <select required value={formData.profileId} onChange={e => setFormData({ ...formData, profileId: e.target.value })} className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg px-3 font-black text-[11px] text-slate-700 focus:border-blue-500 transition-all">
+                                                            <option value="">Seleccione perfil...</option>
+                                                            {rolesDisponibles.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.nombre}</option>
+                                                            ))}
+                                                        </select>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     </div>

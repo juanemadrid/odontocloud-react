@@ -3,7 +3,7 @@ import { useToast } from '../../../context/ToastContext';
 import { createPlan, updatePlan, deletePlan } from '../../../services/planService';
 import { db } from '../../../firebase/firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where, limit, updateDoc, onSnapshot } from 'firebase/firestore';
-import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle, FiLoader, FiSend } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiPlus, FiCheck, FiX, FiInfo, FiActivity, FiDollarSign, FiChevronLeft, FiPlusCircle, FiPackage, FiFileText, FiPrinter, FiPlusSquare, FiSave, FiAlertCircle, FiLoader, FiSend, FiEye } from 'react-icons/fi';
 import { useFormContext } from 'react-hook-form';
 import { useAuth } from '../../../context/AuthContext';
 import ProcedureAdditionModal from './ProcedureAdditionModal';
@@ -58,6 +58,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const [loadingPlanes, setLoadingPlanes] = useState(false);
     const [loadingPlanItems, setLoadingPlanItems] = useState(false);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
+    const [showOdontoModal, setShowOdontoModal] = useState(false);
+    const [odontoLoading, setOdontoLoading] = useState(false);
+    const [odontoItems, setOdontoItems] = useState([]);
 
     // Refs for auto-saving
     const autoSaveTimeoutRef = useRef(null);
@@ -528,6 +531,49 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         triggerAutoSave(nextItems);
     };
 
+    const handleOpenOdontoModal = async () => {
+        if (!patientId) {
+            toast.error("Error: ID de paciente no disponible.");
+            return;
+        }
+        setShowOdontoModal(true);
+        setOdontoLoading(true);
+        try {
+            const { collection, getDocs, query, orderBy } = await import("firebase/firestore");
+            const colRef = collection(db, "pacientes", patientId, "odontogramas");
+            const snap = await getDocs(query(colRef, orderBy("creado", "desc")));
+            
+            const list = [];
+            snap.docs.forEach(doc => {
+                const s = doc.data();
+                const creadoDate = s.creado?.toDate ? s.creado.toDate() : s.creado ? new Date(s.creado) : null;
+                const formattedDate = creadoDate 
+                    ? creadoDate.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) 
+                    : "---";
+                const creadoPor = s.creadoPor || s.profesional || "---";
+
+                if (s.plan && Array.isArray(s.plan)) {
+                    s.plan.forEach(item => {
+                        list.push({
+                            id: doc.id,
+                            fecha: formattedDate,
+                            creadoPor: creadoPor,
+                            pieza: item.diente || item.tooth || "---",
+                            situacion: item.tratamiento || item.label || "---",
+                            cara: item.cara || item.surface || "---"
+                        });
+                    });
+                }
+            });
+            setOdontoItems(list);
+        } catch (e) {
+            console.error("Error loading current odontogram data:", e);
+            toast.error("Error al cargar el odontograma actual");
+        } finally {
+            setOdontoLoading(false);
+        }
+    };
+
     // UI state for search
     const [activeSearchId, setActiveSearchId] = useState(null);
     const [searchResults, setSearchResults] = useState([]);
@@ -906,6 +952,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         }
 
         const planData = {
+            id: currentPlanId,
             title: title || "Presupuesto",
             items: items,
             subtotal: calculateSubtotal(),
@@ -913,7 +960,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             total: calculateTotal(),
             date: initialData?.date || new Date(),
             type: initialData?.type || "presupuesto",
-            profesional: initialData?.profesional || userProfile?.nombre || userProfile?.nombreCompleto || "",
+            profesional: initialData?.profesional || userProfile?.nombreCompleto || userProfile?.nombre || "",
             observaciones: obs,
             cobertura
         };
@@ -1359,6 +1406,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             <FiPackage size={18} strokeWidth={3} />
                             Cargar Paquete / Combo Completo
                         </button>
+                        <button
+                            onClick={handleOpenOdontoModal}
+                            className="bg-[#8CC63F]/10 border border-[#8CC63F]/20 text-[#8CC63F] hover:bg-[#8CC63F] hover:text-white py-3.5 px-6 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all hover:shadow-lg active:scale-95 whitespace-nowrap"
+                        >
+                            <FiEye size={18} strokeWidth={3} />
+                            Odonto. Actual
+                        </button>
                     </div>
 
                     {/* Summary Block - estilo OralDrive */}
@@ -1573,6 +1627,78 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                     className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
                                 >
                                     CANCELAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Odonto. Actual (estilo OralDrive) */}
+            {showOdontoModal && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-fadeIn border border-slate-100">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <div>
+                                <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                                     🦷 Odonto. Actual
+                                </h3>
+                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mt-1">
+                                    Historial de hallazgos del odontograma más reciente para {patient?.nombreCompleto}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowOdontoModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <FiX size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {odontoLoading ? (
+                                <div className="p-10 text-center text-slate-400 font-bold animate-pulse uppercase text-xs tracking-widest">
+                                    Cargando odontograma...
+                                </div>
+                            ) : odontoItems.length === 0 ? (
+                                <div className="p-12 text-center text-slate-400 font-medium">
+                                    <div className="text-3xl mb-2">🦷</div>
+                                    <p className="text-xs uppercase font-black tracking-widest text-slate-400 mb-1">Sin hallazgos registrados</p>
+                                    <p className="text-[10px] text-slate-300">Este paciente aún no tiene tratamientos registrados en su odontograma.</p>
+                                </div>
+                            ) : (
+                                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner max-h-[400px] overflow-y-auto">
+                                    <table className="w-full text-left table-auto">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-200 uppercase text-[9px] font-black text-slate-400 tracking-widest">
+                                                <th className="px-4 py-3.5">Fecha de creación</th>
+                                                <th className="px-4 py-3.5">Creado por</th>
+                                                <th className="px-4 py-3.5 text-center">Pieza</th>
+                                                <th className="px-4 py-3.5">Situación</th>
+                                                <th className="px-4 py-3.5">Cara afectada</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-[11px] font-bold text-slate-600 uppercase">
+                                            {odontoItems.map((item, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-4 py-3 text-slate-500">{item.fecha}</td>
+                                                    <td className="px-4 py-3 text-slate-500 font-semibold">{item.creadoPor}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className="inline-flex items-center justify-center w-7 h-7 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg font-black text-[10px]">
+                                                            {item.pieza}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-800 font-black">{item.situacion}</td>
+                                                    <td className="px-4 py-3 text-slate-400 font-black text-[10px] tracking-wide">{item.cara || "General"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
+                                <button
+                                    onClick={() => setShowOdontoModal(false)}
+                                    className="px-6 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+                                >
+                                    Cerrar
                                 </button>
                             </div>
                         </div>

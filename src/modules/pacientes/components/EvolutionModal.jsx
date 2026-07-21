@@ -753,7 +753,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1.5 min-h-[24px] flex items-end">
                                     Ámbito realización
                                 </label>
                                 <select 
@@ -767,7 +767,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1.5 min-h-[24px] flex items-end">
                                     Finalidad del procedimiento
                                 </label>
                                 <select 
@@ -784,7 +784,7 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1.5 min-h-[24px] flex items-end">
                                     Personal que atiende
                                 </label>
                                 <input 
@@ -795,8 +795,8 @@ export default function EvolutionModal({ isOpen, onClose, patient, initialData =
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1">
-                                    Modalidad de atención <span className="text-rose-500">*</span>
+                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block mb-1.5 min-h-[24px] flex items-end">
+                                    Modalidad de atención <span className="text-rose-500 ml-1">*</span>
                                 </label>
                                 <select 
                                     {...register("modalidadAtencion")} 

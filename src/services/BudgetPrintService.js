@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
 import { db } from "../firebase/firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 /**
  * BudgetPrintService
@@ -13,11 +13,11 @@ export const BudgetPrintService = {
     generatePDF: async (plan, patient, clinic, userProfile) => {
         if (!plan || !patient || !clinic) {
             console.error("Missing data for PDF generation:", { plan, patient, clinic });
-            toast.error("Datos insuficientes para generar el documento");
+            window.alert("❌ Datos insuficientes para generar el documento");
             return;
         }
 
-        const toastId = toast.loading("Generando documento institucional...");
+        window.alert("Generando documento institucional...");
 
         try {
             // 1. Create hidden container
@@ -39,6 +39,31 @@ export const BudgetPrintService = {
             const subtotal = plan.subtotal || plan.items?.reduce((acc, i) => acc + (i.amount * i.qty), 0) || 0;
             const discount = plan.totalDescuento || plan.items?.reduce((acc, i) => acc + (i.descuento || 0), 0) || 0;
             const total = plan.total || (subtotal - discount);
+
+            // 2.3 Fetch clinical evolutions to check realized state of items
+            let evolutions = [];
+            const patientId = patient?.id || patient?.documento || "";
+            if (patientId && plan.id) {
+                try {
+                    const evoQ = query(
+                        collection(db, "clinical_evolutions"),
+                        where("patientId", "==", patientId),
+                        where("planId", "==", plan.id)
+                    );
+                    const snap = await getDocs(evoQ);
+                    evolutions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                } catch (err) {
+                    console.error("Error loading evolutions for print:", err);
+                }
+            }
+
+            const isItemRealized = (item) => {
+                if (item.realizado === true) return true;
+                return evolutions.some(evo =>
+                    evo.plantillaItems?.[item.id]?.realizado === true ||
+                    (evo.plantillaItems?.[item.id]?.realizado === undefined && evo.plantillaItems?.[item.id]?.checked === true)
+                );
+            };
 
             // 2.5 Resolve Patient Info with extreme robustness
             // Sometimes patient comes from Firestore doc, sometimes from form watch, sometimes from list search
@@ -88,7 +113,11 @@ export const BudgetPrintService = {
             }
 
             // Resolve values
-            const logoUrl = dbLogoUrl || clinic?.logo || clinic?.logoUrl || "";
+            const rawLogoUrl = dbLogoUrl || clinic?.logo || clinic?.logoUrl || "";
+            const isLocalDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            const logoUrl = (isLocalDev && rawLogoUrl && rawLogoUrl.includes('firebasestorage.googleapis.com'))
+                ? `/odontocloud-react/api/proxy-logo?url=${encodeURIComponent(rawLogoUrl)}`
+                : rawLogoUrl;
             const clinicName = dbClinicName || clinic?.nombreComercial || clinic?.nombre || clinic?.name || "Clínica Odontológica";
             const clinicNit = dbClinicNit || clinic?.nit || clinic?.NIT || "---";
             const clinicAddress = dbClinicAddress || clinic?.direccion || "---";
@@ -100,9 +129,13 @@ export const BudgetPrintService = {
 
             // 2.7 Resolve Professional Name & Role (Doctor vs Admin)
             let profDisplayName = plan.profesional || "";
-            // If the plan profissional matches clinic name or is empty, try to get it from current user or fallback
-            if (!profDisplayName || profDisplayName.toUpperCase() === (clinic?.nombre || "").toUpperCase()) {
-                profDisplayName = userProfile?.nombre || userProfile?.name || "---";
+            // If the plan professional matches clinic name or is empty or undefined, try to get it from current user or fallback
+            if (!profDisplayName || profDisplayName.toUpperCase() === (clinic?.nombre || "").toUpperCase() || profDisplayName.toLowerCase().includes("undefined")) {
+                profDisplayName = userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.name || "";
+            }
+            if (!profDisplayName || profDisplayName.toLowerCase().includes("undefined")) {
+                const fallbackName = userProfile?.nombreCompleto || userProfile?.nombre || "";
+                profDisplayName = (fallbackName && !fallbackName.toLowerCase().includes("undefined")) ? fallbackName : "Administrador";
             }
             
             // Determine if it's a doctor or admin (Maria Royo is admin)
@@ -117,12 +150,18 @@ export const BudgetPrintService = {
             profDisplayName = profDisplayName.replace(/^DR\.?\s+/i, "");
             if (isDoctor) profDisplayName = `DR. ${profDisplayName}`;
 
+            // Calculate validity
+            const vigencia = plan.vigencia || 30;
+            const validUntil = new Date(date);
+            validUntil.setDate(validUntil.getDate() + vigencia);
+            const formattedValidUntil = validUntil.toLocaleDateString("es-CO", { day: 'numeric', month: 'long', year: 'numeric' });
+
             // 3. Template HTML
             const headerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #2563eb; padding-bottom: 25px; margin-bottom: 30px;">
                     <div style="display: flex; gap: 25px; align-items: center;">
                         ${logoUrl 
-                            ? `<img src="${logoUrl}" style="max-width: 140px; max-height: 75px; object-fit: contain;" />`
+                            ? `<img src="${logoUrl}" style="max-width: 140px; max-height: 75px; object-fit: contain;" crossorigin="anonymous" />`
                             : `<div style="width: 80px; height: 80px; background: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 900;">${clinicName.substring(0, 1) || "O"}</div>`
                         }
                         <div>
@@ -143,19 +182,36 @@ export const BudgetPrintService = {
             `;
 
             const patientInfoHTML = `
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 25px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 22px; margin-bottom: 25px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
                     <div style="border-right: 1px solid #f1f5f9; padding-right: 20px;">
-                        <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">Información del Paciente</span>
-                        <h2 style="margin: 0; font-size: 15px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">${pName}</h2>
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 10px;">
-                            <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">ID / DOC:</strong> ${patient?.tipoDocumento || ""} ${pDoc}</p>
-                            <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Celular:</strong> ${pPhone}</p>
+                        <span style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 8px;">Información del Paciente</span>
+                        <h2 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">${pName}</h2>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
+                            <p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Documento:</strong> ${patient?.tipoDocumento || "C.C."} ${pDoc}</p>
+                            <p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Dirección:</strong> ${patient?.lugarResidencia || patient?.direccion || "---"}</p>
+                            <p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Ciudad:</strong> ${patient?.ciudadDomicilio || patient?.ciudad || "---"}</p>
+                            <p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Teléfono:</strong> ${pPhone}</p>
                         </div>
                     </div>
-                    <div style="padding-left: 10px;">
-                        <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">${roleLabel}</span>
-                        <h3 style="margin: 0; font-size: 14px; font-weight: 900; color: #1e293b; text-transform: uppercase;">${profDisplayName}</h3>
-                        <p style="margin: 6px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Cargo:</strong> ${userProfile?.rol || "---"}</p>
+                    <div style="padding-left: 10px; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                        <div>
+                            <span style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 8px;">Detalles del Documento</span>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 12px;">
+                                <p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Expedición:</strong> ${formattedDate}</p>
+                                ${plan.type !== 'plan' 
+                                    ? `<p style="margin: 0; font-size: 11px; color: #475569; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Válido Hasta:</strong> ${formattedValidUntil}</p>`
+                                    : ""
+                                }
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                            <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">${roleLabel}</span>
+                            <h3 style="margin: 0; font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${profDisplayName}</h3>
+                            ${(profDisplayName.toLowerCase() !== "administrador" && userProfile?.rol)
+                                ? `<p style="margin: 2px 0 0 0; font-size: 10px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 8px; text-transform: uppercase; margin-right: 5px;">Cargo:</strong> ${userProfile.rol}</p>`
+                                : ""
+                            }
+                        </div>
                     </div>
                 </div>
             `;
@@ -200,6 +256,7 @@ export const BudgetPrintService = {
                                 <th style="padding: 15px; text-align: left; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Código</th>
                                 <th style="padding: 15px; text-align: left; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Descripción</th>
                                 <th style="padding: 15px; text-align: center; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Dientes</th>
+                                <th style="padding: 15px; text-align: center; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Realizado</th>
                                 <th style="padding: 15px; text-align: center; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Cant.</th>
                                 <th style="padding: 15px; text-align: right; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">V. Unitario</th>
                                 <th style="padding: 15px; text-align: right; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Total</th>
@@ -214,6 +271,12 @@ export const BudgetPrintService = {
                                         ${item.line_obs ? `<div style="font-size: 10px; color: #94a3b8; font-weight: 500; font-style: italic; margin-top: 2px;">OBS: ${item.line_obs}</div>` : ""}
                                     </td>
                                     <td style="padding: 14px 15px; text-align: center; font-weight: 900; color: #64748b;">${item.dientes || "---"}</td>
+                                    <td style="padding: 14px 15px; text-align: center;">
+                                        ${isItemRealized(item)
+                                            ? `<span style="color: #10b981; font-weight: 800; background: #ecfdf5; padding: 4px 8px; border-radius: 8px; font-size: 10px; text-transform: uppercase;">Realizado</span>`
+                                            : `<span style="color: #64748b; font-weight: 800; background: #f1f5f9; padding: 4px 8px; border-radius: 8px; font-size: 10px; text-transform: uppercase;">No realizado</span>`
+                                        }
+                                    </td>
                                     <td style="padding: 14px 15px; text-align: center; font-weight: 900;">${item.qty}</td>
                                     <td style="padding: 14px 15px; text-align: right;">$${Number(item.amount).toLocaleString('es-CO')}</td>
                                     <td style="padding: 14px 15px; text-align: right; font-weight: 900; color: #0f172a;">$${(Number(item.amount) * Number(item.qty)).toLocaleString('es-CO')}</td>
@@ -248,15 +311,21 @@ export const BudgetPrintService = {
                 </div>
             `;
 
+            const docSignatureImg = (userProfile?.firmaElectronica || userProfile?.firma)
+                ? `<div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;"><img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" crossOrigin="anonymous" /></div>`
+                : `<div style="height: 55px;"></div>`;
+
             const footerHTML = `
-                <div style="margin-top: 80px; display: flex; justify-content: space-between; gap: 80px; padding: 0 30px;">
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center;">
+                <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 80px; padding: 0 30px;">
+                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
+                        <div style="height: 55px;"></div>
                         <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Aceptado por el Paciente</p>
                         <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C.C. / Registro</p>
                     </div>
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 15px; text-align: center;">
+                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
+                        ${docSignatureImg}
                         <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Especialista</p>
-                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Sello y Registro Médico</p>
+                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
                     </div>
                 </div>
                 <div style="margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px;">
@@ -269,6 +338,16 @@ export const BudgetPrintService = {
             // 4. Assemble and Append
             printElement.innerHTML = headerHTML + patientInfoHTML + coverageHTML + itemsTableHTML + summaryHTML + footerHTML;
             document.body.appendChild(printElement);
+
+            // Wait for all images to load before rendering canvas
+            const images = printElement.querySelectorAll("img");
+            await Promise.all(Array.from(images).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            }));
 
             // 5. Generate with html2canvas
             const canvas = await html2canvas(printElement, {
@@ -298,11 +377,11 @@ export const BudgetPrintService = {
 
             // Cleanup
             document.body.removeChild(printElement);
-            toast.success("PDF generado con éxito", { id: toastId });
+            window.alert("✅ PDF generado con éxito");
 
         } catch (error) {
             console.error("Error generating PDF:", error);
-            toast.error("Error al generar el documento PDF", { id: toastId });
+            window.alert("❌ Error al generar el documento PDF");
         }
     }
 };
