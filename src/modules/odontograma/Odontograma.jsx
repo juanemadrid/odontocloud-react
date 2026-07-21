@@ -33,8 +33,43 @@ import {
 } from "react-icons/fi";
 import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
-import FirmaHuellaModal from "./components/FirmaHuellaModal";
+const printHTMLInHiddenIframe = (htmlContent) => {
+    let iframe = document.getElementById("oc-print-iframe");
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "oc-print-iframe";
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0px";
+        iframe.style.height = "0px";
+        iframe.style.border = "none";
+        iframe.style.visibility = "hidden";
+        document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
 
+    const triggerPrint = () => {
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }, 150);
+    };
+
+    const img = doc.querySelector('.odontogram-image');
+    if (img) {
+        if (img.complete) {
+            triggerPrint();
+        } else {
+            img.onload = triggerPrint;
+        }
+    } else {
+        triggerPrint();
+    }
+};
 
 export default function Odontograma({ embeddedPatient }) {
     const toast = useToast();
@@ -90,198 +125,193 @@ export default function Odontograma({ embeddedPatient }) {
                 const rawDate = printingSesion.creado?.seconds ? new Date(printingSesion.creado.seconds * 1000) : new Date();
                 const dateStr = rawDate.toLocaleDateString("es-CO");
 
-                const win = window.open("", "_blank");
-                win.document.write(`
-                    <html>
-                    <head>
-                        <title>Odontograma Clínico - ${embeddedPatient?.nombreCompleto}</title>
-                        <style>
-                            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+            const htmlContent = `
+                <html>
+                <head>
+                    <title>Odontograma Clínico - ${embeddedPatient?.nombreCompleto}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+                        body {
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            margin: 0;
+                            padding: 40px;
+                            color: #334155;
+                            background-color: #ffffff;
+                        }
+                        .header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            border-bottom: 4px solid #2563eb;
+                            padding-bottom: 25px;
+                            margin-bottom: 30px;
+                            gap: 20px;
+                        }
+                        .logo-container {
+                            display: flex;
+                            gap: 25px;
+                            align-items: center;
+                        }
+                        .logo-text-placeholder {
+                            width: 80px;
+                            height: 80px;
+                            background: #2563eb;
+                            border-radius: 16px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 36px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                        }
+                        .clinic-title {
+                            margin: 0;
+                            font-size: 24px;
+                            font-weight: 900;
+                            color: #0f172a;
+                            text-transform: uppercase;
+                            letter-spacing: -1px;
+                        }
+                        .clinic-meta {
+                            margin: 2px 0;
+                            font-size: 12px;
+                            color: #64748b;
+                            font-weight: 500;
+                        }
+                        .doc-info {
+                            text-align: right;
+                        }
+                        .doc-badge {
+                            background: #eff6ff;
+                            padding: 12px 20px;
+                            border-radius: 16px;
+                            border: 2px solid #dbeafe;
+                            margin-bottom: 8px;
+                            display: inline-block;
+                        }
+                        .doc-badge span {
+                            font-size: 16px;
+                            font-weight: 900;
+                            color: #1d4ed8;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .doc-meta {
+                            margin: 0;
+                            font-size: 11px;
+                            color: #94a3b8;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                        }
+                        .patient-info {
+                            font-size: 13px;
+                            margin-bottom: 24px;
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 12px;
+                            padding: 16px;
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 8px;
+                        }
+                        .patient-info div span {
+                            font-weight: bold;
+                            color: #475569;
+                            margin-right: 4px;
+                        }
+                        .odontogram-image-container {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin-top: 10px;
+                        }
+                        .odontogram-image {
+                            max-width: 100%;
+                            height: auto;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 16px;
+                            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+                        }
+                        @media print {
                             body {
-                                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                                margin: 0;
-                                padding: 40px;
-                                color: #334155;
-                                background-color: #ffffff;
-                            }
-                            .header {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: flex-start;
-                                border-bottom: 4px solid #2563eb;
-                                padding-bottom: 25px;
-                                margin-bottom: 30px;
-                                gap: 20px;
-                            }
-                            .logo-container {
-                                display: flex;
-                                gap: 25px;
-                                align-items: center;
-                            }
-                            .logo-text-placeholder {
-                                width: 80px;
-                                height: 80px;
-                                background: #2563eb;
-                                border-radius: 16px;
-                                display: flex;
-                                items-center;
-                                justify-content: center;
-                                color: white;
-                                font-size: 36px;
-                                font-weight: 900;
-                                text-transform: uppercase;
-                            }
-                            .clinic-title {
-                                margin: 0;
-                                font-size: 24px;
-                                font-weight: 900;
-                                color: #0f172a;
-                                text-transform: uppercase;
-                                letter-spacing: -1px;
-                            }
-                            .clinic-meta {
-                                margin: 2px 0;
-                                font-size: 12px;
-                                color: #64748b;
-                                font-weight: 500;
-                            }
-                            .doc-info {
-                                text-align: right;
-                            }
-                            .doc-badge {
-                                background: #eff6ff;
-                                padding: 12px 20px;
-                                border-radius: 16px;
-                                border: 2px solid #dbeafe;
-                                margin-bottom: 8px;
-                                display: inline-block;
-                            }
-                            .doc-badge span {
-                                font-size: 16px;
-                                font-weight: 900;
-                                color: #1d4ed8;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                            }
-                            .doc-meta {
-                                margin: 0;
-                                font-size: 11px;
-                                color: #94a3b8;
-                                font-weight: 900;
-                                text-transform: uppercase;
-                            }
-                            .patient-info {
-                                font-size: 13px;
-                                margin-bottom: 24px;
-                                background: #f8fafc;
-                                border: 1px solid #e2e8f0;
-                                border-radius: 12px;
-                                padding: 16px;
-                                display: grid;
-                                grid-template-columns: 1fr 1fr;
-                                gap: 8px;
-                            }
-                            .patient-info div span {
-                                font-weight: bold;
-                                color: #475569;
-                                margin-right: 4px;
-                            }
-                            .odontogram-image-container {
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                margin-top: 10px;
+                                padding: 20px;
                             }
                             .odontogram-image {
-                                max-width: 100%;
-                                height: auto;
-                                border: 1px solid #cbd5e1;
-                                border-radius: 16px;
-                                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+                                border: none;
+                                box-shadow: none;
                             }
-                            @media print {
-                                body {
-                                    padding: 20px;
-                                }
-                                .odontogram-image {
-                                    border: none;
-                                    box-shadow: none;
-                                }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo-container">
+                            ${logoUrl 
+                                ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                                : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
                             }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="header">
-                            <div class="logo-container">
-                                ${logoUrl 
-                                    ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
-                                    : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
-                                }
-                                <div>
-                                    <h1 class="clinic-title">${clinicName}</h1>
-                                    <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicNit}</p>
-                                    <p class="clinic-meta">${clinicAddress}</p>
-                                    <p class="clinic-meta">TEL: ${clinicPhone} | ${clinicEmail}</p>
-                                </div>
-                            </div>
-                            <div class="doc-info">
-                                <div class="doc-badge">
-                                    <span>Odontograma Clínico</span>
-                                </div>
-                                <p class="doc-meta">FECHA SESIÓN: ${dateStr}</p>
+                            <div>
+                                <h1 class="clinic-title">${clinicName}</h1>
+                                <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicNit}</p>
+                                <p class="clinic-meta">${clinicAddress}</p>
+                                <p class="clinic-meta">TEL: ${clinicPhone} | ${clinicEmail}</p>
                             </div>
                         </div>
-                        <div class="patient-info">
-                            <div><span>Paciente:</span> ${embeddedPatient?.nombreCompleto}</div>
-                            <div><span>Doc. Identidad:</span> ${embeddedPatient?.nroDocumento || "—"}</div>
-                            <div><span>Historia Clínica:</span> ${embeddedPatient?.nroHistoria || "—"}</div>
-                            <div><span>Edad:</span> ${embeddedPatient?.edad || "—"}</div>
-                        </div>
-                        <div class="odontogram-image-container">
-                            <img src="${imgData}" class="odontogram-image" />
-                        </div>
-                        <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
-                            <div style="flex: 1; text-align: center;">
-                                <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
-                                    ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" />` : ''}
-                                </div>
-                                <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
-                                    <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Firma del Especialista / Odontólogo</p>
-                                    <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
-                                </div>
+                        <div class="doc-info">
+                            <div class="doc-badge">
+                                <span>Odontograma Clínico</span>
                             </div>
-                            <div style="flex: 1; text-align: center;">
-                                <div style="height: 60px;"></div>
-                                <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
-                                    <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Responsable de Registro</p>
-                                    <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
-                                </div>
+                            <p class="doc-meta">FECHA SESIÓN: ${dateStr}</p>
+                        </div>
+                    </div>
+                    <div class="patient-info">
+                        <div><span>Paciente:</span> ${embeddedPatient?.nombreCompleto}</div>
+                        <div><span>Doc. Identidad:</span> ${embeddedPatient?.nroDocumento || "—"}</div>
+                        <div><span>Historia Clínica:</span> ${embeddedPatient?.nroHistoria || "—"}</div>
+                        <div><span>Edad:</span> ${embeddedPatient?.edad || "—"}</div>
+                    </div>
+                    <div class="odontogram-image-container">
+                        <img src="${imgData}" class="odontogram-image" />
+                    </div>
+                    <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
+                        <div style="flex: 1; text-align: center;">
+                            <div style="height: 85px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 6px;">
+                                ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 80px; max-width: 280px; object-fit: contain;" />` : ''}
+                            </div>
+                            <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                                <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Firma del Especialista / Odontólogo</p>
+                                <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
                             </div>
                         </div>
-                    </body>
-                    </html>
-                `);
-                win.document.close();
+                        <div style="flex: 1; text-align: center;">
+                            <div style="height: 85px;"></div>
+                            <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                                <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Responsable de Registro</p>
+                                <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
 
-                const img = win.document.querySelector('.odontogram-image');
-                img.onload = () => {
-                    win.print();
-                };
+            printHTMLInHiddenIframe(htmlContent);
 
-                if (toastId && toast?.dismiss) toast.dismiss(toastId);
-                if (toast?.success) toast.success("Vista previa de impresión generada");
+            if (toastId && toast?.dismiss) toast.dismiss(toastId);
+            if (toast?.success) toast.success("Vista previa de impresión generada");
 
-            } catch (err) {
-                console.error(err);
-                if (toastId && toast?.dismiss) toast.dismiss(toastId);
-                if (toast?.error) toast.error("Error al generar vista de impresión");
-            } finally {
-                setPrintingSesion(null);
-            }
-        };
+        } catch (err) {
+            console.error(err);
+            if (toastId && toast?.dismiss) toast.dismiss(toastId);
+            if (toast?.error) toast.error("Error al generar vista de impresión");
+        } finally {
+            setPrintingSesion(null);
+        }
+    };
 
-        executePrint();
-    }, [printingSesion]);
+    executePrint();
+}, [printingSesion]);
 
     useEffect(() => {
         if (embeddedPatient?.id) loadSesiones();
@@ -403,8 +433,7 @@ export default function Odontograma({ embeddedPatient }) {
             const clinicPhone = userProfile?.tenant?.telefono || "—";
             const clinicEmail = userProfile?.tenant?.email || "";
 
-            const win = window.open("", "_blank");
-            win.document.write(`
+            const htmlContent = `
                 <html>
                 <head>
                     <title>Odontograma Clínico - ${embeddedPatient?.nombreCompleto}</title>
@@ -555,8 +584,8 @@ export default function Odontograma({ embeddedPatient }) {
                     </div>
                     <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
                         <div style="flex: 1; text-align: center;">
-                            <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
-                                ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" />` : ''}
+                            <div style="height: 85px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 6px;">
+                                ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 80px; max-width: 280px; object-fit: contain;" />` : ''}
                             </div>
                             <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
                                 <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Firma del Especialista / Odontólogo</p>
@@ -564,7 +593,7 @@ export default function Odontograma({ embeddedPatient }) {
                             </div>
                         </div>
                         <div style="flex: 1; text-align: center;">
-                            <div style="height: 60px;"></div>
+                            <div style="height: 85px;"></div>
                             <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
                                 <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Responsable de Registro</p>
                                 <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
@@ -573,13 +602,9 @@ export default function Odontograma({ embeddedPatient }) {
                     </div>
                 </body>
                 </html>
-            `);
-            win.document.close();
+            `;
 
-            const img = win.document.querySelector('.odontogram-image');
-            img.onload = () => {
-                win.print();
-            };
+            printHTMLInHiddenIframe(htmlContent);
         } catch { 
             toast?.error("Error al generar impresión del odontograma"); 
         } finally {
