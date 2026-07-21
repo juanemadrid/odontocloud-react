@@ -515,10 +515,27 @@ export default function Periodontograma({ embeddedPatient }) {
     const { userProfile } = useAuth();
     const pacienteId = embeddedPatient?.id;
     const [periodonto, setPeriodonto] = useState({});
+    const [clinicConfig, setClinicConfig] = useState(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const timeoutsRef = useRef({});
+
+    useEffect(() => {
+        const tenantId = userProfile?.inquilino || userProfile?.tenantId || userProfile?.tenant?.id;
+        if (!tenantId) return;
+        const loadClinicConfig = async () => {
+            try {
+                const snap = await getDoc(doc(db, "tenants", tenantId));
+                if (snap.exists()) {
+                    setClinicConfig(snap.data());
+                }
+            } catch (err) {
+                console.error("Error loading clinic config", err);
+            }
+        };
+        loadClinicConfig();
+    }, [userProfile]);
 
     useEffect(() => {
         if (!pacienteId) return;
@@ -793,73 +810,168 @@ export default function Periodontograma({ embeddedPatient }) {
     const stats = getStats();
 
     const handlePrintPeriodontograma = () => {
-        const logoUrl = userProfile?.tenant?.logo || "";
-        const clinicName = userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || userProfile?.tenant?.name || "Clínica Dental";
-        const clinicNit = userProfile?.tenant?.nit || "—";
-        const clinicAddress = userProfile?.tenant?.direccion || "—";
-        const clinicPhone = userProfile?.tenant?.telefono || "—";
+        const logoUrl = clinicConfig?.logo || userProfile?.tenant?.logo || "";
+        const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || userProfile?.tenant?.nombre || "CLÍNICA DENTAL";
+        const clinicNit = clinicConfig?.nit || userProfile?.tenant?.nit || "—";
+        const clinicAddress = clinicConfig?.direccion || clinicConfig?.address || "—";
+        const clinicPhone = clinicConfig?.telefono || clinicConfig?.phone || "—";
+        const clinicEmail = clinicConfig?.email || clinicConfig?.correo || "—";
 
         const html = `
             <html>
             <head>
                 <title>Periodontograma Clínico - ${embeddedPatient?.nombreCompleto || ''}</title>
                 <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
                     body {
-                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: #1e293b;
                         padding: 30px;
+                        max-width: 900px;
                         margin: 0 auto;
                         line-height: 1.4;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .header {
                         display: flex;
                         justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 3px solid #2563eb;
-                        padding-bottom: 15px;
-                        margin-bottom: 20px;
+                        align-items: flex-start;
+                        border-bottom: 4px solid #2563eb;
+                        padding-bottom: 22px;
+                        margin-bottom: 25px;
+                        gap: 20px;
                     }
-                    .patient-grid {
+                    .logo-container {
+                        display: flex;
+                        gap: 20px;
+                        align-items: center;
+                    }
+                    .logo-text-placeholder {
+                        width: 75px;
+                        height: 75px;
+                        background: #2563eb;
+                        border-radius: 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 32px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                    }
+                    .clinic-title {
+                        margin: 0;
+                        font-size: 22px;
+                        font-weight: 900;
+                        color: #0f172a;
+                        text-transform: uppercase;
+                        letter-spacing: -0.5px;
+                    }
+                    .clinic-meta {
+                        margin: 2px 0;
+                        font-size: 11.5px;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+                    .doc-info {
+                        text-align: right;
+                    }
+                    .doc-badge {
+                        background: #eff6ff;
+                        padding: 10px 18px;
+                        border-radius: 14px;
+                        border: 2px solid #dbeafe;
+                        margin-bottom: 6px;
+                        display: inline-block;
+                    }
+                    .doc-badge span {
+                        font-size: 15px;
+                        font-weight: 900;
+                        color: #1d4ed8;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .doc-meta {
+                        margin: 0;
+                        font-size: 10.5px;
+                        color: #94a3b8;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                    }
+                    .patient-card {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        padding: 14px 18px;
+                        margin-bottom: 22px;
                         display: grid;
                         grid-template-columns: repeat(4, 1fr);
                         gap: 10px;
-                        background: #f8fafc;
-                        padding: 12px 16px;
-                        border-radius: 12px;
-                        border: 1px solid #e2e8f0;
-                        margin-bottom: 20px;
-                        font-size: 12px;
+                    }
+                    .info-group {
+                        padding: 6px 10px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        border: 1px solid #f1f5f9;
+                    }
+                    .info-label {
+                        font-size: 8px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        color: #94a3b8;
+                        letter-spacing: 0.05em;
+                        margin-bottom: 3px;
+                    }
+                    .info-value {
+                        font-size: 11.5px;
+                        font-weight: 700;
+                        color: #1e293b;
                     }
                     .stats-card {
                         display: grid;
                         grid-template-columns: repeat(4, 1fr);
-                        gap: 15px;
-                        margin-bottom: 25px;
+                        gap: 12px;
+                        margin-bottom: 22px;
                     }
                     .stat-box {
-                        border: 1px solid #cbd5e1;
-                        border-radius: 10px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
                         padding: 10px 14px;
                         background: #ffffff;
                     }
-                    .stat-title { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #64748b; }
-                    .stat-val { font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px; }
+                    .stat-title { font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
+                    .stat-val { font-size: 18px; font-weight: 900; color: #0f172a; margin-top: 3px; }
+                    .section-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        color: #1e3a8a;
+                        letter-spacing: 0.08em;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 5px;
+                        margin-top: 25px;
+                        margin-bottom: 12px;
+                    }
                     .table-perio {
                         width: 100%;
                         border-collapse: collapse;
-                        font-size: 10px;
+                        font-size: 9.5px;
                         margin-bottom: 20px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        overflow: hidden;
                     }
                     .table-perio th, .table-perio td {
-                        border: 1px solid #cbd5e1;
-                        padding: 4px 6px;
+                        border: 1px solid #e2e8f0;
+                        padding: 4px 5px;
                         text-align: center;
                     }
                     .table-perio th {
-                        background: #f1f5f9;
+                        background: #f8fafc;
                         font-weight: 800;
                         text-transform: uppercase;
+                        color: #475569;
                     }
                     .pocket-highlight {
                         background: #fee2e2;
@@ -871,22 +983,43 @@ export default function Periodontograma({ embeddedPatient }) {
             </head>
             <body>
                 <div class="header">
-                    <div>
-                        ${logoUrl ? `<img src="${logoUrl}" style="max-height: 55px; max-width: 200px;" />` : `<h2 style="margin:0; color:#2563eb;">${clinicName}</h2>`}
-                        <div style="font-size:11px; color:#64748b;">NIT: ${clinicNit} | Tel: ${clinicPhone}</div>
-                        <div style="font-size:11px; color:#64748b;">${clinicAddress}</div>
+                    <div class="logo-container">
+                        ${logoUrl 
+                            ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
+                            : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
+                        }
+                        <div>
+                            <h1 class="clinic-title">${clinicName}</h1>
+                            <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicNit}</p>
+                            <p class="clinic-meta">${clinicAddress}</p>
+                            <p class="clinic-meta">TEL: ${clinicPhone} ${clinicEmail !== '—' ? `| ${clinicEmail}` : ''}</p>
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <h2 style="margin:0; color:#1e3a8a; text-transform:uppercase; font-size:18px;">Periodontograma Clínico</h2>
-                        <div style="font-size:11px; color:#64748b; font-weight:bold;">FECHA: ${new Date().toLocaleDateString('es-CO')}</div>
+                    <div class="doc-info">
+                        <div class="doc-badge">
+                            <span>Periodontograma Clínico</span>
+                        </div>
+                        <p class="doc-meta">FECHA IMPRESIÓN: ${new Date().toLocaleDateString('es-CO')}</p>
                     </div>
                 </div>
 
-                <div class="patient-grid">
-                    <div><strong>Paciente:</strong> ${embeddedPatient?.nombreCompleto || '—'}</div>
-                    <div><strong>Doc. Identidad:</strong> ${embeddedPatient?.nroDocumento || '—'}</div>
-                    <div><strong>Nro. Historia:</strong> #${embeddedPatient?.nroHistoria || 'S/N'}</div>
-                    <div><strong>Edad:</strong> ${embeddedPatient?.edad || '—'}</div>
+                <div class="patient-card">
+                    <div class="info-group">
+                        <div class="info-label">Paciente</div>
+                        <div class="info-value">${embeddedPatient?.nombreCompleto || '—'}</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Documento Identidad</div>
+                        <div class="info-value">${embeddedPatient?.tipoDocumento || 'C.C.'} ${embeddedPatient?.nroDocumento || '—'}</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Nro. Historia</div>
+                        <div class="info-value">#${embeddedPatient?.nroHistoria || 'S/N'}</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Edad</div>
+                        <div class="info-value">${embeddedPatient?.edad || '—'}</div>
+                    </div>
                 </div>
 
                 <div class="stats-card">
@@ -908,15 +1041,15 @@ export default function Periodontograma({ embeddedPatient }) {
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px; font-size: 13px; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">
-                    Diagnóstico Sugerido: <span style="padding: 4px 10px; border-radius: 6px; background: #eff6ff; border: 1px solid #bfdbfe;">${stats.dxBadge.label}</span>
+                <div style="margin-bottom: 20px; font-size: 12px; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">
+                    Diagnóstico Sugerido: <span style="padding: 4px 12px; border-radius: 8px; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8;">${stats.dxBadge.label}</span>
                 </div>
 
-                <h3 style="font-size:12px; text-transform:uppercase; color:#1e3a8a; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Matriz de Sondaje — Arcada Superior (Maxilar 18-28)</h3>
+                <div class="section-title">Matriz de Sondaje — Arcada Superior (Maxilar 18-28)</div>
                 <table class="table-perio">
                     <thead>
                         <tr>
-                            <th>Diente</th>
+                            <th style="width: 100px;">Diente</th>
                             ${TEETH_UPPER.map(t => `<th colspan="3">${t}</th>`).join('')}
                         </tr>
                         <tr>
@@ -942,11 +1075,11 @@ export default function Periodontograma({ embeddedPatient }) {
                     </tbody>
                 </table>
 
-                <h3 style="font-size:12px; text-transform:uppercase; color:#1e3a8a; border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-top: 25px;">Matriz de Sondaje — Arcada Inferior (Mandíbula 48-38)</h3>
+                <div class="section-title">Matriz de Sondaje — Arcada Inferior (Mandíbula 48-38)</div>
                 <table class="table-perio">
                     <thead>
                         <tr>
-                            <th>Diente</th>
+                            <th style="width: 100px;">Diente</th>
                             ${TEETH_LOWER.map(t => `<th colspan="3">${t}</th>`).join('')}
                         </tr>
                         <tr>
@@ -972,19 +1105,22 @@ export default function Periodontograma({ embeddedPatient }) {
                     </tbody>
                 </table>
 
-                <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px;">
+                <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px; page-break-inside: avoid;">
                     <div style="flex: 1; text-align: center;">
-                        <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
-                            ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 200px;" />` : ''}
+                        <div style="height: 85px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 6px;">
+                            ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 80px; max-width: 280px; object-fit: contain;" />` : ''}
                         </div>
-                        <div style="border-top: 1.5px solid #64748b; padding-top: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
-                            Firma del Especialista / Periodoncista
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <div style="font-weight: 800; font-size: 11px; text-transform: uppercase; color: #0f172a;">${userProfile?.nombreCompleto || userProfile?.displayName || 'Odontólogo Responsable'}</div>
+                            <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Especialista / Periodoncista</div>
+                            ${userProfile?.tarjetaProfesional ? `<div style="font-size: 9px; color: #64748b; font-weight: 600;">T.P. ${userProfile.tarjetaProfesional}</div>` : ''}
                         </div>
                     </div>
                     <div style="flex: 1; text-align: center;">
-                        <div style="height: 60px;"></div>
-                        <div style="border-top: 1.5px solid #64748b; padding-top: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
-                            Responsable de Registro
+                        <div style="height: 85px;"></div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <div style="font-weight: 800; font-size: 11px; text-transform: uppercase; color: #0f172a;">${embeddedPatient?.nombreCompleto || 'Paciente'}</div>
+                            <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Paciente / Conformidad</div>
                         </div>
                     </div>
                 </div>
@@ -1012,6 +1148,7 @@ export default function Periodontograma({ embeddedPatient }) {
 
                 <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
                     <button
+                        type="button"
                         onClick={handlePopulateHealthy}
                         className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-full font-black text-[10.5px] uppercase tracking-wider border border-slate-200 transition-all flex items-center gap-1.5"
                         title="Rellenar sitios vacíos con 2mm (Salud)"
@@ -1020,6 +1157,7 @@ export default function Periodontograma({ embeddedPatient }) {
                         Completar Salud (2mm)
                     </button>
                     <button
+                        type="button"
                         onClick={handleClearAll}
                         className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-full font-black text-[10.5px] uppercase tracking-wider border border-rose-100 transition-all flex items-center gap-1.5"
                         title="Limpiar datos del periodontograma"
@@ -1028,6 +1166,7 @@ export default function Periodontograma({ embeddedPatient }) {
                         Limpiar
                     </button>
                     <button
+                        type="button"
                         onClick={handlePrintPeriodontograma}
                         className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-[11px] uppercase tracking-widest transition-all shadow-md shadow-amber-500/20 flex items-center gap-2"
                     >
