@@ -1219,6 +1219,7 @@ export default function Dashboard() {
   const [weeklySeries, setWeeklySeries] = useState([]);
   const [todaysAppointments, setTodaysAppointments] = useState([]);
   const [todaysLoading, setTodaysLoading] = useState(true);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
 
   const { startToday, endToday, startTodayJS } = useTodayRange();
   const todayIso = useMemo(() => toIsoDate(startTodayJS), [startTodayJS]);
@@ -1236,6 +1237,56 @@ export default function Dashboard() {
         .replace(".", "");
     return `${fmt(start)} – ${fmt(end)}`;
   }, [locale]);
+
+  // ── Dashboard Caching Logic (sessionStorage 3-minute TTL) ──
+  useEffect(() => {
+    if (!userProfile?.inquilino) return;
+
+    const cachedData = sessionStorage.getItem(`odc_dash_cache_${userProfile.inquilino}`);
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        if (Date.now() - parsed.timestamp < 3 * 60 * 1000) {
+          setMetrics(parsed.metrics);
+          setWeeklySeries(parsed.weeklySeries);
+          const appts = (parsed.todaysAppointments || []).map(c => ({
+            ...c,
+            fecha: c.fecha ? new Date(c.fecha) : new Date()
+          }));
+          setTodaysAppointments(appts);
+          setRecent(parsed.recent || []);
+
+          setMetricsLoading(false);
+          setTodaysLoading(false);
+          setRecentLoading(false);
+          setCacheLoaded(true);
+          console.log("⚡ Dashboard loaded from sessionStorage cache.");
+          return;
+        }
+      } catch (e) {
+        console.warn("Failed to load dashboard cache:", e);
+      }
+    }
+    setCacheLoaded(false);
+  }, [userProfile?.inquilino]);
+
+  useEffect(() => {
+    if (cacheLoaded || !userProfile?.inquilino || metricsLoading || todaysLoading || recentLoading) return;
+
+    try {
+      const cacheData = {
+        timestamp: Date.now(),
+        metrics,
+        weeklySeries,
+        todaysAppointments,
+        recent
+      };
+      sessionStorage.setItem(`odc_dash_cache_${userProfile.inquilino}`, JSON.stringify(cacheData));
+      console.log("💾 Dashboard cache saved to sessionStorage.");
+    } catch (e) {
+      console.error("Error saving dashboard cache:", e);
+    }
+  }, [cacheLoaded, userProfile?.inquilino, metrics, weeklySeries, todaysAppointments, recent, metricsLoading, todaysLoading, recentLoading]);
 
   const normalizeCita = (docSnap) => {
     const data = docSnap.data() || {};
@@ -1268,6 +1319,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!userProfile?.inquilino) return;
+    if (cacheLoaded) return;
 
     const qTodayStr = query(
       collection(db, "citas"),
@@ -1307,9 +1359,10 @@ export default function Dashboard() {
     return () => {
       try { unsubStr(); } catch { }
     };
-  }, [todayIso, userProfile?.inquilino]);
+  }, [todayIso, userProfile?.inquilino, cacheLoaded]);
 
   useEffect(() => {
+    if (cacheLoaded) return;
     const loadMetricsBase = async () => {
       try {
         const pacientesCountSnap = await getCountFromServer(
@@ -1346,9 +1399,10 @@ export default function Dashboard() {
       }
     };
     loadMetricsBase();
-  }, [todayIso, userProfile?.inquilino]);
+  }, [todayIso, userProfile?.inquilino, cacheLoaded]);
 
   useEffect(() => {
+    if (cacheLoaded) return;
     const today = new Date();
     const startWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
     const endWeekJs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
@@ -1423,11 +1477,12 @@ export default function Dashboard() {
     return () => {
       try { unsub(); } catch { }
     };
-  }, [locale]);
+  }, [locale, cacheLoaded]);
 
   const [recent, setRecent] = useState([]);
   const [recentLoading, setRecentLoading] = useState(true);
   useEffect(() => {
+    if (cacheLoaded) return;
     const loadRecent = async () => {
       try {
         const qAct = query(
@@ -1452,7 +1507,7 @@ export default function Dashboard() {
       }
     };
     loadRecent();
-  }, []);
+  }, [userProfile?.inquilino, cacheLoaded]);
 
   // Effect to re-run queries when userProfile loaded
   useEffect(() => {
