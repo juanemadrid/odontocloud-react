@@ -120,10 +120,13 @@ export function useAgenda() {
             const map = {};
             snap.docs.forEach(d => {
                 const data = d.data();
-                const key = d.id;
-                map[key] = data;
-                if (data.nroDocumento) map[data.nroDocumento] = data;
-                if (data.documento) map[data.documento] = data;
+                const pObj = { id: d.id, ...data };
+                map[d.id] = pObj;
+                if (data.nroDocumento) map[String(data.nroDocumento).trim()] = pObj;
+                if (data.documento) map[String(data.documento).trim()] = pObj;
+                if (data.id) map[String(data.id).trim()] = pObj;
+                const nameKey = (data.nombreCompleto || data.paciente || `${data.nombres || ''} ${data.apellidos || ''}`).trim().toLowerCase();
+                if (nameKey) map[nameKey] = pObj;
             });
             setPatientsMap(map);
         });

@@ -95,8 +95,18 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
             const chair = chairs.find(c => c.id === apt.consultorioId);
             
             // Hydrate live phone from patientsMap if available
-            const pKey = apt.pacienteId || apt.patientId || apt.documento || apt.nroDocumento;
-            const livePatient = pKey ? patientsMap[pKey] : null;
+            const pKey1 = apt.pacienteId ? String(apt.pacienteId).trim() : "";
+            const pKey2 = apt.patientId ? String(apt.patientId).trim() : "";
+            const pKey3 = apt.documento ? String(apt.documento).trim() : "";
+            const pKey4 = apt.nroDocumento ? String(apt.nroDocumento).trim() : "";
+            const pNameKey = (apt.paciente || apt.pacienteNombre || "").trim().toLowerCase();
+            
+            const livePatient = (pKey1 && patientsMap[pKey1]) ||
+                                (pKey2 && patientsMap[pKey2]) ||
+                                (pKey3 && patientsMap[pKey3]) ||
+                                (pKey4 && patientsMap[pKey4]) ||
+                                (pNameKey && patientsMap[pNameKey]) || null;
+                                
             const liveCelular = livePatient?.celular || livePatient?.celularPaciente || livePatient?.telefono || livePatient?.telefonoPaciente || apt.celular || apt.celularPaciente || apt.telefono || "";
 
             let doctorDisplayName = "S/A";

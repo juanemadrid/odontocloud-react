@@ -229,17 +229,30 @@ export const createOrUpdatePatient = async (inquilino, patientData, isNew = fals
         if (patientData.celular) {
             const citasQ = query(
                 collection(db, "citas"),
-                where("inquilino", "==", inquilino),
-                where("documento", "==", patientData.nroDocumento)
+                where("inquilino", "==", inquilino)
             );
             const citasSnap = await getDocs(citasQ);
+            const docNum = (patientData.nroDocumento || patientData.documento || id || "").toString().trim();
+            const fullName = (patientData.nombreCompleto || patientData.paciente || "").toString().trim().toLowerCase();
+
             citasSnap.docs.forEach(async (cDoc) => {
-                await updateDoc(doc(db, "citas", cDoc.id), {
-                    celular: patientData.celular,
-                    celularPaciente: patientData.celular,
-                    telefono: patientData.celular,
-                    telefonoPaciente: patientData.telDomicilio || patientData.celular
-                });
+                const cData = cDoc.data();
+                const cDocNum = (cData.documento || cData.nroDocumento || "").toString().trim();
+                const cPacId = (cData.pacienteId || cData.patientId || "").toString().trim();
+                const cName = (cData.paciente || cData.pacienteNombre || "").toString().trim().toLowerCase();
+
+                const isMatch = (docNum && (cDocNum === docNum || cPacId === docNum || cPacId === id)) ||
+                                (id && cPacId === id) ||
+                                (fullName && cName === fullName);
+
+                if (isMatch) {
+                    await updateDoc(doc(db, "citas", cDoc.id), {
+                        celular: patientData.celular,
+                        celularPaciente: patientData.celular,
+                        telefono: patientData.celular,
+                        telefonoPaciente: patientData.telDomicilio || patientData.celular
+                    });
+                }
             });
         }
     } catch (syncErr) {
