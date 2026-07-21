@@ -13,7 +13,7 @@ import AgendaSidebar from "./components/AgendaSidebar";
 import AppointmentModal from "./components/AppointmentModal";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
-import { sendConfirmation } from "../../services/WhatsAppService";
+import { sendConfirmation, openWhatsAppWebDirect } from "../../services/WhatsAppService";
 
 export default function Agenda() {
     const { userProfile } = useAuth(); // NEW: Access clinic info
