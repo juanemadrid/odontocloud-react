@@ -158,7 +158,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const currentSignature = firmaElectronica || (canvasRef.current ? canvasRef.current.toDataURL("image/png") : "");
+            const currentSignature = firmaElectronica || "";
             const fullName = `${nombre} ${apellido}`.trim();
 
             const updatePayload = {
@@ -170,8 +170,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 registroMedico: registroMedico.trim(),
                 tarjetaProfesional: registroMedico.trim(),
                 fotoPerfil: fotoPerfil || "",
-                firmaElectronica: currentSignature || "",
-                firma: currentSignature || "",
+                firmaElectronica: currentSignature,
+                firma: currentSignature,
                 huellaDigital: huellaDigital || "",
                 updatedAt: new Date().toISOString()
             };
@@ -187,10 +187,12 @@ export default function UserProfileModal({ isOpen, onClose }) {
             }
 
             // Sync local Auth state
-            setUserProfile(prev => ({
-                ...prev,
-                ...updatePayload
-            }));
+            if (typeof setUserProfile === "function") {
+                setUserProfile(prev => ({
+                    ...prev,
+                    ...updatePayload
+                }));
+            }
 
             toast.success("Perfil de usuario guardado con éxito.");
             onClose();

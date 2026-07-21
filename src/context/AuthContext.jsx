@@ -253,6 +253,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         userProfile,
+        setUserProfile,
         loading,
         logout
     };
