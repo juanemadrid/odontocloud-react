@@ -323,6 +323,24 @@ export default function Odontograma({ embeddedPatient }) {
                     <div class="odontogram-image-container">
                         <img src="${imgData}" class="odontogram-image" />
                     </div>
+                    <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
+                        <div style="flex: 1; text-align: center;">
+                            <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
+                                ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" />` : ''}
+                            </div>
+                            <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                                <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Firma del Especialista / Odontólogo</p>
+                                <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
+                            </div>
+                        </div>
+                        <div style="flex: 1; text-align: center;">
+                            <div style="height: 60px;"></div>
+                            <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                                <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">Responsable de Registro</p>
+                                <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
+                            </div>
+                        </div>
+                    </div>
                 </body>
                 </html>
             `);
@@ -606,12 +624,18 @@ export default function Odontograma({ embeddedPatient }) {
                                     >
                                         {finalizado ? <FiEye size={14} /> : <FiEdit3 size={14} />}
                                     </button>
-                                    <button
-                                        title="Imprimir / PDF"
-                                        className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-all"
-                                    >
-                                        <FiPrinter size={14} />
-                                    </button>
+                                     <button
+                                         onClick={() => {
+                                             abrirEditor(s);
+                                             setTimeout(() => {
+                                                 handleImprimir();
+                                             }, 400);
+                                         }}
+                                         title="Imprimir / PDF"
+                                         className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-all"
+                                     >
+                                         <FiPrinter size={14} />
+                                     </button>
                                     <button
                                         onClick={() => handleEliminar(s.id)}
                                         title="Eliminar"
