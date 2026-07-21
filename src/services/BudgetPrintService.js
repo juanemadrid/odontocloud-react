@@ -312,20 +312,26 @@ export const BudgetPrintService = {
             `;
 
             const docSignatureImg = (userProfile?.firmaElectronica || userProfile?.firma)
-                ? `<div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;"><img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" crossOrigin="anonymous" /></div>`
-                : `<div style="height: 55px;"></div>`;
+                ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" crossOrigin="anonymous" />`
+                : '';
 
             const footerHTML = `
                 <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 80px; padding: 0 30px;">
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
-                        <div style="height: 55px;"></div>
-                        <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Aceptado por el Paciente</p>
-                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C.C. / Registro</p>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px;"></div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Aceptado por el Paciente</p>
+                            <p style="margin: 4px 0 0 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C.C. / Registro</p>
+                        </div>
                     </div>
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
-                        ${docSignatureImg}
-                        <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Especialista</p>
-                        <p style="margin: 4px 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
+                            ${docSignatureImg}
+                        </div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <p style="margin: 0; font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Especialista</p>
+                            <p style="margin: 4px 0 0 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
+                        </div>
                     </div>
                 </div>
                 <div style="margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px;">

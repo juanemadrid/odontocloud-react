@@ -161,7 +161,7 @@ export const EvolutionPrintService = {
                             </tr>
                             <tr>
                                 <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Dirección residencia</td>
-                                <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.direccion || patient?.address || '---'}</td>
+                                <td colspan="5" style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.lugarResidencia || patient?.direccion || patient?.direccionResidencia || patient?.address || '---'}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -257,20 +257,27 @@ export const EvolutionPrintService = {
 
             // Signature & Footer
             const docSignatureImg = (userProfile?.firmaElectronica || userProfile?.firma)
-                ? `<div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;"><img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" crossOrigin="anonymous" /></div>`
-                : `<div style="height: 55px;"></div>`;
+                ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 180px; object-fit: contain;" crossOrigin="anonymous" />`
+                : '';
 
             const footerHTML = `
-                <div style="margin-top: 40px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 8px; text-align: center;">
-                        ${docSignatureImg}
-                        <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Especialista / Odontólogo</p>
-                        <p style="margin: 3px 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
+                <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px; padding: 0 20px;">
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
+                            ${docSignatureImg}
+                        </div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Firma del Especialista / Odontólogo</p>
+                            <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${userProfile?.registroMedico ? `TP: ${userProfile.registroMedico}` : 'Sello y Registro Médico'}</p>
+                        </div>
                     </div>
-                    <div style="flex: 1; border-top: 1px solid #cbd5e1; padding-top: 8px; text-align: center;">
-                        <div style="height: 55px;"></div>
-                        <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Responsable de Registro</p>
-                        <p style="margin: 3px 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
+
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px;"></div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 8px;">
+                            <p style="margin: 0; font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">Responsable de Registro</p>
+                            <p style="margin: 3px 0 0 0; font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Generado por: ${(userProfile?.nombreCompleto || userProfile?.nombre || userProfile?.email || "Administrador").toUpperCase()}</p>
+                        </div>
                     </div>
                 </div>
                 <div style="margin-top: 40px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 15px;">
