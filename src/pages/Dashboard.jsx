@@ -1220,6 +1220,8 @@ export default function Dashboard() {
   const [todaysAppointments, setTodaysAppointments] = useState([]);
   const [todaysLoading, setTodaysLoading] = useState(true);
   const [cacheLoaded, setCacheLoaded] = useState(false);
+  const [recent, setRecent] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(true);
 
   const { startToday, endToday, startTodayJS } = useTodayRange();
   const todayIso = useMemo(() => toIsoDate(startTodayJS), [startTodayJS]);
@@ -1479,8 +1481,6 @@ export default function Dashboard() {
     };
   }, [locale, cacheLoaded]);
 
-  const [recent, setRecent] = useState([]);
-  const [recentLoading, setRecentLoading] = useState(true);
   useEffect(() => {
     if (cacheLoaded) return;
     const loadRecent = async () => {
