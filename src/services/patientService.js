@@ -223,6 +223,29 @@ export const createOrUpdatePatient = async (inquilino, patientData, isNew = fals
     }
 
     await setDoc(doc(db, "pacientes", id), payload, { merge: true });
+
+    // Synchronize patient phone number with all existing citas in Firestore
+    try {
+        if (patientData.celular) {
+            const citasQ = query(
+                collection(db, "citas"),
+                where("inquilino", "==", inquilino),
+                where("documento", "==", patientData.nroDocumento)
+            );
+            const citasSnap = await getDocs(citasQ);
+            citasSnap.docs.forEach(async (cDoc) => {
+                await updateDoc(doc(db, "citas", cDoc.id), {
+                    celular: patientData.celular,
+                    celularPaciente: patientData.celular,
+                    telefono: patientData.celular,
+                    telefonoPaciente: patientData.telDomicilio || patientData.celular
+                });
+            });
+        }
+    } catch (syncErr) {
+        console.warn("Non-blocking error syncing patient phone to citas:", syncErr);
+    }
+
     return { id, ...payload };
 };
 

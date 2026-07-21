@@ -78,7 +78,7 @@ function StatusSelector({ currentStatus, onChange }) {
     );
 }
 
-export default function AgendaDailyTable({ appointments, doctors, branches, chairs, onEventClick, onUpdateStatus, onWhatsApp, sidebarVisible }) {
+export default function AgendaDailyTable({ appointments, doctors, branches, chairs, patientsMap = {}, onEventClick, onUpdateStatus, onWhatsApp, sidebarVisible }) {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -94,6 +94,11 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
             const branch = branches.find(b => b.id === apt.sucursalId);
             const chair = chairs.find(c => c.id === apt.consultorioId);
             
+            // Hydrate live phone from patientsMap if available
+            const pKey = apt.pacienteId || apt.patientId || apt.documento || apt.nroDocumento;
+            const livePatient = pKey ? patientsMap[pKey] : null;
+            const liveCelular = livePatient?.celular || livePatient?.celularPaciente || livePatient?.telefono || livePatient?.telefonoPaciente || apt.celular || apt.celularPaciente || apt.telefono || "";
+
             let doctorDisplayName = "S/A";
             if (doc) {
                 const firstName = (doc.nombre || doc.nombres || "").trim().split(/\s+/)[0];
@@ -113,12 +118,13 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
 
             return {
                 ...apt,
+                celular: liveCelular,
                 doctorDisplayName,
                 sucursalDisplayName: branch?.nombre || apt.sucursal || apt.sucursalId || "PRINCIPAL",
                 chairDisplayName: chair?.nombre || apt.consultorioName || apt.consultorioId || "BOX 1"
             };
         });
-    }, [appointments, doctors, branches, chairs]);
+    }, [appointments, doctors, branches, chairs, patientsMap]);
 
     return (
         <div className="flex flex-col h-full bg-white overflow-hidden">

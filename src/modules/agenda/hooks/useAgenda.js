@@ -63,6 +63,7 @@ export function useAgenda() {
     const [specialties, setSpecialties] = useState([]);
     const [entities, setEntities] = useState([]);
     const [priceList, setPriceList] = useState([]);
+    const [patientsMap, setPatientsMap] = useState({});
 
     // Filters
     const [filterDocId, setFilterDocId] = useState("");
@@ -115,9 +116,21 @@ export function useAgenda() {
             setPriceList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        const unsubPatients = onSnapshot(query(collection(db, "pacientes"), where("inquilino", "==", inquilino)), snap => {
+            const map = {};
+            snap.docs.forEach(d => {
+                const data = d.data();
+                const key = d.id;
+                map[key] = data;
+                if (data.nroDocumento) map[data.nroDocumento] = data;
+                if (data.documento) map[data.documento] = data;
+            });
+            setPatientsMap(map);
+        });
+
         return () => {
             unsubDocs(); unsubChairs(); unsubBranches();
-            unsubSpecs(); unsubEntities(); unsubPrices();
+            unsubSpecs(); unsubEntities(); unsubPrices(); unsubPatients();
         };
     }, [inquilino]);
 
@@ -772,7 +785,7 @@ export function useAgenda() {
         viewMode, setViewMode,
         loading, appointments,
         doctors, chairs, branches,
-        specialties, entities, priceList,
+        specialties, entities, priceList, patientsMap,
         createAppointment, updateAppointment, deleteAppointment,
         filters: { filterDocId, setFilterDocId, filterBranchId, setFilterBranchId }
     };

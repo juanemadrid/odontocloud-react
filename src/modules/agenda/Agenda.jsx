@@ -23,7 +23,7 @@ export default function Agenda() {
         viewMode, setViewMode,
         doctors, appointments,
         branches, chairs,
-        specialties, entities, priceList,
+        specialties, entities, priceList, patientsMap,
         createAppointment, updateAppointment, deleteAppointment,
         filters
     } = useAgenda();
@@ -610,6 +610,7 @@ export default function Agenda() {
                                 doctors={doctors}
                                 branches={branches}
                                 chairs={chairs}
+                                patientsMap={patientsMap}
                                 sidebarVisible={sidebarVisible}
                                 onEventClick={handleEventClick}
                                 onUpdateStatus={async (id, status) => {
