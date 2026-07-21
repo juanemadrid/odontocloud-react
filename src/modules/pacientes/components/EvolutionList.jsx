@@ -129,16 +129,10 @@ const printEvolution = (evo, patient, clinicInfo = {}) => {
       <tr>
         <td class="lbl">Nombre responsable</td>
         <td>${patient?.nombreResponsable || patient?.acudiente || '—'}</td>
-        <td class="lbl">EPS</td>
-        <td>${patient?.eps || '—'}</td>
-        <td class="lbl">Nombre acompañante</td>
-        <td>${patient?.nombreAcompanante || '—'}</td>
-      </tr>
-      <tr>
         <td class="lbl">Teléfono responsable</td>
         <td>${patient?.telefonoResponsable || '—'}</td>
-        <td class="lbl">Tel. Acompañante</td>
-        <td colspan="3">${patient?.telefonoAcompanante || '—'}</td>
+        <td class="lbl">EPS</td>
+        <td>${patient?.nombreEps || patient?.eps || patient?.epsNombre || '—'}</td>
       </tr>
       <tr>
         <td class="lbl">Dirección residencia</td>

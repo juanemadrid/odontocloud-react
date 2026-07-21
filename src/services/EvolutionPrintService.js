@@ -154,16 +154,10 @@ export const EvolutionPrintService = {
                             <tr>
                                 <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Nombre responsable</td>
                                 <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.nombreResponsable || patient?.acudiente || '---'}</td>
-                                <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">EPS</td>
-                                <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.eps || '---'}</td>
-                                <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Nombre acompañante</td>
-                                <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.nombreAcompanante || '---'}</td>
-                            </tr>
-                            <tr>
                                 <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Teléfono responsable</td>
                                 <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.telefonoResponsable || '---'}</td>
-                                <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Tel. Acompañante</td>
-                                <td colspan="3" style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.telefonoAcompanante || '---'}</td>
+                                <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">EPS</td>
+                                <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-weight: 600; color: #334155;">${patient?.nombreEps || patient?.eps || patient?.epsNombre || '---'}</td>
                             </tr>
                             <tr>
                                 <td style="background: #f8fafc; font-weight: 800; border: 1px solid #cbd5e1; padding: 6px 8px; color: #475569; text-transform: uppercase;">Dirección residencia</td>
@@ -240,7 +234,7 @@ export const EvolutionPrintService = {
                     }
 
                     return `
-                        <div style="margin-bottom: 18px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; border-left: 4px solid ${isRemission ? '#d97706' : '#2563eb'};">
+                        <div style="margin-bottom: 18px; padding: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <span style="font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase;">
                                     ${patientName} (${profName})
@@ -300,7 +294,7 @@ export const EvolutionPrintService = {
                 });
             }));
 
-            // 5. Render Canvas & PDF
+            // 5. Render Canvas & PDF with Multi-page Pagination support
             const canvas = await html2canvas(printElement, {
                 scale: 2.5,
                 useCORS: true,
@@ -316,10 +310,21 @@ export const EvolutionPrintService = {
             });
 
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const imgWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position -= pageHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                heightLeft -= pageHeight;
+            }
 
             const pdfBlob = pdf.output('bloburl');
             window.open(pdfBlob, '_blank');

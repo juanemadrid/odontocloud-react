@@ -1421,20 +1421,6 @@ export default function PatientForm({
                                             </FormRow>
                                         )}
 
-                                        {(isVisible("acompNombre") || isVisible("acompTelefono")) && (
-                                            <div className="my-4 border-t border-slate-100" />
-                                        )}
-
-                                        {isVisible("acompNombre") && (
-                                            <FormRow label="Nombre Acompañante" error={errors.nombreAcompanante}>
-                                                <input {...register("nombreAcompanante")} className="form-input text-sm w-full" placeholder="Nombre completo del acompañante" />
-                                            </FormRow>
-                                        )}
-                                        {isVisible("acompTelefono") && (
-                                            <FormRow label="Teléfono Acompañante" error={errors.telefonoAcompanante}>
-                                                <input {...register("telefonoAcompanante")} className="form-input text-sm w-full md:w-64" placeholder="Teléfono" />
-                                            </FormRow>
-                                        )}
                                     </div>
                                 </>
                             )}
