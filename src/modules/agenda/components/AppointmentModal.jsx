@@ -10,6 +10,7 @@ import { searchPatients } from "../../../services/patientService";
 import { FiUser, FiCalendar, FiPhone, FiExternalLink, FiSearch, FiCreditCard, FiAlertCircle } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { buildDashboardPath } from "../../../utils/dashboardBasePath";
 import { sendConfirmation } from "../../../services/WhatsAppService";
 import { dispatchAutomationEvent } from "../../../services/AutomationService";
 import { usePermissions } from "../../../hooks/usePermissions";
@@ -231,11 +232,7 @@ export default function AppointmentModal({
     const handleGoToProfile = () => {
         const pid = watch("pacienteId");
         if (!pid) return;
-        // Detect dynamic dashboard prefix (e.g., /dashboard_admin, /dashboard_recepcion)
-        const pathParts = window.location.pathname.split('/').filter(Boolean);
-        const dbPart = pathParts.find(p => p.startsWith('dashboard'));
-        const dashboardPrefix = dbPart ? `/${dbPart}` : "/dashboard";
-        navigate(`${dashboardPrefix}/pacientes?id=${pid}`);
+        navigate(buildDashboardPath(`pacientes?id=${pid}`));
     };
 
     const onValidSubmit = async (data) => {

@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase/firebaseConfig";
 import { useAuth } from "../../../context/AuthContext";
 import { ReceiptPrintService } from "../../../services/ReceiptPrintService";
+import { buildDashboardPath } from "../../../utils/dashboardBasePath";
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString("es-CO", {
@@ -87,7 +88,7 @@ export default function SaldoFavorList({ onNew }) {
     // Aggregate credit balance per patient
     const creditBalances = useMemo(() => {
         return pacientes.map(pac => {
-            const pacPayments = pagos.filter(p => p.pacienteId === pac.id && p.estado !== "Anulado");
+            const pacPayments = pagos.filter(p => (p.pacienteId === pac.id || p.patientId === pac.id) && p.estado !== "Anulado");
             
             // Total credit added
             const totalCredits = pacPayments
@@ -164,7 +165,7 @@ export default function SaldoFavorList({ onNew }) {
     // Reactive calculations for selected patient in detailed view
     const selectedTotals = useMemo(() => {
         if (!selectedPaciente) return { disponible: 0, usado: 0, total: 0 };
-        const pacPayments = pagos.filter(p => p.pacienteId === selectedPaciente.id && p.estado !== "Anulado");
+        const pacPayments = pagos.filter(p => (p.pacienteId === selectedPaciente.id || p.patientId === selectedPaciente.id) && p.estado !== "Anulado");
         
         const total = pacPayments
             .filter(p => p.concepto === "SALDO A FAVOR")
@@ -180,7 +181,7 @@ export default function SaldoFavorList({ onNew }) {
 
     const selectedMovements = useMemo(() => {
         if (!selectedPaciente) return [];
-        const pacPayments = pagos.filter(p => p.pacienteId === selectedPaciente.id);
+        const pacPayments = pagos.filter(p => (p.pacienteId === selectedPaciente.id || p.patientId === selectedPaciente.id));
         
         const list = pacPayments.map(p => {
             const isTopUp = p.concepto === "SALDO A FAVOR";
@@ -503,7 +504,7 @@ export default function SaldoFavorList({ onNew }) {
                                                     <button 
                                                         className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-all shadow-sm mx-auto"
                                                         title="Ver historial en Ficha"
-                                                        onClick={() => navigate(`/dashboard/pacientes?id=${item.id}&tab=pagos`)}
+                                                        onClick={() => navigate(buildDashboardPath(`pacientes?id=${item.id}&tab=saldo`))}
                                                     >
                                                         <FiUser size={14} />
                                                     </button>

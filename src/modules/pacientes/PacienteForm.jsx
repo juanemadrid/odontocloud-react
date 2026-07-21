@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
 import { useToast } from "../../context/ToastContext";
 import { getPatientById, createOrUpdatePatient, deletePatient } from "../../services/patientService";
 import { useAudit } from "../../hooks/useAudit";
@@ -34,7 +35,7 @@ export default function PacienteForm() {
           setInitialData(data);
         } else {
           toast.error("El paciente no existe o el ID es inválido.");
-          navigate("/dashboard/pacientes");
+          navigate(buildDashboardPath("pacientes"));
         }
       } catch (err) {
         console.error("Error loading patient:", err);
@@ -74,7 +75,7 @@ export default function PacienteForm() {
       toast.success(isNew ? "¡Paciente registrado con éxito!" : "Ficha de paciente actualizada.");
 
       // Redirect to the newly created/updated patient details
-      navigate(`/dashboard/pacientes`);
+      navigate(buildDashboardPath("pacientes"));
     } catch (err) {
       console.error("Error saving patient:", err);
       toast.error(err.message || "No se pudo guardar la información.");
@@ -101,7 +102,7 @@ export default function PacienteForm() {
       );
 
       toast.success("Paciente eliminado correctamente.");
-      navigate("/dashboard/pacientes");
+      navigate(buildDashboardPath("pacientes"));
     } catch (err) {
       console.error("Error deleting patient:", err);
       toast.error("No se pudo eliminar el registro.");

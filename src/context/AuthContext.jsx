@@ -190,12 +190,24 @@ export const AuthProvider = ({ children }) => {
 
     // --- EFFECT 2: Real-time listener for Tenant/Clinic info ---
     useEffect(() => {
-        if (!userProfile?.inquilino) return;
+        if (!userProfile?.inquilino) {
+            console.log("AuthContext - No inquilino en userProfile, saltando listener de tenant");
+            return;
+        }
+
+        console.log("AuthContext - Iniciando listener en tiempo real para tenant:", userProfile.inquilino);
 
         const tenantDocRef = doc(db, "tenants", userProfile.inquilino);
         const unsubscribe = onSnapshot(tenantDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const tenantData = docSnap.data();
+                console.log("AuthContext - Datos de tenant actualizados:", {
+                    id: docSnap.id,
+                    status: tenantData.status,
+                    nombre: tenantData.nombreComercial || tenantData.name,
+                    subscriptionEndDate: tenantData.subscriptionEndDate
+                });
+
                 setUserProfile(prev => ({
                     ...prev,
                     tenant: {
@@ -209,12 +221,17 @@ export const AuthProvider = ({ children }) => {
                         logo: tenantData.logoUrl || tenantData.logo || ""
                     }
                 }));
+            } else {
+                console.warn("AuthContext - Documento de tenant no existe:", userProfile.inquilino);
             }
         }, (error) => {
             console.error("Error in tenant real-time listener:", error);
         });
 
-        return () => unsubscribe();
+        return () => {
+            console.log("AuthContext - Limpiando listener de tenant");
+            unsubscribe();
+        };
     }, [userProfile?.inquilino]);
 
     const logout = async () => {

@@ -3,6 +3,7 @@ import { db } from "../../firebase/firebaseConfig";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
 import { 
     FiCheckCircle, FiCircle, FiArrowRight, FiSettings, FiUsers, 
     FiMapPin, FiAward, FiCreditCard, FiList, FiFileText, FiAlertTriangle, 
@@ -15,7 +16,7 @@ const STEPS = [
         label: "1. Datos de la Clínica",
         description: "Nombre, logo, NIT y contacto principal.",
         icon: FiSettings,
-        path: "/dashboard/config/datos-basicos",
+        path: buildDashboardPath('config/datos-basicos'),
         check: async (db, inquilino) => {
             const docRef = doc(db, "tenants", inquilino);
             const snap = await getDoc(docRef);
@@ -29,7 +30,7 @@ const STEPS = [
         label: "2. Sedes y Sucursales",
         description: "Registra las sedes físicas donde atiendes.",
         icon: FiMapPin,
-        path: "/dashboard/config/sucursales",
+        path: buildDashboardPath('config/sucursales'),
         check: async (db, inquilino) => {
             const q = query(collection(db, "sucursales"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
@@ -41,7 +42,7 @@ const STEPS = [
         label: "3. Consultorios / Unidades",
         description: "Configura las unidades dentales o cubículos.",
         icon: FiMonitor,
-        path: "/dashboard/config/recursos-fisicos",
+        path: buildDashboardPath('config/recursos-fisicos'),
         check: async (db, inquilino) => {
             const snap = await getDocs(collection(db, "tenants", inquilino, "recursos_fisicos"));
             return !snap.empty;
@@ -52,7 +53,7 @@ const STEPS = [
         label: "4. Especialidades",
         description: "Define las ramas odontológicas de tu clínica.",
         icon: FiAward,
-        path: "/dashboard/config/especialidades",
+        path: buildDashboardPath('config/especialidades'),
         check: async (db, inquilino) => {
             const q = query(collection(db, "especialidades"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
@@ -64,7 +65,7 @@ const STEPS = [
         label: "5. Profesionales y Staff",
         description: "Crea perfiles para doctores y recepcionistas.",
         icon: FiUsers,
-        path: "/dashboard/config/usuarios",
+        path: buildDashboardPath('config/usuarios'),
         check: async (db, inquilino) => {
             const q = query(collection(db, "usuarios"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
@@ -76,7 +77,7 @@ const STEPS = [
         label: "6. Lista de Precios",
         description: "Costos de tratamientos y servicios.",
         icon: FiList,
-        path: "/dashboard/config/listas-precios",
+        path: buildDashboardPath('config/listas-precios'),
         check: async (db, inquilino) => {
             const q = query(collection(db, "listas_precios"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
@@ -88,7 +89,7 @@ const STEPS = [
         label: "7. Facturación",
         description: "Numeración para facturas y recibos.",
         icon: FiFileText,
-        path: "/dashboard/config/consecutivos",
+        path: buildDashboardPath('config/consecutivos'),
         check: async (db, inquilino) => {
             const q = query(collection(db, "consecutivos"), where("inquilino", "==", inquilino));
             const snap = await getDocs(q);
@@ -182,7 +183,7 @@ export default function ConfigAssistant() {
                     return (
                         <Link 
                             key={step.id} 
-                            to={step.path}
+                            to={buildDashboardPath(`config/${step.id}`)}
                             className={`
                                 group relative flex items-center gap-6 p-6 rounded-[32px] border transition-all duration-500
                                 ${isDone 
@@ -228,7 +229,7 @@ export default function ConfigAssistant() {
                     </div>
                     <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">¡Todo Listo para Atender!</h2>
                     <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-8">Has completado la configuración base de tu clínica.</p>
-                    <Link to="/dashboard" className="inline-flex px-10 py-4 bg-white text-blue-600 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all">
+                    <Link to={buildDashboardPath('')} className="inline-flex px-10 py-4 bg-white text-blue-600 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all">
                         Ir al Panel Principal
                     </Link>
                 </div>

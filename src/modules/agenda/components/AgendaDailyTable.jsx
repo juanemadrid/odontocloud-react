@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { buildDashboardPath } from '../../../utils/dashboardBasePath';
 import { FiClock, FiUser, FiHome, FiActivity, FiSearch, FiFilter, FiChevronDown, FiCalendar, FiSmartphone, FiEdit2 } from 'react-icons/fi';
 
 const APPOINTMENT_STATUSES = [
@@ -162,9 +163,9 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
                                                         <p 
                                                             className={`font-black text-blue-600 hover:underline cursor-pointer uppercase transition-all print:text-slate-800 print:whitespace-normal ${sidebarVisible ? 'text-[10px] truncate max-w-[150px]' : 'text-[13px] truncate max-w-[250px]'}`} 
                                                             onClick={() => {
-                                                                if (apt.pacienteId) {
-                                                                    const prefix = location.pathname.split('/agenda')[0] || '/dashboard';
-                                                                    navigate(`${prefix}/pacientes?id=${apt.pacienteId}`);
+                                                                const patientId = apt.pacienteId || apt.patientId;
+                                                                if (patientId) {
+                                                                    navigate(buildDashboardPath(`pacientes?id=${patientId}`));
                                                                 } else {
                                                                     onEventClick(apt);
                                                                 }

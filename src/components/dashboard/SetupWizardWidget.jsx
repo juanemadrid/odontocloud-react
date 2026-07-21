@@ -3,7 +3,8 @@ import { db } from "../../firebase/firebaseConfig";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { FiCheckCircle, FiArrowRight, FiSettings, FiAlertCircle } from "react-icons/fi";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
+import { FiCheckCircle, FiArrowRight, FiSettings, FiUsers, FiAlertCircle } from "react-icons/fi";
 
 const CHECKS = [
     { id: "tenant", label: "Datos Clínica", check: async (db, inq) => {
@@ -94,7 +95,7 @@ export default function SetupWizardWidget() {
                 </div>
 
                 <button 
-                    onClick={() => navigate("/dashboard/config/asistente")}
+                    onClick={() => navigate(buildDashboardPath('config/asistente'))}
                     className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 shrink-0"
                 >
                     Continuar Asistente

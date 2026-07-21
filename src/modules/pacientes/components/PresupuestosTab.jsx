@@ -73,7 +73,11 @@ export default function PresupuestosTab({ patient: dbPatient }) {
                 <PlanEditor
                     patient={patient}
                     initialData={editingPlan}
-                    onClose={() => { setMode('list'); setEditingPlan(null); }}
+                    onClose={() => { 
+                        setMode('list'); 
+                        setEditingPlan(null); 
+                        setRefreshKey(prev => prev + 1);
+                    }}
                     onSaved={handleSaved}
                 />
             )}

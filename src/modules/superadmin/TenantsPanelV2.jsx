@@ -101,9 +101,16 @@ export default function TenantsPanelV2() {
     };
 
     const handleStatusToggle = async (id, current) => {
-        if (!window.confirm(`¿${current === "active" ? "Suspender" : "Activar"} esta clínica?`)) return;
-        try { await toggleTenantStatus(id, current); loadData(); }
-        catch { alert("Error al cambiar estado"); }
+        const action = current === "active" ? "Suspender" : "Activar";
+        if (!window.confirm(`¿${action} esta clínica? ${current === "active" ? "Los usuarios no podrán iniciar sesión mientras esté suspendida." : ""}`)) return;
+        try { 
+            await toggleTenantStatus(id, current);
+            // Force full reload to get fresh data from Firestore
+            await loadData();
+        } catch(err) { 
+            console.error("Error al cambiar estado:", err);
+            alert("Error al cambiar estado: " + err.message); 
+        }
     };
 
     const handleUpdatePlan = async (e) => {

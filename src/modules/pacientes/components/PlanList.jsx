@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getPlansByPatient, deletePlan } from '../../../services/planService';
 import { getPatientById } from '../../../services/patientService';
-import { FiPlus, FiPrinter, FiEdit3, FiTrash2, FiX, FiAlertCircle, FiShield } from "react-icons/fi";
+import { FiPlus, FiPrinter, FiEdit3, FiTrash2, FiX, FiAlertCircle, FiShield, FiFileText } from "react-icons/fi";
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../context/AuthContext';
 import { BudgetPrintService } from '../../../services/BudgetPrintService';

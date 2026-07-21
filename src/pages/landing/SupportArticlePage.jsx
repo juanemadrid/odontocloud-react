@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { buildDashboardPath } from '../../utils/dashboardBasePath';
 import { FiArrowLeft, FiClock, FiCheckCircle, FiAlertCircle, FiMonitor, FiSettings, FiUserPlus, FiMapPin, FiGrid, FiMessageCircle, FiEdit3, FiSave, FiList, FiActivity, FiTool, FiFileText, FiDownload, FiDollarSign, FiThumbsUp, FiThumbsDown, FiMessageSquare } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -172,7 +173,7 @@ const ARTICLES = {
                     <p className="text-slate-300 mb-6 max-w-2xl mx-auto" style={{ color: '#cbd5e1' }}>
                         Si has completado estos 3 pasos, tu clínica está lista para recibir el primer paciente.
                     </p>
-                    <Link to="/dashboard" className="inline-block bg-white text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-slate-100 transition-colors" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+                    <Link to={buildDashboardPath()} className="inline-block bg-white text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-slate-100 transition-colors" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
                         Ir al Panel Principal
                     </Link>
                 </section>

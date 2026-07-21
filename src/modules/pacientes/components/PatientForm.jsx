@@ -570,10 +570,17 @@ export default function PatientForm({
         let isMounted = true;
         const loadCities = async () => {
             setLoadingCiudadesNacimiento(true);
-            const cities = await fetchCitiesForCountry(paisNacimiento);
-            if (isMounted) {
-                setCiudadesNacimiento(cities);
-                setLoadingCiudadesNacimiento(false);
+            try {
+                const cities = await fetchCitiesForCountry(paisNacimiento);
+                if (isMounted) {
+                    setCiudadesNacimiento(cities);
+                }
+            } catch (err) {
+                console.error("Error loading birth cities:", err);
+            } finally {
+                if (isMounted) {
+                    setLoadingCiudadesNacimiento(false);
+                }
             }
         };
 
@@ -599,10 +606,17 @@ export default function PatientForm({
         let isMounted = true;
         const loadCities = async () => {
             setLoadingCiudadesDomicilio(true);
-            const cities = await fetchCitiesForCountry(paisDomicilio);
-            if (isMounted) {
-                setCiudadesDomicilio(cities);
-                setLoadingCiudadesDomicilio(false);
+            try {
+                const cities = await fetchCitiesForCountry(paisDomicilio);
+                if (isMounted) {
+                    setCiudadesDomicilio(cities);
+                }
+            } catch (err) {
+                console.error("Error loading residence cities:", err);
+            } finally {
+                if (isMounted) {
+                    setLoadingCiudadesDomicilio(false);
+                }
             }
         };
 

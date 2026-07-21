@@ -26,7 +26,8 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         convenioBeneficio: watchPatient("convenioBeneficio") || dbPatient?.convenioBeneficio
     };
 
-    const isEditing = !!initialData?.id;
+    const [currentPlanId, setCurrentPlanId] = useState(initialData?.id || null);
+    const isEditing = !!currentPlanId;
     const patientId = patient?.id;
     const toast = useToast();
     const [loading, setLoading] = useState(false);
@@ -57,6 +58,82 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     const [loadingPlanes, setLoadingPlanes] = useState(false);
     const [loadingPlanItems, setLoadingPlanItems] = useState(false);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
+
+    // Refs for auto-saving
+    const autoSaveTimeoutRef = useRef(null);
+    const pendingSaveDataRef = useRef(null);
+
+    useEffect(() => {
+        setCurrentPlanId(initialData?.id || null);
+    }, [initialData?.id]);
+
+    // Keep pendingSaveDataRef in sync with the latest values
+    useEffect(() => {
+        pendingSaveDataRef.current = { items, title, obs };
+    }, [items, title, obs]);
+
+    // On unmount, flush any pending save
+    useEffect(() => {
+        return () => {
+            if (autoSaveTimeoutRef.current) {
+                clearTimeout(autoSaveTimeoutRef.current);
+                const { items: finalItems, title: finalTitle, obs: finalObs } = pendingSaveDataRef.current || {};
+                if (finalItems && finalTitle) {
+                    autoSaveSilent(finalItems, finalTitle, finalObs);
+                }
+            }
+        };
+    }, []);
+
+    const autoSaveSilent = async (updatedItems, updatedTitle, updatedObs) => {
+        if (!updatedTitle.trim()) return;
+        const validItems = updatedItems.filter(i => (i.desc || "").trim() !== "");
+        if (validItems.length === 0) return;
+
+        try {
+            const planData = {
+                patientId,
+                title: updatedTitle,
+                items: validItems,
+                total: validItems.reduce((acc, curr) => acc + (Number(curr.amount) * Number(curr.qty)), 0) - validItems.reduce((acc, curr) => acc + (Number(curr.descuento || 0)), 0),
+                subtotal: validItems.reduce((acc, curr) => acc + (Number(curr.amount) * Number(curr.qty)), 0),
+                totalDescuento: validItems.reduce((acc, curr) => acc + (Number(curr.descuento || 0)), 0),
+                status: initialData?.status || "draft",
+                type: initialData?.type || "presupuesto",
+                profesionalId: initialData?.profesionalId || "",
+                vigencia: initialData?.vigencia || 30,
+                observaciones: updatedObs,
+                cobertura,
+                inquilino: inquilino || patient?.inquilino || "",
+                baseListId: baseListId
+            };
+
+            let planIdToUse = pendingSaveDataRef.current?.tempPlanId || currentPlanId;
+
+            if (planIdToUse) {
+                await updatePlan(planIdToUse, planData);
+                console.log("Auto-save: updated plan", planIdToUse);
+            } else {
+                const saved = await createPlan(planData);
+                setCurrentPlanId(saved.id);
+                if (pendingSaveDataRef.current) {
+                    pendingSaveDataRef.current.tempPlanId = saved.id;
+                }
+                console.log("Auto-save: created plan", saved.id);
+            }
+        } catch (error) {
+            console.error("Error in autoSaveSilent:", error);
+        }
+    };
+
+    const triggerAutoSave = (updatedItems = items, updatedTitle = title, updatedObs = obs) => {
+        if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+        }
+        autoSaveTimeoutRef.current = setTimeout(() => {
+            autoSaveSilent(updatedItems, updatedTitle, updatedObs);
+        }, 1000);
+    };
     const [convenioDescuentos, setConvenioDescuentos] = useState({});
 
     // ── Factus / DIAN ──
@@ -124,12 +201,12 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
         // Payments are less time-critical — a one-time fetch is fine
         const fetchPayments = async () => {
-            if (!initialData?.id) return;
+            if (!currentPlanId) return;
             try {
                 const paySnap = await getDocs(query(
                     collection(db, "pagos"),
                     where("patientId", "==", patientId),
-                    where("planId", "==", initialData.id)
+                    where("planId", "==", currentPlanId)
                 ));
                 setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.estado !== "Anulado"));
             } catch (err) {
@@ -139,7 +216,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         fetchPayments();
 
         return () => unsubscribeEvo();
-    }, [patientId, initialData?.id]);
+    }, [patientId, currentPlanId]);
 
     const isItemRealized = (itemId) => {
         // 1. Check direct realizado flag on the item itself (set from plan editor)
@@ -147,7 +224,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         if (itemDirectly?.realizado === true) return true;
         // 2. Check clinical evolutions (set from evolution modal)
         return evolutions.some(evo => 
-            evo.planId === initialData?.id && 
+            evo.planId === currentPlanId && 
             // Compatibilidad: registros nuevos usan `realizado`, antiguos usaban `checked`
             (evo.plantillaItems?.[itemId]?.realizado === true ||
              (evo.plantillaItems?.[itemId]?.realizado === undefined && evo.plantillaItems?.[itemId]?.checked === true))
@@ -200,7 +277,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     }, [payments, items]);
 
     const hasRealizedDebt = React.useMemo(() => {
-        if (!initialData?.id) return false;
+        if (!currentPlanId) return false;
         return (items || []).some(item => {
             const totalCost = (Number(item.amount || 0) * Number(item.qty || 1)) - Number(item.descuento || 0);
             const paid = paidMap[item.id] || 0;
@@ -223,7 +300,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         }
         // 2. Check clinical evolutions
         const evo = evolutions.find(e =>
-            e.planId === initialData?.id &&
+            e.planId === currentPlanId &&
             (e.plantillaItems?.[itemId]?.realizado === true ||
              (e.plantillaItems?.[itemId]?.realizado === undefined && e.plantillaItems?.[itemId]?.checked === true))
         );
@@ -247,7 +324,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
     const handleGenerateSelectedInvoice = async () => {
         if (selectedForInvoice.size === 0) return;
-        if (!initialData?.id) {
+        if (!currentPlanId) {
             toast.error('Guarda el plan antes de generar la factura.');
             return;
         }
@@ -312,7 +389,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             const invoiceData = {
                 patientId,
                 inquilino:  inquilino || '',
-                planId:     initialData.id,
+                planId:     currentPlanId,
                 nroFactura: `FE-${Math.floor(1000 + Math.random() * 9000)}`,
                 fechaISO:   new Date().toISOString(),
                 total:      totalFactura,
@@ -333,7 +410,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                     ? { ...it, facturado: true, fechaFacturado: new Date().toISOString() }
                     : it
             );
-            await updDoc(docRef(db, 'treatment_plans', initialData.id), { items: updatedItems });
+            await updDoc(docRef(db, 'treatment_plans', currentPlanId), { items: updatedItems });
             setItems(updatedItems);
 
             // 3️⃣ Emit to DIAN via Factus
@@ -431,9 +508,11 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 max_desc: it.max_desc !== undefined ? Number(it.max_desc) : 100
             }));
 
-            setItems([...items, ...newItems]);
+            const nextItems = [...items, ...newItems];
+            setItems(nextItems);
             setShowPlanesModal(false);
             toast.success(`Combo "${plan.nombre}" cargado!`);
+            triggerAutoSave(nextItems);
         } catch (e) {
             console.error(e);
             toast.error("Error cargando el combo.");
@@ -443,8 +522,10 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
     };
 
     const handleModalAdd = (newStagedItems) => {
-        setItems([...items, ...newStagedItems]);
+        const nextItems = [...items, ...newStagedItems];
+        setItems(nextItems);
         toast.success(`${newStagedItems.length} servicios cargados con éxito`);
+        triggerAutoSave(nextItems);
     };
 
     // UI state for search
@@ -645,7 +726,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
 
     const removeItem = (id) => {
         if (items.length === 1) return;
-        setItems(items.filter(i => i.id !== id));
+        const nextItems = items.filter(i => i.id !== id);
+        setItems(nextItems);
+        triggerAutoSave(nextItems);
     };
 
     const updateItem = (id, field, val) => {
@@ -666,7 +749,9 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 }
             }
         }
-        setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
+        const nextItems = items.map(i => i.id === id ? { ...i, [field]: val } : i);
+        setItems(nextItems);
+        triggerAutoSave(nextItems);
     };
 
     const calculateSubtotal = () => {
@@ -718,12 +803,13 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                 convertedAt: new Date()
             };
 
-            if (initialData?.id) {
+            if (currentPlanId) {
                 // Plan ya guardado: actualizar tipo a 'plan'
-                await updatePlan(initialData.id, planPayload);
+                await updatePlan(currentPlanId, planPayload);
             } else {
                 // Plan nuevo (sin ID aún): crear directamente como plan de tratamiento
-                await createPlan(planPayload);
+                const saved = await createPlan(planPayload);
+                setCurrentPlanId(saved.id);
             }
 
             toast.success("¡Convertido a Plan de Tratamiento exitosamente!");
@@ -768,10 +854,11 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
             };
 
             if (isEditing) {
-                await updatePlan(initialData.id, planData);
+                await updatePlan(currentPlanId, planData);
                 toast.success("Presupuesto actualizado");
             } else {
-                await createPlan(planData);
+                const saved = await createPlan(planData);
+                setCurrentPlanId(saved.id);
                 toast.success("Presupuesto guardado");
             }
             onSaved?.();
@@ -790,7 +877,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
         }
         setLoading(true);
         try {
-            await deletePlan(initialData.id);
+            await deletePlan(currentPlanId);
             toast.success("Presupuesto eliminado");
             onSaved?.();
         } catch (error) {
@@ -867,7 +954,10 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                             placeholder="TÍTULO DEL PRESUPUESTO..."
                             value={title}
                             disabled={hasPayments}
-                            onChange={(e) => setTitle(e.target.value)}
+                            onChange={(e) => {
+                                setTitle(e.target.value);
+                                triggerAutoSave(items, e.target.value, obs);
+                            }}
                             className="bg-transparent border-none p-0 text-lg font-black text-slate-800 tracking-tight outline-none w-full max-w-sm focus:ring-0"
                         />
                     </div>
@@ -907,13 +997,14 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                         )}
                         {!hasPayments && (
                             <button 
-                                onClick={() => setDeleteModal({ isOpen: true, planId: initialData?.id, planName: title })} 
+                                onClick={() => setDeleteModal({ isOpen: true, planId: currentPlanId, planName: title })} 
                                 disabled={loading} 
                                 className="shrink-0 px-3 py-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-rose-100 whitespace-nowrap"
                             >
                                 <FiTrash2 size={13} /> {isEditing ? "Eliminar" : "Descartar"}
                             </button>
                         )}
+                        {/* 
                         <button 
                             onClick={() => handleSave('accepted')} 
                             disabled={loading} 
@@ -921,6 +1012,7 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                         >
                              <FiCheck size={13} strokeWidth={3} /> {isEditing ? "Guardar" : "Finalizar & Aprobar"}
                         </button>
+                        */}
                     </div>
                 </div>
             </div>
@@ -1279,7 +1371,10 @@ export default function PlanEditor({ patient: dbPatient, initialData, onClose, o
                                   className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-[12px] font-medium text-slate-600 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-100 transition-all resize-none"
                                   placeholder="Escriba aquí los términos, condiciones u observaciones del plan..."
                                   value={obs}
-                                  onChange={(e) => setObs(e.target.value)}
+                                  onChange={(e) => {
+                                      setObs(e.target.value);
+                                      triggerAutoSave(items, title, e.target.value);
+                                  }}
                               />
                               <button 
                                 onClick={() => handleSave(initialData?.status || 'draft')}

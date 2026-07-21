@@ -5,6 +5,7 @@ import {
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../../firebase/firebaseConfig";
+import { buildDashboardPath } from "../../../utils/dashboardBasePath";
 import { 
     collection, addDoc, getDocs, query, where, 
     serverTimestamp, increment, doc, updateDoc, Timestamp 
@@ -247,7 +248,7 @@ export default function SaldoFavorForm({ onCancel, onSuccess }) {
             }
 
             setSuccess(true);
-            setTimeout(() => onSuccess ? onSuccess() : navigate("/dashboard/facturacion/saldo"), 1500);
+            setTimeout(() => onSuccess ? onSuccess() : navigate(buildDashboardPath('facturacion/saldo')), 1500);
 
         } catch (e) {
             console.error("Error saving credit balance:", e);

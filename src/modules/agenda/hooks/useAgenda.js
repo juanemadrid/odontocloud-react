@@ -163,6 +163,7 @@ export function useAgenda() {
                 return {
                     id: d.id,
                     ...data,
+                    pacienteId: data.pacienteId || data.patientId || null,
                     start: dateObj,
                     end: new Date((dateObj?.getTime() || 0) + ((data.duracion || 30) * 60000)),
                     resourceId: data.doctorId

@@ -10,6 +10,7 @@ import {
     query, where, serverTimestamp, increment, Timestamp 
 } from "firebase/firestore";
 import { useAuth } from "../../../context/AuthContext";
+import { buildDashboardPath } from "../../../utils/dashboardBasePath";
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString("es-CO", {
@@ -383,7 +384,7 @@ export default function ReciboCajaForm({ onCancel, onSuccess }) {
             }
 
             setSuccess(true);
-            setTimeout(() => onSuccess ? onSuccess() : navigate("/dashboard/facturacion/recibo"), 1500);
+            setTimeout(() => onSuccess ? onSuccess() : navigate(buildDashboardPath('facturacion/recibo')), 1500);
 
         } catch (e) {
             console.error("Error al guardar recibo:", e);

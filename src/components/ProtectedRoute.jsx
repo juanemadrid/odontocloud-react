@@ -10,6 +10,16 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     const { user, userProfile, loading } = useAuth();
     const location = useLocation();
 
+    console.log("ProtectedRoute - Estado:", {
+        loading,
+        hasUser: !!user,
+        hasProfile: !!userProfile,
+        rol: userProfile?.rol,
+        inquilino: userProfile?.inquilino,
+        hasTenant: !!userProfile?.tenant,
+        tenantStatus: userProfile?.tenant?.status
+    });
+
     if (loading) {
         return <PremiumLoading />;
     }
@@ -18,12 +28,26 @@ export default function ProtectedRoute({ children, allowedRoles }) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
+    // If no userProfile yet, show loading (shouldn't happen but safety check)
+    if (!userProfile) {
+        console.warn("ProtectedRoute - Usuario autenticado pero sin perfil, mostrando loading");
+        return <PremiumLoading />;
+    }
+
     // ── Tenant suspension/expiration check ──
     // superadmin is always allowed through
     const role = normalizeRole(userProfile?.rol);
-    if (role !== "superadmin") {
-        const isSuspended = isTenantSuspended(userProfile?.tenant);
-        const isExpired = isSubscriptionExpired(userProfile?.tenant);
+    if (role !== "superadmin" && userProfile.inquilino && userProfile.tenant) {
+        // Only check suspension/expiration if tenant data is loaded
+        const isSuspended = isTenantSuspended(userProfile.tenant);
+        const isExpired = isSubscriptionExpired(userProfile.tenant);
+
+        console.log("ProtectedRoute - Verificación suspensión:", {
+            isSuspended,
+            isExpired,
+            tenantStatus: userProfile.tenant.status,
+            tenantId: userProfile.tenant.id
+        });
 
         if (isSuspended || isExpired) {
             return (
@@ -43,6 +67,16 @@ export default function ProtectedRoute({ children, allowedRoles }) {
                                 : "El periodo de suscripción de esta clínica ha vencido. Por favor contacta al administrador o renueva tu suscripción para continuar utilizando el servicio."}
                         </p>
                         <p className="text-xs text-slate-400 font-medium">OdontoCloud · soporte@odontocloud.com</p>
+                        <button 
+                            onClick={() => { 
+                                // Clear auth and go to login
+                                localStorage.removeItem("odc_session");
+                                window.location.href = '/login';
+                            }}
+                            className="mt-4 px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors"
+                        >
+                            Volver al inicio de sesión
+                        </button>
                     </div>
                 </div>
             );

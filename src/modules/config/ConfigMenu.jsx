@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
 import {
     FiSettings, FiUsers, FiMapPin, FiAward, FiCreditCard,
     FiList, FiPackage, FiCheckSquare, FiLayout, FiShield, FiFileText, FiServer
@@ -46,7 +47,7 @@ export default function ConfigMenu() {
                 {CONFIG_ITEMS.map((item, index) => (
                     <div
                         key={index} // Using index as slug is not unique
-                        onClick={() => navigate(`/dashboard/config/${item.slug}`)}
+                        onClick={() => navigate(buildDashboardPath(`config/${item.slug}`))}
                         className={`group flex items-center gap-6 p-6 rounded-[24px] border transition-all duration-300 cursor-pointer relative overflow-hidden
                             ${item.isPrimary 
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-100' 

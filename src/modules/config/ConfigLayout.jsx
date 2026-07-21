@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
 import {
     FiSettings, FiUsers, FiMapPin, FiAward, FiCreditCard,
     FiList, FiPackage, FiCheckSquare, FiLayout, FiShield, FiFileText,
@@ -89,7 +90,7 @@ export default function ConfigLayout({ children }) {
                         return (
                             <NavLink
                                 key={item.slug}
-                                to={`/dashboard/config/${item.slug}`}
+                                to={buildDashboardPath(`config/${item.slug}`)}
                                 className={`
                                     flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group
                                     ${isActive

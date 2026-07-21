@@ -220,7 +220,7 @@ export default function WebCms() {
                 {/* Header Premium Clean */}
                 <div className="px-8 py-8 bg-white relative shrink-0 border-b border-slate-50">
                     <button
-                        onClick={() => navigate("/dashboard/config/datos-basicos")}
+                        onClick={() => navigate(buildDashboardPath('config/datos-basicos'))}
                         className="flex items-center gap-1.5 text-[9.5px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest mb-4 transition-colors duration-300"
                     >
                         ← Volver a Ajustes
@@ -931,7 +931,7 @@ export default function WebCms() {
                                         <button
                                             onClick={() => {
                                                 if (window.confirm("⚠️ No tienes un 'Identificador URL' configurado para tu clínica.\n\n¿Quieres ir a 'Datos Básicos' para configurarlo ahora?")) {
-                                                    navigate("/dashboard/config/empresa");
+                                                    navigate(buildDashboardPath('config/empresa'));
                                                 }
                                             }}
                                             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-full transition-all text-[10px] font-black uppercase tracking-widest shadow-md shadow-amber-500/10 active:scale-95 shrink-0 animate-pulse cursor-pointer"

@@ -4,6 +4,7 @@ import { FiAlertCircle, FiTrendingUp, FiUsers, FiBox, FiArrowRight } from "react
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
+import { buildDashboardPath } from "../../utils/dashboardBasePath";
 
 export default function SmartAlerts() {
     const { userProfile } = useAuth();
@@ -156,9 +157,9 @@ export default function SmartAlerts() {
                 <div
                     key={alert.id}
                     onClick={() => {
-                        if (alert.type === 'fidelización') navigate('/dashboard/pacientes');
-                        else if (alert.type === 'inventario') navigate('/dashboard/inventario');
-                        else if (alert.type === 'negocio') navigate('/dashboard/reportes');
+                        if (alert.type === 'fidelización') navigate(buildDashboardPath('pacientes'));
+                        else if (alert.type === 'inventario') navigate(buildDashboardPath('inventario'));
+                        else if (alert.type === 'negocio') navigate(buildDashboardPath('reportes'));
                     }}
                     className="group bg-white border border-slate-100 p-4 rounded-2xl flex items-start gap-4 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer"
                 >
