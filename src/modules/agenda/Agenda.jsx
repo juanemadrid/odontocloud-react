@@ -156,14 +156,14 @@ export default function Agenda() {
         }
     };
 
-    const handleWhatsApp = async () => {
-        if (!editingApt) return;
-        try {
-            const res = await sendConfirmation(editingApt);
-            toast.success(res.message);
-        } catch (e) {
-            toast.error(e.message);
+    const handleWhatsApp = (cita) => {
+        const targetCita = cita || editingApt;
+        if (!targetCita) {
+            toast.error("No se ha seleccionado ninguna cita");
+            return;
         }
+        openWhatsAppWebDirect(targetCita, userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || "Clínica Dental");
+        toast.success("Abriendo WhatsApp con mensaje de recordatorio...");
     };
 
     const changeDate = (days) => {

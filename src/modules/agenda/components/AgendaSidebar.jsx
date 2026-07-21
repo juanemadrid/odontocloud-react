@@ -223,6 +223,38 @@ export default function AgendaSidebar({
                     </FilterAccordion>
 
                 </div>
+
+                {/* 🪑 Dental Chair Occupancy Widget */}
+                <div className="p-3 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            Ocupación de Sillones
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400">Hoy</span>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
+                                <span>Unidad / Sillón 1</span>
+                                <span className="text-emerald-600">75%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }} />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
+                                <span>Unidad / Sillón 2</span>
+                                <span className="text-blue-600">50%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full" style={{ width: '50%' }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

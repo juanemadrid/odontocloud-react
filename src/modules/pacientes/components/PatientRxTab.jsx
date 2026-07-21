@@ -24,6 +24,10 @@ export default function PatientRxTab({ patient, onUpdate }) {
     const [editingImage, setEditingImage] = useState(null);
     const [previewItem, setPreviewItem] = useState(null);
     const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+    const [compareModalOpen, setCompareModalOpen] = useState(false);
+    const [beforeImg, setBeforeImg] = useState(null);
+    const [afterImg, setAfterImg] = useState(null);
+    const [sliderPos, setSliderPos] = useState(50);
     
     // Form States
     const [selectedFile, setSelectedFile] = useState(null);
@@ -333,12 +337,26 @@ export default function PatientRxTab({ patient, onUpdate }) {
                         />
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     </div>
-                    <button 
-                        onClick={() => setViewMode("form")}
-                        className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 flex items-center gap-2 transition-all active:scale-95 shrink-0"
-                    >
-                        <FiPlus size={14} /> Nuevo archivo
-                    </button>
+                    
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <button 
+                            onClick={() => {
+                                if (images.length < 2) return toast.error("Necesita al menos 2 imágenes cargadas para comparar");
+                                setBeforeImg(images[images.length - 1]);
+                                setAfterImg(images[0]);
+                                setCompareModalOpen(true);
+                            }}
+                            className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shrink-0"
+                        >
+                            <FiEye size={14} /> Comparar Antes vs Después
+                        </button>
+                        <button 
+                            onClick={() => setViewMode("form")}
+                            className="px-6 py-2.5 bg-[#8CC63F] hover:bg-[#7bb335] text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-[#8CC63F]/20 flex items-center gap-2 transition-all active:scale-95 shrink-0"
+                        >
+                            <FiPlus size={14} /> Nuevo archivo
+                        </button>
+                    </div>
                 </div>
 
                 {/* TABLE */}
@@ -517,6 +535,135 @@ export default function PatientRxTab({ patient, onUpdate }) {
                                 className="flex-1 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-600/20 transition-all active:scale-95"
                             >
                                 Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 📸 COMPARADOR ANTES VS DESPUÉS MODAL */}
+            {compareModalOpen && (
+                <div className="fixed inset-0 z-[99999] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[32px] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                            <div>
+                                <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                                    📸 Comparador Clínico Antes vs Después
+                                </h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                    Desplaza el divisor central para evaluar la evolución estética o radiográfica
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setCompareModalOpen(false)}
+                                className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+                            >
+                                <FiX size={20} />
+                            </button>
+                        </div>
+
+                        {/* Selectors */}
+                        <div className="p-4 bg-slate-950/30 border-b border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1.5">
+                                    1. Imagen "ANTES" (Inicial)
+                                </label>
+                                <select 
+                                    value={beforeImg?.path || ""} 
+                                    onChange={e => setBeforeImg(images.find(i => i.path === e.target.value))}
+                                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl py-2 px-3 text-xs font-bold focus:outline-none"
+                                >
+                                    {images.map(img => (
+                                        <option key={img.path} value={img.path}>
+                                            {img.title || img.name} ({img.fechaAsocISO || 'Sin fecha'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1.5">
+                                    2. Imagen "DESPUÉS" (Final / Progreso)
+                                </label>
+                                <select 
+                                    value={afterImg?.path || ""} 
+                                    onChange={e => setAfterImg(images.find(i => i.path === e.target.value))}
+                                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl py-2 px-3 text-xs font-bold focus:outline-none"
+                                >
+                                    {images.map(img => (
+                                        <option key={img.path} value={img.path}>
+                                            {img.title || img.name} ({img.fechaAsocISO || 'Sin fecha'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Interactive Comparison Canvas */}
+                        <div className="p-6 flex-1 flex items-center justify-center relative min-h-[380px] select-none overflow-hidden bg-slate-950/80">
+                            {beforeImg && afterImg ? (
+                                <div className="relative w-full h-[400px] md:h-[480px] rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
+                                    {/* AFTER IMAGE (Background) */}
+                                    <img 
+                                        src={afterImg.url} 
+                                        alt="Después" 
+                                        className="absolute inset-0 w-full h-full object-contain bg-black"
+                                    />
+                                    <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-emerald-600/90 backdrop-blur-md text-white font-black text-[10px] uppercase tracking-widest rounded-lg shadow-lg">
+                                        DESPUÉS: {afterImg.title || afterImg.name}
+                                    </div>
+
+                                    {/* BEFORE IMAGE (Clipped overlay) */}
+                                    <div 
+                                        className="absolute inset-0 overflow-hidden border-r-2 border-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                                        style={{ width: `${sliderPos}%` }}
+                                    >
+                                        <img 
+                                            src={beforeImg.url} 
+                                            alt="Antes" 
+                                            className="absolute inset-0 w-full h-full object-contain bg-black max-w-none"
+                                            style={{ width: '100%', height: '100%' }}
+                                        />
+                                        <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-blue-600/90 backdrop-blur-md text-white font-black text-[10px] uppercase tracking-widest rounded-lg shadow-lg">
+                                            ANTES: {beforeImg.title || beforeImg.name}
+                                        </div>
+                                    </div>
+
+                                    {/* Range input controller */}
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        value={sliderPos}
+                                        onChange={e => setSliderPos(e.target.value)}
+                                        className="absolute inset-0 opacity-0 cursor-ew-resize z-30 w-full h-full"
+                                    />
+
+                                    {/* Slider Handle Knob */}
+                                    <div 
+                                        className="absolute top-1/2 -translate-y-1/2 pointer-events-none z-20 w-10 h-10 -ml-5 rounded-full bg-white text-slate-900 shadow-2xl flex items-center justify-center font-black text-xs border-2 border-blue-500"
+                                        style={{ left: `${sliderPos}%` }}
+                                    >
+                                        ↔
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                                    Seleccione las dos imágenes para iniciar la comparación.
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                Arrastre el control slider horizontalmente para comparar la evolución clínica
+                            </span>
+                            <button 
+                                onClick={() => setCompareModalOpen(false)}
+                                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all"
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </div>
