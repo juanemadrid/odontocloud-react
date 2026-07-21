@@ -547,6 +547,8 @@ export default function Agenda() {
                             branches={branches}
                             selectedBranch={filters.filterBranchId}
                             onSelectBranch={filters.setFilterBranchId}
+                            chairs={chairs}
+                            appointments={appointments}
                         />
                     </div>
                 </div>

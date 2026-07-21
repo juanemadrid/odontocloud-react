@@ -172,9 +172,9 @@ export const sendConfirmation = sendConfirmacion;
  * Abre directamente WhatsApp Web o App móvil con un mensaje de recordatorio de cita prellenado
  */
 export function openWhatsAppWebDirect(cita, clinicName = "Clínica Dental") {
-    const rawPhone = cita.telefonoPaciente || cita.celularPaciente || cita.telefono || cita.celular || "";
+    const rawPhone = (cita.celular || cita.telefono || cita.celularPaciente || cita.telefonoPaciente || cita.pacienteCelular || cita.pacienteTelefono || cita.phone || cita.mobile || "").toString().trim();
     const phone = normalizePhone(rawPhone);
-    const nombre = cita.pacienteNombre || cita.nombrePaciente || cita.nombreCompleto || "Paciente";
+    const nombre = cita.pacienteNombre || cita.nombrePaciente || cita.nombreCompleto || cita.paciente || "Paciente";
     
     let fechaStr = "—";
     if (cita.start) {
@@ -192,13 +192,16 @@ export function openWhatsAppWebDirect(cita, clinicName = "Clínica Dental") {
         horaStr = cita.horaInicio || cita.hora;
     }
 
-    const doctor = cita.doctorName || cita.dentista || cita.doctor || "su Odontólogo Tratante";
+    const doctor = cita.doctorName || cita.doctorDisplayName || cita.dentista || cita.doctor || "su Odontólogo Tratante";
 
     const textMessage = `Hola *${nombre}*, te saludamos de *${clinicName}* 🦷.\n\nTe recordamos tu cita odontológica programada:\n📅 *Fecha:* ${fechaStr}\n⏰ *Hora:* ${horaStr}\n👨‍⚕️ *Profesional:* ${doctor}\n\nPor favor responde a este mensaje confirmando tu asistencia. ¡Te esperamos!`;
 
     const encodedText = encodeURIComponent(textMessage);
     const waUrl = phone ? `https://wa.me/${phone}?text=${encodedText}` : `https://wa.me/?text=${encodedText}`;
     
-    window.open(waUrl, "_blank");
+    const win = window.open(waUrl, "_blank", "noopener,noreferrer");
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = waUrl;
+    }
 }
 

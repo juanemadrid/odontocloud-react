@@ -38,7 +38,9 @@ export default function AgendaSidebar({
     doctors,
     selectedDoctor, onSelectDoctor,
     branches = [],
-    selectedBranch, onSelectBranch
+    selectedBranch, onSelectBranch,
+    chairs = [],
+    appointments = []
 }) {
     // Ambas secciones CERRADAS por defecto
     const [openSections, setOpenSections] = useState({ sucursal: false, profesionales: false });
@@ -48,6 +50,31 @@ export default function AgendaSidebar({
     const toggleSection = (sec) => {
         setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
     };
+
+    // Dynamic Chair Occupancy Stats based on appointments
+    const chairStats = useMemo(() => {
+        const totalSlotsPerDay = 16; // 8am to 4pm
+        if (!chairs || chairs.length === 0) {
+            const count = appointments.length;
+            const pct = Math.min(100, Math.round((count / totalSlotsPerDay) * 100));
+            return [
+                { id: '1', nombre: 'Sillón Principal', percent: pct, color: 'bg-emerald-500', textColor: 'text-emerald-600' }
+            ];
+        }
+        return chairs.map((c, i) => {
+            const count = appointments.filter(a => a.consultorioId === c.id || a.consultorioName === c.nombre).length;
+            const pct = Math.min(100, Math.round((count / totalSlotsPerDay) * 100));
+            const color = i % 2 === 0 ? 'bg-emerald-500' : 'bg-blue-500';
+            const textColor = i % 2 === 0 ? 'text-emerald-600' : 'text-blue-600';
+            return {
+                id: c.id,
+                nombre: c.nombre || `Sillón ${i + 1}`,
+                percent: pct,
+                color,
+                textColor
+            };
+        });
+    }, [chairs, appointments]);
 
     // Filtrar doctores mientras se escribe
     const filteredDoctors = useMemo(() => {
@@ -234,24 +261,17 @@ export default function AgendaSidebar({
                         <span className="text-[9px] font-bold text-slate-400">Hoy</span>
                     </div>
                     <div className="space-y-2">
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
-                                <span>Unidad / Sillón 1</span>
-                                <span className="text-emerald-600">75%</span>
+                        {chairStats.map(st => (
+                            <div key={st.id} className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
+                                    <span>{st.nombre}</span>
+                                    <span className={st.textColor}>{st.percent}%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${st.color} rounded-full transition-all duration-500`} style={{ width: `${st.percent}%` }} />
+                                </div>
                             </div>
-                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }} />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
-                                <span>Unidad / Sillón 2</span>
-                                <span className="text-blue-600">50%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 rounded-full" style={{ width: '50%' }} />
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
 
