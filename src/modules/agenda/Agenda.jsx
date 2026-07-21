@@ -628,8 +628,7 @@ export default function Agenda() {
                                     }
                                 }}
                                 onWhatsApp={(apt) => {
-                                    setEditingApt(apt);
-                                    handleWhatsApp();
+                                    handleWhatsApp(apt);
                                 }}
                             />
                         )}
