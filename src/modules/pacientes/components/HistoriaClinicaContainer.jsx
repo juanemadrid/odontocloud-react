@@ -17,6 +17,31 @@ import { useAuth } from "../../../context/AuthContext";
 import { getAnamnesis } from "../../../services/clinicalService";
 import DocClinicoModal from "./DocClinicoModal";
 
+const printHTMLInHiddenIframe = (htmlContent) => {
+    let iframe = document.getElementById("oc-print-iframe");
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "oc-print-iframe";
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0px";
+        iframe.style.height = "0px";
+        iframe.style.border = "none";
+        iframe.style.visibility = "hidden";
+        document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }, 150);
+};
+
 export default function HistoriaClinicaContainer({ patient }) {
     const toast = useToast();
     const { userProfile } = useAuth();
@@ -51,6 +76,27 @@ export default function HistoriaClinicaContainer({ patient }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [signModal, setSignModal] = useState({ isOpen: false, doc: null });
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, docId: null });
+
+    // Filter logic computed before print handlers
+    const filteredDocs = documents.filter(d => {
+        const dFecha = new Date(d.fechaIso).toLocaleDateString().toLowerCase();
+        if (filterFecha && !dFecha.includes(filterFecha.toLowerCase())) return false;
+        if (filterTipo && !d.tipoDocumento?.toLowerCase().includes(filterTipo.toLowerCase())) return false;
+        if (filterProf && !d.profesional?.toLowerCase().includes(filterProf.toLowerCase())) return false;
+        if (filterTrans && !d.transcribe?.toLowerCase().includes(filterTrans.toLowerCase())) return false;
+        
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            const matchesTipo = d.tipoDocumento?.toLowerCase().includes(lowerTerm);
+            const matchesProf = d.profesional?.toLowerCase().includes(lowerTerm);
+            const matchesTrans = d.transcribe?.toLowerCase().includes(lowerTerm);
+            const matchesContenido = d.contenido?.toLowerCase().includes(lowerTerm);
+            const matchesDiagnostico = d.diagnostico?.toLowerCase().includes(lowerTerm);
+            if (!matchesTipo && !matchesProf && !matchesTrans && !matchesContenido && !matchesDiagnostico) return false;
+        }
+        
+        return true;
+    });
 
     const handleSignPrescription = (docObj) => {
         setSignModal({ isOpen: true, doc: docObj });
@@ -130,12 +176,6 @@ export default function HistoriaClinicaContainer({ patient }) {
     };
 
     const handlePrintDoc = (doc) => {
-        const printWindow = window.open("", "_blank");
-        if (!printWindow) {
-            toast.error("Por favor permite los popups en este sitio para poder imprimir.");
-            return;
-        }
-
         const logoUrl = clinicConfig?.logo || "";
         const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
         const isTemplate = doc.isTemplateDoc || !["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento);
@@ -179,151 +219,121 @@ export default function HistoriaClinicaContainer({ patient }) {
             const dxRel = doc.dxRelacionados || [];
             const cups = doc.cupsItems || [];
             contentHtml = `
-                <div class="section-title">Detalle de Orden de Servicio</div>
-                <div style="margin-top: 15px; font-size: 13px;">
-                    <p><strong>Tipo de Orden:</strong> ${doc.tipoOrden || 'Orden médica'}</p>
-                    <p><strong>Diagnóstico Principal:</strong> ${doc.dxPrincipal ? `${doc.dxPrincipal.code} - ${doc.dxPrincipal.name}` : '-'}</p>
+                <div class="section-title">Detalle de la Orden Médica</div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 12px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Tipo de Orden:</span>
+                        <span style="font-size: 13px; font-weight: 700; color: #1e293b; margin-left: 6px;">${doc.tipoOrden || 'Orden Médica'}</span>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Diagnóstico Principal:</span>
+                        <span style="font-size: 13px; font-weight: 600; color: #1e293b; margin-left: 6px;">${doc.dxPrincipal ? `${doc.dxPrincipal.code} - ${doc.dxPrincipal.name}` : 'No especificado'}</span>
+                    </div>
                     ${dxRel.length > 0 ? `
-                        <p><strong>Diagnósticos Relacionados:</strong></p>
-                        <ul>
-                            ${dxRel.map(d => `<li>${d.code} - ${d.name}</li>`).join('')}
-                        </ul>
+                        <div style="margin-bottom: 12px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Diagnósticos Relacionados:</span>
+                            <div style="margin-top: 4px;">
+                                ${dxRel.map(r => `<span class="badge pos" style="margin-right: 5px;">${r.code} - ${r.name}</span>`).join('')}
+                            </div>
+                        </div>
                     ` : ''}
                 </div>
-                
-                <div class="section-title">Procedimientos (CUPS)</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 100px;">Código</th>
-                            <th>Procedimiento (Nombre)</th>
-                            <th>Observaciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${cups.length === 0 ? `
-                            <tr><td colspan="3" style="text-align: center; color: #64748b;">No se registran procedimientos.</td></tr>
-                        ` : cups.map(c => `
+
+                ${cups.length > 0 ? `
+                    <div class="section-title">Procedimientos Solicitados / CUPS</div>
+                    <table>
+                        <thead>
                             <tr>
-                                <td class="font-mono">${c.code}</td>
-                                <td><strong>${c.name}</strong></td>
-                                <td>${c.descripcion || '-'}</td>
+                                <th style="width: 100px;">Código CUPS</th>
+                                <th>Nombre del Procedimiento</th>
+                                <th>Observaciones / Detalle</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                
+                        </thead>
+                        <tbody>
+                            ${cups.map(c => `
+                                <tr>
+                                    <td class="font-mono" style="font-weight: 700;">${c.code}</td>
+                                    <td><strong>${c.name}</strong></td>
+                                    <td>${c.descripcion || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : ''}
+
                 ${doc.observacionesGenerales ? `
-                    <div class="section-title">Observaciones Generales</div>
-                    <div class="content-box" style="margin-top: 10px;">${doc.observacionesGenerales.replace(/\n/g, '<br/>')}</div>
+                    <div class="section-title" style="margin-top: 20px;">Observaciones Generales</div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 15px; font-size: 12px; color: #334155;">
+                        ${doc.observacionesGenerales}
+                    </div>
                 ` : ''}
             `;
         } else if (doc.tipoDocumento === "Consulta") {
-            const ant = doc.antecedentes || [];
-            const aler = doc.alergias || [];
-            const fam = doc.antFamiliares || [];
-            const meds = doc.medicamentosPrev || [];
+            const anteced = doc.antecedentes || [];
+            const alergias = doc.alergias || [];
             contentHtml = `
-                <div class="section-title">Motivo de Consulta y Enfermedad Actual</div>
-                <div style="margin-top: 15px; font-size: 13px;">
-                    <p><strong>Motivo de Consulta:</strong> ${doc.motivoConsulta || '-'}</p>
-                    <p><strong>Enfermedad Actual:</strong> ${doc.enfermedadActual || '-'}</p>
+                <div class="section-title">Registro de Consulta Clínica</div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Motivo de Consulta</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-top: 3px;">${doc.motivoConsulta || 'No registrado'}</div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Enfermedad Actual</div>
+                        <div style="font-size: 12.5px; color: #334155; margin-top: 3px; white-space: pre-wrap;">${doc.enfermedadActual || 'No registrada'}</div>
+                    </div>
                 </div>
-                
-                <div class="section-title">Antecedentes Clínicos</div>
-                ${doc.antNoRefiere ? `<p><em>No refiere antecedentes.</em></p>` : `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 100px;">Código</th>
-                                <th>Diagnóstico</th>
-                                <th>Observaciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${ant.length === 0 ? `<tr><td colspan="3" style="text-align: center; color: #64748b;">No hay antecedentes registrados.</td></tr>` : ant.map(a => `
-                                <tr>
-                                    <td class="font-mono">${a.code}</td>
-                                    <td><strong>${a.name}</strong></td>
-                                    <td>${a.obs || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `}
-                
-                <div class="section-title">Alergias</div>
-                ${doc.alerNoRefiere ? `<p><em>No refiere alergias.</em></p>` : `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 150px;">Tipo de Alergia</th>
-                                <th>Observaciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${aler.length === 0 ? `<tr><td colspan="2" style="text-align: center; color: #64748b;">No hay alergias registradas.</td></tr>` : aler.map(a => `
-                                <tr>
-                                    <td><strong>${a.tipo}</strong></td>
-                                    <td>${a.obs || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `}
 
-                <div class="section-title">Antecedentes Familiares</div>
-                ${doc.famNoRefiere ? `<p><em>No refiere antecedentes familiares.</em></p>` : `
+                ${anteced.length > 0 ? `
+                    <div class="section-title">Antecedentes Clínicos Registrados</div>
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 120px;">Parentesco</th>
-                                <th style="width: 100px;">CIE10</th>
-                                <th>Diagnóstico</th>
-                                <th>Observaciones</th>
+                                <th style="width: 100px;">Código CIE-10</th>
+                                <th>Nombre del Antecedente / Condición</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${fam.length === 0 ? `<tr><td colspan="4" style="text-align: center; color: #64748b;">No hay antecedentes familiares registrados.</td></tr>` : fam.map(f => `
+                            ${anteced.map(a => `
                                 <tr>
-                                    <td><strong>${f.parentesco}</strong></td>
-                                    <td class="font-mono">${f.code}</td>
-                                    <td><strong>${f.name}</strong></td>
-                                    <td>${f.obs || '-'}</td>
+                                    <td class="font-mono" style="font-weight: 700;">${a.code}</td>
+                                    <td>${a.name}</td>
                                 </tr>
-                            `).join('')}
+                            `).map(item => item).join('')}
                         </tbody>
                     </table>
-                `}
+                ` : ''}
 
-                <div class="section-title">Medicamentos en Uso</div>
-                ${doc.medPrevNoRefiere ? `<p><em>No refiere uso de medicamentos.</em></p>` : `
+                ${alergias.length > 0 ? `
+                    <div class="section-title" style="margin-top: 20px;">Alergias Conocidas</div>
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 200px;">DCI / Medicamento</th>
-                                <th>Observaciones</th>
+                                <th style="width: 180px;">Tipo de Alergia / Agente</th>
+                                <th>Observaciones / Reacción</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${meds.length === 0 ? `<tr><td colspan="2" style="text-align: center; color: #64748b;">No hay medicamentos registrados.</td></tr>` : meds.map(m => `
+                            ${alergias.map(al => `
                                 <tr>
-                                    <td><strong>${m.nombre}</strong></td>
-                                    <td>${m.obs || '-'}</td>
+                                    <td><strong style="color: #ef4444;">${al.tipo}</strong></td>
+                                    <td>${al.obs || 'Reacción no detallada'}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
-                `}
+                ` : ''}
             `;
         } else {
             contentHtml = `
-                ${isTemplate ? '' : '<div class="section-title">Contenido del Documento</div>'}
-                <div class="content-box">${(doc.contenido || "").replace(/\n/g, "<br/>")}</div>
+                <div class="section-title">${isTemplate ? (doc.nombrePlantilla || doc.tipoDocumento) : `Detalle de ${doc.tipoDocumento}`}</div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; color: #334155;">
+                    ${doc.contenido || 'Sin contenido registrado'}
+                </div>
             `;
         }
 
-        printWindow.document.write(`
+        const html = `
             <html>
             <head>
                 <title>${doc.tipoDocumento} - ${patient.nombreCompleto || ''}</title>
@@ -342,68 +352,45 @@ export default function HistoriaClinicaContainer({ patient }) {
                     .header {
                         display: flex;
                         justify-content: space-between;
-                        align-items: flex-start;
-                        border-bottom: 4px solid #2563eb;
-                        padding-bottom: 25px;
-                        margin-bottom: 30px;
+                        align-items: center;
+                        border-bottom: 2px solid #2563eb;
+                        padding-bottom: 15px;
+                        margin-bottom: 25px;
                         gap: 20px;
                     }
-                    .logo-container {
+                    .logo-area {
                         display: flex;
-                        gap: 25px;
+                        justify-content: flex-start;
                         align-items: center;
+                        max-width: 50%;
                     }
-                    .logo-text-placeholder {
-                        width: 80px;
-                        height: 80px;
-                        background: #2563eb;
-                        border-radius: 16px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-size: 36px;
-                        font-weight: 900;
+                    .logo-text {
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #2563eb;
+                        letter-spacing: -0.04em;
                         text-transform: uppercase;
+                        line-height: 1;
                     }
-                    .clinic-title {
-                        margin: 0;
-                        font-size: 24px;
-                        font-weight: 900;
-                        color: #0f172a;
-                        text-transform: uppercase;
-                        letter-spacing: -1px;
-                    }
-                    .clinic-meta {
-                        margin: 2px 0;
-                        font-size: 12px;
-                        color: #64748b;
-                        font-weight: 500;
-                    }
-                    .doc-info {
+                    .doc-title {
                         text-align: right;
+                        max-width: 50%;
                     }
-                    .doc-badge {
-                        background: #eff6ff;
-                        padding: 12px 20px;
-                        border-radius: 16px;
-                        border: 2px solid #dbeafe;
-                        margin-bottom: 8px;
-                        display: inline-block;
-                    }
-                    .doc-badge span {
-                        font-size: 16px;
-                        font-weight: 900;
-                        color: #1d4ed8;
+                    .doc-title h1 {
+                        font-size: 18px;
+                        font-weight: 800;
                         text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    }
-                    .doc-meta {
                         margin: 0;
-                        font-size: 11px;
-                        color: #94a3b8;
-                        font-weight: 900;
+                        color: #1e3a8a;
+                        letter-spacing: 0.02em;
+                    }
+                    .doc-title p {
+                        font-size: 9px;
+                        font-weight: 700;
+                        color: #64748b;
                         text-transform: uppercase;
+                        margin: 4px 0 0 0;
+                        letter-spacing: 0.15em;
                     }
                     .patient-card {
                         background: #f8fafc;
@@ -412,7 +399,7 @@ export default function HistoriaClinicaContainer({ patient }) {
                         padding: 16px 20px;
                         margin-bottom: 25px;
                         display: grid;
-                        grid-template-columns: repeat(2, 1fr);
+                        grid-template-columns: repeat(4, 1fr);
                         gap: 12px;
                     }
                     .info-group {
@@ -442,130 +429,73 @@ export default function HistoriaClinicaContainer({ patient }) {
                         letter-spacing: 0.08em;
                         border-bottom: 2px solid #e2e8f0;
                         padding-bottom: 5px;
-                        margin-top: 30px;
-                        margin-bottom: 15px;
-                    }
-                    .content-box {
-                        font-size: 11.5px;
-                        color: #334155;
-                        white-space: pre-wrap;
-                        background: #ffffff;
-                        border: 1px solid #e2e8f0;
-                        border-left: 4px solid #2563eb;
-                        padding: 15px 20px;
-                        border-radius: 8px;
-                        min-height: 120px;
-                        line-height: 1.5;
+                        margin-top: 25px;
+                        margin-bottom: 12px;
                     }
                     table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-top: 10px;
+                        margin-top: 8px;
                         border: 1px solid #e2e8f0;
-                        border-radius: 6px;
+                        border-radius: 8px;
                         overflow: hidden;
                     }
                     th {
                         background: #f8fafc;
-                        padding: 8px 10px;
                         font-size: 9px;
                         font-weight: 800;
                         text-transform: uppercase;
                         color: #475569;
-                        border-bottom: 1px solid #e2e8f0;
-                        text-align: left;
                         letter-spacing: 0.05em;
+                        padding: 8px 12px;
+                        text-align: left;
+                        border-bottom: 1px solid #e2e8f0;
                     }
                     td {
-                        padding: 8px 10px;
-                        font-size: 11px;
-                        border-bottom: 1px solid #f1f5f9;
+                        padding: 9px 12px;
+                        font-size: 11.5px;
                         color: #334155;
+                        border-bottom: 1px solid #f1f5f9;
                     }
-                    tr:last-child td {
-                        border-bottom: none;
-                    }
-                    .text-center { text-align: center; }
-                    .font-bold { font-weight: bold; }
-                    .font-mono { font-family: monospace; }
+                    tr:last-child td { border-bottom: none; }
                     .badge {
-                        font-size: 8px;
-                        font-weight: 900;
+                        display: inline-block;
                         padding: 2px 6px;
                         border-radius: 4px;
-                        text-transform: uppercase;
+                        font-size: 9px;
+                        font-weight: 800;
                     }
-                    .badge.pos { background: #d1fae5; color: #065f46; }
-                    .badge.nopos { background: #fef3c7; color: #92400e; }
-                    .text-muted { color: #64748b; font-size: 10px; }
-                    .rec-row {
-                        background: #faf5ff;
-                        font-size: 10.5px;
-                        color: #5b21b6;
-                        border-bottom: 1.5px dashed #e9d5ff;
-                    }
-                    .footer-sig {
-                        margin-top: 60px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-end;
-                        gap: 20px;
-                    }
-                    .sig-block {
-                        flex: 1;
-                        min-width: 150px;
-                        text-align: center;
-                        font-size: 11px;
-                    }
-                    .sig-line {
-                        border-top: 1px solid #94a3b8;
-                        margin-bottom: 5px;
-                    }
-                    .sig-title {
-                        font-weight: bold;
-                        color: #0f172a;
-                    }
-                    .sig-subtitle {
-                        color: #64748b;
-                        font-size: 8.5px;
-                        text-transform: uppercase;
-                    }
+                    .badge.pos { background: #dcfce7; color: #166534; }
+                    .badge.nopos { background: #fee2e2; color: #991b1b; }
+                    .font-mono { font-family: monospace; }
+                    .text-center { text-align: center; }
+                    .rec-row { background: #fdfce7; font-size: 10.5px; color: #854d0e; }
                     @media print {
                         body { padding: 15px; }
-                        .no-print { display: none; }
                     }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <div class="logo-container">
+                    <div class="logo-area">
                         ${logoUrl 
-                            ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 150px; object-fit: contain;" />`
-                            : `<div class="logo-text-placeholder">${clinicName.substring(0, 1) || "O"}</div>`
+                            ? `<img src="${logoUrl}" style="max-height: 60px; max-width: 250px; object-fit: contain;" />`
+                            : `<div class="logo-text">${clinicName.toUpperCase()}</div>`
                         }
-                        <div>
-                            <h1 class="clinic-title">${clinicName}</h1>
-                            <p class="clinic-meta" style="font-weight: 800;">NIT: ${clinicConfig?.nit || "—"}</p>
-                            <p class="clinic-meta">${clinicConfig?.address || clinicConfig?.direccion || "—"}</p>
-                            <p class="clinic-meta">TEL: ${clinicConfig?.phone || clinicConfig?.telefono || "—"} | ${clinicConfig?.email || ""}</p>
-                        </div>
                     </div>
-                    <div class="doc-info">
-                        <div class="doc-badge">
-                            <span>${doc.tipoDocumento}${["Receta", "Orden", "Consulta", "Alerta"].includes(doc.tipoDocumento) ? ' Médica' : ''}</span>
-                        </div>
-                        <p class="doc-meta">FECHA EMISIÓN: ${new Date(doc.fechaIso).toLocaleDateString('es-CO')}</p>
-                        <p class="doc-meta" style="margin-top: 4px;">HISTORIA: #${patient.nroHistoria || 'S/N'}</p>
+                    <div class="doc-title">
+                        <h1>${isTemplate ? (doc.nombrePlantilla || doc.tipoDocumento) : doc.tipoDocumento}</h1>
+                        <p>Documento Clínico Oficial</p>
                     </div>
                 </div>
 
                 <div class="patient-card">
                     <div class="info-group">
-                        <div class="info-label">Paciente</div>
+                        <div class="info-label">Nombre Completo</div>
                         <div class="info-value">${patient.nombreCompleto || ''}</div>
                     </div>
                     <div class="info-group">
-                        <div class="info-label">Documento Identidad</div>
+                        <div class="info-label">Identificación</div>
                         <div class="info-value">${patient.tipoDocumento || 'C.C.'} ${patient.nroDocumento || ''}</div>
                     </div>
                     <div class="info-group">
@@ -573,8 +503,8 @@ export default function HistoriaClinicaContainer({ patient }) {
                         <div class="info-value">#${patient.nroHistoria || 'S/N'}</div>
                     </div>
                     <div class="info-group">
-                        <div class="info-label">Fecha Emisión</div>
-                        <div class="info-value">${new Date(doc.fechaIso).toLocaleString('es-ES')}</div>
+                        <div class="info-label">Fecha</div>
+                        <div class="info-value">${new Date(doc.fechaIso).toLocaleDateString('es-CO')}</div>
                     </div>
                 </div>
 
@@ -582,13 +512,17 @@ export default function HistoriaClinicaContainer({ patient }) {
 
                 <div class="footer-sig" style="margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;">
                     <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
+                            ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 200px; object-fit: contain;" />` : ''}
+                        </div>
                         <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
-                        <div class="sig-title" style="font-weight: bold; color: #0f172a;">${doc.profesional || ''}</div>
+                        <div class="sig-title" style="font-weight: bold; color: #0f172a;">${doc.profesional || userProfile?.nombreCompleto || ''}</div>
                         <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Profesional Tratante</div>
                     </div>
                     
                     ${doc.terceraFirma ? `
                     <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div style="height: 60px;"></div>
                         <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
                         <div class="sig-title" style="font-weight: bold; color: #0f172a;">${patient.nombreCompleto || ''}</div>
                         <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Paciente / Aceptante</div>
@@ -596,21 +530,17 @@ export default function HistoriaClinicaContainer({ patient }) {
                     ` : ''}
 
                     <div class="sig-block" style="flex: 1; min-width: 180px; text-align: center; font-size: 11px;">
+                        <div style="height: 60px;"></div>
                         <div class="sig-line" style="border-top: 1px solid #94a3b8; margin-bottom: 5px;"></div>
                         <div class="sig-title" style="font-weight: bold; color: #0f172a;">${doc.transcribe || ''}</div>
                         <div class="sig-subtitle" style="color: #64748b; font-size: 9px; text-transform: uppercase;">Transcriptor / Auxiliar</div>
                     </div>
                 </div>
-
-                <script>
-                    window.onload = function() {
-                        window.print();
-                    };
-                </script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        printHTMLInHiddenIframe(html);
     };
 
     const handlePrintFullHistory = async () => {
@@ -625,13 +555,7 @@ export default function HistoriaClinicaContainer({ patient }) {
         const logoUrl = clinicConfig?.logo || "";
         const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
 
-        const printWindow = window.open("", "_blank");
-        if (!printWindow) {
-            toast.error("Por favor permite los popups en este sitio para poder imprimir.");
-            return;
-        }
-
-        printWindow.document.write(`
+        const html = `
             <html>
             <head>
                 <title>Historia Clínica - ${patient.nombreCompleto || ''}</title>
@@ -753,30 +677,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                         margin-top: 30px;
                         margin-bottom: 15px;
                     }
-                    .anamnesis-grid {
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 12px 20px;
-                        margin-bottom: 25px;
-                    }
-                    .anamnesis-item {
-                        border-bottom: 1px solid #f1f5f9;
-                        padding-bottom: 6px;
-                    }
-                    .anamnesis-title {
-                        font-size: 8.5px;
-                        font-weight: 800;
-                        color: #64748b;
-                        text-transform: uppercase;
-                        letter-spacing: 0.04em;
-                        margin-bottom: 3px;
-                    }
-                    .anamnesis-content {
-                        font-size: 11.5px;
-                        color: #334155;
-                        line-height: 1.45;
-                        white-space: pre-wrap;
-                    }
                     .document-item {
                         border: 1px solid #e2e8f0;
                         border-left: 4px solid #2563eb;
@@ -808,11 +708,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                         line-height: 1.45;
                         white-space: pre-wrap;
                     }
-                    .receta-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 10px;
-                        border: 1px solid #e2e8f0;
                         border-radius: 6px;
                         overflow: hidden;
                     }
@@ -977,28 +872,18 @@ export default function HistoriaClinicaContainer({ patient }) {
                     </div>
                 `).join('')}
 
-                <script>
-                    window.onload = function() {
-                        window.print();
-                    };
-                </script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        printHTMLInHiddenIframe(html);
     };
 
     const handlePrintPartial = () => {
-        const printWindow = window.open("", "_blank");
-        if (!printWindow) {
-            toast.error("Por favor permite los popups en este sitio para poder imprimir.");
-            return;
-        }
-
         const logoUrl = clinicConfig?.logo || "";
         const clinicName = clinicConfig?.nombreComercial || clinicConfig?.nombre || clinicConfig?.name || "CLÍNICA DENTAL";
 
-        printWindow.document.write(`
+        const html = `
             <html>
             <head>
                 <title>Reporte de Historia Clínica - ${patient.nombreCompleto || ''}</title>
@@ -1158,7 +1043,6 @@ export default function HistoriaClinicaContainer({ patient }) {
                     }
                     @media print {
                         body { padding: 15px; }
-                        .no-print { display: none; }
                     }
                 </style>
             </head>
@@ -1262,39 +1146,12 @@ export default function HistoriaClinicaContainer({ patient }) {
                         </div>
                     </div>
                 `).join('')}
-
-                <script>
-                    window.onload = function() {
-                        window.print();
-                    };
-                </script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        printHTMLInHiddenIframe(html);
     };
-
-    // Filter logic
-    const filteredDocs = documents.filter(d => {
-        const dFecha = new Date(d.fechaIso).toLocaleDateString().toLowerCase();
-        if (filterFecha && !dFecha.includes(filterFecha.toLowerCase())) return false;
-        if (filterTipo && !d.tipoDocumento?.toLowerCase().includes(filterTipo.toLowerCase())) return false;
-        if (filterProf && !d.profesional?.toLowerCase().includes(filterProf.toLowerCase())) return false;
-        if (filterTrans && !d.transcribe?.toLowerCase().includes(filterTrans.toLowerCase())) return false;
-        
-        if (searchTerm) {
-            const lowerTerm = searchTerm.toLowerCase();
-            const matchesTipo = d.tipoDocumento?.toLowerCase().includes(lowerTerm);
-            const matchesProf = d.profesional?.toLowerCase().includes(lowerTerm);
-            const matchesTrans = d.transcribe?.toLowerCase().includes(lowerTerm);
-            const matchesContenido = d.contenido?.toLowerCase().includes(lowerTerm);
-            const matchesDiagnostico = d.diagnostico?.toLowerCase().includes(lowerTerm);
-            if (!matchesTipo && !matchesProf && !matchesTrans && !matchesContenido && !matchesDiagnostico) return false;
-        }
-        
-        return true;
-    });
-
 
     if (!patient) return <div className="p-8 text-center text-slate-400">Cargando paciente...</div>;
 

@@ -130,33 +130,30 @@ const printEvolution = (evo, patient, clinicInfo = {}) => {
         <td class="lbl">Nombre responsable</td>
         <td>${patient?.nombreResponsable || patient?.acudiente || '—'}</td>
         <td class="lbl">Teléfono responsable</td>
-        <td>${patient?.telefonoResponsable || '—'}</td>
-        <td class="lbl">EPS</td>
-        <td>${patient?.nombreEps || patient?.eps || patient?.epsNombre || '—'}</td>
+        <td class="meta-label">Paciente</td>
+        <td><strong>${patientName}</strong></td>
       </tr>
       <tr>
-        <td class="lbl">Dirección residencia</td>
-        <td colspan="5">${patient?.direccion || patient?.address || '—'}</td>
+        <td class="meta-label">Fecha / Hora</td>
+        <td>${dateStr} ${timeStr}</td>
+      </tr>
+      <tr>
+        <td class="meta-label">Profesional</td>
+        <td>${evo.profesional || 'Odontólogo Responsable'}</td>
       </tr>
     </tbody>
   </table>
 
-  <div class="section-title">Evoluciones</div>
+  <div class="section-title">Evolución</div>
 
   <div class="evo-header">${patientName}${evo.profesional ? ` (${evo.profesional})` : ''}</div>
   <div class="evo-date">${dateStr} — ${timeStr}</div>
   ${procedimientos.length > 0 ? `<div style="margin-bottom:6px;">${procedimientos.map(p => `<span class="proc-tag">${p}</span>`).join('')}</div>` : ''}
   <p class="evo-text">${(evo.description || evo.comentario || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
-
-  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
 </body>
 </html>`;
 
-    const w = window.open('', '_blank', 'width=850,height=700');
-    if (w) {
-        w.document.write(html);
-        w.document.close();
-    }
+    printHTMLInHiddenIframe(html);
 };
 
 function EvolutionCard({ evo, onEdit, onDelete, onSignDoctor, onSignPatient, onPrint, patientName, planItemsLookup }) {
