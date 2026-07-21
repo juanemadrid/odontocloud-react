@@ -706,12 +706,12 @@ function Overview({
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
               <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 p-3 shadow-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <span className="text-4xl">🩺</span>
+                <span className="text-4xl">🦷</span>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse" />
-                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Portal Clínico Activo</span>
+                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Portal Odontológico Activo</span>
                 </div>
                 <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight">
                   Dr. {userName}
