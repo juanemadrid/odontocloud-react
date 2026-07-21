@@ -2,24 +2,63 @@ import React, { useState, useEffect, useRef } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import Button from "../../components/ui/Button";
-import { FiActivity, FiSave, FiAlertCircle, FiDroplet, FiSun, FiLayers } from "react-icons/fi";
+import { FiActivity, FiSave, FiAlertCircle, FiDroplet, FiSun, FiLayers, FiPrinter, FiCheckCircle, FiRefreshCw, FiTrash2 } from "react-icons/fi";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 // Tooth numbers (FDI standards)
 const TEETH_UPPER = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
 const TEETH_LOWER = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 
 const INITIAL_TOOTH_DATA = {
-    v: [{}, {}, {}], // Vestibular: Distal, Central, Mesial
-    l: [{}, {}, {}], // Lingual/Palatal: Mesial, Central, Distal
+    v: [{}, {}, {}], // Vestibular
+    l: [{}, {}, {}], // Lingual/Palatal
     mobility: 0,
     furcation: 0
 };
 
+const printHTMLInHiddenIframe = (htmlContent) => {
+    let iframe = document.getElementById("oc-print-iframe");
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "oc-print-iframe";
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0px";
+        iframe.style.height = "0px";
+        iframe.style.border = "none";
+        iframe.style.visibility = "hidden";
+        document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }, 150);
+};
+
+const getSiteLabel = (tooth, index) => {
+    const num = Number(tooth);
+    const isRightSide = (num >= 11 && num <= 18) || (num >= 41 && num <= 48);
+    if (isRightSide) {
+        return index === 0 ? "D" : index === 1 ? "C" : "M";
+    } else {
+        return index === 0 ? "M" : index === 1 ? "C" : "D";
+    }
+};
+
 // ─── PeriodontogramaChart SVG Sub-component ─────────────────────────────
-const PeriodontogramaChart = ({ teeth, face, isUpper, periodonto }) => {
+const PeriodontogramaChart = ({ teeth, face, isUpper, periodonto, faceLabel }) => {
     const Y_cej = isUpper ? 110 : 50; // CEJ level (0 mm)
     const yScale = 6; // 6px per mm
+    const cardWidth = 128;
+    const cardGap = 10;
+    const totalWidth = teeth.length * (cardWidth + cardGap);
 
     const getY = (val) => {
         const num = Number(val) || 0;
@@ -38,7 +77,7 @@ const PeriodontogramaChart = ({ teeth, face, isUpper, periodonto }) => {
             const gm = site.gm !== undefined && site.gm !== "" ? Number(site.gm) : 0;
             const cal = site.cal !== undefined && site.cal !== "" ? Number(site.cal) : pd + gm;
 
-            const x = tIdx * (112 + 12) + 4 + (104 / 3) * (sIdx + 0.5);
+            const x = tIdx * (cardWidth + cardGap) + 4 + (cardWidth - 8) / 3 * (sIdx + 0.5);
             points.push({
                 x,
                 gm,
@@ -58,7 +97,7 @@ const PeriodontogramaChart = ({ teeth, face, isUpper, periodonto }) => {
     // Path for Clinical Attachment Level (Red)
     const calPath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${getY(p.cal)}`).join(' ');
 
-    // Shaded pocket area polygon (connecting GM and CAL line nodes)
+    // Shaded pocket area polygon
     const pocketPoints = [];
     points.forEach(p => {
         pocketPoints.push(`${p.x},${getY(p.gm)}`);
@@ -75,254 +114,216 @@ const PeriodontogramaChart = ({ teeth, face, isUpper, periodonto }) => {
     const y4mm = getY(4);
 
     return (
-        <div className="w-[1972px] h-[160px] bg-slate-50/40 rounded-2xl relative border border-slate-100/80 shadow-inner overflow-hidden select-none shrink-0">
-            <svg width={1972} height={160} viewBox="0 0 1972 160" className="absolute inset-0">
-                {/* Visual Gradient Background */}
-                <defs>
-                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#ffffff" stopOpacity="0.8" />
-                    </linearGradient>
-                </defs>
-                <rect width={1972} height={160} fill="url(#chartGrad)" />
+        <div className="flex flex-col gap-1.5 my-3">
+            <div className="flex items-center justify-between px-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${face === 'v' ? 'bg-blue-500' : 'bg-amber-500'}`}></span>
+                    Gráfico de Sondaje — Cara {faceLabel} ({isUpper ? 'Maxilar Superior' : 'Mandíbula Inferior'})
+                </span>
+                <div className="flex items-center gap-4 text-[9px] font-bold uppercase tracking-wider">
+                    <span className="flex items-center gap-1 text-blue-600"><span className="w-2.5 h-0.5 bg-blue-600 rounded"></span> Margen Gingival (GM)</span>
+                    <span className="flex items-center gap-1 text-red-600"><span className="w-2.5 h-0.5 bg-red-600 rounded"></span> Profundidad / NIC (CAL)</span>
+                    <span className="flex items-center gap-1 text-rose-600"><span className="w-2 h-2 rounded-full bg-rose-600"></span> Sangrado (BOP)</span>
+                    <span className="flex items-center gap-1 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Placa</span>
+                </div>
+            </div>
 
-                {/* Millimeter Horizontal Grids */}
-                {gridLevels.map((lvl) => {
-                    const y = getY(lvl);
-                    const isCej = lvl === 0;
-                    return (
-                        <g key={lvl}>
+            <div className="w-full overflow-x-auto custom-scrollbar pb-2">
+                <div style={{ width: `${totalWidth}px` }} className="h-[160px] bg-slate-50/70 rounded-2xl relative border border-slate-200/80 shadow-inner select-none shrink-0">
+                    <svg width={totalWidth} height={160} viewBox={`0 0 ${totalWidth} 160`} className="absolute inset-0">
+                        <defs>
+                            <linearGradient id={`chartGrad-${face}-${isUpper ? 'u' : 'l'}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.9" />
+                                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.9" />
+                            </linearGradient>
+                        </defs>
+                        <rect width={totalWidth} height={160} fill={`url(#chartGrad-${face}-${isUpper ? 'u' : 'l'})`} />
+
+                        {/* Millimeter Horizontal Grids */}
+                        {gridLevels.map((lvl) => {
+                            const y = getY(lvl);
+                            const isCej = lvl === 0;
+                            return (
+                                <g key={lvl}>
+                                    <line
+                                        x1={0}
+                                        y1={y}
+                                        x2={totalWidth}
+                                        y2={y}
+                                        stroke={isCej ? "#64748b" : "#e2e8f0"}
+                                        strokeWidth={isCej ? 1.5 : 0.75}
+                                        strokeDasharray={isCej ? "" : "3,3"}
+                                    />
+                                    <text x={8} y={y + 3} className="text-[8px] font-black fill-slate-400">{lvl}</text>
+                                    <text x={totalWidth - 12} y={y + 3} className="text-[8px] font-black fill-slate-400" textAnchor="end">{lvl}</text>
+                                </g>
+                            );
+                        })}
+
+                        {/* Pathological 4mm Threshold Guide Line */}
+                        <line
+                            x1={0}
+                            y1={y4mm}
+                            x2={totalWidth}
+                            y2={y4mm}
+                            stroke="#f43f5e"
+                            strokeWidth={1}
+                            strokeDasharray="4,4"
+                            opacity={0.85}
+                        />
+                        <text x={40} y={isUpper ? y4mm + 10 : y4mm - 4} className="text-[7.5px] font-black fill-rose-500 uppercase tracking-widest">Umbral 4mm</text>
+                        <text x={24} y={isUpper ? yCej + 10 : yCej - 4} className="text-[7.5px] font-black fill-slate-500 uppercase tracking-widest">Línea CEJ</text>
+
+                        {/* Vertical guides aligning to sites */}
+                        {points.map((p, idx) => (
                             <line
-                                x1={0}
-                                y1={y}
-                                x2={1972}
-                                y2={y}
-                                stroke={isCej ? "#64748b" : "#e2e8f0"}
-                                strokeWidth={isCej ? 1.5 : 0.75}
-                                strokeDasharray={isCej ? "" : "3,3"}
+                                key={idx}
+                                x1={p.x}
+                                y1={0}
+                                x2={p.x}
+                                y2={160}
+                                stroke="#e2e8f0"
+                                strokeWidth={p.siteIndex === 1 ? 1 : 0.5}
+                                strokeDasharray={p.siteIndex === 1 ? "4,4" : "1,3"}
+                                opacity={0.4}
                             />
-                            {/* Level labels at both ends */}
-                            <text x={8} y={y + 3} className="text-[8px] font-black fill-slate-400">{lvl}</text>
-                            <text x={1964} y={y + 3} className="text-[8px] font-black fill-slate-400" textAnchor="end">{lvl}</text>
-                        </g>
-                    );
-                })}
+                        ))}
 
-                {/* Pathological 4mm Threshold Guide Line */}
-                <line
-                    x1={0}
-                    y1={y4mm}
-                    x2={1972}
-                    y2={y4mm}
-                    stroke="#f43f5e"
-                    strokeWidth={1}
-                    strokeDasharray="4,4"
-                    opacity={0.85}
-                />
-                <text x={40} y={isUpper ? y4mm + 10 : y4mm - 4} className="text-[7.5px] font-black fill-rose-500 uppercase tracking-widest">Umbral 4mm</text>
-                <text x={24} y={isUpper ? yCej + 10 : yCej - 4} className="text-[7.5px] font-black fill-slate-500 uppercase tracking-widest">Línea CEJ</text>
+                        {/* Teeth Backdrop */}
+                        {teeth.map((tooth, tIdx) => {
+                            const xCenter = tIdx * (cardWidth + cardGap) + (cardWidth / 2);
+                            const isMolar = [18, 17, 16, 26, 27, 28, 48, 47, 46, 36, 37, 38].includes(tooth);
 
-                {/* Vertical guides aligning to sites */}
-                {points.map((p, idx) => (
-                    <line
-                        key={idx}
-                        x1={p.x}
-                        y1={0}
-                        x2={p.x}
-                        y2={160}
-                        stroke="#e2e8f0"
-                        strokeWidth={p.siteIndex === 1 ? 1 : 0.5}
-                        strokeDasharray={p.siteIndex === 1 ? "4,4" : "1,3"}
-                        opacity={0.4}
-                    />
-                ))}
+                            if (isUpper) {
+                                return (
+                                    <path
+                                        key={tooth}
+                                        d={isMolar ? `M ${xCenter - 18} 110 C ${xCenter - 18} 135, ${xCenter + 18} 135, ${xCenter + 18} 110 L ${xCenter + 15} 70 C ${xCenter + 15} 30, ${xCenter + 7} 20, ${xCenter + 9} 25 L ${xCenter} 55 L ${xCenter - 9} 25 C ${xCenter - 7} 20, ${xCenter - 15} 30, ${xCenter - 15} 70 Z`
+                                                   : `M ${xCenter - 12} 110 C ${xCenter - 12} 132, ${xCenter + 12} 132, ${xCenter + 12} 110 L ${xCenter + 9} 70 C ${xCenter + 9} 30, ${xCenter} 20, ${xCenter} 20 C ${xCenter} 20, ${xCenter - 9} 30, ${xCenter - 9} 70 Z`}
+                                        fill="#f1f5f9"
+                                        stroke="#cbd5e1"
+                                        strokeWidth={1}
+                                        fillOpacity={0.45}
+                                        strokeOpacity={0.5}
+                                    />
+                                );
+                            } else {
+                                return (
+                                    <path
+                                        key={tooth}
+                                        d={isMolar ? `M ${xCenter - 18} 50 C ${xCenter - 18} 25, ${xCenter + 18} 25, ${xCenter + 18} 50 L ${xCenter + 15} 90 C ${xCenter + 15} 130, ${xCenter + 7} 140, ${xCenter + 9} 135 L ${xCenter} 105 L ${xCenter - 9} 135 C ${xCenter - 7} 140, ${xCenter - 15} 130, ${xCenter - 15} 90 Z`
+                                                   : `M ${xCenter - 12} 50 C ${xCenter - 12} 28, ${xCenter + 12} 28, ${xCenter + 12} 50 L ${xCenter + 9} 90 C ${xCenter + 9} 130, ${xCenter} 140, ${xCenter} 140 C ${xCenter} 140, ${xCenter - 9} 130, ${xCenter - 9} 90 Z`}
+                                        fill="#f1f5f9"
+                                        stroke="#cbd5e1"
+                                        strokeWidth={1}
+                                        fillOpacity={0.45}
+                                        strokeOpacity={0.5}
+                                    />
+                                );
+                            }
+                        })}
 
-                {/* Simplified Anatomical Teeth Backdrop */}
-                {teeth.map((tooth, tIdx) => {
-                    const xCenter = tIdx * (112 + 12) + 56;
-                    const isMolar = [18, 17, 16, 26, 27, 28, 48, 47, 46, 36, 37, 38].includes(tooth);
-
-                    if (isUpper) {
-                        if (isMolar) {
+                        {/* Direct Tooth Number Labels inside SVG */}
+                        {teeth.map((tooth, tIdx) => {
+                            const xCenter = tIdx * (cardWidth + cardGap) + (cardWidth / 2);
+                            const yPos = isUpper ? (face === 'v' ? 18 : 148) : (face === 'v' ? 148 : 18);
                             return (
-                                <path
-                                    key={tooth}
-                                    d={`M ${xCenter - 16} 110 
-                                        C ${xCenter - 16} 135, ${xCenter + 16} 135, ${xCenter + 16} 110
-                                        L ${xCenter + 14} 70
-                                        C ${xCenter + 14} 30, ${xCenter + 6} 20, ${xCenter + 8} 25
-                                        L ${xCenter} 55
-                                        L ${xCenter - 8} 25
-                                        C ${xCenter - 6} 20, ${xCenter - 14} 30, ${xCenter - 14} 70
-                                        Z`}
-                                    fill="#f1f5f9"
-                                    stroke="#cbd5e1"
-                                    strokeWidth={1}
-                                    fillOpacity={0.45}
-                                    strokeOpacity={0.5}
-                                />
-                            );
-                        } else {
-                            return (
-                                <path
-                                    key={tooth}
-                                    d={`M ${xCenter - 10} 110
-                                        C ${xCenter - 10} 132, ${xCenter + 10} 132, ${xCenter + 10} 110
-                                        L ${xCenter + 8} 70
-                                        C ${xCenter + 8} 30, ${xCenter} 20, ${xCenter} 20
-                                        C ${xCenter} 20, ${xCenter - 8} 30, ${xCenter - 8} 70
-                                        Z`}
-                                    fill="#f1f5f9"
-                                    stroke="#cbd5e1"
-                                    strokeWidth={1}
-                                    fillOpacity={0.45}
-                                    strokeOpacity={0.5}
-                                />
-                            );
-                        }
-                    } else {
-                        if (isMolar) {
-                            return (
-                                <path
-                                    key={tooth}
-                                    d={`M ${xCenter - 16} 50
-                                        C ${xCenter - 16} 25, ${xCenter + 16} 25, ${xCenter + 16} 50
-                                        L ${xCenter + 14} 90
-                                        C ${xCenter + 14} 130, ${xCenter + 6} 140, ${xCenter + 8} 135
-                                        L ${xCenter} 105
-                                        L ${xCenter - 8} 135
-                                        C ${xCenter - 6} 140, ${xCenter - 14} 130, ${xCenter - 14} 90
-                                        Z`}
-                                    fill="#f1f5f9"
-                                    stroke="#cbd5e1"
-                                    strokeWidth={1}
-                                    fillOpacity={0.45}
-                                    strokeOpacity={0.5}
-                                />
-                            );
-                        } else {
-                            return (
-                                <path
-                                    key={tooth}
-                                    d={`M ${xCenter - 10} 50
-                                        C ${xCenter - 10} 28, ${xCenter + 10} 28, ${xCenter + 10} 50
-                                        L ${xCenter + 8} 90
-                                        C ${xCenter + 8} 130, ${xCenter} 140, ${xCenter} 140
-                                        C ${xCenter} 140, ${xCenter - 8} 130, ${xCenter - 8} 90
-                                        Z`}
-                                    fill="#f1f5f9"
-                                    stroke="#cbd5e1"
-                                    strokeWidth={1}
-                                    fillOpacity={0.45}
-                                    strokeOpacity={0.5}
-                                />
-                            );
-                        }
-                    }
-                })}
-
-                {/* Direct Tooth Number Labels inside SVG */}
-                {teeth.map((tooth, tIdx) => {
-                    const xCenter = tIdx * (112 + 12) + 56;
-                    const yPos = isUpper ? (face === 'v' ? 18 : 148) : (face === 'v' ? 148 : 18);
-                    return (
-                        <text
-                            key={`num-${tooth}`}
-                            x={xCenter}
-                            y={yPos}
-                            className="text-[9px] font-black fill-slate-400/80 uppercase tracking-widest"
-                            textAnchor="middle"
-                        >
-                            {tooth}
-                        </text>
-                    );
-                })}
-
-                {/* Shaded pocket area (translucent red) */}
-                {points.some(p => p.pd > 0) && (
-                    <polygon
-                        points={pocketPolygon}
-                        fill="#ef4444"
-                        fillOpacity={0.15}
-                    />
-                )}
-
-                {/* GM Line (Blue) */}
-                <path
-                    d={gmPath}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-
-                {/* CAL Line (Red) */}
-                <path
-                    d={calPath}
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-
-                {/* Nodes & Bleeding/Plaque Indicators */}
-                {points.map((p, idx) => {
-                    const y_gm = getY(p.gm);
-                    const y_cal = getY(p.cal);
-                    return (
-                        <g key={idx}>
-                            {/* GM Node */}
-                            <circle cx={p.x} cy={y_gm} r={3} fill="#2563eb" stroke="#ffffff" strokeWidth={1} />
-                            
-                            {/* CAL Node */}
-                            <circle cx={p.x} cy={y_cal} r={3} fill="#dc2626" stroke="#ffffff" strokeWidth={1} />
-
-                            {/* Bleeding Marker (BOP - Red Dot) */}
-                            {p.bleeding && (
-                                <circle
-                                    cx={p.x}
-                                    cy={isUpper ? y_gm + 9 : y_gm - 9}
-                                    r={4}
-                                    fill="#e11d48"
-                                    stroke="#ffffff"
-                                    strokeWidth={1.2}
-                                />
-                            )}
-
-                            {/* Plaque Marker (PLA - Yellow/Amber Dot) */}
-                            {p.plaque && (
-                                <circle
-                                    cx={p.x + (p.bleeding ? 5 : 0)}
-                                    cy={isUpper ? y_gm + 9 : y_gm - 9}
-                                    r={4}
-                                    fill="#d97706"
-                                    stroke="#ffffff"
-                                    strokeWidth={1.2}
-                                />
-                            )}
-
-                            {/* Pathological Numeric Pocket Value above CAL node */}
-                            {p.pd >= 4 && (
                                 <text
-                                    x={p.x}
-                                    y={isUpper ? y_cal - 8 : y_cal + 11}
-                                    className="text-[8.5px] font-black fill-red-600"
+                                    key={`num-${tooth}`}
+                                    x={xCenter}
+                                    y={yPos}
+                                    className="text-[9px] font-black fill-slate-400/80 uppercase tracking-widest"
                                     textAnchor="middle"
                                 >
-                                    {p.pd}
+                                    {tooth}
                                 </text>
-                            )}
-                        </g>
-                    );
-                })}
-            </svg>
+                            );
+                        })}
+
+                        {/* Shaded pocket area (translucent red) */}
+                        {points.some(p => p.pd > 0) && (
+                            <polygon
+                                points={pocketPolygon}
+                                fill="#ef4444"
+                                fillOpacity={0.18}
+                            />
+                        )}
+
+                        {/* GM Line (Blue) */}
+                        <path
+                            d={gmPath}
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+
+                        {/* CAL Line (Red) */}
+                        <path
+                            d={calPath}
+                            fill="none"
+                            stroke="#ef4444"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+
+                        {/* Nodes & Bleeding/Plaque Indicators */}
+                        {points.map((p, idx) => {
+                            const y_gm = getY(p.gm);
+                            const y_cal = getY(p.cal);
+                            return (
+                                <g key={idx}>
+                                    <circle cx={p.x} cy={y_gm} r={3} fill="#2563eb" stroke="#ffffff" strokeWidth={1} />
+                                    <circle cx={p.x} cy={y_cal} r={3} fill="#dc2626" stroke="#ffffff" strokeWidth={1} />
+
+                                    {/* Bleeding Marker (BOP - Red Dot) */}
+                                    {p.bleeding && (
+                                        <circle
+                                            cx={p.x}
+                                            cy={isUpper ? y_gm + 9 : y_gm - 9}
+                                            r={4}
+                                            fill="#e11d48"
+                                            stroke="#ffffff"
+                                            strokeWidth={1.2}
+                                        />
+                                    )}
+
+                                    {/* Plaque Marker (PLA - Yellow/Amber Dot) */}
+                                    {p.plaque && (
+                                        <circle
+                                            cx={p.x + (p.bleeding ? 5 : 0)}
+                                            cy={isUpper ? y_gm + 9 : y_gm - 9}
+                                            r={4}
+                                            fill="#d97706"
+                                            stroke="#ffffff"
+                                            strokeWidth={1.2}
+                                        />
+                                    )}
+
+                                    {/* Probing Depth Label */}
+                                    {p.pd > 0 && (
+                                        <text
+                                            x={p.x}
+                                            y={isUpper ? y_cal - 8 : y_cal + 11}
+                                            className="text-[8.5px] font-black fill-red-600"
+                                            textAnchor="middle"
+                                        >
+                                            {p.pd}
+                                        </text>
+                                    )}
+                                </g>
+                            );
+                        })}
+                    </svg>
+                </div>
+            </div>
         </div>
     );
 };
 
-// ─── SiteInput Sub-component (Moved outside render) ──────────────────────
+// ─── SiteInput Sub-component ──────────────────────
 const SiteInput = ({ 
     tooth, 
     face, 
@@ -344,17 +345,17 @@ const SiteInput = ({
     const isDeep = pd !== "" && pd >= 4;
 
     return (
-        <div className="flex flex-col items-center p-1.5 border-r last:border-0 border-slate-100 bg-gradient-to-b from-white to-slate-50/30">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">{label}</span>
+        <div className="flex flex-col items-center p-1 flex-1 border-r last:border-0 border-slate-100 bg-gradient-to-b from-white to-slate-50/30">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{label}</span>
 
-            {/* PD Input - MEJORADO: Más grande y legible */}
+            {/* PD Input */}
             <input
                 data-tooth={tooth}
                 data-face={face}
                 data-index={index}
                 data-field="pd"
                 data-upper={isUpper}
-                className={`perio-input w-9 h-9 text-center text-base font-black border-2 rounded-lg outline-none transition-all shadow-sm
+                className={`perio-input w-8 h-8 text-center text-sm font-black border-2 rounded-lg outline-none transition-all shadow-sm
                     ${isDeep ? 'bg-red-50 text-red-700 border-red-400 ring-2 ring-red-200' : 'border-slate-300 text-slate-800 bg-white focus:bg-blue-50'} 
                     focus:border-blue-500 focus:ring-2 focus:ring-blue-100 hover:border-slate-400`}
                 type="text"
@@ -363,56 +364,56 @@ const SiteInput = ({
                 value={pd}
                 onChange={(e) => handleInputChange(e, tooth, face, index, 'pd', e.target.value)}
                 onKeyDown={handleKeyDown}
-                title="Profundidad de Sondaje (mm)"
+                title={`Profundidad de Sondaje (mm) - Sitio ${label}`}
             />
 
-            {/* GM Input - MEJORADO: Más grande y visible */}
+            {/* GM Input */}
             <input
                 data-tooth={tooth}
                 data-face={face}
                 data-index={index}
                 data-field="gm"
                 data-upper={isUpper}
-                className="perio-input w-9 h-7 text-center text-xs font-bold border-2 border-t-0 border-slate-300 rounded-b-lg outline-none text-slate-600 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all hover:border-slate-400 shadow-sm"
+                className="perio-input w-8 h-6 text-center text-[11px] font-bold border border-t-0 border-slate-300 rounded-b-md outline-none text-slate-600 bg-slate-50 focus:bg-white focus:border-blue-500 transition-all shadow-sm"
                 type="text"
                 placeholder="0"
                 value={gm}
                 onChange={(e) => handleInputChange(e, tooth, face, index, 'gm', e.target.value)}
                 onKeyDown={handleKeyDown}
-                title="Margen Gingival (mm)"
+                title={`Margen Gingival (mm) - Sitio ${label}`}
             />
 
-            {/* BOP (Bleeding) & Plaque Flags - MEJORADOS: Más grandes y táctiles */}
-            <div className="flex gap-1.5 mt-1.5 mb-1">
+            {/* BOP & Plaque Toggles */}
+            <div className="flex gap-1 mt-1 mb-0.5">
                 <button
                     type="button"
-                    className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center shadow-sm
-                        ${site.bleeding ? 'bg-rose-500 border-rose-600 shadow-rose-200 scale-110' : 'bg-white border-slate-300 hover:border-rose-400 hover:bg-rose-50'}`}
+                    className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center shadow-sm
+                        ${site.bleeding ? 'bg-rose-500 border-rose-600 shadow-rose-200 scale-110' : 'bg-white border-slate-300 hover:border-rose-400'}`}
                     onClick={() => updateSite(tooth, face, index, 'bleeding', !site.bleeding)}
                     title="Sangrado al Sondaje (BOP)"
                 >
-                    {site.bleeding && <FiDroplet size={8} className="text-white" />}
+                    {site.bleeding && <FiDroplet size={7} className="text-white" />}
                 </button>
                 <button
                     type="button"
-                    className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center shadow-sm
-                        ${site.plaque ? 'bg-amber-500 border-amber-600 shadow-amber-200 scale-110' : 'bg-white border-slate-300 hover:border-amber-400 hover:bg-amber-50'}`}
+                    className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center shadow-sm
+                        ${site.plaque ? 'bg-amber-500 border-amber-600 shadow-amber-200 scale-110' : 'bg-white border-slate-300 hover:border-amber-400'}`}
                     onClick={() => updateSite(tooth, face, index, 'plaque', !site.plaque)}
-                    title="Placa Bacteriana"
+                    title="Placa Bacteriana (PLA)"
                 >
-                    {site.plaque && <FiAlertCircle size={8} className="text-white" />}
+                    {site.plaque && <FiAlertCircle size={7} className="text-white" />}
                 </button>
             </div>
 
-            {/* CAL Display - MEJORADO: Más visible */}
-            <span className={`text-xs font-black px-1.5 py-0.5 rounded-md ${cal > 4 ? 'text-indigo-700 bg-indigo-100' : cal !== "" ? 'text-slate-600 bg-slate-100' : 'text-slate-300 bg-slate-50'}`}>
+            {/* CAL Display */}
+            <span className={`text-[10px] font-black px-1 rounded ${cal > 4 ? 'text-indigo-700 bg-indigo-100' : cal !== "" ? 'text-slate-600 bg-slate-100' : 'text-slate-300 bg-slate-50'}`}>
                 {cal !== "" ? cal : "-"}
             </span>
         </div>
     );
 };
 
-// ─── ToothColumn Sub-component (Moved outside render) ────────────────────
+// ─── ToothColumn Sub-component ────────────────────
 const ToothColumn = ({ 
     tooth, 
     isUpper, 
@@ -427,41 +428,41 @@ const ToothColumn = ({
     const isMolar = [18, 17, 16, 26, 27, 28, 48, 47, 46, 36, 37, 38].includes(tooth);
 
     return (
-        <div className="flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-md overflow-hidden w-[112px] shrink-0 hover:border-indigo-300 transition-all hover:shadow-lg">
-            <div className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-center text-base font-black py-2 text-white uppercase tracking-widest">
+        <div className="flex flex-col items-center bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden w-[128px] shrink-0 hover:border-indigo-300 transition-all hover:shadow-md">
+            <div className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-center text-sm font-black py-1.5 text-white uppercase tracking-widest">
                 {tooth}
             </div>
 
-            {/* Vestibular Row - MEJORADO */}
-            <div className="w-full bg-blue-50/60 border-b-2 border-slate-200 p-2">
-                <div className="text-[10px] font-black text-blue-700 uppercase tracking-wider text-center mb-1.5 flex items-center justify-center gap-1">
-                    <FiSun size={11} /> Vestibular
+            {/* Vestibular Row */}
+            <div className="w-full bg-blue-50/50 border-b border-slate-200 p-1.5">
+                <div className="text-[9px] font-black text-blue-700 uppercase tracking-wider text-center mb-1 flex items-center justify-center gap-1">
+                    <FiSun size={10} /> Vestibular
                 </div>
-                <div className="flex justify-around gap-0.5">
-                    <SiteInput tooth={tooth} face={vFace} index={0} label="D" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
-                    <SiteInput tooth={tooth} face={vFace} index={1} label="C" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
-                    <SiteInput tooth={tooth} face={vFace} index={2} label="M" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
-                </div>
-            </div>
-
-            {/* Lingual / Palatal Row - MEJORADO */}
-            <div className="w-full bg-amber-50/60 p-2 border-b-2 border-slate-200">
-                <div className="text-[10px] font-black text-amber-700 uppercase tracking-wider text-center mb-1.5 flex items-center justify-center gap-1">
-                    <FiLayers size={11} /> {isUpper ? "Palatino" : "Lingual"}
-                </div>
-                <div className="flex justify-around gap-0.5">
-                    <SiteInput tooth={tooth} face={lFace} index={0} label="M" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
-                    <SiteInput tooth={tooth} face={lFace} index={1} label="C" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
-                    <SiteInput tooth={tooth} face={lFace} index={2} label="D" isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                <div className="flex justify-between w-full">
+                    <SiteInput tooth={tooth} face={vFace} index={0} label={getSiteLabel(tooth, 0)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                    <SiteInput tooth={tooth} face={vFace} index={1} label={getSiteLabel(tooth, 1)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                    <SiteInput tooth={tooth} face={vFace} index={2} label={getSiteLabel(tooth, 2)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
                 </div>
             </div>
 
-            {/* Meta Controls (Mobility & Furcation) - MEJORADO */}
-            <div className="flex flex-col gap-2 p-2 w-full bg-gradient-to-b from-slate-50 to-white items-center">
-                <div className="flex items-center justify-between w-full gap-1">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Mov</label>
+            {/* Palatino / Lingual Row */}
+            <div className="w-full bg-amber-50/50 p-1.5 border-b border-slate-200">
+                <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider text-center mb-1 flex items-center justify-center gap-1">
+                    <FiLayers size={10} /> {isUpper ? "Palatino" : "Lingual"}
+                </div>
+                <div className="flex justify-between w-full">
+                    <SiteInput tooth={tooth} face={lFace} index={0} label={getSiteLabel(tooth, 0)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                    <SiteInput tooth={tooth} face={lFace} index={1} label={getSiteLabel(tooth, 1)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                    <SiteInput tooth={tooth} face={lFace} index={2} label={getSiteLabel(tooth, 2)} isUpper={isUpper} periodonto={periodonto} updateSite={updateSite} handleInputChange={handleInputChange} handleKeyDown={handleKeyDown} />
+                </div>
+            </div>
+
+            {/* Meta Controls (Mobility & Furcation) */}
+            <div className="flex flex-col gap-1 p-1.5 w-full bg-slate-50/70 items-center">
+                <div className="flex items-center justify-between w-full px-1">
+                    <label className="text-[8.5px] font-black text-slate-500 uppercase tracking-wider">Mov</label>
                     <select
-                        className="text-xs font-black border-2 border-slate-300 rounded-lg bg-white px-2 py-0.5 text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 hover:border-slate-400 shadow-sm"
+                        className="text-[11px] font-black border border-slate-300 rounded bg-white px-1 py-0.5 text-slate-800 outline-none focus:border-indigo-500"
                         value={periodonto[tooth]?.mobility || 0}
                         onChange={e => {
                             const val = Number(e.target.value);
@@ -481,10 +482,10 @@ const ToothColumn = ({
                 </div>
 
                 {isMolar && (
-                    <div className="flex items-center justify-between w-full pt-1 border-t border-slate-200 gap-1">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Furc</label>
+                    <div className="flex items-center justify-between w-full pt-1 border-t border-slate-200 px-1">
+                        <label className="text-[8.5px] font-black text-slate-500 uppercase tracking-wider">Furc</label>
                         <select
-                            className="text-xs font-black border-2 border-slate-300 rounded-lg bg-white px-2 py-0.5 text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 hover:border-slate-400 shadow-sm"
+                            className="text-[11px] font-black border border-slate-300 rounded bg-white px-1 py-0.5 text-slate-800 outline-none focus:border-indigo-500"
                             value={periodonto[tooth]?.furcation || 0}
                             onChange={e => {
                                 const val = Number(e.target.value);
@@ -511,6 +512,7 @@ const ToothColumn = ({
 // ─── Periodontograma (Main Component) ───────────────────────────────
 export default function Periodontograma({ embeddedPatient }) {
     const toast = useToast();
+    const { userProfile } = useAuth();
     const pacienteId = embeddedPatient?.id;
     const [periodonto, setPeriodonto] = useState({});
     const [loading, setLoading] = useState(false);
@@ -538,7 +540,6 @@ export default function Periodontograma({ embeddedPatient }) {
         };
         load();
 
-        // Cleanup timeouts on unmount
         return () => {
             Object.values(timeoutsRef.current).forEach(clearTimeout);
         };
@@ -560,6 +561,35 @@ export default function Periodontograma({ embeddedPatient }) {
         }
     };
 
+    const handlePopulateHealthy = () => {
+        setPeriodonto(prev => {
+            const next = { ...prev };
+            const allTeeth = [...TEETH_UPPER, ...TEETH_LOWER];
+            allTeeth.forEach(t => {
+                if (!next[t]) next[t] = JSON.parse(JSON.stringify(INITIAL_TOOTH_DATA));
+                ['v', 'l'].forEach(face => {
+                    if (!next[t][face]) next[t][face] = [{}, {}, {}];
+                    [0, 1, 2].forEach(sIdx => {
+                        if (next[t][face][sIdx].pd === undefined || next[t][face][sIdx].pd === "") {
+                            next[t][face][sIdx].pd = 2;
+                            next[t][face][sIdx].gm = 0;
+                            next[t][face][sIdx].cal = 2;
+                        }
+                    });
+                });
+            });
+            return next;
+        });
+        toast.info("Sitios vacíos completados con 2mm (Salud)");
+    };
+
+    const handleClearAll = () => {
+        if (window.confirm("¿Deseas reiniciar todos los valores del periodontograma?")) {
+            setPeriodonto({});
+            toast.success("Periodontograma limpiado");
+        }
+    };
+
     const updateSite = (toothIso, face, index, field, value) => {
         setPeriodonto(prev => {
             const next = { ...prev };
@@ -576,7 +606,6 @@ export default function Periodontograma({ embeddedPatient }) {
             const numVal = value === "" ? "" : Number(value);
             next[toothIso][face][index][field] = value === "" ? "" : numVal;
 
-            // Auto Calculate CAL = PD + GM
             const pd = next[toothIso][face][index].pd !== undefined && next[toothIso][face][index].pd !== "" ? Number(next[toothIso][face][index].pd) : 0;
             const gm = next[toothIso][face][index].gm !== undefined && next[toothIso][face][index].gm !== "" ? Number(next[toothIso][face][index].gm) : 0;
             next[toothIso][face][index].cal = pd + gm;
@@ -585,7 +614,6 @@ export default function Periodontograma({ embeddedPatient }) {
         });
     };
 
-    // Auto-advance cursor helper
     const advanceToNextInput = (currentInput) => {
         const tooth = Number(currentInput.getAttribute('data-tooth'));
         const face = currentInput.getAttribute('data-face');
@@ -606,7 +634,7 @@ export default function Periodontograma({ embeddedPatient }) {
                 targetTooth = teethArray[toothIdx + 1];
                 targetIndex = 0;
             } else {
-                return; // Reached end of arch row
+                return;
             }
         }
 
@@ -643,7 +671,6 @@ export default function Periodontograma({ embeddedPatient }) {
         }
     };
 
-    // Dual-axis keyboard navigation
     const handleKeyDown = (e) => {
         const current = e.target;
         const tooth = Number(current.getAttribute('data-tooth'));
@@ -705,12 +732,13 @@ export default function Periodontograma({ embeddedPatient }) {
         }
     };
 
-    // Statistical calculations
+    // Statistics calculations
     const getStats = () => {
         let totalProbed = 0;
         let bleedingCount = 0;
         let plaqueCount = 0;
         let pocketCount = 0;
+        let maxPocketDepth = 0;
 
         const allTeeth = [...TEETH_UPPER, ...TEETH_LOWER];
         allTeeth.forEach(t => {
@@ -725,6 +753,7 @@ export default function Periodontograma({ embeddedPatient }) {
                     if (site.pd !== undefined && site.pd !== "") {
                         totalProbed++;
                         const pdNum = Number(site.pd) || 0;
+                        if (pdNum > maxPocketDepth) maxPocketDepth = pdNum;
                         if (pdNum >= 4) pocketCount++;
                         if (site.bleeding) bleedingCount++;
                         if (site.plaque) plaqueCount++;
@@ -736,45 +765,289 @@ export default function Periodontograma({ embeddedPatient }) {
         const bopPercent = totalProbed > 0 ? Math.round((bleedingCount / totalProbed) * 100) : 0;
         const plaquePercent = totalProbed > 0 ? Math.round((plaqueCount / totalProbed) * 100) : 0;
 
+        let dxBadge = { label: "Sin datos", color: "bg-slate-100 text-slate-600" };
+        if (totalProbed > 0) {
+            if (pocketCount === 0 && bopPercent <= 10) {
+                dxBadge = { label: "Salud Periodontal", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+            } else if (pocketCount === 0 && bopPercent > 10) {
+                dxBadge = { label: "Gingivitis", color: "bg-amber-50 text-amber-700 border-amber-200" };
+            } else if (maxPocketDepth >= 6) {
+                dxBadge = { label: "Periodontitis Severa / Avanzada (≥6mm)", color: "bg-rose-50 text-rose-700 border-rose-200" };
+            } else if (maxPocketDepth >= 4) {
+                dxBadge = { label: "Periodontitis Moderada / Leve (4-5mm)", color: "bg-orange-50 text-orange-700 border-orange-200" };
+            }
+        }
+
         return {
             totalProbed,
             bleedingCount,
             plaqueCount,
             pocketCount,
             bopPercent,
-            plaquePercent
+            plaquePercent,
+            maxPocketDepth,
+            dxBadge
         };
     };
 
     const stats = getStats();
 
+    const handlePrintPeriodontograma = () => {
+        const logoUrl = userProfile?.tenant?.logo || "";
+        const clinicName = userProfile?.tenant?.nombreComercial || userProfile?.tenant?.nombre || userProfile?.tenant?.name || "Clínica Dental";
+        const clinicNit = userProfile?.tenant?.nit || "—";
+        const clinicAddress = userProfile?.tenant?.direccion || "—";
+        const clinicPhone = userProfile?.tenant?.telefono || "—";
+
+        const html = `
+            <html>
+            <head>
+                <title>Periodontograma Clínico - ${embeddedPatient?.nombreCompleto || ''}</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+                    body {
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        color: #1e293b;
+                        padding: 30px;
+                        margin: 0 auto;
+                        line-height: 1.4;
+                    }
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 3px solid #2563eb;
+                        padding-bottom: 15px;
+                        margin-bottom: 20px;
+                    }
+                    .patient-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 10px;
+                        background: #f8fafc;
+                        padding: 12px 16px;
+                        border-radius: 12px;
+                        border: 1px solid #e2e8f0;
+                        margin-bottom: 20px;
+                        font-size: 12px;
+                    }
+                    .stats-card {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 15px;
+                        margin-bottom: 25px;
+                    }
+                    .stat-box {
+                        border: 1px solid #cbd5e1;
+                        border-radius: 10px;
+                        padding: 10px 14px;
+                        background: #ffffff;
+                    }
+                    .stat-title { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+                    .stat-val { font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px; }
+                    .table-perio {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 10px;
+                        margin-bottom: 20px;
+                    }
+                    .table-perio th, .table-perio td {
+                        border: 1px solid #cbd5e1;
+                        padding: 4px 6px;
+                        text-align: center;
+                    }
+                    .table-perio th {
+                        background: #f1f5f9;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                    }
+                    .pocket-highlight {
+                        background: #fee2e2;
+                        color: #991b1b;
+                        font-weight: 800;
+                    }
+                    @media print { body { padding: 15px; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        ${logoUrl ? `<img src="${logoUrl}" style="max-height: 55px; max-width: 200px;" />` : `<h2 style="margin:0; color:#2563eb;">${clinicName}</h2>`}
+                        <div style="font-size:11px; color:#64748b;">NIT: ${clinicNit} | Tel: ${clinicPhone}</div>
+                        <div style="font-size:11px; color:#64748b;">${clinicAddress}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <h2 style="margin:0; color:#1e3a8a; text-transform:uppercase; font-size:18px;">Periodontograma Clínico</h2>
+                        <div style="font-size:11px; color:#64748b; font-weight:bold;">FECHA: ${new Date().toLocaleDateString('es-CO')}</div>
+                    </div>
+                </div>
+
+                <div class="patient-grid">
+                    <div><strong>Paciente:</strong> ${embeddedPatient?.nombreCompleto || '—'}</div>
+                    <div><strong>Doc. Identidad:</strong> ${embeddedPatient?.nroDocumento || '—'}</div>
+                    <div><strong>Nro. Historia:</strong> #${embeddedPatient?.nroHistoria || 'S/N'}</div>
+                    <div><strong>Edad:</strong> ${embeddedPatient?.edad || '—'}</div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-box">
+                        <div class="stat-title">Sitios Evaluados</div>
+                        <div class="stat-val">${stats.totalProbed}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Sangrado (BOP)</div>
+                        <div class="stat-val" style="color: #e11d48;">${stats.bopPercent}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Placa Bacteriana</div>
+                        <div class="stat-val" style="color: #d97706;">${stats.plaquePercent}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Bolsas ≥ 4mm</div>
+                        <div class="stat-val" style="color: #dc2626;">${stats.pocketCount}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; font-size: 13px; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">
+                    Diagnóstico Sugerido: <span style="padding: 4px 10px; border-radius: 6px; background: #eff6ff; border: 1px solid #bfdbfe;">${stats.dxBadge.label}</span>
+                </div>
+
+                <h3 style="font-size:12px; text-transform:uppercase; color:#1e3a8a; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Matriz de Sondaje — Arcada Superior (Maxilar 18-28)</h3>
+                <table class="table-perio">
+                    <thead>
+                        <tr>
+                            <th>Diente</th>
+                            ${TEETH_UPPER.map(t => `<th colspan="3">${t}</th>`).join('')}
+                        </tr>
+                        <tr>
+                            <th>Cara</th>
+                            ${TEETH_UPPER.map(t => `<th>${getSiteLabel(t, 0)}</th><th>${getSiteLabel(t, 1)}</th><th>${getSiteLabel(t, 2)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Vestibular (PD)</strong></td>
+                            ${TEETH_UPPER.map(t => {
+                                const sites = (periodonto[t]?.v) || [{},{},{}];
+                                return sites.map(s => `<td class="${s.pd >= 4 ? 'pocket-highlight' : ''}">${s.pd !== undefined ? s.pd : '-'}</td>`).join('');
+                            }).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Palatino (PD)</strong></td>
+                            ${TEETH_UPPER.map(t => {
+                                const sites = (periodonto[t]?.l) || [{},{},{}];
+                                return sites.map(s => `<td class="${s.pd >= 4 ? 'pocket-highlight' : ''}">${s.pd !== undefined ? s.pd : '-'}</td>`).join('');
+                            }).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="font-size:12px; text-transform:uppercase; color:#1e3a8a; border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-top: 25px;">Matriz de Sondaje — Arcada Inferior (Mandíbula 48-38)</h3>
+                <table class="table-perio">
+                    <thead>
+                        <tr>
+                            <th>Diente</th>
+                            ${TEETH_LOWER.map(t => `<th colspan="3">${t}</th>`).join('')}
+                        </tr>
+                        <tr>
+                            <th>Cara</th>
+                            ${TEETH_LOWER.map(t => `<th>${getSiteLabel(t, 0)}</th><th>${getSiteLabel(t, 1)}</th><th>${getSiteLabel(t, 2)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Vestibular (PD)</strong></td>
+                            ${TEETH_LOWER.map(t => {
+                                const sites = (periodonto[t]?.v) || [{},{},{}];
+                                return sites.map(s => `<td class="${s.pd >= 4 ? 'pocket-highlight' : ''}">${s.pd !== undefined ? s.pd : '-'}</td>`).join('');
+                            }).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Lingual (PD)</strong></td>
+                            ${TEETH_LOWER.map(t => {
+                                const sites = (periodonto[t]?.l) || [{},{},{}];
+                                return sites.map(s => `<td class="${s.pd >= 4 ? 'pocket-highlight' : ''}">${s.pd !== undefined ? s.pd : '-'}</td>`).join('');
+                            }).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 60px;">
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px;">
+                            ${(userProfile?.firmaElectronica || userProfile?.firma) ? `<img src="${userProfile.firmaElectronica || userProfile.firma}" style="max-height: 55px; max-width: 200px;" />` : ''}
+                        </div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
+                            Firma del Especialista / Periodoncista
+                        </div>
+                    </div>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="height: 60px;"></div>
+                        <div style="border-top: 1.5px solid #64748b; padding-top: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
+                            Responsable de Registro
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        printHTMLInHiddenIframe(html);
+    };
+
     return (
         <div className="flex flex-col h-full bg-slate-50/30 animate-fadeIn min-h-0 relative p-6 md:p-8 overflow-y-auto custom-scrollbar">
             
             {/* Upper Action Bar */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shrink-0">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                        <FiLayers size={18} />
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-sm">
+                        <FiActivity size={22} />
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-slate-800 tracking-tight">Periodontograma Clínico Gráfico</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Control gráfico de bolsas, recesión, placa y sangrado</p>
+                        <h3 className="text-lg font-black text-slate-800 tracking-tight">Periodontograma Clínico Gráfico</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Control gráfico de bolsas, recesión, placa y sangrado (BOP)</p>
                     </div>
                 </div>
-                <Button 
-                    variant="primary" 
-                    onClick={handleSave} 
-                    disabled={loading || saving}
-                    className="shadow-lg shadow-blue-500/20 px-8 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2"
-                >
-                    <FiSave size={14} />
-                    {saving ? "Guardando..." : "Guardar Cambios"}
-                </Button>
+
+                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                    <button
+                        onClick={handlePopulateHealthy}
+                        className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-full font-black text-[10.5px] uppercase tracking-wider border border-slate-200 transition-all flex items-center gap-1.5"
+                        title="Rellenar sitios vacíos con 2mm (Salud)"
+                    >
+                        <FiCheckCircle size={14} className="text-emerald-500" />
+                        Completar Salud (2mm)
+                    </button>
+                    <button
+                        onClick={handleClearAll}
+                        className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-full font-black text-[10.5px] uppercase tracking-wider border border-rose-100 transition-all flex items-center gap-1.5"
+                        title="Limpiar datos del periodontograma"
+                    >
+                        <FiTrash2 size={14} />
+                        Limpiar
+                    </button>
+                    <button
+                        onClick={handlePrintPeriodontograma}
+                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-black text-[11px] uppercase tracking-widest transition-all shadow-md shadow-amber-500/20 flex items-center gap-2"
+                    >
+                        <FiPrinter size={14} />
+                        Imprimir / PDF
+                    </button>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleSave} 
+                        disabled={loading || saving}
+                        className="shadow-lg shadow-blue-500/20 px-8 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2"
+                    >
+                        <FiSave size={14} />
+                        {saving ? "Guardando..." : "Guardar Cambios"}
+                    </Button>
+                </div>
             </div>
 
             {/* Statistics panel */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 shrink-0">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8 shrink-0">
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sitios Evaluados</span>
                     <div className="flex items-end justify-between mt-2">
@@ -789,7 +1062,7 @@ export default function Periodontograma({ embeddedPatient }) {
                     <div className="flex items-end justify-between mt-2">
                         <span className="text-2xl font-black text-rose-600">{stats.bopPercent}%</span>
                         <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${stats.bopPercent > 25 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                            {stats.bopPercent > 25 ? 'Crítico' : 'Controlado'}
+                            {stats.bopPercent > 25 ? 'Alto' : 'Normal'}
                         </span>
                     </div>
                 </div>
@@ -806,72 +1079,92 @@ export default function Periodontograma({ embeddedPatient }) {
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                     <span className="text-[9px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
-                        <FiActivity /> Bolsas Periodontales
+                        <FiActivity /> Bolsas ≥ 4mm
                     </span>
                     <div className="flex items-end justify-between mt-2">
-                        <span className="text-2xl font-black text-red-650">{stats.pocketCount}</span>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded bg-red-50 text-red-600 uppercase tracking-wider">
-                            {stats.pocketCount > 0 ? `${stats.pocketCount} Alertas` : 'Sano'}
+                        <span className="text-2xl font-black text-red-600">{stats.pocketCount}</span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${stats.pocketCount > 0 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            {stats.pocketCount > 0 ? `${stats.pocketCount} Puntos` : 'Sano'}
+                        </span>
+                    </div>
+                </div>
+                <div className="col-span-2 lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Diagnóstico Periodontal</span>
+                    <div className="mt-2">
+                        <span className={`inline-block text-[10.5px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-wide ${stats.dxBadge.color}`}>
+                            {stats.dxBadge.label}
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* Scrollable Container Arch Layout */}
+            {/* Form and Graphical Canvas Layout */}
             <form id="periodontograma-form" className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-10 min-h-0 mb-8 shrink-0">
                 
                 {/* Upper Arch (18 - 28) */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center"></span>
-                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Arcada Superior (Maxilar)</h4>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Arcada Superior (Maxilar 18 — 28)</h4>
+                        </div>
                     </div>
                     
-                    <div className="w-full">
-                        <div className="flex flex-col gap-3 p-1">
-                            {/* Tooth Cards en GRID responsive sin scroll horizontal */}
-                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-3 w-full">
-                                {TEETH_UPPER.map(t => (
-                                    <ToothColumn 
-                                        key={t} 
-                                        tooth={t} 
-                                        isUpper={true} 
-                                        periodonto={periodonto}
-                                        setPeriodonto={setPeriodonto}
-                                        updateSite={updateSite}
-                                        handleInputChange={handleInputChange}
-                                        handleKeyDown={handleKeyDown}
-                                    />
-                                ))}
-                            </div>
+                    {/* Graphical SVG Periodontogram for Upper Arch */}
+                    <div className="space-y-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                        <PeriodontogramaChart teeth={TEETH_UPPER} face="v" isUpper={true} periodonto={periodonto} faceLabel="Vestibular" />
+                        <PeriodontogramaChart teeth={TEETH_UPPER} face="l" isUpper={true} periodonto={periodonto} faceLabel="Palatino" />
+                    </div>
+
+                    {/* Numeric Cards Grid for Upper Arch */}
+                    <div className="w-full overflow-x-auto custom-scrollbar pb-2">
+                        <div className="flex gap-2.5 min-w-max p-1">
+                            {TEETH_UPPER.map(t => (
+                                <ToothColumn 
+                                    key={t} 
+                                    tooth={t} 
+                                    isUpper={true} 
+                                    periodonto={periodonto}
+                                    setPeriodonto={setPeriodonto}
+                                    updateSite={updateSite}
+                                    handleInputChange={handleInputChange}
+                                    handleKeyDown={handleKeyDown}
+                                />
+                            ))}
                         </div>
                     </div>
                 </div>
 
                 {/* Lower Arch (48 - 38) */}
-                <div className="space-y-4 border-t border-slate-100 pt-8">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Arcada Inferior (Mandíbula)</h4>
+                <div className="space-y-6 border-t border-slate-100 pt-8">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Arcada Inferior (Mandíbula 48 — 38)</h4>
+                        </div>
                     </div>
 
-                    <div className="w-full">
-                        <div className="flex flex-col gap-3 p-1">
-                            {/* Tooth Cards en GRID responsive sin scroll horizontal */}
-                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-3 w-full">
-                                {TEETH_LOWER.map(t => (
-                                    <ToothColumn 
-                                        key={t} 
-                                        tooth={t} 
-                                        isUpper={false} 
-                                        periodonto={periodonto}
-                                        setPeriodonto={setPeriodonto}
-                                        updateSite={updateSite}
-                                        handleInputChange={handleInputChange}
-                                        handleKeyDown={handleKeyDown}
-                                    />
-                                ))}
-                            </div>
+                    {/* Graphical SVG Periodontogram for Lower Arch */}
+                    <div className="space-y-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                        <PeriodontogramaChart teeth={TEETH_LOWER} face="l" isUpper={false} periodonto={periodonto} faceLabel="Lingual" />
+                        <PeriodontogramaChart teeth={TEETH_LOWER} face="v" isUpper={false} periodonto={periodonto} faceLabel="Vestibular" />
+                    </div>
+
+                    {/* Numeric Cards Grid for Lower Arch */}
+                    <div className="w-full overflow-x-auto custom-scrollbar pb-2">
+                        <div className="flex gap-2.5 min-w-max p-1">
+                            {TEETH_LOWER.map(t => (
+                                <ToothColumn 
+                                    key={t} 
+                                    tooth={t} 
+                                    isUpper={false} 
+                                    periodonto={periodonto}
+                                    setPeriodonto={setPeriodonto}
+                                    updateSite={updateSite}
+                                    handleInputChange={handleInputChange}
+                                    handleKeyDown={handleKeyDown}
+                                />
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -880,19 +1173,19 @@ export default function Periodontograma({ embeddedPatient }) {
 
             {/* Premium Legend card */}
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shrink-0">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Leyenda & Guías de Sondaje</h4>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Leyenda & Convenciones Periodontales</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-50 border-2 border-red-200 text-red-650 flex items-center justify-center font-black">4</div>
-                        <span>Bolsa Profunda (&gt;= 4mm)</span>
+                        <div className="w-8 h-8 rounded-lg bg-red-50 border-2 border-red-300 text-red-700 flex items-center justify-center font-black">4</div>
+                        <span>Bolsa Profunda (≥ 4mm)</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center shadow-sm text-white text-[8px] font-black">BOP</div>
-                        <span>Sangrado al sondaje (BOP)</span>
+                        <span>Sangrado al Sondaje</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shadow-sm text-white text-[8px] font-black">PLA</div>
-                        <span>Placa bacteriana (PLA)</span>
+                        <span>Placa Bacteriana</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="text-indigo-650 font-black text-sm">CAL</div>
