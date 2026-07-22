@@ -194,15 +194,10 @@ export function openWhatsAppWebDirect(cita, clinicName = "Clínica Dental") {
 
     const doctor = cita.doctorName || cita.doctorDisplayName || cita.dentista || cita.doctor || "su Odontólogo Tratante";
 
-    const tooth = String.fromCodePoint(0x1F9B7);
-    const calendar = String.fromCodePoint(0x1F4C5);
-    const clock = String.fromCodePoint(0x23F0);
-    const doctorIcon = String.fromCodePoint(0x1F468) + "\u200D" + String.fromCodePoint(0x2695) + "\uFE0F";
-
-    const textMessage = `Hola *${nombre}*, te saludamos de *${clinicName}* ${tooth}.\n\nTe recordamos tu cita odontológica programada:\n${calendar} *Fecha:* ${fechaStr}\n${clock} *Hora:* ${horaStr}\n${doctorIcon} *Profesional:* ${doctor}\n\nPor favor responde a este mensaje confirmando tu asistencia. ¡Te esperamos!`;
+    const textMessage = `Hola *${nombre}*, te saludamos de *${clinicName}*.\n\nTe recordamos tu cita odontológica programada:\n\n• *Fecha:* ${fechaStr}\n• *Hora:* ${horaStr}\n• *Profesional:* ${doctor}\n\nPor favor responde a este mensaje confirmando tu asistencia. ¡Te esperamos!`;
 
     const encodedText = encodeURIComponent(textMessage);
-    const waUrl = phone ? `https://wa.me/${phone}?text=${encodedText}` : `https://wa.me/?text=${encodedText}`;
+    const waUrl = phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}` : `https://api.whatsapp.com/send?text=${encodedText}`;
     
     const win = window.open(waUrl, "_blank", "noopener,noreferrer");
     if (!win || win.closed || typeof win.closed === 'undefined') {
