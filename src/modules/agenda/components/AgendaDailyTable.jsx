@@ -251,7 +251,12 @@ export default function AgendaDailyTable({ appointments, doctors, branches, chai
                                                                 }
 
                                                                 const doctor = apt.doctorDisplayName || apt.doctorName || apt.dentista || apt.doctor || "su Odontólogo Tratante";
-                                                                const textMessage = `Hola *${nombre}*, te saludamos de *CLINICA DENTAL* 🦷.\n\nTe recordamos tu cita odontológica programada:\n📅 *Fecha:* ${fechaStr}\n⏰ *Hora:* ${horaStr}\n👨‍⚕️ *Profesional:* ${doctor}\n\nPor favor responde a este mensaje confirmando tu asistencia. ¡Te esperamos!`;
+                                                                const tooth = String.fromCodePoint(0x1F9B7);
+                                                                const calendar = String.fromCodePoint(0x1F4C5);
+                                                                const clock = String.fromCodePoint(0x23F0);
+                                                                const doctorIcon = String.fromCodePoint(0x1F468) + "\u200D" + String.fromCodePoint(0x2695) + "\uFE0F";
+
+                                                                const textMessage = `Hola *${nombre}*, te saludamos de *CLINICA DENTAL* ${tooth}.\n\nTe recordamos tu cita odontológica programada:\n${calendar} *Fecha:* ${fechaStr}\n${clock} *Hora:* ${horaStr}\n${doctorIcon} *Profesional:* ${doctor}\n\nPor favor responde a este mensaje confirmando tu asistencia. ¡Te esperamos!`;
 
                                                                 const encodedText = encodeURIComponent(textMessage);
                                                                 return rawPhone ? `https://wa.me/${rawPhone}?text=${encodedText}` : `https://wa.me/?text=${encodedText}`;
