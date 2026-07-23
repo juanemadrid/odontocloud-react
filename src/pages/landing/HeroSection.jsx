@@ -1,153 +1,100 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { FiCheckCircle, FiShield, FiUsers, FiClock, FiPlusSquare, FiInfo } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiCheckCircle, FiShield, FiZap, FiCalendar, FiFileText, FiUsers, FiTrendingUp, FiArrowRight, FiPlay, FiStar } from "react-icons/fi";
 import DocumentationModal from "../../components/landing/DocumentationModal";
 import { useNavigate } from 'react-router-dom';
-
-const defaultSlides = [
-    {
-        image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=2068",
-        title: "Gestión Integral|Clínica Dental",
-        subtitle: "Optimiza cada aspecto de tu práctica con nuestra suite completa de herramientas de gestión. Desde la programación de citas hasta la facturación electrónica."
-    }
-];
 
 export default function HeroSection({ config = {}, onShowTrial }) {
     const containerRef = useRef(null);
     const navigate = useNavigate();
     const [showDocModal, setShowDocModal] = useState(false);
-    const [currentSlide, setCurrentSlide] = useState(0);
 
-    const slides = config?.slides && config.slides.length > 0 ? config.slides : [
-        {
-            image: defaultSlides[0].image,
-            title: config.heroTitle || (config.isMaster ? "Gestión Integral|Clínica Dental" : `${config.name}|Clínica Dental`),
-            subtitle: config.heroSubtitle || "Optimiza cada aspecto de tu práctica con nuestra suite completa de herramientas de gestión."
-        }
-    ];
-
-    // Safe use of scroll hooks
-    const { scrollY } = useScroll();
-    const yBg = useTransform(scrollY, [0, 1000], [0, 300]);
-
-    useEffect(() => {
-        if (slides.length <= 1) return;
-        const interval = setInterval(() => {
-            setCurrentSlide(prev => (prev + 1) % slides.length);
-        }, 6000);
-        return () => clearInterval(interval);
-    }, [slides]);
-
-    const activeSlide = slides[currentSlide] || slides[0];
-
-    const getImageUrl = (url) => {
-        if (!url) return defaultSlides[0].image;
-        if (url.startsWith('http')) return url;
-        const baseUrl = import.meta.env.BASE_URL;
-        const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
-        return `${baseUrl}${cleanUrl}`;
-    };
-
-    const activeImage = getImageUrl(activeSlide.image);
-
-    const rawTitle = (activeSlide && typeof activeSlide.title === 'string') 
-        ? activeSlide.title 
-        : (config.heroTitle || (config.isMaster ? "Gestión Integral|Clínica Dental" : `${config.name}|Clínica Dental`));
+    const rawTitle = (config.heroTitle || (config.isMaster ? "El Control Total de tu|Clínica Dental" : `${config.name}|Clínica Dental`));
     const parts = rawTitle.split('|');
-    const titlePart1 = parts[0]?.trim() || "";
-    const titlePart2 = parts[1]?.trim() || "";
+    const titlePart1 = parts[0]?.trim() || "El Control Total de tu";
+    const titlePart2 = parts[1]?.trim() || "Clínica Dental";
 
-    const activeSubtitle = (activeSlide && typeof activeSlide.subtitle === 'string')
-        ? activeSlide.subtitle
-        : (config.heroSubtitle || "Optimiza cada aspecto de tu práctica con nuestra suite de gestión.");
+    const subtitle = config.heroSubtitle || "La plataforma más completa, moderna y fácil de usar. Agenda inteligente, historia clínica digital, facturación electrónica DIAN y RIPS en un solo lugar.";
 
     return (
         <section
             id="inicio"
             ref={containerRef}
-            className="relative w-full min-h-screen bg-[var(--viva-blue)] overflow-hidden flex items-center justify-center font-sans"
+            className="relative w-full min-h-screen bg-slate-950 text-white overflow-hidden flex flex-col items-center justify-between font-sans pt-28 pb-16"
         >
-            <div className="absolute inset-0 bg-[var(--viva-blue)] z-0">
-                <div className="absolute inset-0 opacity-30"
-                    style={{ background: 'var(--viva-mesh)' }}></div>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]"></div>
+            {/* Dynamic Futuristic Background - Clean & Glowing */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                {/* Gradient mesh circles */}
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-tr from-blue-600/20 via-cyan-500/20 to-indigo-600/10 blur-[130px] rounded-full" />
+                <div className="absolute top-[20%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full" />
+                <div className="absolute top-[40%] right-[-10%] w-[600px] h-[600px] bg-blue-600/15 blur-[140px] rounded-full" />
+
+                {/* Subtle Modern Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
             </div>
 
-            {/* Background Slideshow with AnimatePresence */}
-            <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentSlide}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 1 }}
-                        className="absolute inset-0 bg-cover bg-center grayscale"
-                        style={{ backgroundImage: `url(${activeImage})` }}
-                    />
-                </AnimatePresence>
-            </div>
+            <div className="container relative z-10 mx-auto px-6 max-w-7xl flex flex-col items-center text-center">
 
-            <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+                {/* Hero Header Content */}
+                <div className="max-w-4xl mx-auto space-y-6 pt-6">
+                    
+                    {/* Glowing Top Badge */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: -15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/80 border border-cyan-500/30 backdrop-blur-xl shadow-[0_0_20px_rgba(6,182,212,0.15)] mx-auto"
+                    >
+                        <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                        </span>
+                        <span className="text-xs font-extrabold uppercase tracking-widest text-cyan-300">
+                            OdontoCloud 2026 • Software Odontológico de Élite
+                        </span>
+                    </motion.div>
 
-            <div className="container relative z-10 mx-auto px-6 max-w-7xl flex flex-col items-center justify-center h-full pt-20">
+                    {/* Main Title */}
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                        className="text-4xl sm:text-6xl md:text-7xl font-display font-black tracking-tight leading-[1.08] uppercase"
+                    >
+                        <span className="block text-slate-100 font-extrabold">
+                            {titlePart1}
+                        </span>
+                        <span className="block bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent drop-shadow-lg">
+                            {titlePart2}
+                        </span>
+                    </motion.h1>
 
-                <div className="text-center space-y-8 max-w-4xl mx-auto">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentSlide}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.6 }}
+                    {/* Subtitle */}
+                    <motion.p 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed"
+                    >
+                        {subtitle}
+                    </motion.p>
+
+                    {/* Action Buttons */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                        className="flex flex-wrap items-center justify-center gap-4 pt-4"
+                    >
+                        <button
+                            onClick={() => onShowTrial(config?.heroBtn1Text || "Prueba Gratis")}
+                            className="px-8 py-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(37,99,235,0.4)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.5)] transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-3 border border-cyan-400/30"
                         >
-                            {config.isMaster && (
-                                <div className="inline-flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 backdrop-blur-md mb-6 hover:bg-sky-500/20 transition-colors cursor-default mx-auto">
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-white text-[10px] font-bold shadow-[0_0_10px_rgba(14,165,233,0.5)]">
-                                        New
-                                    </span>
-                                    <span className="text-xs font-bold text-sky-200 uppercase tracking-widest">
-                                        OdontoCloud 2026
-                                    </span>
-                                </div>
-                            )}
+                            <span>{config?.heroBtn1Text || (config.isMaster ? "Comenzar Prueba Gratis" : "Agendar Cita")}</span>
+                            <FiArrowRight size={16} />
+                        </button>
 
-                            <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6 drop-shadow-2xl uppercase">
-                                {titlePart1 && (
-                                    <span style={{ fontFamily: 'var(--font-serif)' }} className="italic font-normal block text-slate-300 lowercase first-letter:uppercase">
-                                        {titlePart1}
-                                    </span>
-                                )}
-                                {titlePart2 && (
-                                    <span className="text-gradient-gold block">
-                                        {titlePart2}
-                                    </span>
-                                )}
-                            </h1>
-
-                            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed font-light">
-                                {activeSubtitle}
-                            </p>
-                        </motion.div>
-                    </AnimatePresence>
-
-                    <div className="flex flex-wrap gap-4 pt-8 justify-center">
-                        <motion.button
-                            whileHover={{ scale: 1.02, boxShadow: "0 20px 40px -10px rgba(14, 165, 233, 0.4)" }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => onShowTrial(activeSlide.btnText || config?.heroBtn1Text || "Plan Pro")}
-                            className="relative overflow-hidden px-8 py-4 bg-sky-500 text-white rounded-full font-bold text-sm uppercase tracking-widest shadow-[0_10px_20px_-5px_rgba(14,165,233,0.3)] transition-all group"
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
-                                {activeSlide.btnText || config?.heroBtn1Text || (config.isMaster ? "Empezar Gratis" : "Agendar Cita")} <FiCheckCircle />
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </motion.button>
-
-                        <motion.button
-                            whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.1)" }}
-                            whileTap={{ scale: 0.98 }}
+                        <button
                             onClick={() => {
                                 if (!config.isMaster) {
                                     const link = config?.heroBtn2Link || "/portal";
@@ -157,7 +104,6 @@ export default function HeroSection({ config = {}, onShowTrial }) {
                                     } else if (config.slug && link === '/portal') {
                                         finalLink = `/c/${config.slug}/portal`;
                                     }
-
                                     if (finalLink.startsWith('/')) {
                                         navigate(finalLink);
                                     } else {
@@ -167,33 +113,104 @@ export default function HeroSection({ config = {}, onShowTrial }) {
                                 }
                                 setShowDocModal(true);
                             }}
-                            className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-full font-bold text-sm uppercase tracking-widest backdrop-blur-md transition-all hover:border-white/30"
+                            className="px-8 py-4 bg-slate-900/90 border border-slate-700/80 text-slate-200 rounded-2xl font-bold text-xs uppercase tracking-[0.15em] hover:bg-slate-800 hover:border-slate-500 hover:text-white transition-all backdrop-blur-xl flex items-center gap-2 shadow-lg"
                         >
-                            {config?.heroBtn2Text || (config.isMaster ? "Ver Documentación" : "Portal Pacientes")}
-                        </motion.button>
-                    </div>  </div>
-
-                    <div className="pt-12 flex flex-wrap items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                        {(config.isMaster ? [
-                            { text: "Encriptación SSL", icon: <FiShield className="text-sky-400" size={20} /> },
-                            { text: "Copias de Seguridad", icon: <FiCheckCircle className="text-sky-400" size={20} /> },
-                            { text: "Cumple HIPAA/RGPD", icon: <FiShield className="text-sky-400" size={20} /> },
-                            { text: "Infraestructura Cloud", icon: <FiCheckCircle className="text-sky-400" size={20} /> }
-                        ] : [
-                            { text: "Odontólogos Certificados", icon: <FiUsers className="text-sky-400" size={20} /> },
-                            { text: "Instalaciones Seguras", icon: <FiShield className="text-sky-400" size={20} /> },
-                            { text: "Tecnología Avanzada", icon: <FiCheckCircle className="text-sky-400" size={20} /> },
-                            { text: "Atención Inmediata", icon: <FiClock className="text-sky-400" size={20} /> }
-                        ]).map((badge, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                                {badge.icon}
-                                <span className="text-sm font-bold text-slate-300 hidden md:block">{badge.text}</span>
-                            </div>
-                        ))}
-                    </div>
+                            <FiPlay size={14} className="text-cyan-400" />
+                            <span>{config?.heroBtn2Text || (config.isMaster ? "Ver Documentación" : "Portal Pacientes")}</span>
+                        </button>
+                    </motion.div>
                 </div>
 
+                {/* Hero Showcase Mockup Card */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="w-full max-w-5xl mt-14 relative"
+                >
+                    {/* Glowing outer backdrop */}
+                    <div className="absolute -inset-1 rounded-[2.5rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 opacity-20 blur-xl"></div>
 
+                    {/* Premium Glass Container */}
+                    <div className="relative rounded-[2rem] bg-slate-900/90 border border-slate-800 p-6 md:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden">
+                        
+                        {/* Mockup Header Toolbar */}
+                        <div className="flex items-center justify-between pb-6 border-b border-slate-800 mb-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-rose-500/80"></div>
+                                <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                                <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                                <span className="ml-3 text-xs font-mono text-slate-400">app.odontocloud.com/dashboard</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                                    <FiZap size={12} /> Factus DIAN Conectado
+                                </span>
+                                <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                                    <FiShield size={12} /> RIPS 2026 Listo
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Interactive Feature Highlights Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            
+                            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-left hover:border-cyan-500/40 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <FiCalendar size={20} />
+                                </div>
+                                <h4 className="text-sm font-bold text-white mb-1">Agenda Inteligente</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed">Recordatorios automatizados vía WhatsApp y confirmación directa de citas.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-left hover:border-blue-500/40 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <FiFileText size={20} />
+                                </div>
+                                <h4 className="text-sm font-bold text-white mb-1">Historia Clínica Digital</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed">Evoluciones completas, adjuntos de odontología y firmas digitales.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-left hover:border-emerald-500/40 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <FiZap size={20} />
+                                </div>
+                                <h4 className="text-sm font-bold text-white mb-1">Facturación Electrónica</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed">Emisión directa DIAN con proveedor Factus en un solo clic.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-left hover:border-indigo-500/40 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <FiTrendingUp size={20} />
+                                </div>
+                                <h4 className="text-sm font-bold text-white mb-1">Reportes & Cartera</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed">Estadísticas reales de ingresos, RIPS estandarizados y cobros.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Trust Badges Footer */}
+                <div className="pt-12 flex flex-wrap items-center justify-center gap-8 text-slate-400">
+                    {(config.isMaster ? [
+                        { text: "Facturación DIAN Integrada", icon: <FiZap className="text-emerald-400" size={18} /> },
+                        { text: "Generación de RIPS", icon: <FiCheckCircle className="text-cyan-400" size={18} /> },
+                        { text: "Encriptación SSL Bancaria", icon: <FiShield className="text-blue-400" size={18} /> },
+                        { text: "Infraestructura Cloud Nube 99.9%", icon: <FiStar className="text-amber-400" size={18} /> }
+                    ] : [
+                        { text: "Odontólogos Certificados", icon: <FiUsers className="text-cyan-400" size={18} /> },
+                        { text: "Instalaciones Seguras", icon: <FiShield className="text-blue-400" size={18} /> },
+                        { text: "Tecnología Avanzada", icon: <FiCheckCircle className="text-emerald-400" size={18} /> }
+                    ]).map((badge, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-slate-900/60 px-4 py-2 rounded-xl border border-slate-800/60">
+                            {badge.icon}
+                            <span>{badge.text}</span>
+                        </div>
+                    ))}
+                </div>
+
+            </div>
 
             <DocumentationModal
                 isOpen={showDocModal}
