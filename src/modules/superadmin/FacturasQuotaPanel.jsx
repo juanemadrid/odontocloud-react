@@ -171,6 +171,14 @@ export default function FacturasQuotaPanel() {
     }
   };
 
+  // ── Clinic Specific Factus Credentials inside Assign Modal ──
+  const [customCredsEnabled, setCustomCredsEnabled] = useState(false);
+  const [clinicCreds, setClinicCreds] = useState({
+    factusClientId: "", factusClientSecret: "",
+    factusUsername: "", factusPassword: "",
+    factusNumberingRangeId: "", factusTestMode: true,
+  });
+
   const handleAssign = async () => {
     if (!assignModal) return;
     if (assignCuota <= 0) { toast.error("La cuota debe ser mayor a 0."); return; }
@@ -181,6 +189,11 @@ export default function FacturasQuotaPanel() {
     }
     setAssigning(true);
     try {
+      if (customCredsEnabled && clinicCreds.factusClientId) {
+        const { saveTenantFactusCredentials } = await import("../../services/factusAdminService");
+        await saveTenantFactusCredentials(assignModal.inquilino, assignTargetSucursalId || null, clinicCreds);
+      }
+
       if (assignTargetSucursalId) {
         await assignQuotaToSucursal(assignTargetSucursalId, assignCuota, assignPlan);
         toast.success(`${assignCuota} facturas asignadas a la sucursal.`);
@@ -468,6 +481,47 @@ export default function FacturasQuotaPanel() {
                 {assignTargetSucursalId ? <span className="block text-indigo-600 font-bold mt-0.5">Asignado específicamente a Sede / Sucursal.</span> : null}
                 <br/>
                 Plan: <strong className="capitalize">{assignCustom ? "personalizado" : assignPlan}</strong>
+              </div>
+
+              {/* Toggle to register clinic specific Factus API Keys */}
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={customCredsEnabled}
+                    onChange={e => setCustomCredsEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Registrar Credenciales Factus API para esta clínica</span>
+                </label>
+
+                {customCredsEnabled && (
+                  <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3 text-xs">
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Credenciales API de Factus asignadas a esta clínica</p>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Client ID</label>
+                      <input value={clinicCreds.factusClientId} onChange={e=>setClinicCreds(p=>({...p,factusClientId:e.target.value}))} className={inp} placeholder="Client ID de Factus" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Client Secret</label>
+                      <input type="password" value={clinicCreds.factusClientSecret} onChange={e=>setClinicCreds(p=>({...p,factusClientSecret:e.target.value}))} className={inp} placeholder="Client Secret" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Usuario API</label>
+                        <input value={clinicCreds.factusUsername} onChange={e=>setClinicCreds(p=>({...p,factusUsername:e.target.value}))} className={inp} placeholder="Email API" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Contraseña API</label>
+                        <input type="password" value={clinicCreds.factusPassword} onChange={e=>setClinicCreds(p=>({...p,factusPassword:e.target.value}))} className={inp} placeholder="Contraseña API" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">ID Rango Numeración</label>
+                      <input value={clinicCreds.factusNumberingRangeId} onChange={e=>setClinicCreds(p=>({...p,factusNumberingRangeId:e.target.value}))} className={inp} placeholder="Ej: 8" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">

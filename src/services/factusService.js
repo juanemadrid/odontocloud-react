@@ -311,25 +311,27 @@ export const downloadInvoicePDF = async (
 // 6. sendInvoice — full payload builder + send
 // ─────────────────────────────────────────────
 export const sendInvoice = async (invoiceData, patientData, tenantCredentials) => {
-  // ── Load centralized credentials from superadmin if not explicitly passed ──
-  // tenantCredentials may be a legacy per-tenant object; we prefer the central ones.
+  // ── Load credentials: check sucursal / tenant specific credentials, fallback to superadmin central ──
   let resolvedCreds = tenantCredentials;
-  if (!tenantCredentials?.factusClientId || !tenantCredentials?.factusClientSecret) {
-    try {
-      const { getFactusAdminCredentials } = await import("./factusAdminService");
-      const adminCreds = await getFactusAdminCredentials();
-      if (adminCreds) resolvedCreds = { ...adminCreds, ...tenantCredentials };
-    } catch (e) {
-      console.warn("Could not load centralized Factus credentials:", e.message);
+  try {
+    const { getFactusCredentialsForTenant } = await import("./factusAdminService");
+    const foundCreds = await getFactusCredentialsForTenant(
+      invoiceData?.inquilino || tenantCredentials?.inquilino,
+      invoiceData?.sucursalId || tenantCredentials?.sucursalId
+    );
+    if (foundCreds) {
+      resolvedCreds = { ...foundCreds, ...tenantCredentials };
     }
+  } catch (e) {
+    console.warn("Could not resolve Factus credentials for tenant/sucursal:", e.message);
   }
 
   const creds = {
-    factusClientId:     resolvedCreds.factusClientId,
-    factusClientSecret: resolvedCreds.factusClientSecret,
-    factusUsername:     resolvedCreds.factusUsername || resolvedCreds.username,
-    factusPassword:     resolvedCreds.factusPassword || resolvedCreds.password,
-    factusTestMode:     resolvedCreds.factusTestMode ?? true,
+    factusClientId:     resolvedCreds?.factusClientId,
+    factusClientSecret: resolvedCreds?.factusClientSecret,
+    factusUsername:     resolvedCreds?.factusUsername || resolvedCreds?.username,
+    factusPassword:     resolvedCreds?.factusPassword || resolvedCreds?.password,
+    factusTestMode:     resolvedCreds?.factusTestMode ?? true,
   };
 
   const accessToken = await getToken(creds);

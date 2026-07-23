@@ -185,11 +185,68 @@ export const consumeOneInvoice = async (inquilino, sucursalId = null) => {
 };
 
 // ─────────────────────────────────────────────
-// 7. Check if tenant / sucursal can emit (has quota left)
+// 8. Get Factus API Credentials for a specific tenant/sucursal (with central fallback)
 // ─────────────────────────────────────────────
-export const canTenantEmit = async (inquilino, sucursalId = null) => {
-  const quota = await getSucursalQuota(sucursalId, inquilino);
-  if (!quota) return false;
-  return quota.disponibles > 0;
+export const getFactusCredentialsForTenant = async (inquilino, sucursalId = null) => {
+  // 1. Check sucursal if specified
+  if (sucursalId) {
+    const sSnap = await getDoc(doc(db, "sucursales", sucursalId));
+    if (sSnap.exists()) {
+      const s = sSnap.data();
+      if (s.factusClientId && s.factusClientSecret) {
+        return {
+          factusClientId:         s.factusClientId,
+          factusClientSecret:     s.factusClientSecret,
+          factusUsername:         s.factusUsername || s.username,
+          factusPassword:         s.factusPassword || s.password,
+          factusTestMode:         s.factusTestMode ?? true,
+          factusNumberingRangeId: s.factusNumberingRangeId || null,
+        };
+      }
+    }
+  }
+
+  // 2. Check tenant
+  if (inquilino) {
+    const tSnap = await getDoc(doc(db, "tenants", inquilino));
+    if (tSnap.exists()) {
+      const t = tSnap.data();
+      if (t.factusClientId && t.factusClientSecret) {
+        return {
+          factusClientId:         t.factusClientId,
+          factusClientSecret:     t.factusClientSecret,
+          factusUsername:         t.factusUsername || t.username,
+          factusPassword:         t.factusPassword || t.password,
+          factusTestMode:         t.factusTestMode ?? true,
+          factusNumberingRangeId: t.factusNumberingRangeId || null,
+        };
+      }
+    }
+  }
+
+  // 3. Fallback to centralized superadmin credentials
+  return await getFactusAdminCredentials();
 };
+
+// ─────────────────────────────────────────────
+// 9. Save Factus API Credentials for a specific tenant or sucursal (SuperAdmin action)
+// ─────────────────────────────────────────────
+export const saveTenantFactusCredentials = async (inquilino, sucursalId = null, credsData = {}) => {
+  const payload = {
+    factusClientId:         credsData.factusClientId         || "",
+    factusClientSecret:     credsData.factusClientSecret     || "",
+    factusUsername:         credsData.factusUsername         || "",
+    factusPassword:         credsData.factusPassword         || "",
+    factusTestMode:         credsData.factusTestMode         ?? true,
+    factusNumberingRangeId: credsData.factusNumberingRangeId || "",
+    updatedAt: serverTimestamp(),
+  };
+
+  if (sucursalId) {
+    await updateDoc(doc(db, "sucursales", sucursalId), payload);
+  } else if (inquilino) {
+    await updateDoc(doc(db, "tenants", inquilino), payload);
+  }
+};
+
 
