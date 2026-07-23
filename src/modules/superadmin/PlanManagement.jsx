@@ -33,11 +33,23 @@ export default function PlanManagement({ hideTitle }) {
         { id: "Administración", label: "Administración" }
     ];
 
+    // Helper for dots formatting in inputs (e.g. 150000 -> 150.000)
+    const formatInputDots = (num) => {
+        if (num === null || num === undefined || num === "" || isNaN(num)) return "";
+        return Number(num).toLocaleString("es-CO");
+    };
+
+    const parseDotsInput = (str) => {
+        const raw = String(str).replace(/\D/g, "");
+        return raw ? Number(raw) : 0;
+    };
+
     // Form State
     const [newPlan, setNewPlan] = useState({
         name: "",
         description: "",
         maxUsers: 5,
+        includeFacturacion: true,
         facturasIncluidas: 300,
         monthlyPrice: 0,
         yearlyPrice: 0,
@@ -79,11 +91,13 @@ export default function PlanManagement({ hideTitle }) {
                 finalFeatures.push("CMS");
             }
 
+            const isFacturacionActive = newPlan.includeFacturacion;
             const planData = {
                 name: newPlan.name,
                 description: newPlan.description,
                 maxUsers: Number(newPlan.maxUsers),
-                facturasIncluidas: Number(newPlan.facturasIncluidas) || 0,
+                includeFacturacion: isFacturacionActive,
+                facturasIncluidas: isFacturacionActive ? (Number(newPlan.facturasIncluidas) || 300) : 0,
                 monthlyPrice: Number(newPlan.monthlyPrice),
                 yearlyPrice: Number(newPlan.yearlyPrice),
                 recommended: newPlan.recommended,
@@ -102,7 +116,7 @@ export default function PlanManagement({ hideTitle }) {
             }
 
             setShowModal(false);
-            setNewPlan({ name: "", description: "", maxUsers: 5, facturasIncluidas: 300, monthlyPrice: 0, yearlyPrice: 0, includeCms: false, recommended: false, features: [] });
+            setNewPlan({ name: "", description: "", maxUsers: 5, includeFacturacion: true, facturasIncluidas: 300, monthlyPrice: 0, yearlyPrice: 0, includeCms: false, recommended: false, features: [] });
             setEditingId(null);
             setCustomFeature("");
             loadPlans();
@@ -114,10 +128,12 @@ export default function PlanManagement({ hideTitle }) {
 
     const handleEdit = (plan) => {
         setEditingId(plan.id);
+        const hasFactus = plan.includeFacturacion ?? (Boolean(plan.facturasIncluidas && plan.facturasIncluidas > 0));
         setNewPlan({
             name: plan.name,
             description: plan.description || "",
             maxUsers: plan.maxUsers,
+            includeFacturacion: hasFactus,
             facturasIncluidas: plan.facturasIncluidas ?? 300,
             monthlyPrice: plan.monthlyPrice,
             yearlyPrice: plan.yearlyPrice || 0,
@@ -156,6 +172,7 @@ export default function PlanManagement({ hideTitle }) {
             name: "",
             description: "",
             maxUsers: 5,
+            includeFacturacion: true,
             facturasIncluidas: 300,
             monthlyPrice: 0,
             yearlyPrice: 0,
@@ -261,10 +278,21 @@ export default function PlanManagement({ hideTitle }) {
                                             </span>
                                         </li>
                                         <li className="flex items-center gap-3">
-                                            <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 text-[10px]">⚡</div>
-                                            <span className="text-xs font-bold text-emerald-700">
-                                                {plan.facturasIncluidas ? `${plan.facturasIncluidas.toLocaleString('es-CO')} Facturas Electrónicas / mes` : "Sin Facturas Electrónicas incluidas"}
-                                            </span>
+                                            {(plan.includeFacturacion ?? Boolean(plan.facturasIncluidas && plan.facturasIncluidas > 0)) ? (
+                                                <>
+                                                    <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 text-[10px]">⚡</div>
+                                                    <span className="text-xs font-bold text-emerald-700">
+                                                        Facturación Electrónica ({plan.facturasIncluidas ? plan.facturasIncluidas.toLocaleString('es-CO') : 300} / mes)
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-[10px]">✕</div>
+                                                    <span className="text-xs font-medium text-slate-400">
+                                                        Sin Facturación Electrónica
+                                                    </span>
+                                                </>
+                                            )}
                                         </li>
                                         {plan.features?.slice(0, 6).map(feature => (
                                             <li key={feature} className="flex items-center gap-3">
@@ -335,54 +363,43 @@ export default function PlanManagement({ hideTitle }) {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Precio Mensual</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Precio Mensual ($)</label>
                                         <input
-                                            type="number"
-                                            className="w-full input-premium mb-1"
-                                            placeholder="0"
-                                            value={newPlan.monthlyPrice}
-                                            onChange={e => setNewPlan({ ...newPlan, monthlyPrice: e.target.value === "" ? "" : Number(e.target.value) })}
+                                            type="text"
+                                            inputMode="numeric"
+                                            className="w-full input-premium mb-1 font-semibold"
+                                            placeholder="150.000"
+                                            value={formatInputDots(newPlan.monthlyPrice)}
+                                            onChange={e => setNewPlan({ ...newPlan, monthlyPrice: parseDotsInput(e.target.value) })}
                                             required
                                         />
                                         <span className="text-xs text-slate-500 font-medium">Vista: {formatCurrency(newPlan.monthlyPrice)}</span>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Precio Anual</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Precio Anual ($)</label>
                                         <input
-                                            type="number"
-                                            className="w-full input-premium mb-1"
-                                            placeholder="0"
-                                            value={newPlan.yearlyPrice}
-                                            onChange={e => setNewPlan({ ...newPlan, yearlyPrice: e.target.value === "" ? "" : Number(e.target.value) })}
+                                            type="text"
+                                            inputMode="numeric"
+                                            className="w-full input-premium mb-1 font-semibold"
+                                            placeholder="1.500.000"
+                                            value={formatInputDots(newPlan.yearlyPrice)}
+                                            onChange={e => setNewPlan({ ...newPlan, yearlyPrice: parseDotsInput(e.target.value) })}
                                             required
                                         />
                                         <span className="text-xs text-slate-500 font-medium">Vista: {formatCurrency(newPlan.yearlyPrice)}</span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Max Usuarios</label>
-                                        <input
-                                            type="number"
-                                            className="w-full input-premium"
-                                            placeholder="5"
-                                            value={newPlan.maxUsers}
-                                            onChange={e => setNewPlan({ ...newPlan, maxUsers: e.target.value === "" ? "" : Number(e.target.value) })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Facturas Incluidas</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            className="w-full input-premium"
-                                            placeholder="300"
-                                            value={newPlan.facturasIncluidas}
-                                            onChange={e => setNewPlan({ ...newPlan, facturasIncluidas: e.target.value === "" ? "" : Number(e.target.value) })}
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Max Usuarios</label>
+                                    <input
+                                        type="number"
+                                        className="w-full input-premium"
+                                        placeholder="5"
+                                        value={newPlan.maxUsers}
+                                        onChange={e => setNewPlan({ ...newPlan, maxUsers: e.target.value === "" ? "" : Number(e.target.value) })}
+                                        required
+                                    />
                                 </div>
 
                                 <div>
@@ -441,26 +458,62 @@ export default function PlanManagement({ hideTitle }) {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className={`p-4 rounded-xl border transition-all cursor-pointer ${newPlan.includeCms ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}
-                                        onClick={() => setNewPlan(prev => ({ ...prev, includeCms: !prev.includeCms }))}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-6 flex items-center bg-gray-300 rounded-full p-1 duration-300 ease-in-out ${newPlan.includeCms ? 'bg-indigo-600' : ''}`}>
-                                                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${newPlan.includeCms ? 'translate-x-4' : ''}`}></div>
+                                {/* OPIONES DE CONFIGURACIÓN AVANZADA (TOGGLES) */}
+                                <div className="space-y-3 pt-2 border-t border-slate-100">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Opciones Adicionales del Plan</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        
+                                        {/* Toggle Facturación Electrónica */}
+                                        <div className={`p-3 rounded-xl border transition-all cursor-pointer ${newPlan.includeFacturacion ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}
+                                            onClick={() => setNewPlan(prev => ({ ...prev, includeFacturacion: !prev.includeFacturacion }))}>
+                                            <div className="flex flex-col gap-2">
+                                                <div className={`w-8 h-5 flex items-center bg-gray-300 rounded-full p-0.5 duration-300 ease-in-out ${newPlan.includeFacturacion ? 'bg-emerald-600' : ''}`}>
+                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${newPlan.includeFacturacion ? 'translate-x-3' : ''}`}></div>
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-900 leading-tight">Facturación Electrónica</span>
                                             </div>
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-900 leading-none">Sitio Web</span>
                                         </div>
+
+                                        {/* Toggle Sitio Web */}
+                                        <div className={`p-3 rounded-xl border transition-all cursor-pointer ${newPlan.includeCms ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}
+                                            onClick={() => setNewPlan(prev => ({ ...prev, includeCms: !prev.includeCms }))}>
+                                            <div className="flex flex-col gap-2">
+                                                <div className={`w-8 h-5 flex items-center bg-gray-300 rounded-full p-0.5 duration-300 ease-in-out ${newPlan.includeCms ? 'bg-indigo-600' : ''}`}>
+                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${newPlan.includeCms ? 'translate-x-3' : ''}`}></div>
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-900 leading-tight">Sitio Web CMS</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Toggle Destacar */}
+                                        <div className={`p-3 rounded-xl border transition-all cursor-pointer ${newPlan.recommended ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}
+                                            onClick={() => setNewPlan(prev => ({ ...prev, recommended: !prev.recommended }))}>
+                                            <div className="flex flex-col gap-2">
+                                                <div className={`w-8 h-5 flex items-center bg-gray-300 rounded-full p-0.5 duration-300 ease-in-out ${newPlan.recommended ? 'bg-amber-500' : ''}`}>
+                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${newPlan.recommended ? 'translate-x-3' : ''}`}></div>
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-amber-900 leading-tight">Destacar Plan</span>
+                                            </div>
+                                        </div>
+
                                     </div>
 
-                                    <div className={`p-4 rounded-xl border transition-all cursor-pointer ${newPlan.recommended ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}
-                                        onClick={() => setNewPlan(prev => ({ ...prev, recommended: !prev.recommended }))}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-6 flex items-center bg-gray-300 rounded-full p-1 duration-300 ease-in-out ${newPlan.recommended ? 'bg-amber-500' : ''}`}>
-                                                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${newPlan.recommended ? 'translate-x-4' : ''}`}></div>
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 leading-none">Destacar</span>
+                                    {/* Si Facturación Electrónica está activa, pedir la cuota de facturas */}
+                                    {newPlan.includeFacturacion && (
+                                        <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100 animate-fadeIn">
+                                            <label className="block text-[10px] font-black text-emerald-800 uppercase tracking-wider mb-1">
+                                                Facturas Electrónicas Incluidas al mes
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-full h-9 px-3 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:border-emerald-500"
+                                                placeholder="Ej: 300"
+                                                value={newPlan.facturasIncluidas}
+                                                onChange={e => setNewPlan({ ...newPlan, facturasIncluidas: Number(e.target.value) || 0 })}
+                                            />
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 <p className="text-xs text-slate-500 italic text-center">
