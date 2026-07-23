@@ -260,16 +260,16 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                                 navigate(getDashboardPath());
                             }}
                             className={`
-                                relative overflow-hidden px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest 
+                                relative overflow-hidden px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide 
                                 transition-all duration-300 transform hover:scale-105 hover:shadow-xl group
                                 ${isTransparent
                                     ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-                                    : 'bg-[var(--viva-blue)] text-white shadow-lg shadow-blue-900/20'
+                                    : 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 hover:bg-blue-700'
                                 }
                             `}
                         >
                             <span className="relative z-10 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                 Mi Panel
                             </span>
                         </button>
