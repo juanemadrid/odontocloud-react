@@ -237,31 +237,31 @@ export default function FacturasQuotaPanel() {
       </div>
 
       {/* ── Clinics Table ── */}
-      <div className="bg-white rounded-[32px] border border-slate-200/60 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <FiFileText size={18} className="text-blue-600" />
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+      <div className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 gap-2">
+          <div className="flex items-center gap-2.5">
+            <FiFileText size={16} className="text-blue-600" />
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
               Clínicas Registradas en el Sistema
             </h3>
           </div>
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            Haz clic en "Configurar Facturas & API" para asignar llaves y paquetes
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Haz clic en "Configurar API & Facturas" para gestionar la sede
           </span>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 gap-3 text-slate-400 animate-pulse">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"/>
+          <div className="flex items-center justify-center py-16 gap-3 text-slate-400 animate-pulse">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"/>
             <span className="text-xs font-bold uppercase tracking-widest">Cargando clínicas...</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="w-full">
+            <table className="w-full text-left border-collapse table-auto">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/80">
-                  {["Clínica / Inquilino", "NIT", "Estado Factus API", "Plan", "Cuota Paquete", "Usadas", "Disponibles", "Acción"].map((h, i) => (
-                    <th key={i} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  {["Clínica / Sede", "NIT", "Estado Factus", "Plan", "Cuota", "Usadas", "Disponibles", "Acción"].map((h, i) => (
+                    <th key={i} className="px-3.5 py-3 text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -269,84 +269,84 @@ export default function FacturasQuotaPanel() {
                 {tenants.map(t => (
                   <React.Fragment key={t.id}>
                     {/* Parent Clinic Row */}
-                    <tr className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="px-6 py-4 font-black text-slate-800 uppercase tracking-tight">
-                        <div className="flex items-center gap-2">
+                    <tr className="hover:bg-slate-50/60 transition-colors group text-xs">
+                      <td className="px-3.5 py-2.5 font-black text-slate-800 uppercase tracking-tight">
+                        <div className="flex items-center gap-1.5">
                           <span>{t.nombre}</span>
                           {t.sucursales?.length > 0 && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-100 text-blue-700 uppercase">
+                            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-blue-100 text-blue-700 uppercase">
                               {t.sucursales.length} sedes
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 font-mono">{t.nit}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-3.5 py-2.5 text-[11px] font-bold text-slate-500 font-mono whitespace-nowrap">{t.nit}</td>
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
                         {t.hasFactusCreds ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/60 uppercase tracking-wider">
-                            <FiCheckCircle size={12} className="text-emerald-600" /> API Lista
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/60 uppercase">
+                            <FiCheckCircle size={10} className="text-emerald-600" /> API Lista
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/60 uppercase tracking-wider">
-                            <FiAlertCircle size={12} className="text-amber-600" /> Sin Credenciales
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200/60 uppercase">
+                            <FiAlertCircle size={10} className="text-amber-600" /> Sin Credenciales
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 uppercase tracking-wider">
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase">
                           {t.facturacionPlan}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-800 text-sm">{t.facturacionCuota.toLocaleString("es-CO")}</td>
-                      <td className="px-6 py-4 font-medium text-slate-500 text-sm">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
-                      <td className="px-6 py-4">
-                        <span className={`font-black text-sm ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
+                      <td className="px-3.5 py-2.5 font-bold text-slate-800 text-xs whitespace-nowrap">{t.facturacionCuota.toLocaleString("es-CO")}</td>
+                      <td className="px-3.5 py-2.5 font-medium text-slate-500 text-xs whitespace-nowrap">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <span className={`font-black text-xs ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
                           {t.disponibles.toLocaleString("es-CO")}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
                         <button
                           onClick={() => openModalForClinic(t)}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-200 active:scale-95"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
                         >
-                          <FiSettings size={14} /> Configurar Facturas & API
+                          <FiSettings size={12} /> Configurar API & Facturas
                         </button>
                       </td>
                     </tr>
 
                     {/* Sub-rows for Sucursales */}
                     {t.sucursales && t.sucursales.map(s => (
-                      <tr key={s.id} className="bg-slate-50/30 hover:bg-blue-50/30 transition-colors">
-                        <td className="pl-12 pr-6 py-3 text-xs font-bold text-slate-600 flex items-center gap-2">
-                          <FiMapPin size={13} className="text-blue-500 shrink-0" />
+                      <tr key={s.id} className="bg-slate-50/30 hover:bg-blue-50/30 transition-colors text-xs">
+                        <td className="pl-8 pr-3.5 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1.5 whitespace-nowrap">
+                          <FiMapPin size={11} className="text-blue-500 shrink-0" />
                           <span>Sede: {s.nombre} {s.ciudad ? `(${s.ciudad})` : ""}</span>
                         </td>
-                        <td className="px-6 py-3 text-xs font-mono text-slate-400">Sucursal</td>
-                        <td className="px-6 py-3">
+                        <td className="px-3.5 py-2 text-[10px] font-mono text-slate-400 whitespace-nowrap">Sucursal</td>
+                        <td className="px-3.5 py-2 whitespace-nowrap">
                           {s.hasFactusCreds ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
-                              <FiCheckCircle size={10} /> API Sede Configurada
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                              <FiCheckCircle size={9} /> API Sede Configurada
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-500 uppercase">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black bg-slate-100 text-slate-500 uppercase">
                               Usa Cuenta Principal
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-600 uppercase">
+                        <td className="px-3.5 py-2 whitespace-nowrap">
+                          <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black bg-indigo-50 text-indigo-600 uppercase">
                             {s.facturacionPlan}
                           </span>
                         </td>
-                        <td className="px-6 py-3 font-semibold text-slate-700 text-xs">{s.facturacionCuota.toLocaleString("es-CO")}</td>
-                        <td className="px-6 py-3 text-slate-500 text-xs">{s.facturacionUsadas.toLocaleString("es-CO")}</td>
-                        <td className="px-6 py-3 font-bold text-xs text-emerald-600">{s.disponibles.toLocaleString("es-CO")}</td>
-                        <td className="px-6 py-3">
+                        <td className="px-3.5 py-2 font-semibold text-slate-700 text-[11px] whitespace-nowrap">{s.facturacionCuota.toLocaleString("es-CO")}</td>
+                        <td className="px-3.5 py-2 text-slate-500 text-[11px] whitespace-nowrap">{s.facturacionUsadas.toLocaleString("es-CO")}</td>
+                        <td className="px-3.5 py-2 font-bold text-[11px] text-emerald-600 whitespace-nowrap">{s.disponibles.toLocaleString("es-CO")}</td>
+                        <td className="px-3.5 py-2 whitespace-nowrap">
                           <button
                             onClick={() => openModalForClinic(s, true, t)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase transition-all"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase transition-all"
                           >
-                            <FiSettings size={12} /> Configurar Sede
+                            <FiSettings size={11} /> Configurar Sede
                           </button>
                         </td>
                       </tr>
