@@ -412,7 +412,7 @@ export default function FacturasQuotaPanel() {
                       type="button"
                       onClick={() => {
                         if (p.plan === "personalizado") {
-                          setModalForm(prev => ({ ...prev, isCustomCuota: true, facturacionPlan: "personalizado" }));
+                          setModalForm(prev => ({ ...prev, isCustomCuota: true, facturacionPlan: "personalizado", facturacionCuota: prev.facturacionCuota || "" }));
                         } else {
                           setModalForm(prev => ({ ...prev, facturacionCuota: p.cuota, facturacionPlan: p.plan, isCustomCuota: false }));
                         }
@@ -437,10 +437,13 @@ export default function FacturasQuotaPanel() {
                       Cantidad de Facturas del Paquete
                     </label>
                     <input
-                      type="number"
-                      min="1"
-                      value={modalForm.facturacionCuota}
-                      onChange={e => setModalForm(prev => ({ ...prev, facturacionCuota: Number(e.target.value) || 0 }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={modalForm.facturacionCuota === 0 || modalForm.facturacionCuota === "" ? "" : Number(modalForm.facturacionCuota).toLocaleString("es-CO")}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        setModalForm(prev => ({ ...prev, facturacionCuota: raw === "" ? "" : Number(raw) }));
+                      }}
                       className={inp}
                       placeholder="Ej: 400"
                     />
