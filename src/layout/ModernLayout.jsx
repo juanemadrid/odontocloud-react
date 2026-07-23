@@ -73,16 +73,8 @@ export default function ModernLayout() {
         name: userProfile?.tenant?.name || config.name || "OdontoCloud"
     };
 
-    // Determine if we should use a transparent header (overlay)
-    // Applies to Home (Hero) and Inner Pages with PageHeader (Nosotros, Servicios, Sedes)
-    // Also applies to clinic home /c/:slug
-    const hasHeroHeader =
-        pathname === '/' ||
-        pathname === '' ||
-        pathname.includes('/nosotros') ||
-        pathname.includes('/servicios') ||
-        pathname.includes('/sedes') ||
-        (pathname.startsWith('/c/') && pathname.split('/').length === 3); // /c/slug (exactly 3 parts)
+    // Header styling: Use clean, crisp light mode navigation
+    const hasHeroHeader = false;
 
     return (
         <div className="viva-root landing-mode min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
