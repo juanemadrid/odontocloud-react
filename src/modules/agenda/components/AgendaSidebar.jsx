@@ -184,69 +184,82 @@ export default function AgendaSidebar({
 
                     {/* ─── PROFESIONALES ─── */}
                     <FilterAccordion
-                        title={selectedDoctor ? selectedDoctorName : "Profesionales"}
+                        title={selectedDoctor ? selectedDoctorName : (doctors.length === 1 ? getFullName(doctors[0]) : "Profesionales")}
                         icon={FiUser}
                         isOpen={openSections.profesionales}
                         onToggle={() => toggleSection('profesionales')}
-                        count={selectedDoctor ? 1 : 0}
+                        count={selectedDoctor || doctors.length === 1 ? 1 : 0}
                     >
-                        {/* Buscador funcional */}
-                        <div className="relative mb-2 mt-1">
-                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
-                            <input
-                                type="text"
-                                placeholder="Buscar profesional..."
-                                value={doctorSearch}
-                                onChange={e => setDoctorSearch(e.target.value)}
-                                className="w-full pl-8 pr-8 py-2 text-[10px] bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-300 placeholder:text-slate-300 font-bold uppercase transition-all"
-                            />
-                            {doctorSearch && (
-                                <button onClick={() => setDoctorSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                                    <FiX size={11} />
-                                </button>
-                            )}
-                        </div>
+                        {doctors.length > 1 ? (
+                            <>
+                                {/* Buscador funcional */}
+                                <div className="relative mb-2 mt-1">
+                                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar profesional..."
+                                        value={doctorSearch}
+                                        onChange={e => setDoctorSearch(e.target.value)}
+                                        className="w-full pl-8 pr-8 py-2 text-[10px] bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-300 placeholder:text-slate-300 font-bold uppercase transition-all"
+                                    />
+                                    {doctorSearch && (
+                                        <button onClick={() => setDoctorSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                                            <FiX size={11} />
+                                        </button>
+                                    )}
+                                </div>
 
-                        {/* Lista filtrada */}
-                        <div className="flex flex-col gap-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-0.5">
-                            {/* "Todos" solo si no hay búsqueda activa */}
-                            {!doctorSearch && (
-                                <button
-                                    onClick={() => { onSelectDoctor(null); toggleSection('profesionales'); }}
-                                    className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
-                                        !selectedDoctor
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                                    }`}
-                                >
-                                    <FiUser size={11} />
-                                    Todos los profesionales
-                                </button>
-                            )}
+                                {/* Lista filtrada */}
+                                <div className="flex flex-col gap-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-0.5">
+                                    {/* "Todos" solo si no hay búsqueda activa */}
+                                    {!doctorSearch && (
+                                        <button
+                                            onClick={() => { onSelectDoctor(null); toggleSection('profesionales'); }}
+                                            className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                                !selectedDoctor
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            <FiUser size={11} />
+                                            Todos los profesionales
+                                        </button>
+                                    )}
 
-                            {filteredDoctors.map(doc => (
-                                <button
-                                    key={doc.id}
-                                    onClick={() => { onSelectDoctor(doc.id); setDoctorSearch(''); toggleSection('profesionales'); }}
-                                    className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
-                                        selectedDoctor === doc.id
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                                    }`}
-                                >
-                                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] font-black shrink-0">
-                                        {(getFullName(doc) || '?')[0].toUpperCase()}
+                                    {filteredDoctors.map(doc => (
+                                        <button
+                                            key={doc.id}
+                                            onClick={() => { onSelectDoctor(doc.id); setDoctorSearch(''); toggleSection('profesionales'); }}
+                                            className={`text-left text-[10px] py-2 px-3 rounded-xl transition-all font-black uppercase tracking-tight flex items-center gap-2 ${
+                                                selectedDoctor === doc.id
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                            }`}
+                                        >
+                                            <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] font-black shrink-0">
+                                                {(getFullName(doc) || '?')[0].toUpperCase()}
+                                            </span>
+                                            <span className="truncate">{getFullName(doc)}</span>
+                                        </button>
+                                    ))}
+
+                                    {filteredDoctors.length === 0 && (
+                                        <p className="text-[9px] text-slate-300 font-bold uppercase text-center py-3">
+                                            {doctorSearch ? 'Sin resultados' : 'No hay doctores registrados'}
+                                        </p>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col gap-1 p-1">
+                                <div className="text-left text-[10px] py-2 px-3 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200 font-black uppercase tracking-tight flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[8px] font-black shrink-0">
+                                        {(getFullName(doctors[0]) || '?')[0].toUpperCase()}
                                     </span>
-                                    <span className="truncate">{getFullName(doc)}</span>
-                                </button>
-                            ))}
-
-                            {filteredDoctors.length === 0 && (
-                                <p className="text-[9px] text-slate-300 font-bold uppercase text-center py-3">
-                                    {doctorSearch ? 'Sin resultados' : 'No hay doctores registrados'}
-                                </p>
-                            )}
-                        </div>
+                                    <span className="truncate">{getFullName(doctors[0])}</span>
+                                </div>
+                            </div>
+                        )}
                     </FilterAccordion>
 
                 </div>

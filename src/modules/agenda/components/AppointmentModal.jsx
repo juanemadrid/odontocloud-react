@@ -852,7 +852,7 @@ export default function AppointmentModal({
 
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Profesional *</label>
-                                    <select {...register("doctorId")} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                    <select {...register("doctorId")} disabled={!hasWritePermission || doctors.length === 1} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none disabled:bg-slate-100 disabled:cursor-not-allowed">
                                         <option value="">ELIJA DOCTOR...</option>
                                         {/* ✅ FILTRADO POR ESPECIALIDAD */}
                                         {doctors

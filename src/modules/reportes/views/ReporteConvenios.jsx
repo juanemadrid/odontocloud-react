@@ -6,44 +6,28 @@ import { FiSearch, FiFileText, FiFilter } from "react-icons/fi";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
-const TIPO_MOVIMIENTO_OPTIONS = [
-  "Todos",
-  "CxC",
-  "Factura de Compra",
-  "Egreso-",
-  "Recibo de caja+",
-  "Nota crédito-",
-  "Nota débito+",
-  "Traslado Destino+",
-  "Traslado Origen-",
-  "Factura",
-  "Factura Electrónica",
-  "Consumo saldo a favor"
-];
-
-export default function ReporteFinanciero() {
+export default function ReporteConvenios() {
   const { userProfile } = useAuth();
-  const [allFacturas, setAllFacturas] = useState([]);
-  const [filteredFacturas, setFilteredFacturas] = useState([]);
-  const [profesionales, setProfesionales] = useState([]);
+  const [allRecords, setAllRecords] = useState([]);
+  const [filteredRecords, setFilteredRecords] = useState([]);
+  const [conveniosList, setConveniosList] = useState([]);
+  const [pacientesList, setPacientesList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filtros idénticos a OralDrive
-  const [fechaInicial, setFechaInicial] = useState("2025-07-01");
+  const [fechaInicial, setFechaInicial] = useState("2025-09-22");
   const [fechaFinal, setFechaFinal] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [oficina, setOficina] = useState("OFICINA PRINCIPAL");
-  const [tipoMovimiento, setTipoMovimiento] = useState("Todos");
-  const [informacionContable, setInformacionContable] = useState(false);
-  const [selectedProfesional, setSelectedProfesional] = useState("Todos");
+  const [selectedConvenio, setSelectedConvenio] = useState("");
+  const [selectedPaciente, setSelectedPaciente] = useState("");
+  const [showConvenioDropdown, setShowConvenioDropdown] = useState(false);
+  const [showPacienteDropdown, setShowPacienteDropdown] = useState(false);
 
-  // Estado de filtros aplicados al dar clic en Buscar
+  // Estado de filtros aplicados al hacer clic en Buscar
   const [appliedFilters, setAppliedFilters] = useState({
-    fechaInicial: "2025-07-01",
+    fechaInicial: "2025-09-22",
     fechaFinal: format(new Date(), "yyyy-MM-dd"),
-    oficina: "OFICINA PRINCIPAL",
-    tipoMovimiento: "Todos",
-    informacionContable: false,
-    profesional: "Todos"
+    convenio: "",
+    paciente: ""
   });
 
   const [tableSearchTerm, setTableSearchTerm] = useState("");
@@ -51,23 +35,25 @@ export default function ReporteFinanciero() {
 
   const [visibleColumns, setVisibleColumns] = useState({
     fecha: true,
-    documento: true,
+    convenio: true,
     paciente: true,
-    profesional: true,
-    tipoMovimiento: true,
-    descripcion: true,
-    monto: true,
+    documento: true,
+    servicio: true,
+    montoOriginal: true,
+    descuentoConvenio: true,
+    totalPagar: true,
     estado: true,
   });
 
   const columnLabels = {
-    fecha: "Fecha",
-    documento: "No. Documento / Factura",
+    fecha: "Fecha hora",
+    convenio: "Convenio",
     paciente: "Paciente",
-    profesional: "Profesional",
-    tipoMovimiento: "Tipo de Movimiento",
-    descripcion: "Descripción",
-    monto: "Monto",
+    documento: "No. Documento / Historia",
+    servicio: "Tratamiento / Servicio",
+    montoOriginal: "Monto tarifa base",
+    descuentoConvenio: "Descuento convenio",
+    totalPagar: "Total a pagar",
     estado: "Estado",
   };
 
@@ -80,69 +66,74 @@ export default function ReporteFinanciero() {
       if (!userProfile?.inquilino) return;
       setLoading(true);
       try {
-        // Cargar Facturas / Transacciones
-        const qFacturas = query(
-          collection(db, "facturas"),
+        // Cargar Convenios registrados
+        const qConvenios = query(
+          collection(db, "convenios"),
           where("inquilino", "==", userProfile.inquilino)
         );
-        const snapFacturas = await getDocs(qFacturas);
-        const listFacturas = [];
-        snapFacturas.forEach(doc => {
-          listFacturas.push({ id: doc.id, ...doc.data() });
+        const snapConvenios = await getDocs(qConvenios);
+        const listConv = [];
+        snapConvenios.forEach(doc => {
+          const c = doc.data();
+          listConv.push({ id: doc.id, nombre: c.nombre || c.name || "Sin nombre" });
         });
+        setConveniosList(listConv);
 
-        // Cargar Pagos / Recibos de caja adicionales si existen
-        const qPagos = query(
-          collection(db, "pagos"),
+        // Cargar Pacientes
+        const qPacientes = query(
+          collection(db, "pacientes"),
           where("inquilino", "==", userProfile.inquilino)
         );
-        const snapPagos = await getDocs(qPagos);
-        snapPagos.forEach(doc => {
+        const snapPacientes = await getDocs(qPacientes);
+        const listPacs = [];
+        snapPacientes.forEach(doc => {
           const p = doc.data();
-          listFacturas.push({
-            id: doc.id,
-            idFactura: p.nroRecibo || `REC-${doc.id.slice(0, 6)}`,
-            pacienteNombre: p.patientName || p.nombrePaciente || "—",
-            descripcion: p.concepto || "Recibo de caja",
-            monto: p.monto || p.valor || 0,
-            estado: p.estado || "Pagada",
-            tipoMovimiento: "Recibo de caja+",
-            fecha: p.fecha || p.createdAt,
-            profesional: p.profesional || p.odontologo || ""
-          });
+          const nom = `${p.nombre || p.nombres || ''} ${p.apellido || p.apellidos || ''}`.trim() || p.nombreCompleto || 'Sin nombre';
+          listPacs.push({ id: doc.id, nombre: nom, documento: p.identificacion || p.nroDocumento || '' });
+        });
+        setPacientesList(listPacs);
+
+        // Cargar Planes / Facturas asociadas a Convenios
+        const qPlanes = query(
+          collection(db, "planes"),
+          where("inquilino", "==", userProfile.inquilino)
+        );
+        const snapPlanes = await getDocs(qPlanes);
+        const listRecords = [];
+
+        snapPlanes.forEach(doc => {
+          const p = doc.data();
+          if (p.convenio || p.convenioNombre || p.convenioId) {
+            const total = Number(p.total || 0);
+            const desc = Number(p.descuentoConvenio || p.descuento || 0);
+            listRecords.push({
+              id: doc.id,
+              fecha: p.createdAt || p.date,
+              convenio: p.convenio || p.convenioNombre || "Convenio Institucional",
+              paciente: p.patientName || p.nombrePaciente || "—",
+              documento: p.patientDocument || p.identificacion || "—",
+              servicio: p.title || p.nombre || "Plan de tratamiento con convenio",
+              montoOriginal: total + desc,
+              descuentoConvenio: desc,
+              totalPagar: total,
+              estado: p.status || "Activo"
+            });
+          }
         });
 
-        listFacturas.sort((a, b) => {
+        listRecords.sort((a, b) => {
           const dateA = a.fecha?.seconds || (a.fecha ? new Date(a.fecha).getTime() / 1000 : 0);
           const dateB = b.fecha?.seconds || (b.fecha ? new Date(b.fecha).getTime() / 1000 : 0);
           return dateB - dateA;
         });
-        setAllFacturas(listFacturas);
 
-        // Cargar Profesionales / Doctores
-        const qUsuarios = query(
-          collection(db, "usuarios"),
-          where("inquilino", "==", userProfile.inquilino)
-        );
-        const snapUsuarios = await getDocs(qUsuarios);
-        const listProfs = [];
-        snapUsuarios.forEach(doc => {
-          const u = doc.data();
-          const role = (u.rol || u.role || "").toLowerCase();
-          if (role === "odontologo" || role === "doctor" || role === "odontóloga" || role === "doctores" || u.esOdontologo === true) {
-            const primerNombre = u.nombre || u.nombres || u.displayName || "";
-            const primerApellido = u.apellido || u.apellidos || "";
-            const nombreCompleto = `${primerNombre} ${primerApellido}`.trim() || u.email;
-            listProfs.push({ id: doc.id, nombre: nombreCompleto });
-          }
-        });
-        setProfesionales(listProfs);
+        setAllRecords(listRecords);
 
-        // Aplicar filtro inicial
-        filterData(listFacturas, appliedFilters, "");
+        // Aplicar filtrado inicial
+        filterData(listRecords, appliedFilters, "");
 
       } catch (error) {
-        console.error("Error cargando reporte de facturación:", error);
+        console.error("Error cargando reporte de convenios:", error);
       } finally {
         setLoading(false);
       }
@@ -152,42 +143,44 @@ export default function ReporteFinanciero() {
   }, [userProfile?.inquilino]);
 
   const filterData = (sourceList, filters, quickSearch) => {
-    let result = sourceList.filter(f => {
+    let result = sourceList.filter(r => {
       // Filtro por Fechas
-      const targetDate = f.fecha ? (f.fecha.toDate ? f.fecha.toDate() : new Date(f.fecha)) : null;
+      const targetDate = r.fecha ? (r.fecha.toDate ? r.fecha.toDate() : new Date(r.fecha)) : null;
       if (targetDate) {
         const init = new Date(filters.fechaInicial + "T00:00:00");
         const end = new Date(filters.fechaFinal + "T23:59:59");
         if (targetDate < init || targetDate > end) return false;
       }
 
-      // Filtro por Tipo de Movimiento
-      if (filters.tipoMovimiento !== "Todos") {
-        const movType = (f.tipoMovimiento || f.tipo || "Factura").toLowerCase();
-        if (!movType.includes(filters.tipoMovimiento.toLowerCase())) return false;
+      // Filtro por Convenio
+      if (filters.convenio) {
+        const convTarget = filters.convenio.toLowerCase();
+        const rConv = (r.convenio || "").toLowerCase();
+        if (!rConv.includes(convTarget) && !convTarget.includes(rConv)) return false;
       }
 
-      // Filtro por Profesional
-      if (filters.profesional !== "Todos") {
-        const profTarget = filters.profesional.toLowerCase();
-        const fProf = (f.profesional || f.profesionalAsignado || f.odontologo || "").toLowerCase();
-        if (!fProf.includes(profTarget) && !profTarget.includes(fProf)) return false;
+      // Filtro por Paciente
+      if (filters.paciente) {
+        const pacTarget = filters.paciente.toLowerCase();
+        const rPac = (r.paciente || "").toLowerCase();
+        if (!rPac.includes(pacTarget) && !pacTarget.includes(rPac)) return false;
       }
 
       return true;
     });
 
-    // Búsqueda rápida en tabla
+    // Buscador rápido en tabla
     if (quickSearch && quickSearch.trim() !== "") {
       const term = quickSearch.toLowerCase();
-      result = result.filter(f => (
-        (f.idFactura && f.idFactura.toLowerCase().includes(term)) ||
-        (f.pacienteNombre && f.pacienteNombre.toLowerCase().includes(term)) ||
-        (f.descripcion && f.descripcion.toLowerCase().includes(term))
+      result = result.filter(r => (
+        (r.convenio && r.convenio.toLowerCase().includes(term)) ||
+        (r.paciente && r.paciente.toLowerCase().includes(term)) ||
+        (r.servicio && r.servicio.toLowerCase().includes(term)) ||
+        (r.documento && r.documento.toLowerCase().includes(term))
       ));
     }
 
-    setFilteredFacturas(result);
+    setFilteredRecords(result);
   };
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -197,17 +190,15 @@ export default function ReporteFinanciero() {
     const newFilters = {
       fechaInicial,
       fechaFinal,
-      oficina,
-      tipoMovimiento,
-      informacionContable,
-      profesional: selectedProfesional
+      convenio: selectedConvenio,
+      paciente: selectedPaciente
     };
     setAppliedFilters(newFilters);
-    filterData(allFacturas, newFilters, tableSearchTerm);
+    filterData(allRecords, newFilters, tableSearchTerm);
   };
 
   const handleExportExcel = () => {
-    const rows = filteredFacturas.map(f => {
+    const rows = filteredRecords.map(r => {
       const formatDateStr = (d) => {
         if (!d) return "";
         const dt = d.toDate ? d.toDate() : new Date(d);
@@ -215,21 +206,22 @@ export default function ReporteFinanciero() {
       };
 
       return {
-        "Fecha": formatDateStr(f.fecha),
-        "No. Documento / Factura": f.idFactura || f.id || "—",
-        "Paciente": f.pacienteNombre || "—",
-        "Profesional": f.profesional || f.profesionalAsignado || "—",
-        "Tipo de Movimiento": f.tipoMovimiento || "Factura",
-        "Descripción": f.descripcion || "Facturación médica",
-        "Monto": Number(f.monto || 0),
-        "Estado": f.estado || "Pagada",
+        "Fecha hora": formatDateStr(r.fecha),
+        "Convenio": r.convenio || "—",
+        "Paciente": r.paciente || "—",
+        "No. Documento / Historia": r.documento || "—",
+        "Tratamiento / Servicio": r.servicio || "—",
+        "Monto tarifa base": Number(r.montoOriginal || 0),
+        "Descuento convenio": Number(r.descuentoConvenio || 0),
+        "Total a pagar": Number(r.totalPagar || 0),
+        "Estado": r.estado || "Activo",
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Facturación");
-    XLSX.writeFile(workbook, `Reporte_Facturacion_${appliedFilters.fechaInicial}_al_${appliedFilters.fechaFinal}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Convenios");
+    XLSX.writeFile(workbook, `Reporte_Convenios_${appliedFilters.fechaInicial}_al_${appliedFilters.fechaFinal}.xlsx`);
   };
 
   return (
@@ -238,11 +230,11 @@ export default function ReporteFinanciero() {
       {/* ─── ENCABEZADO Y BREADCRUMB ─── */}
       <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-black text-slate-800 tracking-tight">Reporte facturación</h2>
+          <h2 className="text-base font-black text-slate-800 tracking-tight">Reporte convenios</h2>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
             <span>🏠 Reportes</span>
             <span>/</span>
-            <span className="text-slate-500 font-bold">Reporte facturación</span>
+            <span className="text-slate-500 font-bold">Reporte convenios</span>
           </div>
         </div>
 
@@ -281,66 +273,113 @@ export default function ReporteFinanciero() {
           </div>
         </div>
 
-        {/* Fila 2: Oficina / Tipo de movimiento */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-500 mb-1">Oficina</label>
-            <select
-              value={oficina}
-              onChange={(e) => setOficina(e.target.value)}
-              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sky-500 transition-all uppercase"
-            >
-              <option value="OFICINA PRINCIPAL">OFICINA PRINCIPAL / CLINICA DENTAL</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-slate-500 mb-1">Tipo de movimiento</label>
-            <select
-              value={tipoMovimiento}
-              onChange={(e) => setTipoMovimiento(e.target.value)}
-              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sky-500 transition-all"
-            >
-              {TIPO_MOVIMIENTO_OPTIONS.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Fila 3: Información contable + Profesionales + Botón Buscar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        {/* Fila 2: Convenio (Buscador / Autocompletado) / Paciente (Autocompletado) + Botón Buscar */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
           
-          {/* Switch Información contable */}
-          <div className="flex items-center gap-3 h-9">
-            <span className="font-bold text-[11px] text-slate-500">Información contable</span>
-            <button
-              type="button"
-              onClick={() => setInformacionContable(!informacionContable)}
-              className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors ${informacionContable ? 'bg-sky-500 justify-end' : 'bg-slate-300 justify-start'}`}
-            >
-              <div className="w-4 h-4 bg-white rounded-full shadow-md" />
-            </button>
-            <span className="text-slate-400 text-[10px] cursor-help" title="Muestra desgloses contables adicionales">ⓘ</span>
+          {/* Convenio */}
+          <div className="md:col-span-2 relative">
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">Convenio</label>
+            <input
+              type="text"
+              placeholder="Buscar convenio..."
+              value={selectedConvenio}
+              onChange={(e) => {
+                setSelectedConvenio(e.target.value);
+                setShowConvenioDropdown(true);
+              }}
+              onFocus={() => setShowConvenioDropdown(true)}
+              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sky-500 transition-all uppercase"
+            />
+
+            {showConvenioDropdown && (
+              <div className="absolute left-0 right-0 top-16 z-30 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedConvenio("");
+                    setShowConvenioDropdown(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-slate-50 rounded-lg transition-colors uppercase"
+                >
+                  -- TODOS LOS CONVENIOS --
+                </button>
+                {conveniosList
+                  .filter(c => c.nombre.toLowerCase().includes(selectedConvenio.toLowerCase()))
+                  .map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedConvenio(c.nombre);
+                        setShowConvenioDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-lg transition-colors uppercase truncate block"
+                    >
+                      {c.nombre}
+                    </button>
+                  ))}
+                {conveniosList.filter(c => c.nombre.toLowerCase().includes(selectedConvenio.toLowerCase())).length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-400 font-medium text-center">
+                    No se encontraron convenios
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Profesionales */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-500 mb-1">Profesionales</label>
-            <select
-              value={selectedProfesional}
-              onChange={(e) => setSelectedProfesional(e.target.value)}
+          {/* Paciente */}
+          <div className="md:col-span-2 relative">
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">Paciente</label>
+            <input
+              type="text"
+              placeholder="Buscar paciente..."
+              value={selectedPaciente}
+              onChange={(e) => {
+                setSelectedPaciente(e.target.value);
+                setShowPacienteDropdown(true);
+              }}
+              onFocus={() => setShowPacienteDropdown(true)}
               className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sky-500 transition-all uppercase"
-            >
-              <option value="Todos">Todos</option>
-              {profesionales.map(prof => (
-                <option key={prof.id} value={prof.nombre}>{prof.nombre}</option>
-              ))}
-            </select>
+            />
+
+            {showPacienteDropdown && (
+              <div className="absolute left-0 right-0 top-16 z-30 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPaciente("");
+                    setShowPacienteDropdown(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-slate-50 rounded-lg transition-colors uppercase"
+                >
+                  -- TODOS LOS PACIENTES --
+                </button>
+                {pacientesList
+                  .filter(pac => pac.nombre.toLowerCase().includes(selectedPaciente.toLowerCase()))
+                  .map(pac => (
+                    <button
+                      key={pac.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPaciente(pac.nombre);
+                        setShowPacienteDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-lg transition-colors uppercase truncate block"
+                    >
+                      {pac.nombre}
+                    </button>
+                  ))}
+                {pacientesList.filter(pac => pac.nombre.toLowerCase().includes(selectedPaciente.toLowerCase())).length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-400 font-medium text-center">
+                    No se encontraron pacientes
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Botón Buscar */}
-          <div>
+          <div className="md:col-span-1">
             <button
               onClick={handleSearchClick}
               className="w-full h-9 px-6 bg-[#7cb342] hover:bg-[#689f38] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5"
@@ -410,7 +449,7 @@ export default function ReporteFinanciero() {
                 value={tableSearchTerm}
                 onChange={(e) => {
                   setTableSearchTerm(e.target.value);
-                  filterData(allFacturas, appliedFilters, e.target.value);
+                  filterData(allRecords, appliedFilters, e.target.value);
                 }}
                 className="h-7 pl-8 pr-2.5 w-44 bg-white border border-slate-200 rounded-md text-[11px] outline-none focus:border-sky-500 transition-all"
               />
@@ -423,7 +462,7 @@ export default function ReporteFinanciero() {
           {loading ? (
             <div className="flex flex-col items-center justify-center p-8 text-slate-400">
               <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-2" />
-              <span className="text-[11px] font-bold">Cargando reporte de facturación...</span>
+              <span className="text-[11px] font-bold">Cargando reporte de convenios...</span>
             </div>
           ) : (
             <table className="w-full text-left border-collapse text-[11px]">
@@ -431,13 +470,13 @@ export default function ReporteFinanciero() {
                 <tr>
                   {visibleColumns.fecha && (
                     <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
-                      <div>Fecha</div>
+                      <div>Fecha hora</div>
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
-                  {visibleColumns.documento && (
+                  {visibleColumns.convenio && (
                     <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
-                      <div>No. Documento / Factura</div>
+                      <div>Convenio</div>
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
@@ -447,27 +486,33 @@ export default function ReporteFinanciero() {
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
-                  {visibleColumns.profesional && (
+                  {visibleColumns.documento && (
                     <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
-                      <div>Profesional</div>
+                      <div>No. Documento / Historia</div>
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
-                  {visibleColumns.tipoMovimiento && (
+                  {visibleColumns.servicio && (
                     <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
-                      <div>Tipo de movimiento</div>
+                      <div>Tratamiento / Servicio</div>
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
-                  {visibleColumns.descripcion && (
-                    <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
-                      <div>Descripción</div>
-                      <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
-                    </th>
-                  )}
-                  {visibleColumns.monto && (
+                  {visibleColumns.montoOriginal && (
                     <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-right">
-                      <div>Monto</div>
+                      <div>Monto tarifa base</div>
+                      <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
+                    </th>
+                  )}
+                  {visibleColumns.descuentoConvenio && (
+                    <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-right">
+                      <div>Descuento convenio</div>
+                      <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
+                    </th>
+                  )}
+                  {visibleColumns.totalPagar && (
+                    <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-right">
+                      <div>Total a pagar</div>
                       <input type="text" className="mt-1 w-full h-5 px-1 text-[10px] border border-slate-200 rounded font-normal" />
                     </th>
                   )}
@@ -480,68 +525,69 @@ export default function ReporteFinanciero() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredFacturas.map((f) => {
+                {filteredRecords.map((r) => {
                   const formatDateStr = (d) => {
                     if (!d) return "";
                     const dt = d.toDate ? d.toDate() : new Date(d);
                     return isNaN(dt.getTime()) ? "" : format(dt, "dd/MM/yyyy HH:mm");
                   };
 
-                  const monto = Number(f.monto || 0);
-
                   return (
-                    <tr key={f.id} className="hover:bg-sky-50/40 transition-colors">
+                    <tr key={r.id} className="hover:bg-sky-50/40 transition-colors">
                       {visibleColumns.fecha && (
                         <td className="px-3 py-2 border-r border-slate-100 whitespace-nowrap">
-                          {formatDateStr(f.fecha)}
+                          {formatDateStr(r.fecha)}
                         </td>
                       )}
-                      {visibleColumns.documento && (
-                        <td className="px-3 py-2 border-r border-slate-100 font-bold text-sky-600 whitespace-nowrap">
-                          {f.idFactura || f.id || "—"}
+                      {visibleColumns.convenio && (
+                        <td className="px-3 py-2 border-r border-slate-100 font-bold text-sky-600 uppercase whitespace-nowrap">
+                          {r.convenio || "—"}
                         </td>
                       )}
                       {visibleColumns.paciente && (
                         <td className="px-3 py-2 border-r border-slate-100 font-bold text-slate-800 uppercase whitespace-nowrap">
-                          {f.pacienteNombre || "—"}
+                          {r.paciente || "—"}
                         </td>
                       )}
-                      {visibleColumns.profesional && (
-                        <td className="px-3 py-2 border-r border-slate-100 uppercase whitespace-nowrap">
-                          {f.profesional || f.profesionalAsignado || "—"}
-                        </td>
-                      )}
-                      {visibleColumns.tipoMovimiento && (
+                      {visibleColumns.documento && (
                         <td className="px-3 py-2 border-r border-slate-100 whitespace-nowrap">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                            {f.tipoMovimiento || "Factura"}
-                          </span>
+                          {r.documento || "—"}
                         </td>
                       )}
-                      {visibleColumns.descripcion && (
+                      {visibleColumns.servicio && (
                         <td className="px-3 py-2 border-r border-slate-100 whitespace-nowrap">
-                          {f.descripcion || "Facturación médica"}
+                          {r.servicio || "—"}
                         </td>
                       )}
-                      {visibleColumns.monto && (
-                        <td className="px-3 py-2 border-r border-slate-100 font-mono font-bold text-emerald-600 text-right whitespace-nowrap">
-                          $ {monto.toLocaleString('es-CO')}
+                      {visibleColumns.montoOriginal && (
+                        <td className="px-3 py-2 border-r border-slate-100 font-mono text-right whitespace-nowrap">
+                          $ {Number(r.montoOriginal || 0).toLocaleString('es-CO')}
+                        </td>
+                      )}
+                      {visibleColumns.descuentoConvenio && (
+                        <td className="px-3 py-2 border-r border-slate-100 font-mono text-emerald-600 font-bold text-right whitespace-nowrap">
+                          -$ {Number(r.descuentoConvenio || 0).toLocaleString('es-CO')}
+                        </td>
+                      )}
+                      {visibleColumns.totalPagar && (
+                        <td className="px-3 py-2 border-r border-slate-100 font-mono font-bold text-slate-900 text-right whitespace-nowrap">
+                          $ {Number(r.totalPagar || 0).toLocaleString('es-CO')}
                         </td>
                       )}
                       {visibleColumns.estado && (
                         <td className="px-3 py-2 text-center whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${f.estado === "Pagada" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
-                            {f.estado || "Pagada"}
+                          <span className="uppercase text-[10px] font-black text-slate-500">
+                            {r.estado || "Activo"}
                           </span>
                         </td>
                       )}
                     </tr>
                   );
                 })}
-                {filteredFacturas.length === 0 && (
+                {filteredRecords.length === 0 && (
                   <tr>
                     <td colSpan={Object.values(visibleColumns).filter(Boolean).length || 1} className="px-6 py-8 text-center text-slate-400 font-medium">
-                      No se encontraron transacciones para los filtros seleccionados.
+                      No se encontraron registros de convenios para los filtros seleccionados.
                     </td>
                   </tr>
                 )}

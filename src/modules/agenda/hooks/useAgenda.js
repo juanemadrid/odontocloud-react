@@ -69,6 +69,44 @@ export function useAgenda() {
     const [filterDocId, setFilterDocId] = useState("");
     const [filterBranchId, setFilterBranchId] = useState("");
 
+    // === Role & Permission Check for Doctor Isolation ===
+    const rolActual = (userProfile?.rol || "").trim().toLowerCase();
+    const isAdmin = rolActual === "administrador" || rolActual === "superadmin";
+    const isDoctor = userProfile?.esDoctor === true || 
+                     ["doctor", "odontologo", "especialista"].includes(rolActual) || 
+                     (typeof userProfile?.profileName === 'string' && userProfile.profileName.toLowerCase().includes('octor'));
+    const isDoctorOnly = isDoctor && !isAdmin;
+
+    const currentUserId = userProfile?.uid || userProfile?.id;
+    const currentDoctorObj = useMemo(() => {
+        if (!doctors || doctors.length === 0) return null;
+        return doctors.find(d => 
+            d.id === currentUserId || 
+            (currentUserId && d.uid === currentUserId) ||
+            (userProfile?.email && d.email?.toLowerCase() === userProfile.email.toLowerCase())
+        );
+    }, [doctors, currentUserId, userProfile?.email]);
+
+    const loggedInDoctorId = currentDoctorObj?.id || currentUserId;
+
+    // Filtered doctor list exposed to the app: if isDoctorOnly, restrict to only the current doctor
+    const effectiveDoctors = useMemo(() => {
+        if (!isDoctorOnly) return doctors;
+        if (currentDoctorObj) return [currentDoctorObj];
+        return [{
+            id: loggedInDoctorId,
+            nombre: userProfile?.nombreCompleto || userProfile?.nombre || "Mi Agenda",
+            especialidad: userProfile?.especialidad || "Odontología"
+        }];
+    }, [isDoctorOnly, doctors, currentDoctorObj, loggedInDoctorId, userProfile]);
+
+    // Keep filterDocId sync'd for doctor-only users
+    useEffect(() => {
+        if (isDoctorOnly && loggedInDoctorId && filterDocId !== loggedInDoctorId) {
+            setFilterDocId(loggedInDoctorId);
+        }
+    }, [isDoctorOnly, loggedInDoctorId, filterDocId]);
+
     // === Load Catalogs ===
     useEffect(() => {
         if (!inquilino) return;
@@ -188,7 +226,8 @@ export function useAgenda() {
 
             const visible = raw.filter(ev => {
                 const inRange = ev.start >= start && ev.start <= end;
-                const matchDoc = !filterDocId || ev.doctorId === filterDocId;
+                const activeDocFilter = isDoctorOnly ? loggedInDoctorId : filterDocId;
+                const matchDoc = !activeDocFilter || ev.doctorId === activeDocFilter;
                 const matchBranch = !filterBranchId || ev.sucursalId === filterBranchId;
                 return inRange && matchDoc && matchBranch;
             }).sort((a, b) => (a.start || 0) - (b.start || 0));
@@ -787,9 +826,10 @@ export function useAgenda() {
         selectedDate, setSelectedDate,
         viewMode, setViewMode,
         loading, appointments,
-        doctors, chairs, branches,
+        doctors: effectiveDoctors, chairs, branches,
         specialties, entities, priceList, patientsMap,
+        isDoctorOnly, loggedInDoctorId,
         createAppointment, updateAppointment, deleteAppointment,
-        filters: { filterDocId, setFilterDocId, filterBranchId, setFilterBranchId }
+        filters: { filterDocId: isDoctorOnly ? loggedInDoctorId : filterDocId, setFilterDocId, filterBranchId, setFilterBranchId }
     };
 }
