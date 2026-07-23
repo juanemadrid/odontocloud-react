@@ -1,26 +1,19 @@
 /**
  * FacturasQuotaPanel.jsx
- * SuperAdmin panel — manage centralized Factus credentials
- * and assign invoice quotas to tenants.
+ *
+ * Panel SuperAdmin para la gestión independiente de Paquetes y Credenciales Factus API por Clínica.
+ * Cada clínica cuenta con su propio paquete de facturación electrónica y sus credenciales API de Factus.
  */
 import React, { useState, useEffect } from "react";
 import {
-  collection, getDocs, query, orderBy,
-  doc, getDoc,
+  collection, getDocs, query, orderBy, doc, getDoc, updateDoc, setDoc, serverTimestamp
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useToast } from "../../context/ToastContext";
-import {
-  getFactusAdminCredentials,
-  saveFactusAdminCredentials,
-  getFactusAdminStats,
-  assignQuotaToTenant,
-  assignQuotaToSucursal,
-} from "../../services/factusAdminService";
 import factusService from "../../services/factusService";
 import {
   FiSave, FiZap, FiPlus, FiRefreshCw, FiEye, FiEyeOff,
-  FiFileText, FiAlertCircle, FiCheckCircle, FiMapPin,
+  FiFileText, FiAlertCircle, FiCheckCircle, FiMapPin, FiSettings, FiLock, FiCheck
 } from "react-icons/fi";
 
 const PLAN_PRESETS = [
@@ -30,65 +23,42 @@ const PLAN_PRESETS = [
   { label: "Personalizado",            cuota: 0,    plan: "personalizado" },
 ];
 
-const inp = "w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all";
+const inp = "w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all";
 
 export default function FacturasQuotaPanel() {
   const toast = useToast();
 
-  // ── Credentials form ──
-  const [creds, setCreds] = useState({
-    factusClientId: "", factusClientSecret: "",
-    factusUsername: "", factusPassword: "",
-    factusTestMode: true, factusNumberingRangeId: "",
-    totalComprado: 0,
+  // ── Tenants & sucursales list ──
+  const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // ── Modal state for Clinic Factus & Quota configuration ──
+  const [configModal, setConfigModal] = useState(null); // { tenantId, sucursalId, nombre }
+  const [modalForm, setModalForm] = useState({
+    facturacionCuota: 300,
+    facturacionPlan: "básico",
+    isCustomCuota: false,
+    factusClientId: "",
+    factusClientSecret: "",
+    factusUsername: "",
+    factusPassword: "",
+    factusNumberingRangeId: "",
+    factusTestMode: true,
   });
+
   const [showSecret, setShowSecret] = useState(false);
   const [showPass, setShowPass]     = useState(false);
   const [saving, setSaving]         = useState(false);
   const [testing, setTesting]       = useState(false);
 
-  // ── Stats ──
-  const [stats, setStats]     = useState({ totalComprado: 0, totalAsignado: 0, totalUsado: 0 });
-
-  // ── Tenants & sucursales list ──
-  const [tenants, setTenants]   = useState([]);
-  const [loading, setLoading]   = useState(true);
-
-  // ── Assign modal ──
-  const [assignModal, setAssignModal] = useState(null); // { inquilino, sucursalId, nombre }
-  const [assignCuota, setAssignCuota] = useState(300);
-  const [assignPlan,  setAssignPlan]  = useState("básico");
-  const [assignCustom, setAssignCustom] = useState(false);
-  const [assignTargetSucursalId, setAssignTargetSucursalId] = useState("");
-  const [assigning, setAssigning] = useState(false);
-
   // ─────────────────────────────────────────
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [credsData, statsData, tenantsSnap, sucursalesSnap] = await Promise.all([
-        getFactusAdminCredentials(),
-        getFactusAdminStats(),
+      const [tenantsSnap, sucursalesSnap] = await Promise.all([
         getDocs(query(collection(db, "tenants"), orderBy("name"))),
         getDocs(collection(db, "sucursales")),
       ]);
-
-      if (credsData) {
-        setCreds(prev => ({
-          ...prev,
-          factusClientId:         credsData.factusClientId         || "",
-          factusClientSecret:     credsData.factusClientSecret     || "",
-          factusUsername:         credsData.factusUsername         || "",
-          factusPassword:         credsData.factusPassword         || "",
-          factusTestMode:         credsData.factusTestMode         ?? true,
-          factusNumberingRangeId: credsData.factusNumberingRangeId || "",
-        }));
-      }
-      setStats({
-        totalComprado: statsData.totalComprado || credsData?.totalComprado || 0,
-        totalAsignado: statsData.totalAsignado || 0,
-        totalUsado:    statsData.totalUsado    || 0,
-      });
 
       const sucursalesMap = {};
       sucursalesSnap.docs.forEach(d => {
@@ -104,6 +74,13 @@ export default function FacturasQuotaPanel() {
           facturacionUsadas: sData.facturacionUsadas ?? 0,
           facturacionPlan:   sData.facturacionPlan   || "—",
           disponibles: Math.max(0, (sData.facturacionCuota ?? 0) - (sData.facturacionUsadas ?? 0)),
+          hasFactusCreds: Boolean(sData.factusClientId && sData.factusClientSecret),
+          factusClientId: sData.factusClientId || "",
+          factusClientSecret: sData.factusClientSecret || "",
+          factusUsername: sData.factusUsername || "",
+          factusPassword: sData.factusPassword || "",
+          factusNumberingRangeId: sData.factusNumberingRangeId || "",
+          factusTestMode: sData.factusTestMode ?? true,
         });
       });
 
@@ -117,13 +94,20 @@ export default function FacturasQuotaPanel() {
           facturacionUsadas: t.facturacionUsadas ?? 0,
           facturacionPlan:   t.facturacionPlan   || "—",
           disponibles: Math.max(0, (t.facturacionCuota ?? 0) - (t.facturacionUsadas ?? 0)),
+          hasFactusCreds: Boolean(t.factusClientId && t.factusClientSecret),
+          factusClientId: t.factusClientId || "",
+          factusClientSecret: t.factusClientSecret || "",
+          factusUsername: t.factusUsername || "",
+          factusPassword: t.factusPassword || "",
+          factusNumberingRangeId: t.factusNumberingRangeId || "",
+          factusTestMode: t.factusTestMode ?? true,
           sucursales: sucursalesMap[d.id] || [],
         };
       });
       setTenants(list);
     } catch (e) {
       console.error(e);
-      toast.error("Error cargando datos.");
+      toast.error("Error cargando clínicas.");
     } finally {
       setLoading(false);
     }
@@ -132,38 +116,45 @@ export default function FacturasQuotaPanel() {
   useEffect(() => { loadAll(); }, []);
 
   // ─────────────────────────────────────────
-  const handleSaveCreds = async () => {
-    setSaving(true);
-    try {
-      await saveFactusAdminCredentials({
-        factusClientId:         creds.factusClientId,
-        factusClientSecret:     creds.factusClientSecret,
-        factusUsername:         creds.factusUsername,
-        factusPassword:         creds.factusPassword,
-        factusTestMode:         creds.factusTestMode,
-        factusNumberingRangeId: creds.factusNumberingRangeId,
-        totalComprado:          Number(creds.totalComprado) || 0,
-      });
-      toast.success("Credenciales y configuración guardadas.");
-      loadAll();
-    } catch (e) {
-      toast.error(`Error: ${e.message}`);
-    } finally {
-      setSaving(false);
-    }
+  const openModalForClinic = (item, isSucursal = false, parentTenant = null) => {
+    const isCustom = !PLAN_PRESETS.some(p => p.cuota === item.facturacionCuota);
+    setModalForm({
+      facturacionCuota: item.facturacionCuota || 300,
+      facturacionPlan: item.facturacionPlan || "básico",
+      isCustomCuota: isCustom,
+      factusClientId: item.factusClientId || "",
+      factusClientSecret: item.factusClientSecret || "",
+      factusUsername: item.factusUsername || "",
+      factusPassword: item.factusPassword || "",
+      factusNumberingRangeId: item.factusNumberingRangeId || "",
+      factusTestMode: item.factusTestMode ?? true,
+    });
+    setConfigModal({
+      tenantId: isSucursal ? parentTenant.id : item.id,
+      sucursalId: isSucursal ? item.id : null,
+      nombre: isSucursal ? `${parentTenant.nombre} — Sede ${item.nombre}` : item.nombre,
+      isSucursal,
+    });
+    setShowSecret(false);
+    setShowPass(false);
   };
 
+  // ─────────────────────────────────────────
   const handleTestConnection = async () => {
+    if (!modalForm.factusClientId || !modalForm.factusClientSecret) {
+      toast.error("Ingresa Client ID y Client Secret para probar conexión.");
+      return;
+    }
     setTesting(true);
     try {
       await factusService.testConnection({
-        factusClientId:     creds.factusClientId,
-        factusClientSecret: creds.factusClientSecret,
-        factusUsername:     creds.factusUsername,
-        factusPassword:     creds.factusPassword,
-        factusTestMode:     creds.factusTestMode,
+        factusClientId:     modalForm.factusClientId,
+        factusClientSecret: modalForm.factusClientSecret,
+        factusUsername:     modalForm.factusUsername,
+        factusPassword:     modalForm.factusPassword,
+        factusTestMode:     modalForm.factusTestMode,
       });
-      toast.success("¡Conexión con Factus exitosa! Credenciales válidas.");
+      toast.success("¡Conexión exitosa! Las credenciales de Factus son válidas.");
     } catch (e) {
       toast.error(`Error de conexión: ${e.message}`);
     } finally {
@@ -171,259 +162,204 @@ export default function FacturasQuotaPanel() {
     }
   };
 
-  // ── Clinic Specific Factus Credentials inside Assign Modal ──
-  const [customCredsEnabled, setCustomCredsEnabled] = useState(false);
-  const [clinicCreds, setClinicCreds] = useState({
-    factusClientId: "", factusClientSecret: "",
-    factusUsername: "", factusPassword: "",
-    factusNumberingRangeId: "", factusTestMode: true,
-  });
+  // ─────────────────────────────────────────
+  const handleSaveModal = async (e) => {
+    e.preventDefault();
+    if (!configModal) return;
 
-  const handleAssign = async () => {
-    if (!assignModal) return;
-    if (assignCuota <= 0) { toast.error("La cuota debe ser mayor a 0."); return; }
-    const disponibleParaAsignar = stats.totalComprado - stats.totalAsignado;
-    if (assignCuota > disponibleParaAsignar) {
-      toast.error(`Solo tienes ${disponibleParaAsignar} facturas disponibles para asignar.`);
-      return;
-    }
-    setAssigning(true);
+    setSaving(true);
     try {
-      if (customCredsEnabled && clinicCreds.factusClientId) {
-        const { saveTenantFactusCredentials } = await import("../../services/factusAdminService");
-        await saveTenantFactusCredentials(assignModal.inquilino, assignTargetSucursalId || null, clinicCreds);
+      const payload = {
+        facturacionCuota: Number(modalForm.facturacionCuota) || 0,
+        facturacionPlan: modalForm.facturacionPlan,
+        factusClientId: modalForm.factusClientId.trim(),
+        factusClientSecret: modalForm.factusClientSecret.trim(),
+        factusUsername: modalForm.factusUsername.trim(),
+        factusPassword: modalForm.factusPassword.trim(),
+        factusNumberingRangeId: modalForm.factusNumberingRangeId.trim(),
+        factusTestMode: modalForm.factusTestMode,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (configModal.isSucursal && configModal.sucursalId) {
+        await updateDoc(doc(db, "sucursales", configModal.sucursalId), payload);
+      } else {
+        await updateDoc(doc(db, "tenants", configModal.tenantId), payload);
       }
 
-      if (assignTargetSucursalId) {
-        await assignQuotaToSucursal(assignTargetSucursalId, assignCuota, assignPlan);
-        toast.success(`${assignCuota} facturas asignadas a la sucursal.`);
-      } else {
-        await assignQuotaToTenant(assignModal.inquilino, assignCuota, assignPlan);
-        toast.success(`${assignCuota} facturas asignadas a ${assignModal.nombre}.`);
-      }
-      setAssignModal(null);
+      toast.success(`Facturación electrónica configurada con éxito para ${configModal.nombre}`);
+      setConfigModal(null);
       loadAll();
     } catch (e) {
-      toast.error(`Error: ${e.message}`);
+      console.error(e);
+      toast.error(`Error al guardar: ${e.message}`);
     } finally {
-      setAssigning(false);
+      setSaving(false);
     }
   };
 
-  const disponibleParaAsignar = stats.totalComprado - stats.totalAsignado;
-  const pct = stats.totalComprado > 0 ? Math.round((stats.totalUsado / stats.totalComprado) * 100) : 0;
+  const totalClinics = tenants.length;
+  const configuredClinics = tenants.filter(t => t.hasFactusCreds || t.sucursales.some(s => s.hasFactusCreds)).length;
 
   return (
-    <div className="space-y-8 p-6 max-w-5xl mx-auto">
+    <div className="space-y-8 p-4 md:p-8 max-w-6xl mx-auto animate-fadeIn">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Facturación Electrónica</h2>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">Credenciales centralizadas y cuotas por clínica</p>
-        </div>
-        <button onClick={loadAll} className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all">
-          <FiRefreshCw size={15} />
-        </button>
-      </div>
-
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Compradas a Factus",   val: stats.totalComprado,        color: "text-blue-600",   bg: "bg-blue-50"   },
-          { label: "Asignadas a clínicas", val: stats.totalAsignado,        color: "text-indigo-600", bg: "bg-indigo-50" },
-          { label: "Usadas (emitidas)",    val: stats.totalUsado,           color: "text-rose-600",   bg: "bg-rose-50"   },
-          { label: "Disponibles para asignar", val: disponibleParaAsignar,  color: "text-emerald-600",bg: "bg-emerald-50"},
-        ].map(k => (
-          <div key={k.label} className={`${k.bg} rounded-2xl p-4 border border-white/50`}>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{k.label}</p>
-            <p className={`text-3xl font-black ${k.color}`}>{k.val.toLocaleString("es-CO")}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Progress bar */}
-      {stats.totalComprado > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-          <div className="flex justify-between text-xs font-semibold text-slate-500 mb-2">
-            <span>Facturas usadas del total comprado</span>
-            <span>{pct}%</span>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-2.5">
-            <div className="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">{stats.totalUsado} / {stats.totalComprado} facturas</p>
-        </div>
-      )}
-
-      {/* ── Credentials form ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide flex items-center gap-2">
-          <FiZap size={15} className="text-blue-500" /> Credenciales API Factus (centralizadas)
-        </h3>
-        <p className="text-xs text-slate-400">Estas credenciales son tuyas. Las clínicas no las ven ni las necesitan.</p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Client ID *</label>
-            <input value={creds.factusClientId} onChange={e => setCreds(p=>({...p, factusClientId: e.target.value}))} className={inp} placeholder="Client ID de Factus" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-200">
+            <FiZap size={28} className="text-white" />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Client Secret *</label>
-            <div className="relative">
-              <input type={showSecret?"text":"password"} value={creds.factusClientSecret} onChange={e=>setCreds(p=>({...p,factusClientSecret:e.target.value}))} className={inp+" pr-10"} placeholder="Client Secret" />
-              <button type="button" onClick={()=>setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showSecret?<FiEyeOff size={14}/>:<FiEye size={14}/>}</button>
+            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Facturación Electrónica por Clínica</h2>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              Gestión independiente de paquetes y credenciales API Factus
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6 px-5 py-2.5 bg-slate-50 border border-slate-200/60 rounded-2xl">
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Clínicas</p>
+              <p className="text-xl font-black text-slate-800">{totalClinics}</p>
+            </div>
+            <div className="w-px h-8 bg-slate-200" />
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Configuradas Factus</p>
+              <p className="text-xl font-black text-emerald-600">{configuredClinics}</p>
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Usuario / Correo API *</label>
-            <input value={creds.factusUsername} onChange={e=>setCreds(p=>({...p,factusUsername:e.target.value}))} className={inp} placeholder="sandboxv2@factus.com.co" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contraseña API *</label>
-            <div className="relative">
-              <input type={showPass?"text":"password"} value={creds.factusPassword} onChange={e=>setCreds(p=>({...p,factusPassword:e.target.value}))} className={inp+" pr-10"} placeholder="Contraseña" />
-              <button type="button" onClick={()=>setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPass?<FiEyeOff size={14}/>:<FiEye size={14}/>}</button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Rango Numeración Factus</label>
-            <input value={creds.factusNumberingRangeId} onChange={e=>setCreds(p=>({...p,factusNumberingRangeId:e.target.value}))} className={inp} placeholder="Ej: 8" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total comprado a Factus</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={(!creds.totalComprado || creds.totalComprado === 0) ? '' : Number(creds.totalComprado).toLocaleString('es-CO')}
-              onChange={e => {
-                const raw = e.target.value.replace(/\D/g, '');
-                setCreds(p => ({ ...p, totalComprado: raw ? Number(raw) : 0 }));
-              }}
-              className={inp}
-              placeholder="Ej: 10000"
-            />
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={creds.factusTestMode} onChange={e=>setCreds(p=>({...p,factusTestMode:e.target.checked}))} className="w-4 h-4 rounded text-blue-600" />
-            <span className="text-sm font-medium text-slate-600">Modo Sandbox (pruebas)</span>
-          </label>
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button onClick={handleTestConnection} disabled={testing} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all">
-            {testing ? <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"/> : <FiZap size={14}/>}
-            Probar conexión
-          </button>
-          <button onClick={handleSaveCreds} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all">
-            {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <FiSave size={14}/>}
-            Guardar
+          <button onClick={loadAll} className="w-10 h-10 flex items-center justify-center rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-blue-300 transition-all shadow-sm">
+            <FiRefreshCw size={16} />
           </button>
         </div>
       </div>
 
-      {/* ── Tenants quota table ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide flex items-center gap-2">
-            <FiFileText size={15} className="text-indigo-500" /> Cuotas por Clínica
-          </h3>
+      {/* ── Clinics Table ── */}
+      <div className="bg-white rounded-[32px] border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <FiFileText size={18} className="text-blue-600" />
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+              Clínicas Registradas en el Sistema
+            </h3>
+          </div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            Haz clic en "Configurar Facturas & API" para asignar llaves y paquetes
+          </span>
         </div>
+
         {loading ? (
-          <div className="flex items-center justify-center py-12 gap-2 text-slate-400">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/> Cargando...
+          <div className="flex items-center justify-center py-20 gap-3 text-slate-400 animate-pulse">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"/>
+            <span className="text-xs font-bold uppercase tracking-widest">Cargando clínicas...</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  {["Clínica","NIT","Plan","Asignadas","Usadas","Disponibles",""].map((h,i) => (
-                    <th key={i} className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                <tr className="border-b border-slate-100 bg-slate-50/80">
+                  {["Clínica / Inquilino", "NIT", "Estado Factus API", "Plan", "Cuota Paquete", "Usadas", "Disponibles", "Acción"].map((h, i) => (
+                    <th key={i} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {tenants.map(t => (
                   <React.Fragment key={t.id}>
-                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors font-semibold">
-                      <td className="px-5 py-3.5 text-slate-800 flex items-center gap-2">
-                        {t.nombre}
-                        {t.sucursales?.length > 0 && (
-                          <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase">
-                            {t.sucursales.length} sedes
+                    {/* Parent Clinic Row */}
+                    <tr className="hover:bg-slate-50/60 transition-colors group">
+                      <td className="px-6 py-4 font-black text-slate-800 uppercase tracking-tight">
+                        <div className="flex items-center gap-2">
+                          <span>{t.nombre}</span>
+                          {t.sucursales?.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-100 text-blue-700 uppercase">
+                              {t.sucursales.length} sedes
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-slate-500 font-mono">{t.nit}</td>
+                      <td className="px-6 py-4">
+                        {t.hasFactusCreds ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/60 uppercase tracking-wider">
+                            <FiCheckCircle size={12} className="text-emerald-600" /> API Lista
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200/60 uppercase tracking-wider">
+                            <FiAlertCircle size={12} className="text-amber-600" /> Sin Credenciales
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-slate-400 text-xs">{t.nit}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-500 uppercase">{t.facturacionPlan}</span>
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-700">{t.facturacionCuota.toLocaleString("es-CO")}</td>
-                      <td className="px-5 py-3.5 text-slate-500">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`font-black ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
-                          {t.disponibles.toLocaleString("es-CO")}
-                          {t.disponibles <= 0 && <span className="ml-1 text-[9px] font-black bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full uppercase">Agotado</span>}
-                          {t.disponibles > 0 && t.disponibles <= 50 && <span className="ml-1 text-[9px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full uppercase">Bajo</span>}
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 uppercase tracking-wider">
+                          {t.facturacionPlan}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-6 py-4 font-bold text-slate-800 text-sm">{t.facturacionCuota.toLocaleString("es-CO")}</td>
+                      <td className="px-6 py-4 font-medium text-slate-500 text-sm">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-black text-sm ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
+                          {t.disponibles.toLocaleString("es-CO")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
                         <button
-                          onClick={() => {
-                            setAssignModal({ inquilino: t.id, nombre: t.nombre, sucursales: t.sucursales || [] });
-                            setAssignTargetSucursalId("");
-                            setAssignCuota(300);
-                            setAssignPlan("básico");
-                            setAssignCustom(false);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-all"
+                          onClick={() => openModalForClinic(t)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-200 active:scale-95"
                         >
-                          <FiPlus size={12}/> Asignar
+                          <FiSettings size={14} /> Configurar Facturas & API
                         </button>
                       </td>
                     </tr>
 
                     {/* Sub-rows for Sucursales */}
                     {t.sucursales && t.sucursales.map(s => (
-                      <tr key={s.id} className="bg-slate-50/40 border-b border-slate-100/70 text-xs">
-                        <td className="pl-10 pr-5 py-2.5 text-slate-600 flex items-center gap-2">
-                          <FiMapPin size={12} className="text-blue-500 shrink-0" />
-                          <span>{s.nombre} {s.ciudad ? `(${s.ciudad})` : ""}</span>
+                      <tr key={s.id} className="bg-slate-50/30 hover:bg-blue-50/30 transition-colors">
+                        <td className="pl-12 pr-6 py-3 text-xs font-bold text-slate-600 flex items-center gap-2">
+                          <FiMapPin size={13} className="text-blue-500 shrink-0" />
+                          <span>Sede: {s.nombre} {s.ciudad ? `(${s.ciudad})` : ""}</span>
                         </td>
-                        <td className="px-5 py-2.5 text-slate-400 font-mono text-[11px]">Sede</td>
-                        <td className="px-5 py-2.5">
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-600 uppercase">{s.facturacionPlan}</span>
+                        <td className="px-6 py-3 text-xs font-mono text-slate-400">Sucursal</td>
+                        <td className="px-6 py-3">
+                          {s.hasFactusCreds ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">
+                              <FiCheckCircle size={10} /> API Sede Configurada
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-500 uppercase">
+                              Usa Cuenta Principal
+                            </span>
+                          )}
                         </td>
-                        <td className="px-5 py-2.5 font-medium text-slate-700">{s.facturacionCuota.toLocaleString("es-CO")}</td>
-                        <td className="px-5 py-2.5 text-slate-500">{s.facturacionUsadas.toLocaleString("es-CO")}</td>
-                        <td className="px-5 py-2.5">
-                          <span className={`font-bold ${s.disponibles <= 0 ? "text-rose-600" : s.disponibles <= 50 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {s.disponibles.toLocaleString("es-CO")}
+                        <td className="px-6 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-600 uppercase">
+                            {s.facturacionPlan}
                           </span>
                         </td>
-                        <td className="px-5 py-2.5">
+                        <td className="px-6 py-3 font-semibold text-slate-700 text-xs">{s.facturacionCuota.toLocaleString("es-CO")}</td>
+                        <td className="px-6 py-3 text-slate-500 text-xs">{s.facturacionUsadas.toLocaleString("es-CO")}</td>
+                        <td className="px-6 py-3 font-bold text-xs text-emerald-600">{s.disponibles.toLocaleString("es-CO")}</td>
+                        <td className="px-6 py-3">
                           <button
-                            onClick={() => {
-                              setAssignModal({ inquilino: t.id, nombre: `${t.nombre} — Sede ${s.nombre}`, sucursales: t.sucursales || [] });
-                              setAssignTargetSucursalId(s.id);
-                              setAssignCuota(300);
-                              setAssignPlan("básico");
-                              setAssignCustom(false);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-[11px] font-bold hover:bg-blue-100 transition-all"
+                            onClick={() => openModalForClinic(s, true, t)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase transition-all"
                           >
-                            <FiPlus size={10}/> Asignar Sede
+                            <FiSettings size={12} /> Configurar Sede
                           </button>
                         </td>
                       </tr>
                     ))}
                   </React.Fragment>
                 ))}
+
                 {tenants.length === 0 && (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-300 text-sm">No hay clínicas registradas.</td></tr>
+                  <tr>
+                    <td colSpan={8} className="px-8 py-16 text-center text-slate-400 text-sm font-semibold">
+                      No hay clínicas registradas en el sistema.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -431,109 +367,229 @@ export default function FacturasQuotaPanel() {
         )}
       </div>
 
-      {/* ── Assign Modal ── */}
-      {assignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">Asignar facturas a <span className="text-indigo-600">{assignModal.nombre}</span></h3>
-              <p className="text-xs text-slate-400 mt-0.5">Disponibles para asignar: <strong className="text-emerald-600">{disponibleParaAsignar.toLocaleString("es-CO")}</strong></p>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-
-              {assignModal.sucursales && assignModal.sucursales.length > 0 && (
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Destino de la cuota</label>
-                  <select
-                    value={assignTargetSucursalId}
-                    onChange={e => setAssignTargetSucursalId(e.target.value)}
-                    className={inp}
-                  >
-                    <option value="">Cuenta Principal Inquilino</option>
-                    {assignModal.sucursales.map(s => (
-                      <option key={s.id} value={s.id}>Sede / Sucursal: {s.nombre} ({s.ciudad})</option>
-                    ))}
-                  </select>
+      {/* ── Configuration Modal (API Keys + Invoice Package) ── */}
+      {configModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="px-8 py-6 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <FiSettings size={24} className="text-white" />
                 </div>
-              )}
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-tight">Facturación Electrónica Factus</h3>
+                  <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest mt-0.5">
+                    {configModal.nombre}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setConfigModal(null)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Selecciona un plan</label>
+            {/* Modal Body */}
+            <form onSubmit={handleSaveModal} className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              
+              {/* Sección 1: Paquete de Facturas */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <FiZap className="text-blue-600" size={18} />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    1. Paquete de Facturas Asignado
+                  </h4>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   {PLAN_PRESETS.map(p => (
-                    <button key={p.label} type="button"
-                      onClick={() => { if (p.plan === "personalizado") { setAssignCustom(true); } else { setAssignCuota(p.cuota); setAssignPlan(p.plan); setAssignCustom(false); } }}
-                      className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-all text-left ${(assignPlan === p.plan && !assignCustom) || (assignCustom && p.plan === "personalizado") ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        if (p.plan === "personalizado") {
+                          setModalForm(prev => ({ ...prev, isCustomCuota: true, facturacionPlan: "personalizado" }));
+                        } else {
+                          setModalForm(prev => ({ ...prev, facturacionCuota: p.cuota, facturacionPlan: p.plan, isCustomCuota: false }));
+                        }
+                      }}
+                      className={`px-4 py-3 rounded-2xl border text-xs font-bold transition-all text-left flex items-center justify-between ${
+                        (modalForm.facturacionPlan === p.plan && !modalForm.isCustomCuota) || (modalForm.isCustomCuota && p.plan === "personalizado")
+                          ? "border-blue-600 bg-blue-50/80 text-blue-700 shadow-sm"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
                     >
-                      {p.label}
+                      <span>{p.label}</span>
+                      {((modalForm.facturacionPlan === p.plan && !modalForm.isCustomCuota) || (modalForm.isCustomCuota && p.plan === "personalizado")) && (
+                        <FiCheck className="text-blue-600" size={16} />
+                      )}
                     </button>
                   ))}
                 </div>
-              </div>
-              {assignCustom && (
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cantidad personalizada</label>
-                  <input type="number" min="1" value={assignCuota} onChange={e=>setAssignCuota(Number(e.target.value))} className={inp} />
-                </div>
-              )}
-              <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500">
-                Se agregarán <strong className="text-slate-700">{assignCuota}</strong> facturas.
-                {assignTargetSucursalId ? <span className="block text-indigo-600 font-bold mt-0.5">Asignado específicamente a Sede / Sucursal.</span> : null}
-                <br/>
-                Plan: <strong className="capitalize">{assignCustom ? "personalizado" : assignPlan}</strong>
-              </div>
 
-              {/* Toggle to register clinic specific Factus API Keys */}
-              <div className="pt-2 border-t border-slate-100 space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={customCredsEnabled}
-                    onChange={e => setCustomCredsEnabled(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Registrar Credenciales Factus API para esta clínica</span>
-                </label>
-
-                {customCredsEnabled && (
-                  <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3 text-xs">
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Credenciales API de Factus asignadas a esta clínica</p>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Client ID</label>
-                      <input value={clinicCreds.factusClientId} onChange={e=>setClinicCreds(p=>({...p,factusClientId:e.target.value}))} className={inp} placeholder="Client ID de Factus" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Client Secret</label>
-                      <input type="password" value={clinicCreds.factusClientSecret} onChange={e=>setClinicCreds(p=>({...p,factusClientSecret:e.target.value}))} className={inp} placeholder="Client Secret" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Usuario API</label>
-                        <input value={clinicCreds.factusUsername} onChange={e=>setClinicCreds(p=>({...p,factusUsername:e.target.value}))} className={inp} placeholder="Email API" />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Contraseña API</label>
-                        <input type="password" value={clinicCreds.factusPassword} onChange={e=>setClinicCreds(p=>({...p,factusPassword:e.target.value}))} className={inp} placeholder="Contraseña API" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">ID Rango Numeración</label>
-                      <input value={clinicCreds.factusNumberingRangeId} onChange={e=>setClinicCreds(p=>({...p,factusNumberingRangeId:e.target.value}))} className={inp} placeholder="Ej: 8" />
-                    </div>
+                {modalForm.isCustomCuota && (
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      Cantidad de Facturas del Paquete
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={modalForm.facturacionCuota}
+                      onChange={e => setModalForm(prev => ({ ...prev, facturacionCuota: Number(e.target.value) || 0 }))}
+                      className={inp}
+                      placeholder="Ej: 400"
+                    />
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-              <button onClick={() => setAssignModal(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all">Cancelar</button>
-              <button onClick={handleAssign} disabled={assigning} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-                {assigning ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <FiCheckCircle size={14}/>}
-                Confirmar
-              </button>
-            </div>
+
+              {/* Sección 2: Credenciales Factus API */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <FiLock className="text-indigo-600" size={18} />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                      2. Credenciales API de Factus (Entregadas por Factus para esta clínica)
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      Client ID Factus *
+                    </label>
+                    <input
+                      value={modalForm.factusClientId}
+                      onChange={e => setModalForm(prev => ({ ...prev, factusClientId: e.target.value }))}
+                      className={inp}
+                      placeholder="Ej: a249df34-772b-461d-a9eb-2bb4f95ad511"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      Client Secret Factus *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showSecret ? "text" : "password"}
+                        value={modalForm.factusClientSecret}
+                        onChange={e => setModalForm(prev => ({ ...prev, factusClientSecret: e.target.value }))}
+                        className={inp + " pr-10"}
+                        placeholder="Client Secret"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecret(!showSecret)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showSecret ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      Usuario / Email API *
+                    </label>
+                    <input
+                      value={modalForm.factusUsername}
+                      onChange={e => setModalForm(prev => ({ ...prev, factusUsername: e.target.value }))}
+                      className={inp}
+                      placeholder="sandboxv2@factus.com.co"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      Contraseña API *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPass ? "text" : "password"}
+                        value={modalForm.factusPassword}
+                        onChange={e => setModalForm(prev => ({ ...prev, factusPassword: e.target.value }))}
+                        className={inp + " pr-10"}
+                        placeholder="Contraseña Factus API"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(!showPass)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPass ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                      ID Rango Numeración Factus
+                    </label>
+                    <input
+                      value={modalForm.factusNumberingRangeId}
+                      onChange={e => setModalForm(prev => ({ ...prev, factusNumberingRangeId: e.target.value }))}
+                      className={inp}
+                      placeholder="Ej: 8"
+                    />
+                  </div>
+
+                  <div className="flex items-center pt-5">
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={modalForm.factusTestMode}
+                        onChange={e => setModalForm(prev => ({ ...prev, factusTestMode: e.target.checked }))}
+                        className="w-4 h-4 rounded text-blue-600"
+                      />
+                      <span className="text-xs font-bold text-slate-700">Modo Pruebas (Sandbox)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={testing}
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-slate-200 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
+                >
+                  {testing ? <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"/> : <FiZap size={15} className="text-blue-600" />}
+                  Probar Conexión Factus
+                </button>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setConfigModal(null)}
+                    className="px-6 py-3 rounded-2xl border border-slate-200 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 active:scale-95"
+                  >
+                    {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <FiSave size={16} />}
+                    Guardar Configuración
+                  </button>
+                </div>
+              </div>
+
+            </form>
           </div>
         </div>
       )}
     </div>
   );
 }
+
