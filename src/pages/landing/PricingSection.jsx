@@ -1,97 +1,71 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiCheck, FiStar } from 'react-icons/fi';
+import { FiCheck, FiStar, FiZap, FiX } from 'react-icons/fi';
+import { getPlans } from '../../services/adminService';
 
 export default function PricingSection({ config, dbPlans, onShowTrial, dark = false }) {
-    if (!config?.isMaster) return null;
+    const [fetchedPlans, setFetchedPlans] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    // Default plans if DB is empty
-    const defaultPlans = [
-        {
-            name: "Esencial",
-            price: 120000,
-            desc: "Para consultorios que inician su digitalización.",
-            features: [
-                "1 Usuario (Administrador)",
-                "Agenda Inteligente",
-                "Historia Clínica Digital",
-                "Odontograma 3D Básico",
-                "Hasta 500 Pacientes",
-                "Soporte vía WhatsApp"
-            ],
-            isPopular: false,
-            btnText: "Probar Esencial"
-        },
-        {
-            name: "Pro Professional",
-            price: 250000,
-            desc: "El estándar de oro para clínicas modernas.",
-            features: [
-                "Usuarios Ilimitados",
-                "Página Web Clínica Personalizada",
-                "Recordatorios WhatsApp Ilimitados",
-                "Odontograma 3D Avanzado",
-                "Facturación y Cartera",
-                "Gestión de Inventarios",
-                "Pacientes Ilimitados",
-                "Soporte Prioritario 24/7"
-            ],
-            isPopular: true,
-            btnText: "Elegir Professional"
-        },
-        {
-            name: "Élite Multi-Sede",
-            price: 480000,
-            desc: "Control total para redes de clínicas.",
-            features: [
-                "Todo lo del Plan Pro Professional",
-                "Sedes Ilimitadas",
-                "Analítica de Datos Avanzada",
-                "Portal del Paciente Premium",
-                "API para Integraciones",
-                "Account Manager Dedicado"
-            ],
-            isPopular: false,
-            btnText: "Contactar Ventas"
+    useEffect(() => {
+        if (!dbPlans || dbPlans.length === 0) {
+            setLoading(true);
+            getPlans()
+                .then(plans => {
+                    setFetchedPlans(plans || []);
+                })
+                .catch(err => console.error("Error cargando planes en PricingSection:", err))
+                .finally(() => setLoading(false));
         }
-    ];
+    }, [dbPlans]);
 
     const featureMapping = {
-        "Agenda": "Agenda Inteligente y Recordatorios",
-        "Pacientes": "Gestión Integral de Pacientes",
-        "Inventario": "Control de Inventarios y Stock",
-        "Facturación": "Facturación y Control de Cartera",
-        "Facturacion": "Facturación y Control de Cartera",
+        "Agenda": "Agenda Inteligente con Recordatorios",
+        "Pacientes": "Gestión de Pacientes e Historia Clínica Digital",
+        "Inventario": "Control de Inventarios y Suministros",
+        "Facturación": "Módulo de Facturación Integrado",
+        "Facturacion": "Módulo de Facturación Integrado",
         "RIPS": "RIPS y Normativa de Salud Vigente",
         "Administración": "Módulo de Administración Clínica",
         "Administracion": "Módulo de Administración Clínica",
-        "CMS": "Sitio Web Corporativo Profesional",
-        "Personalizacion": "Personalización de Marca de Élite"
+        "CMS": "Sitio Web Corporativo Profesional (CMS)",
+        "Personalizacion": "Personalización Web para tu Clínica"
     };
 
-    const enrichFeatures = (features) => {
-        if (!features || features.length === 0) return [];
-        return features.map(f => {
-            const cleanText = f.trim();
-            return featureMapping[cleanText] || f;
-        });
-    };
+    const sourcePlans = (dbPlans && dbPlans.length > 0) ? dbPlans : fetchedPlans;
 
-    let displayPlans = (dbPlans && dbPlans.length > 0)
-        ? dbPlans.map(p => {
-            // Normalize DB plan to match expected Landing UI schema
-            return {
-                ...p,
-                desc: p.description || p.desc, // Support both
-                userLimit: p.maxUsers ? `${p.maxUsers} Usuarios` : p.userLimit,
-                coreModule: p.coreModule || "Módulo Core",
-                recommended: p.recommended || p.isPopular || p.name?.toLowerCase().includes('corporativo'),
-                features: enrichFeatures(p.features)
-            };
-        })
-        : (config?.plans && config.plans.length > 0 ? config.plans : defaultPlans);
+    let displayPlans = sourcePlans.map(p => {
+        const hasFactus = p.includeFacturacion !== false && Boolean(p.facturasIncluidas && p.facturasIncluidas > 0);
+        const factusFeature = hasFactus
+            ? `⚡ Facturación Electrónica (${(p.facturasIncluidas || 300).toLocaleString('es-CO')} / mes)`
+            : `✕ Sin Facturación Electrónica`;
 
-    // If we only have 2 plans (Basico and Corporativo), and Corporativo is second, ensure it stands out.
+        const enrichedFeatures = [factusFeature];
+
+        if (p.features && Array.isArray(p.features)) {
+            p.features.forEach(f => {
+                const clean = f.trim();
+                const mapped = featureMapping[clean] || clean;
+                if (!enrichedFeatures.includes(mapped)) {
+                    enrichedFeatures.push(mapped);
+                }
+            });
+        }
+
+        return {
+            ...p,
+            name: p.name || "Plan",
+            desc: p.description || p.desc || "Solución clínica integral para tu consultorio.",
+            userLimit: p.maxUsers ? `Hasta ${p.maxUsers} Usuarios` : "Usuarios Ilimitados",
+            coreModule: p.coreModule || "Módulo Core",
+            price: p.monthlyPrice || p.price || 0,
+            yearlyPrice: p.yearlyPrice || p.annualPrice || 0,
+            recommended: p.recommended || p.isPopular || p.name?.toLowerCase().includes('corporativo'),
+            features: enrichedFeatures,
+            btnText: `Elegir ${p.name}`
+        };
+    });
+
     if (displayPlans.length === 2 && !displayPlans[1].recommended) {
         displayPlans[1].recommended = true;
     }
@@ -206,19 +180,30 @@ export default function PricingSection({ config, dbPlans, onShowTrial, dark = fa
                             </div>
 
                             <ul className="space-y-4 mb-12 flex-grow">
-                                {(plan.features || []).map((feat, j) => (
-                                    <li key={j} className="flex items-start gap-3 group/item">
-                                        <div className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors
-                                            ${dark
-                                                ? 'bg-white/10 text-sky-400 group-hover/item:bg-sky-500 group-hover/item:text-white'
-                                                : 'bg-indigo-50 text-indigo-600 group-hover/item:bg-indigo-600 group-hover/item:text-white'
-                                            }
-                                        `}>
-                                            <FiCheck size={12} />
-                                        </div>
-                                        <span className={`text-sm leading-tight ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{feat}</span>
-                                    </li>
-                                ))}
+                                {(plan.features || []).map((feat, j) => {
+                                    const isFactus = feat.startsWith("⚡");
+                                    const isNoFactus = feat.startsWith("✕");
+
+                                    return (
+                                        <li key={j} className="flex items-start gap-3 group/item">
+                                            <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors
+                                                ${isFactus 
+                                                    ? 'bg-emerald-100 text-emerald-600 font-bold' 
+                                                    : isNoFactus 
+                                                    ? 'bg-slate-100 text-slate-400' 
+                                                    : dark 
+                                                    ? 'bg-white/10 text-sky-400 group-hover/item:bg-sky-500 group-hover/item:text-white' 
+                                                    : 'bg-indigo-50 text-indigo-600 group-hover/item:bg-indigo-600 group-hover/item:text-white'
+                                                }
+                                            `}>
+                                                {isFactus ? <FiZap size={11} /> : isNoFactus ? <FiX size={11} /> : <FiCheck size={12} />}
+                                            </div>
+                                            <span className={`text-sm leading-tight ${isFactus ? 'font-bold text-emerald-700' : isNoFactus ? 'text-slate-400' : dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                {feat.replace(/^⚡\s*/, '').replace(/^✕\s*/, '')}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
 
                             <button
