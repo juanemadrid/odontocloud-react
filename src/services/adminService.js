@@ -68,6 +68,22 @@ export const updatePlan = async (planId, updates) => {
 };
 
 /**
+ * Updates basic tenant details (name, nit, email, address, etc.)
+ */
+export const updateTenantDetails = async (tenantId, updates) => {
+    try {
+        const ref = doc(db, TENANTS_COLLECTION, tenantId);
+        await updateDoc(ref, {
+            ...updates,
+            updatedAt: Timestamp.now()
+        });
+    } catch (error) {
+        console.error("Error updating tenant details:", error);
+        throw error;
+    }
+};
+
+/**
  * Delete a Subscription Plan
  */
 export const deletePlan = async (planId) => {

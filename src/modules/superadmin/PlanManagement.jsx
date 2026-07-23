@@ -38,6 +38,7 @@ export default function PlanManagement({ hideTitle }) {
         name: "",
         description: "",
         maxUsers: 5,
+        facturasIncluidas: 300,
         monthlyPrice: 0,
         yearlyPrice: 0,
         includeCms: false,
@@ -82,6 +83,7 @@ export default function PlanManagement({ hideTitle }) {
                 name: newPlan.name,
                 description: newPlan.description,
                 maxUsers: Number(newPlan.maxUsers),
+                facturasIncluidas: Number(newPlan.facturasIncluidas) || 0,
                 monthlyPrice: Number(newPlan.monthlyPrice),
                 yearlyPrice: Number(newPlan.yearlyPrice),
                 recommended: newPlan.recommended,
@@ -100,7 +102,7 @@ export default function PlanManagement({ hideTitle }) {
             }
 
             setShowModal(false);
-            setNewPlan({ name: "", description: "", maxUsers: 5, monthlyPrice: 0, yearlyPrice: 0, includeCms: false, recommended: false, features: [] });
+            setNewPlan({ name: "", description: "", maxUsers: 5, facturasIncluidas: 300, monthlyPrice: 0, yearlyPrice: 0, includeCms: false, recommended: false, features: [] });
             setEditingId(null);
             setCustomFeature("");
             loadPlans();
@@ -116,6 +118,7 @@ export default function PlanManagement({ hideTitle }) {
             name: plan.name,
             description: plan.description || "",
             maxUsers: plan.maxUsers,
+            facturasIncluidas: plan.facturasIncluidas ?? 300,
             monthlyPrice: plan.monthlyPrice,
             yearlyPrice: plan.yearlyPrice || 0,
             recommended: plan.recommended || false,
@@ -153,6 +156,7 @@ export default function PlanManagement({ hideTitle }) {
             name: "",
             description: "",
             maxUsers: 5,
+            facturasIncluidas: 300,
             monthlyPrice: 0,
             yearlyPrice: 0,
             includeCms: false,
@@ -256,6 +260,12 @@ export default function PlanManagement({ hideTitle }) {
                                                 Hasta {plan.maxUsers} Usuarios
                                             </span>
                                         </li>
+                                        <li className="flex items-center gap-3">
+                                            <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 text-[10px]">⚡</div>
+                                            <span className="text-xs font-bold text-emerald-700">
+                                                {plan.facturasIncluidas ? `${plan.facturasIncluidas.toLocaleString('es-CO')} Facturas Electrónicas / mes` : "Sin Facturas Electrónicas incluidas"}
+                                            </span>
+                                        </li>
                                         {plan.features?.slice(0, 6).map(feature => (
                                             <li key={feature} className="flex items-center gap-3">
                                                 <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 text-[10px]">✓</div>
@@ -300,7 +310,7 @@ export default function PlanManagement({ hideTitle }) {
                                 <h3 className="text-lg font-bold text-slate-800">{editingId ? "Editar Plan" : "Nuevo Plan de Suscripción"}</h3>
                                 <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
                             </div>
-                            <form onSubmit={handleCreate} className="p-6 space-y-5 bg-white" style={{ backgroundColor: '#ffffff' }}>
+                            <form onSubmit={handleCreate} className="p-6 space-y-5 bg-white max-h-[85vh] overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Plan</label>
                                     <input
@@ -350,16 +360,29 @@ export default function PlanManagement({ hideTitle }) {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Max Usuarios</label>
-                                    <input
-                                        type="number"
-                                        className="w-full input-premium"
-                                        placeholder="5"
-                                        value={newPlan.maxUsers}
-                                        onChange={e => setNewPlan({ ...newPlan, maxUsers: e.target.value === "" ? "" : Number(e.target.value) })}
-                                        required
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Max Usuarios</label>
+                                        <input
+                                            type="number"
+                                            className="w-full input-premium"
+                                            placeholder="5"
+                                            value={newPlan.maxUsers}
+                                            onChange={e => setNewPlan({ ...newPlan, maxUsers: e.target.value === "" ? "" : Number(e.target.value) })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Facturas Incluidas</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="w-full input-premium"
+                                            placeholder="300"
+                                            value={newPlan.facturasIncluidas}
+                                            onChange={e => setNewPlan({ ...newPlan, facturasIncluidas: e.target.value === "" ? "" : Number(e.target.value) })}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div>

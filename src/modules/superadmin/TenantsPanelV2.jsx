@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
     getTenants, createTenant, getPlans, toggleTenantStatus, updateTenantPlan,
     getSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptionRequest,
-    grantFreeMonth, deleteTenant
+    grantFreeMonth, deleteTenant, updateTenantDetails
 } from "../../services/adminService";
 import { onSnapshot, collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
@@ -30,10 +30,11 @@ export default function TenantsPanelV2() {
     const [processing,setProcessing]= useState(false);
 
     // Modals
-    const [showCreate,   setShowCreate]   = useState(false);
-    const [showPlan,     setShowPlan]     = useState(false);
-    const [showRequests, setShowRequests] = useState(false);
-    const [showDetail,   setShowDetail]   = useState(null); // tenant object
+    const [showCreate,     setShowCreate]     = useState(false);
+    const [showPlan,       setShowPlan]       = useState(false);
+    const [showRequests,   setShowRequests]   = useState(false);
+    const [showDetail,     setShowDetail]     = useState(null); // tenant object
+    const [showEditTenant, setShowEditTenant] = useState(null);
 
     // Forms
     const [selectedTenant, setSelectedTenant] = useState(null);
@@ -42,6 +43,10 @@ export default function TenantsPanelV2() {
     const [newTenant,  setNewTenant]  = useState({
         name: "", address: "", contactEmail: "", planId: "",
         adminName: "", adminEmail: "", adminPassword: "", planDuration: "monthly"
+    });
+
+    const [editForm, setEditForm] = useState({
+        name: "", nit: "", contactEmail: "", address: "", telefono: ""
     });
 
     // Audit logs per tenant (loaded on demand)
@@ -88,6 +93,33 @@ export default function TenantsPanelV2() {
     const openDetail = (tenant) => {
         setShowDetail(tenant);
         loadAuditLogs(tenant.id);
+    };
+
+    const openEdit = (tenant) => {
+        setSelectedTenant(tenant);
+        setEditForm({
+            name: tenant.name || "",
+            nit: tenant.nit || "",
+            contactEmail: tenant.contactEmail || tenant.email || "",
+            address: tenant.address || tenant.direccion || "",
+            telefono: tenant.telefono || tenant.phone || "",
+        });
+        setShowEditTenant(tenant);
+    };
+
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
+        if (!showEditTenant) return;
+        setProcessing(true);
+        try {
+            await updateTenantDetails(showEditTenant.id, editForm);
+            setShowEditTenant(null);
+            loadData();
+        } catch (err) {
+            alert("Error al actualizar clínica: " + err.message);
+        } finally {
+            setProcessing(false);
+        }
     };
 
     const handleCreate = async (e) => {
@@ -262,12 +294,12 @@ export default function TenantsPanelV2() {
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-1.5">
-                                                    <button onClick={()=>openDetail(t)}
-                                                        title="Ver detalle, historial y auditoría de esta clínica"
+                                                    <button onClick={()=>openEdit(t)}
+                                                        title="Editar información de la clínica (Nombre, NIT, Correo, Dirección)"
                                                         className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all group relative">
-                                                        <FiActivity size={13}/>
+                                                        <FiEdit3 size={13}/>
                                                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-slate-800 text-white text-[10px] rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                                            Detalle & Auditoría
+                                                            Editar Clínica
                                                         </span>
                                                     </button>
                                                     <button onClick={()=>{setSelectedTenant(t);setNewPlanId(t.planId);setNewDuration(t.planDuration||"monthly");setShowPlan(true);}}
@@ -498,6 +530,95 @@ export default function TenantsPanelV2() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Edit Clinic Modal ── */}
+            {showEditTenant && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                            <div>
+                                <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Editar Datos de Clínica</h3>
+                                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">{showEditTenant.name}</p>
+                            </div>
+                            <button onClick={() => setShowEditTenant(null)} className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-all">&times;</button>
+                        </div>
+                        <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nombre de la Clínica *</label>
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    required
+                                    value={editForm.name}
+                                    onChange={e=>setEditForm({...editForm, name: e.target.value})}
+                                    placeholder="Ej: Clínica Dental San José"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIT / Documento</label>
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    placeholder="Ej: 900123456-7"
+                                    value={editForm.nit}
+                                    onChange={e=>setEditForm({...editForm, nit: e.target.value})}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Correo de Contacto</label>
+                                <input
+                                    type="email"
+                                    className={inp}
+                                    placeholder="contacto@clinica.com"
+                                    value={editForm.contactEmail}
+                                    onChange={e=>setEditForm({...editForm, contactEmail: e.target.value})}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dirección Física</label>
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    placeholder="Ej: Calle 45 # 12-34"
+                                    value={editForm.address}
+                                    onChange={e=>setEditForm({...editForm, address: e.target.value})}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Teléfono</label>
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    placeholder="Ej: +57 300 123 4567"
+                                    value={editForm.telefono}
+                                    onChange={e=>setEditForm({...editForm, telefono: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="pt-4 flex gap-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditTenant(null)}
+                                    className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="flex-1 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:opacity-50"
+                                >
+                                    {processing ? "Guardando..." : "Guardar Cambios"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
