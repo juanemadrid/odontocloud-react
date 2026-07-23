@@ -128,14 +128,14 @@ export default function PlanManagement({ hideTitle }) {
 
     const handleEdit = (plan) => {
         setEditingId(plan.id);
-        const hasFactus = plan.includeFacturacion ?? (Boolean(plan.facturasIncluidas && plan.facturasIncluidas > 0));
+        const hasFactus = plan.includeFacturacion !== false; // Default to true for all existing plans
         setNewPlan({
-            name: plan.name,
+            name: plan.name || "",
             description: plan.description || "",
-            maxUsers: plan.maxUsers,
+            maxUsers: plan.maxUsers || 1,
             includeFacturacion: hasFactus,
-            facturasIncluidas: plan.facturasIncluidas ?? 300,
-            monthlyPrice: plan.monthlyPrice,
+            facturasIncluidas: (plan.facturasIncluidas !== undefined && plan.facturasIncluidas !== null) ? plan.facturasIncluidas : 300,
+            monthlyPrice: plan.monthlyPrice || 0,
             yearlyPrice: plan.yearlyPrice || 0,
             recommended: plan.recommended || false,
             includeCms: plan.features?.includes("CMS") || false,
