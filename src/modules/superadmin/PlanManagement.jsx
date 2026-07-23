@@ -35,13 +35,13 @@ export default function PlanManagement({ hideTitle }) {
 
     // Helper for dots formatting in inputs (e.g. 150000 -> 150.000)
     const formatInputDots = (num) => {
-        if (num === null || num === undefined || num === "" || isNaN(num)) return "";
+        if (num === null || num === undefined || num === "" || isNaN(num) || num === 0) return "";
         return Number(num).toLocaleString("es-CO");
     };
 
     const parseDotsInput = (str) => {
         const raw = String(str).replace(/\D/g, "");
-        return raw ? Number(raw) : 0;
+        return raw === "" ? "" : Number(raw);
     };
 
     // Form State
@@ -505,12 +505,12 @@ export default function PlanManagement({ hideTitle }) {
                                                 Facturas Electrónicas Incluidas al mes
                                             </label>
                                             <input
-                                                type="number"
-                                                min="1"
-                                                className="w-full h-9 px-3 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:border-emerald-500"
+                                                type="text"
+                                                inputMode="numeric"
+                                                className="w-full h-9 px-3 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 font-mono"
                                                 placeholder="Ej: 300"
-                                                value={newPlan.facturasIncluidas}
-                                                onChange={e => setNewPlan({ ...newPlan, facturasIncluidas: Number(e.target.value) || 0 })}
+                                                value={formatInputDots(newPlan.facturasIncluidas)}
+                                                onChange={e => setNewPlan({ ...newPlan, facturasIncluidas: parseDotsInput(e.target.value) })}
                                             />
                                         </div>
                                     )}
