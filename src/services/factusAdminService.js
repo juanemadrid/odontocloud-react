@@ -77,6 +77,7 @@ export const getFactusAdminStats = async () => {
 };
 
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // 4. Get tenant quota info
 // ─────────────────────────────────────────────
 export const getTenantQuota = async (inquilino) => {
@@ -89,6 +90,28 @@ export const getTenantQuota = async (inquilino) => {
     facturacionPlan:   d.facturacionPlan   || "—",
     disponibles: Math.max(0, (d.facturacionCuota ?? 0) - (d.facturacionUsadas ?? 0)),
   };
+};
+
+// ─────────────────────────────────────────────
+// 4b. Get sucursal quota info (with tenant fallback)
+// ─────────────────────────────────────────────
+export const getSucursalQuota = async (sucursalId, inquilino) => {
+  if (sucursalId) {
+    const snap = await getDoc(doc(db, "sucursales", sucursalId));
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.facturacionCuota !== undefined && d.facturacionCuota !== null) {
+        return {
+          facturacionCuota:  d.facturacionCuota  ?? 0,
+          facturacionUsadas: d.facturacionUsadas ?? 0,
+          facturacionPlan:   d.facturacionPlan   || "—",
+          disponibles: Math.max(0, (d.facturacionCuota ?? 0) - (d.facturacionUsadas ?? 0)),
+          isSucursalQuota: true,
+        };
+      }
+    }
+  }
+  return await getTenantQuota(inquilino);
 };
 
 // ─────────────────────────────────────────────
@@ -112,14 +135,49 @@ export const assignQuotaToTenant = async (inquilino, additionalUnits, planName) 
 };
 
 // ─────────────────────────────────────────────
-// 6. Consume one invoice from tenant quota
-//    Called after a successful Factus emission
+// 5b. Assign quota to a specific sucursal
 // ─────────────────────────────────────────────
-export const consumeOneInvoice = async (inquilino) => {
-  await updateDoc(doc(db, "tenants", inquilino), {
-    facturacionUsadas: increment(1),
+export const assignQuotaToSucursal = async (sucursalId, additionalUnits, planName) => {
+  const sucursalRef = doc(db, "sucursales", sucursalId);
+  const updates = {
+    facturacionCuota: increment(additionalUnits),
+    updatedAt: serverTimestamp(),
+  };
+  if (planName) updates.facturacionPlan = planName;
+  await updateDoc(sucursalRef, updates);
+
+  // Update global assigned counter
+  await updateDoc(SUPERADMIN_DOC(), {
+    totalAsignado: increment(additionalUnits),
     updatedAt: serverTimestamp(),
   });
+};
+
+// ─────────────────────────────────────────────
+// 6. Consume one invoice from quota (sucursal or tenant)
+//    Called after a successful Factus emission
+// ─────────────────────────────────────────────
+export const consumeOneInvoice = async (inquilino, sucursalId = null) => {
+  let consumedAtSucursal = false;
+  if (sucursalId) {
+    const sucursalRef = doc(db, "sucursales", sucursalId);
+    const snap = await getDoc(sucursalRef);
+    if (snap.exists() && snap.data()?.facturacionCuota !== undefined) {
+      await updateDoc(sucursalRef, {
+        facturacionUsadas: increment(1),
+        updatedAt: serverTimestamp(),
+      });
+      consumedAtSucursal = true;
+    }
+  }
+
+  if (!consumedAtSucursal && inquilino) {
+    await updateDoc(doc(db, "tenants", inquilino), {
+      facturacionUsadas: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
   await updateDoc(SUPERADMIN_DOC(), {
     totalUsado: increment(1),
     updatedAt: serverTimestamp(),
@@ -127,10 +185,11 @@ export const consumeOneInvoice = async (inquilino) => {
 };
 
 // ─────────────────────────────────────────────
-// 7. Check if tenant can emit (has quota left)
+// 7. Check if tenant / sucursal can emit (has quota left)
 // ─────────────────────────────────────────────
-export const canTenantEmit = async (inquilino) => {
-  const quota = await getTenantQuota(inquilino);
+export const canTenantEmit = async (inquilino, sucursalId = null) => {
+  const quota = await getSucursalQuota(sucursalId, inquilino);
   if (!quota) return false;
   return quota.disponibles > 0;
 };
+

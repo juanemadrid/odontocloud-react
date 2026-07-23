@@ -39,7 +39,13 @@ function SucursalEditor({ item, onBack, inquilino }) {
         centroCostos: item?.centroCostos || false,
         centroCostosValor: item?.centroCostosValor || "",
         usuarioSoporte: item?.usuarioSoporte || "Ninguno",
-        codigoPrestadorPropio: item?.codigoPrestadorPropio || false
+        codigoPrestadorPropio: item?.codigoPrestadorPropio || false,
+        dianResolucion: item?.dianResolucion || "",
+        dianPrefijo: item?.dianPrefijo || "",
+        dianRangoDesde: item?.dianRangoDesde || 1,
+        dianRangoHasta: item?.dianRangoHasta || 1000,
+        dianClaveTecnica: item?.dianClaveTecnica || "",
+        dianFechaResolucion: item?.dianFechaResolucion || ""
     });
 
     const [allAlmacenes, setAllAlmacenes] = useState([]);
@@ -475,6 +481,78 @@ function SucursalEditor({ item, onBack, inquilino }) {
                                     <div className={`absolute top-1 left-1 bg-white rounded-full h-5 w-5 transition-all duration-300 ${form.codigoPrestadorPropio ? 'translate-x-7' : 'translate-x-0'}`} />
                                 </div>
                             </label>
+                        </div>
+
+                        {/* SECCION DIAN FACTURACION ELECTRONICA POR SUCURSAL */}
+                        <div className="pt-6 border-t border-slate-100 space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                                    <FiFileText size={16} />
+                                </div>
+                                <div>
+                                    <h4 className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Facturación Electrónica DIAN para esta Sede</h4>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Resolución y numeración autorizada</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Prefijo de Factura</label>
+                                    <input
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        value={form.dianPrefijo}
+                                        onChange={e => handleChange("dianPrefijo", e.target.value)}
+                                        placeholder="Ej: SETT o FE"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Resolución DIAN Nº</label>
+                                    <input
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        value={form.dianResolucion}
+                                        onChange={e => handleChange("dianResolucion", e.target.value)}
+                                        placeholder="Número de resolución autorizada"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Fecha de Resolución</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        value={form.dianFechaResolucion}
+                                        onChange={e => handleChange("dianFechaResolucion", e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Rango Desde</label>
+                                        <input
+                                            type="number"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                            value={form.dianRangoDesde}
+                                            onChange={e => handleChange("dianRangoDesde", parseInt(e.target.value) || 1)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Rango Hasta</label>
+                                        <input
+                                            type="number"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                            value={form.dianRangoHasta}
+                                            onChange={e => handleChange("dianRangoHasta", parseInt(e.target.value) || 1000)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 tracking-[0.05em] ml-1">Clave Técnica DIAN</label>
+                                    <input
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        value={form.dianClaveTecnica}
+                                        onChange={e => handleChange("dianClaveTecnica", e.target.value)}
+                                        placeholder="Clave técnica de facturación de esta sede"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 

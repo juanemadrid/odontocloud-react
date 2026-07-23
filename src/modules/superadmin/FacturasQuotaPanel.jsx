@@ -15,11 +15,12 @@ import {
   saveFactusAdminCredentials,
   getFactusAdminStats,
   assignQuotaToTenant,
+  assignQuotaToSucursal,
 } from "../../services/factusAdminService";
 import factusService from "../../services/factusService";
 import {
   FiSave, FiZap, FiPlus, FiRefreshCw, FiEye, FiEyeOff,
-  FiFileText, FiAlertCircle, FiCheckCircle,
+  FiFileText, FiAlertCircle, FiCheckCircle, FiMapPin,
 } from "react-icons/fi";
 
 const PLAN_PRESETS = [
@@ -49,25 +50,27 @@ export default function FacturasQuotaPanel() {
   // ── Stats ──
   const [stats, setStats]     = useState({ totalComprado: 0, totalAsignado: 0, totalUsado: 0 });
 
-  // ── Tenants list ──
-  const [tenants, setTenants] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // ── Tenants & sucursales list ──
+  const [tenants, setTenants]   = useState([]);
+  const [loading, setLoading]   = useState(true);
 
   // ── Assign modal ──
-  const [assignModal, setAssignModal] = useState(null); // { inquilino, nombre }
+  const [assignModal, setAssignModal] = useState(null); // { inquilino, sucursalId, nombre }
   const [assignCuota, setAssignCuota] = useState(300);
   const [assignPlan,  setAssignPlan]  = useState("básico");
   const [assignCustom, setAssignCustom] = useState(false);
+  const [assignTargetSucursalId, setAssignTargetSucursalId] = useState("");
   const [assigning, setAssigning] = useState(false);
 
   // ─────────────────────────────────────────
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [credsData, statsData, snap] = await Promise.all([
+      const [credsData, statsData, tenantsSnap, sucursalesSnap] = await Promise.all([
         getFactusAdminCredentials(),
         getFactusAdminStats(),
         getDocs(query(collection(db, "tenants"), orderBy("name"))),
+        getDocs(collection(db, "sucursales")),
       ]);
 
       if (credsData) {
@@ -87,7 +90,24 @@ export default function FacturasQuotaPanel() {
         totalUsado:    statsData.totalUsado    || 0,
       });
 
-      const list = snap.docs.map(d => {
+      const sucursalesMap = {};
+      sucursalesSnap.docs.forEach(d => {
+        const sData = d.data();
+        const inq = sData.inquilino;
+        if (!inq) return;
+        if (!sucursalesMap[inq]) sucursalesMap[inq] = [];
+        sucursalesMap[inq].push({
+          id: d.id,
+          nombre: sData.nombre || "Sede",
+          ciudad: sData.ciudad || "",
+          facturacionCuota:  sData.facturacionCuota  ?? 0,
+          facturacionUsadas: sData.facturacionUsadas ?? 0,
+          facturacionPlan:   sData.facturacionPlan   || "—",
+          disponibles: Math.max(0, (sData.facturacionCuota ?? 0) - (sData.facturacionUsadas ?? 0)),
+        });
+      });
+
+      const list = tenantsSnap.docs.map(d => {
         const t = d.data();
         return {
           id: d.id,
@@ -97,6 +117,7 @@ export default function FacturasQuotaPanel() {
           facturacionUsadas: t.facturacionUsadas ?? 0,
           facturacionPlan:   t.facturacionPlan   || "—",
           disponibles: Math.max(0, (t.facturacionCuota ?? 0) - (t.facturacionUsadas ?? 0)),
+          sucursales: sucursalesMap[d.id] || [],
         };
       });
       setTenants(list);
@@ -160,8 +181,13 @@ export default function FacturasQuotaPanel() {
     }
     setAssigning(true);
     try {
-      await assignQuotaToTenant(assignModal.inquilino, assignCuota, assignPlan);
-      toast.success(`${assignCuota} facturas asignadas a ${assignModal.nombre}.`);
+      if (assignTargetSucursalId) {
+        await assignQuotaToSucursal(assignTargetSucursalId, assignCuota, assignPlan);
+        toast.success(`${assignCuota} facturas asignadas a la sucursal.`);
+      } else {
+        await assignQuotaToTenant(assignModal.inquilino, assignCuota, assignPlan);
+        toast.success(`${assignCuota} facturas asignadas a ${assignModal.nombre}.`);
+      }
       setAssignModal(null);
       loadAll();
     } catch (e) {
@@ -308,30 +334,80 @@ export default function FacturasQuotaPanel() {
               </thead>
               <tbody>
                 {tenants.map(t => (
-                  <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3.5 font-semibold text-slate-700">{t.nombre}</td>
-                    <td className="px-5 py-3.5 text-slate-400 text-xs">{t.nit}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-500 uppercase">{t.facturacionPlan}</span>
-                    </td>
-                    <td className="px-5 py-3.5 font-semibold text-slate-700">{t.facturacionCuota.toLocaleString("es-CO")}</td>
-                    <td className="px-5 py-3.5 text-slate-500">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`font-black ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
-                        {t.disponibles.toLocaleString("es-CO")}
-                        {t.disponibles <= 0 && <span className="ml-1 text-[9px] font-black bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full uppercase">Agotado</span>}
-                        {t.disponibles > 0 && t.disponibles <= 50 && <span className="ml-1 text-[9px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full uppercase">Bajo</span>}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <button
-                        onClick={() => { setAssignModal({ inquilino: t.id, nombre: t.nombre }); setAssignCuota(300); setAssignPlan("básico"); setAssignCustom(false); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-all"
-                      >
-                        <FiPlus size={12}/> Asignar
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={t.id}>
+                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors font-semibold">
+                      <td className="px-5 py-3.5 text-slate-800 flex items-center gap-2">
+                        {t.nombre}
+                        {t.sucursales?.length > 0 && (
+                          <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase">
+                            {t.sucursales.length} sedes
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-400 text-xs">{t.nit}</td>
+                      <td className="px-5 py-3.5">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-500 uppercase">{t.facturacionPlan}</span>
+                      </td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-700">{t.facturacionCuota.toLocaleString("es-CO")}</td>
+                      <td className="px-5 py-3.5 text-slate-500">{t.facturacionUsadas.toLocaleString("es-CO")}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`font-black ${t.disponibles <= 0 ? "text-rose-600" : t.disponibles <= 50 ? "text-amber-500" : "text-emerald-600"}`}>
+                          {t.disponibles.toLocaleString("es-CO")}
+                          {t.disponibles <= 0 && <span className="ml-1 text-[9px] font-black bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full uppercase">Agotado</span>}
+                          {t.disponibles > 0 && t.disponibles <= 50 && <span className="ml-1 text-[9px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full uppercase">Bajo</span>}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <button
+                          onClick={() => {
+                            setAssignModal({ inquilino: t.id, nombre: t.nombre, sucursales: t.sucursales || [] });
+                            setAssignTargetSucursalId("");
+                            setAssignCuota(300);
+                            setAssignPlan("básico");
+                            setAssignCustom(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-all"
+                        >
+                          <FiPlus size={12}/> Asignar
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Sub-rows for Sucursales */}
+                    {t.sucursales && t.sucursales.map(s => (
+                      <tr key={s.id} className="bg-slate-50/40 border-b border-slate-100/70 text-xs">
+                        <td className="pl-10 pr-5 py-2.5 text-slate-600 flex items-center gap-2">
+                          <FiMapPin size={12} className="text-blue-500 shrink-0" />
+                          <span>{s.nombre} {s.ciudad ? `(${s.ciudad})` : ""}</span>
+                        </td>
+                        <td className="px-5 py-2.5 text-slate-400 font-mono text-[11px]">Sede</td>
+                        <td className="px-5 py-2.5">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-600 uppercase">{s.facturacionPlan}</span>
+                        </td>
+                        <td className="px-5 py-2.5 font-medium text-slate-700">{s.facturacionCuota.toLocaleString("es-CO")}</td>
+                        <td className="px-5 py-2.5 text-slate-500">{s.facturacionUsadas.toLocaleString("es-CO")}</td>
+                        <td className="px-5 py-2.5">
+                          <span className={`font-bold ${s.disponibles <= 0 ? "text-rose-600" : s.disponibles <= 50 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {s.disponibles.toLocaleString("es-CO")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-2.5">
+                          <button
+                            onClick={() => {
+                              setAssignModal({ inquilino: t.id, nombre: `${t.nombre} — Sede ${s.nombre}`, sucursales: t.sucursales || [] });
+                              setAssignTargetSucursalId(s.id);
+                              setAssignCuota(300);
+                              setAssignPlan("básico");
+                              setAssignCustom(false);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-[11px] font-bold hover:bg-blue-100 transition-all"
+                          >
+                            <FiPlus size={10}/> Asignar Sede
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
                 {tenants.length === 0 && (
                   <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-300 text-sm">No hay clínicas registradas.</td></tr>
@@ -351,6 +427,23 @@ export default function FacturasQuotaPanel() {
               <p className="text-xs text-slate-400 mt-0.5">Disponibles para asignar: <strong className="text-emerald-600">{disponibleParaAsignar.toLocaleString("es-CO")}</strong></p>
             </div>
             <div className="px-6 py-5 space-y-4">
+
+              {assignModal.sucursales && assignModal.sucursales.length > 0 && (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Destino de la cuota</label>
+                  <select
+                    value={assignTargetSucursalId}
+                    onChange={e => setAssignTargetSucursalId(e.target.value)}
+                    className={inp}
+                  >
+                    <option value="">Cuenta Principal Inquilino</option>
+                    {assignModal.sucursales.map(s => (
+                      <option key={s.id} value={s.id}>Sede / Sucursal: {s.nombre} ({s.ciudad})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Selecciona un plan</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -371,7 +464,9 @@ export default function FacturasQuotaPanel() {
                 </div>
               )}
               <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500">
-                Se agregarán <strong className="text-slate-700">{assignCuota}</strong> facturas a <strong>{assignModal.nombre}</strong>.<br/>
+                Se agregarán <strong className="text-slate-700">{assignCuota}</strong> facturas.
+                {assignTargetSucursalId ? <span className="block text-indigo-600 font-bold mt-0.5">Asignado específicamente a Sede / Sucursal.</span> : null}
+                <br/>
                 Plan: <strong className="capitalize">{assignCustom ? "personalizado" : assignPlan}</strong>
               </div>
             </div>
