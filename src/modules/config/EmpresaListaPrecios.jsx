@@ -209,7 +209,7 @@ export default function EmpresaListaPrecios() {
     }
 
     return (
-        <div className="p-4 w-full max-w-6xl mx-auto relative transition-all duration-300">
+        <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
             {loading && (
                 <div className="absolute top-4 right-4 z-50">
                     <div className="w-4 h-4 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
@@ -217,16 +217,16 @@ export default function EmpresaListaPrecios() {
             )}
 
             {/* Header Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                {/* Tabs Modernas */}
-                <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/60 backdrop-blur-sm shadow-inner-sm">
+            <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                {/* Tabs */}
+                <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200/80">
                     {TABS.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-5 py-2 text-[13px] font-black uppercase tracking-widest rounded-xl transition-all duration-500 ${activeTab === tab.id
-                                ? "bg-white text-blue-600 shadow-md ring-1 ring-slate-200/50 scale-[1.02]"
-                                : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                            className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-all cursor-pointer border-0 ${activeTab === tab.id
+                                ? "bg-white text-blue-600 shadow-sm"
+                                : "text-slate-500 hover:text-slate-700 bg-transparent"
                                 }`}
                         >
                             {tab.id === "clinicos" ? "Clínicos" : tab.id === "productos" ? "Productos" : "Servicios"}
@@ -234,32 +234,34 @@ export default function EmpresaListaPrecios() {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative group w-full md:w-64">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors transition-all duration-300 group-focus-within:scale-110" />
+                <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+                    <div className="relative flex-1 md:w-48">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <input
                             type="text"
                             placeholder={(activeTab === "productos" || activeTab === "servicios") ? "Buscar..." : "Buscar lista..."}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
+                            className="w-full h-9 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-[12px] text-slate-700 outline-none focus:border-blue-500 transition-colors"
                         />
                     </div>
+                    
                     {/* Botón de importación */}
                     <button
                         type="button"
-                        className="relative group/btn overflow-hidden bg-white border border-slate-200 text-slate-500 hover:text-blue-600 font-black py-3 px-6 rounded-[20px] shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 flex items-center gap-2 text-[11px] tracking-wider whitespace-nowrap uppercase"
+                        className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-[12px] cursor-pointer"
                         onClick={() => setShowImporter(true)}
                     >
-                        <FiUploadCloud size={16} /> <span>Importar Excel</span>
+                        <FiUploadCloud size={15} /> <span>Importar Excel</span>
                     </button>
+
+                    {/* Botón Nuevo */}
                     <button
                         type="button"
-                        className="relative group/btn overflow-hidden bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-black py-3 px-8 rounded-[20px] shadow-[0_15px_30px_rgba(16,185,129,0.2)] hover:shadow-[0_20px_40px_rgba(16,185,129,0.3)] transition-all duration-500 active:scale-95 flex items-center gap-2 text-sm tracking-wider whitespace-nowrap"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-1.5 text-[12px] cursor-pointer border-0"
                         onClick={handleNew}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite]"></div>
-                        <span className="relative z-10 uppercase tracking-[0.05em]">
+                        <span>
                             {activeTab === "productos" ? "+ Nuevo Producto" : activeTab === "servicios" ? "+ Nuevo Servicio" : "+ Nueva Lista"}
                         </span>
                     </button>
@@ -267,19 +269,17 @@ export default function EmpresaListaPrecios() {
             </div>
 
             {/* Container Seccional */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-500 shadow-[1px_0_10px_rgba(6,182,212,0.15)]"></div>
-
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-xl shadow-cyan-200 transform group-hover/section:scale-105 transition-transform duration-500">
-                            {(activeTab === "productos" || activeTab === "servicios") ? <FiBox className="text-white text-xl" /> : <FiDollarSign className="text-white text-xl" />}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                            {(activeTab === "productos" || activeTab === "servicios") ? <FiBox size={16} /> : <FiDollarSign size={16} />}
                         </div>
                         <div>
-                            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-[0.2em]">
+                            <h3 className="text-[14px] font-bold text-slate-800">
                                 {activeTab === "productos" ? "Catálogo Maestro de Productos" : activeTab === "servicios" ? "Catálogo de Servicios" : TABS.find(t => t.id === activeTab)?.label}
                             </h3>
-                            <p className="text-[11px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest opacity-80">
+                            <p className="text-[11px] text-slate-500">
                                 {activeTab === "productos" ? "Gestión global del inventario" : activeTab === "servicios" ? "Gestión global de servicios" : "Gestión de tarifarios institucionales"}
                             </p>
                         </div>
@@ -287,25 +287,25 @@ export default function EmpresaListaPrecios() {
                 </div>
 
                 {/* Table Area */}
-                <div className="p-0 overflow-x-auto">
-                    <table className="w-full border-collapse">
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-[12px]">
                         <thead>
-                            <tr className="bg-slate-50/30">
+                            <tr className="border-b border-slate-200 bg-slate-50/70">
                                 {(activeTab === "productos" || activeTab === "servicios") ? (
                                     <>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Cód / Ref</th>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Producto</th>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Categoría</th>
-                                        <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Precio Venta</th>
-                                        <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Acciones</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Cód / Ref</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Producto</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Categoría</th>
+                                        <th className="py-2.5 px-4 text-right font-bold text-slate-600">Precio Venta</th>
+                                        <th className="py-2.5 px-4 text-right font-bold text-slate-600">Acciones</th>
                                     </>
                                 ) : (
                                     <>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Nombre</th>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Creación</th>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Actualización</th>
-                                        <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Estado</th>
-                                        <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Acciones</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Nombre</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Creación</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Actualización</th>
+                                        <th className="py-2.5 px-4 text-left font-bold text-slate-600">Estado</th>
+                                        <th className="py-2.5 px-4 text-right font-bold text-slate-600">Acciones</th>
                                     </>
                                 )}
                             </tr>
@@ -365,17 +365,17 @@ export default function EmpresaListaPrecios() {
                                             <div className="flex items-center justify-end gap-1.5">
                                                 <button
                                                     onClick={() => handleEdit(row)}
-                                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border-0 bg-transparent"
                                                     title="Editar Producto"
                                                 >
-                                                    <FiEdit2 size={16} />
+                                                    <FiEdit2 size={14} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(row)}
-                                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-0 bg-transparent"
                                                     title="Eliminar"
                                                 >
-                                                    <FiTrash2 size={16} />
+                                                    <FiTrash2 size={14} />
                                                 </button>
                                             </div>
                                         </td>
@@ -410,28 +410,28 @@ export default function EmpresaListaPrecios() {
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="px-8 py-4 border-b border-slate-50 text-right">
-                                            <div className="flex items-center justify-end gap-1.5">
+                                        <td className="py-2.5 px-4 text-right">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => handleEditor(row)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-200/50 hover:bg-emerald-600 transition-all"
-                                                    title="Configurar Ítems"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border-0 bg-transparent"
+                                                    title="Ver / Configurar Ítems"
                                                 >
-                                                    <FiEye size={18} />
+                                                    <FiEye size={14} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(row)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-200/50 hover:bg-blue-600 transition-all"
-                                                    title="Renombrar"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border-0 bg-transparent"
+                                                    title="Editar nombre"
                                                 >
-                                                    <FiEdit2 size={18} />
+                                                    <FiEdit2 size={14} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(row)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-200/50 hover:bg-rose-600 transition-all"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-0 bg-transparent"
                                                     title="Eliminar"
                                                 >
-                                                    <FiTrash2 size={18} />
+                                                    <FiTrash2 size={14} />
                                                 </button>
                                             </div>
                                         </td>
@@ -445,22 +445,22 @@ export default function EmpresaListaPrecios() {
 
             {/* Modal CRUD - Para Listas (Clínicos, Servicios) */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[999] p-4 animate-in fade-in duration-500">
-                    <div className="bg-white rounded-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden border border-white/40 ring-1 ring-black/5 animate-in zoom-in-95 duration-500">
-                        <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                                    <FiDollarSign className="text-white text-lg" />
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[999] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50/70 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <FiDollarSign size={16} />
                                 </div>
-                                <h3 className="text-[17px] font-black text-slate-800 uppercase tracking-widest">{editItem ? "Editar Lista de Precios" : "Nueva Lista de Precios"}</h3>
+                                <h3 className="text-[15px] font-bold text-slate-800">{editItem ? "Editar Lista de Precios" : "Nueva Lista de Precios"}</h3>
                             </div>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[13px] font-black text-slate-600 uppercase tracking-widest ml-1">Nombre Descriptivo</label>
+                        <div className="p-5 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-600">Nombre Descriptivo *</label>
                                 <input
-                                    className="w-full px-6 py-4 bg-slate-100/30 border border-slate-200 rounded-[20px] text-[16px] font-extrabold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm"
+                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-blue-500 transition-colors"
                                     value={formData.nombre}
                                     onChange={e => setFormData({ ...formData, nombre: e.target.value })}
                                     placeholder="Ej. Tarifas Preferenciales 2026"
@@ -468,16 +468,16 @@ export default function EmpresaListaPrecios() {
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                                 <button
                                     onClick={() => setShowModal(false)}
-                                    className="px-8 py-3 rounded-[20px] text-[13px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+                                    className="px-4 py-2 rounded-lg text-[12px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200 bg-white cursor-pointer"
                                 >
                                     Descartar
                                 </button>
                                 <button
                                     onClick={handleSaveList}
-                                    className="px-10 py-3 rounded-[20px] text-[13px] font-black uppercase tracking-widest bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2"
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0"
                                 >
                                     {editItem ? "Actualizar" : "Crear Lista"}
                                 </button>

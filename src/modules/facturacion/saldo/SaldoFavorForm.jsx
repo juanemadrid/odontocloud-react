@@ -28,17 +28,14 @@ const CIUDADES_COLOMBIA = [
     "Villeta", "Yopal", "Yumbo", "Zipaquirá"
 ].sort();
 
-const FormRow = ({ label, required, children }) => (
-  <tr className="border-b border-slate-100 hover:bg-slate-50/40 transition-all duration-300">
-    <td className="w-[260px] py-4 pr-6 pl-4 text-xs font-extrabold text-slate-500 text-right select-none uppercase tracking-widest leading-relaxed">
-      {label} {required && <span className="text-rose-500 ml-1 text-sm">*</span>}
-    </td>
-    <td className="py-4 pl-2 pr-4">
-      <div className="w-full max-w-lg">
-        {children}
-      </div>
-    </td>
-  </tr>
+// Modern label+field pair
+const Field = ({ label, required, children, colSpan }) => (
+  <div className={colSpan === 2 ? "md:col-span-2" : ""}>
+    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-0.5">
+      {label}{required && <span className="text-rose-500 ml-1">*</span>}
+    </label>
+    {children}
+  </div>
 );
 
 export default function SaldoFavorForm({ onCancel, onSuccess }) {
@@ -266,182 +263,157 @@ export default function SaldoFavorForm({ onCancel, onSuccess }) {
     );
 
     return (
-        <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
-            
-            {/* Header & Breadcrumbs */}
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onCancel || (() => navigate(-1))}
-                        className="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
-                        title="Volver"
-                    >
-                        <FiArrowLeft size={18} />
-                    </button>
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
-                            <span>🏠</span>
-                            <span>-</span>
-                            <span>Facturación</span>
-                            <span>-</span>
-                            <span>Saldo a favor</span>
-                            <span>-</span>
-                            <span>Adicionar saldo a favor</span>
-                        </div>
-                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none mt-1">
-                            Saldo a favor
-                        </h2>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="h-10 px-8 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        Guardar
-                    </button>
-                </div>
-            </div>
+        <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500 pb-28">
 
-            {success && (
-                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-[24px] flex items-center gap-4 animate-in zoom-in">
-                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xl shadow-lg shadow-emerald-500/20">
-                        <FiCheckCircle />
-                    </div>
-                    <div>
-                        <h4 className="text-emerald-800 font-black uppercase text-sm">¡Saldo a favor Guardado!</h4>
-                        <p className="text-emerald-600 text-xs font-medium uppercase tracking-wide">El abono se ha registrado con éxito.</p>
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="bg-rose-50 border border-rose-100 p-6 rounded-[24px] flex items-center gap-4 animate-in shake">
-                    <div className="w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center text-xl shadow-lg shadow-rose-500/20">
-                        <FiAlertCircle />
-                    </div>
-                    <div>
-                        <h4 className="text-rose-800 font-black uppercase text-sm">Error de Validación</h4>
-                        <p className="text-rose-600 text-xs font-medium uppercase tracking-wide">{error}</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Form Fields Cards */}
-            <div className="space-y-6">
+            {/* Single Unified Card */}
+            <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-100">
                 
-                {/* CARD 1: Datos generales */}
-                <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100">
+                {/* Section 1: Datos Generales */}
+                <div className="p-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <FiCalendar size={14} />
+                        </div>
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Datos generales</h3>
                     </div>
-                    <div className="p-4">
-                        <table className="w-full text-left">
-                            <tbody>
-                                <FormRow label="Fecha *" required>
-                                    <input 
-                                        type="date"
-                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                                        value={fecha}
-                                        onChange={e => setFecha(e.target.value)}
-                                    />
-                                </FormRow>
-                                <FormRow label="Profesional">
-                                    <select 
-                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
-                                        value={profesional.id}
-                                        onChange={e => {
-                                            const p = profesionales.find(x => x.id === e.target.value);
-                                            setProfesional({ id: e.target.value, nombre: p?.nombre || "" });
-                                        }}
-                                    >
-                                        <option value="">Seleccione...</option>
-                                        {profesionales.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                                    </select>
-                                </FormRow>
-                            </tbody>
-                        </table>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Field label="Fecha" required>
+                            <input
+                                type="date"
+                                className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
+                                value={fecha}
+                                onChange={e => setFecha(e.target.value)}
+                            />
+                        </Field>
+                        <Field label="Profesional">
+                            <select
+                                className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
+                                value={profesional.id}
+                                onChange={e => {
+                                    const p = profesionales.find(x => x.id === e.target.value);
+                                    setProfesional({ id: e.target.value, nombre: p?.nombre || "" });
+                                }}
+                            >
+                                <option value="">Seleccione...</option>
+                                {profesionales.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                            </select>
+                        </Field>
                     </div>
                 </div>
 
-                {/* CARD 2: Datos tercero */}
-                <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100">
-                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Datos tercero</h3>
+                {/* Section 2: Datos del Tercero y Pago */}
+                <div className="p-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <FiUser size={14} />
+                        </div>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Datos tercero y monto</h3>
                     </div>
-                    <div className="p-4">
-                        <table className="w-full text-left">
-                            <tbody>
-                                <FormRow label="Tercero *" required>
-                                    <div className="flex items-center gap-3">
-                                        <select
-                                            className="flex-1 h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
-                                            value={paciente?.id || ""}
-                                            onChange={e => {
-                                                const p = pacientes.find(x => x.id === e.target.value);
-                                                setPaciente(p || null);
-                                            }}
-                                        >
-                                            <option value="">Seleccione...</option>
-                                            {pacientes.map(p => (
-                                                <option key={p.id} value={p.id}>{p.nombre} (CC: {p.cedula})</option>
-                                            ))}
-                                        </select>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowNewTerceroModal(true)}
-                                            className="w-10 h-10 bg-[#8cc33f] text-white rounded-full flex items-center justify-center hover:bg-[#7db02b] shadow transition-all shrink-0 font-extrabold text-xl"
-                                            title="Nuevo tercero"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </FormRow>
-                                <FormRow label="Valor *" required>
-                                    <input 
-                                        type="number"
-                                        placeholder="0"
-                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all font-mono"
-                                        value={valor}
-                                        onChange={e => setValor(e.target.value)}
-                                    />
-                                </FormRow>
-                                <FormRow label="Medio de pago">
-                                    <select
-                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
-                                        value={medioPago}
-                                        onChange={e => setMedioPago(e.target.value)}
-                                    >
-                                        {paymentMethods.map(m => (
-                                            <option key={m} value={m}>{m}</option>
-                                        ))}
-                                    </select>
-                                </FormRow>
-                                <FormRow label="Observaciones">
-                                    <textarea 
-                                        className="w-full h-24 p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-blue-500 transition-all resize-none shadow-inner"
-                                        placeholder="Observaciones"
-                                        value={observaciones}
-                                        onChange={e => observaciones => setObservaciones(e.target.value)}
-                                    />
-                                </FormRow>
-                            </tbody>
-                        </table>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Field label="Tercero" required colSpan={2}>
+                            <div className="flex items-center gap-3">
+                                <select
+                                    className="flex-1 h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
+                                    value={paciente?.id || ""}
+                                    onChange={e => {
+                                        const p = pacientes.find(x => x.id === e.target.value);
+                                        setPaciente(p || null);
+                                    }}
+                                >
+                                    <option value="">Seleccione...</option>
+                                    {pacientes.map(p => (
+                                        <option key={p.id} value={p.id}>{p.nombre} (CC: {p.cedula})</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewTerceroModal(true)}
+                                    className="w-10 h-10 bg-[#8cc33f] text-white rounded-xl flex items-center justify-center hover:bg-[#7db02b] shadow transition-all shrink-0 font-extrabold text-xl"
+                                    title="Nuevo tercero"
+                                >
+                                    +
+                                </button>
+                            </div>
+                            {paciente && (
+                                <div className="mt-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2">
+                                    <FiUser size={13} className="text-emerald-600" />
+                                    <span className="text-xs font-bold text-emerald-700">{paciente.nombre}</span>
+                                    <span className="text-[10px] text-emerald-500 font-mono ml-auto">CC: {paciente.cedula}</span>
+                                </div>
+                            )}
+                        </Field>
+                        <Field label="Valor" required>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="w-full h-11 pl-8 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all font-mono"
+                                    value={valor}
+                                    onChange={e => setValor(e.target.value)}
+                                />
+                            </div>
+                        </Field>
+                        <Field label="Medio de pago">
+                            <select
+                                className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
+                                value={medioPago}
+                                onChange={e => setMedioPago(e.target.value)}
+                            >
+                                {paymentMethods.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field label="Observaciones" colSpan={2}>
+                            <textarea
+                                className="w-full h-24 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
+                                placeholder="Observaciones del saldo a favor..."
+                                value={observaciones}
+                                onChange={e => setObservaciones(e.target.value)}
+                            />
+                        </Field>
                     </div>
                 </div>
 
-                {/* Bottom Save Bar */}
-                <div className="flex items-center justify-end pt-4">
-                    <button 
+            </div>
+
+            {/* Sticky Save Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+                <div className="flex items-center gap-3">
+                    {error && (
+                        <span className="flex items-center gap-2 text-rose-600 text-xs font-bold">
+                            <FiAlertCircle size={14} />
+                            {error}
+                        </span>
+                    )}
+                    {success && (
+                        <span className="flex items-center gap-2 text-emerald-600 text-xs font-bold">
+                            <FiCheckCircle size={14} />
+                            ¡Saldo a favor guardado!
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onCancel || (() => navigate(-1))}
+                        className="h-10 px-5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all"
+                    >
+                        Cancelar
+                    </button>
+                    <button
                         onClick={handleSubmit}
                         disabled={saving}
-                        className="h-10 px-8 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 disabled:opacity-50"
+                        className="h-10 px-8 flex items-center gap-2 justify-center bg-[#8cc33f] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 disabled:opacity-60"
                     >
-                        Guardar
+                        {saving ? (
+                            <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Guardando...</>
+                        ) : (
+                            <><FiSave size={14} /> Guardar saldo</>
+                        )}
                     </button>
                 </div>
-
             </div>
 
             {/* MODAL: NUEVO TERCERO */}

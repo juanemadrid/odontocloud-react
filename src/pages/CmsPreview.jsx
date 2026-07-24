@@ -74,13 +74,7 @@ export default function CmsPreview() {
         <div className="min-h-screen bg-white">
             <VivaHeader config={config} isPreview={true} />
             <div className="p-0">
-                {(activeTab === 'identity' || activeTab === 'team') ? (
-                    <IdentitySection config={config} />
-                ) : activeTab === 'services' ? (
-                    <ServicesSection config={config} />
-                ) : (
-                    <ModernLanding previewConfig={config} isMaster={isMaster} />
-                )}
+                <ModernLanding previewConfig={config} isMaster={isMaster} activeTab={activeTab} />
             </div>
             <VivaFooter config={{ ...config, isMaster: isMaster }} isPreview={true} />
         </div>

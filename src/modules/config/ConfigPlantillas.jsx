@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { FiSearch, FiEye, FiTrash2, FiEdit2, FiPlus, FiFileText, FiCalendar, FiUser } from "react-icons/fi";
-import { collection, getDocs, query, orderBy, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -35,7 +34,7 @@ export default function ConfigPlantillas() {
             setLoading(false);
         }, (err) => {
             console.error(err);
-            toast.error("Error al sincronizar plantillas");
+            if (toast?.error) toast.error("Error al sincronizar plantillas");
             setLoading(false);
         });
 
@@ -46,10 +45,10 @@ export default function ConfigPlantillas() {
         if (!window.confirm("¿Seguro que desea eliminar esta plantilla? Esta acción es irreversible.")) return;
         try {
             await deleteDoc(doc(db, "tenants", inquilino, "plantillas_clinicas", id));
-            toast.success("Plantilla eliminada correctamente");
+            if (toast?.success) toast.success("Plantilla eliminada correctamente");
         } catch (e) {
             console.error(e);
-            toast.error("Error al eliminar la plantilla");
+            if (toast?.error) toast.error("Error al eliminar la plantilla");
         }
     };
 
@@ -78,146 +77,128 @@ export default function ConfigPlantillas() {
     const filtered = rows.filter(r => (r.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="space-y-10 p-2 md:p-8">
+        <div className="p-4 max-w-6xl mx-auto space-y-4">
+            {/* Header Toolbar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <FiFileText size={18} />
+                    </div>
+                    <div>
+                        <h1 className="text-[16px] font-bold text-slate-800 tracking-tight">Plantillas Clínicas</h1>
+                        <p className="text-[11px] text-slate-500 font-medium">Configuración de formatos de anamnesis, historia clínica y consentimientos</p>
+                    </div>
+                </div>
 
-            {/* Toolbar Premium */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200">
-                            <FiFileText size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-[20px] font-black text-slate-800 uppercase tracking-tighter">Plantillas Clínicas</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Configuración de documentos y formatos</p>
-                        </div>
+                <div className="flex items-center gap-2.5 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar plantilla o formato..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-colors"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="relative group/search">
-                            <FiSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover/search:text-blue-500 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="BUSCAR PLANTILLAS..."
-                                className="pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-600 outline-none w-full md:w-72 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all uppercase tracking-wider placeholder:text-slate-300 shadow-sm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
-                        <button
-                            onClick={() => { setSelectedId(null); setView("editor"); }}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 group/btn overflow-hidden relative"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-                            <FiPlus className="text-lg" /> Nueva Plantilla
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => { setSelectedId(null); setView("editor"); }}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0 shrink-0"
+                    >
+                        <FiPlus size={16} />
+                        <span>Nueva Plantilla</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Table Area (High Density) */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden relative transition-all duration-700">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100/60">
-                                <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Registro</th>
-                                <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Tipo de Documento / Nombre</th>
-                                <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Autor / Creado por</th>
-                                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                            <th className="py-2.5 px-4">Fecha Registro</th>
+                            <th className="py-2.5 px-4">Tipo / Nombre de Plantilla</th>
+                            <th className="py-2.5 px-4">Creado Por</th>
+                            <th className="py-2.5 px-4 text-right">Operaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[12px] text-slate-700">
+                        {loading && rows.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="py-12 text-center text-slate-400 font-medium">
+                                    <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                                    Sincronizando plantillas clínicas...
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading && rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-8 py-24 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-                                            <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Sincronizando formatos...</p>
+                        ) : filtered.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="py-12 text-center text-slate-400 font-medium">
+                                    No se encontraron plantillas clínicas registradas
+                                </td>
+                            </tr>
+                        ) : (
+                            filtered.map((row) => (
+                                <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                                    <td className="py-2.5 px-4 font-medium text-slate-500 text-[11px]">
+                                        <div className="flex items-center gap-1.5">
+                                            <FiCalendar size={13} className="text-slate-400" />
+                                            <span>{formatDate(row.createdAt || row.fecha)}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                                📄
+                                            </div>
+                                            <div>
+                                                <span className="font-bold text-slate-800 uppercase block">{row.nombre}</span>
+                                                <span className="text-[10px] text-blue-600 font-semibold">
+                                                    {row.campos?.length || 0} CAMPOS CONFIGURADOS
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4 text-slate-500 font-medium text-[11px]">
+                                        <div className="flex items-center gap-1.5">
+                                            <FiUser size={12} className="text-slate-400" />
+                                            <span>{row.createdBy || "Sistema"}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <button
+                                                onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(true); }}
+                                                className="w-7 h-7 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Ver Vista Previa"
+                                            >
+                                                <FiEye size={13} />
+                                            </button>
+                                            {!row.isSystem && (
+                                                <>
+                                                    <button
+                                                        onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(false); }}
+                                                        className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                        title="Editar Plantilla"
+                                                    >
+                                                        <FiEdit2 size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(row.id)}
+                                                        className="w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                        title="Eliminar Plantilla"
+                                                    >
+                                                        <FiTrash2 size={13} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-8 py-24 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-6 drop-shadow-inner">
-                                                <FiFileText size={40} />
-                                            </div>
-                                            <p className="text-[14px] font-black text-slate-400 uppercase tracking-[0.2em]">No se encontraron plantillas</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filtered.map(row => (
-                                    <tr key={row.id} className="group/row hover:bg-blue-50/30 transition-all duration-300">
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center gap-3 text-[13px] font-bold text-slate-500">
-                                                <FiCalendar size={14} className="text-slate-400" />
-                                                <span>{formatDate(row.createdAt || row.fecha)}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4">
-                                            <div className="text-[14px] font-black text-slate-700 uppercase tracking-tight group-hover/row:text-blue-700 transition-colors">
-                                                {row.nombre}
-                                            </div>
-                                            <div className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-0.5">
-                                                {row.campos?.length || 0} CAMPOS DEFINIDOS
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center gap-2 text-[12px] font-bold text-slate-500">
-                                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-                                                    <FiUser size={10} className="text-slate-400" />
-                                                </div>
-                                                <span className="lowercase">{row.createdBy || "—"}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4 text-right">
-                                             {row.isSystem ? (
-                                                 <div className="flex items-center justify-end gap-2">
-                                                     <button
-                                                         title="Visualizar plantilla"
-                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100 transition-all active:scale-90"
-                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(true); }}
-                                                     >
-                                                         <FiEye size={16} />
-                                                     </button>
-                                                 </div>
-                                             ) : (
-                                                 <div className="flex items-center justify-end gap-2">
-                                                     <button
-                                                         title="Editar plantilla"
-                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100 transition-all active:scale-90"
-                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(false); }}
-                                                     >
-                                                         <FiEdit2 size={16} />
-                                                     </button>
-                                                     <button
-                                                         title="Visualizar plantilla"
-                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100 transition-all active:scale-90"
-                                                         onClick={() => { setSelectedId(row.id); setView("editor"); setIsViewOnly(true); }}
-                                                     >
-                                                         <FiEye size={16} />
-                                                     </button>
-                                                     <button
-                                                         title="Eliminar plantilla"
-                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:shadow-lg hover:shadow-red-100 transition-all active:scale-90"
-                                                         onClick={() => handleDelete(row.id)}
-                                                     >
-                                                         <FiTrash2 size={16} />
-                                                     </button>
-                                                 </div>
-                                             )}
-                                         </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
         </div>
     );

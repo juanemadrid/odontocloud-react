@@ -264,30 +264,6 @@ export default function AgendaSidebar({
 
                 </div>
 
-                {/* 🪑 Dental Chair Occupancy Widget */}
-                <div className="p-3 border-t border-slate-100 bg-slate-50/50 shrink-0">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Ocupación de Sillones
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-400">Hoy</span>
-                    </div>
-                    <div className="space-y-2">
-                        {chairStats.map(st => (
-                            <div key={st.id} className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase">
-                                    <span>{st.nombre}</span>
-                                    <span className={st.textColor}>{st.percent}%</span>
-                                </div>
-                                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                    <div className={`h-full ${st.color} rounded-full transition-all duration-500`} style={{ width: `${st.percent}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
             </div>
         </div>
     );

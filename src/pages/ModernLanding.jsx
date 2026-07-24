@@ -18,7 +18,7 @@ import { isAccessBlocked } from "../utils/subscriptionHelper";
 import TrialModal from "../components/landing/TrialModal";
 import "../styles/modern.css";
 
-export default function ModernLanding({ previewConfig, isMaster = false, section = null }) {
+export default function ModernLanding({ previewConfig, isMaster = false, section = null, activeTab = null }) {
     const { clinicSlug } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -35,6 +35,29 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
     const [tenantInfo, setTenantInfo] = useState(null);
 
     useEffect(() => {
+        if (!activeTab) return;
+        const tabToIdMap = {
+            hero: "hero",
+            style: "hero",
+            identity: "nosotros",
+            services: "servicios",
+            team: "equipo",
+            testimonials: "testimonios",
+            footer: "contacto",
+            cta_final: "contacto"
+        };
+        const targetId = tabToIdMap[activeTab];
+        if (targetId) {
+            setTimeout(() => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 150);
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
         // Handle Hash Scroll
         if (location.hash) {
             const id = location.hash.replace('#', '');
@@ -43,7 +66,7 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth' });
                 }
-            }, 300); // Slightly more delay for component mounting
+            }, 300);
         }
     }, [location]);
 
@@ -150,9 +173,43 @@ export default function ModernLanding({ previewConfig, isMaster = false, section
                         const webSnap = await getDoc(webRef);
 
                         if (webSnap.exists()) {
-                            setConfig({ ...DEFAULT_CONFIG, ...webSnap.data(), name: tenantData.name, slug: clinicSlug, isMaster: false });
+                            const data = webSnap.data();
+                            const clinicName = tenantData.empresaNombre || tenantData.name || "Clínica Dental";
+
+                            const isSoftwareTitle = (t) => !t || t.toLowerCase().includes("gestiona tu clínica") || t.toLowerCase().includes("software");
+                            const heroTitle = isSoftwareTitle(data.heroTitle)
+                                ? `Cuidamos de tu sonrisa con excelencia en ${clinicName}`
+                                : data.heroTitle;
+
+                            const heroSubtitle = (data.heroSubtitle || "").toLowerCase().includes("odontocloud es el software")
+                                ? "La mejor atención odontológica con tecnología avanzada y un equipo especializado."
+                                : (data.heroSubtitle || DEFAULT_CONFIG.heroSubtitle);
+
+                            const heroBtn1Text = (data.heroBtn1Text || "").toLowerCase().includes("solicitar")
+                                ? "Agendar Cita"
+                                : (data.heroBtn1Text || DEFAULT_CONFIG.heroBtn1Text);
+
+                            setConfig({
+                                ...DEFAULT_CONFIG,
+                                ...data,
+                                name: clinicName,
+                                heroTitle,
+                                heroSubtitle,
+                                heroBtn1Text,
+                                slug: clinicSlug,
+                                isMaster: false
+                            });
                         } else {
-                            setConfig({ ...DEFAULT_CONFIG, name: tenantData.name, slug: clinicSlug, isMaster: false });
+                            const clinicName = tenantData.empresaNombre || tenantData.name || "Clínica Dental";
+                            setConfig({
+                                ...DEFAULT_CONFIG,
+                                name: clinicName,
+                                heroTitle: `Cuidamos de tu sonrisa con excelencia en ${clinicName}`,
+                                heroSubtitle: "La mejor atención odontológica con tecnología avanzada y un equipo especializado.",
+                                heroBtn1Text: "Agendar Cita",
+                                slug: clinicSlug,
+                                isMaster: false
+                            });
                         }
                     } else {
                         setConfig(MASTER_CONFIG);

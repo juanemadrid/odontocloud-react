@@ -1,7 +1,11 @@
-
+// src/modules/config/ConfigConsecutivos.jsx
+// ============================================================
+// ⚙️ Configuración de Consecutivos - OdontoCloud
+// Diseño estilizado, compacto y profesional.
+// ============================================================
 import React, { useState, useEffect } from "react";
-import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiHash, FiUsers } from "react-icons/fi";
-import { collection, getDocs, deleteDoc, doc, query, where, orderBy } from "firebase/firestore";
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiHash, FiUsers, FiFilter } from "react-icons/fi";
+import { collection, getDocs, deleteDoc, doc, query, where } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "sonner";
@@ -32,7 +36,6 @@ export default function ConfigConsecutivos() {
             );
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Sort locally to avoid Firestore composite index requirement
             data.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", undefined, { sensitivity: "base" }));
             setConsecutivos(data);
         } catch (error) {
@@ -73,117 +76,117 @@ export default function ConfigConsecutivos() {
 
     if (showForm) {
         return (
-            <div className="p-2 md:p-8">
-                <div className="max-w-4xl mx-auto">
-                    <button
-                        onClick={handleCloseForm}
-                        className="mb-6 text-slate-400 hover:text-blue-600 font-bold uppercase tracking-widest text-xs flex items-center gap-2 transition-colors"
-                    >
-                        ← Volver a la lista
-                    </button>
-                    <ConfigConsecutivosForm onClose={handleCloseForm} initialData={editingItem} />
-                </div>
+            <div className="p-4 md:p-6 max-w-5xl mx-auto">
+                <button
+                    onClick={handleCloseForm}
+                    className="mb-4 text-slate-500 hover:text-blue-600 font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                >
+                    ← Volver a la lista
+                </button>
+                <ConfigConsecutivosForm onClose={handleCloseForm} initialData={editingItem} />
             </div>
         );
     }
 
     return (
-        <div className="p-2 md:p-8">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-200">
-                        <FiHash size={32} className="text-white" />
+        <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+            
+            {/* Header & Bar Acciones */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                        <FiHash size={20} />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Consecutivos</h1>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Gestión de numeración de documentos</p>
+                        <h1 className="text-[17px] font-bold text-slate-800">Consecutivos</h1>
+                        <p className="text-[12px] text-slate-500">Gestión y asignación de numeración de documentos</p>
                     </div>
                 </div>
 
                 <button
                     onClick={() => setShowForm(true)}
-                    className="bg-lime-500 hover:bg-lime-600 text-white px-8 py-4 rounded-[20px] text-[13px] font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_20px_40px_rgba(132,204,22,0.4)] transition-all active:scale-95 hover:-translate-y-1"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[12px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border-0 shrink-0"
                 >
-                    <FiPlus size={20} />
-                    <span>Nuevo Consecutivo</span>
+                    <FiPlus size={16} />
+                    <span>Nuevo consecutivo</span>
                 </button>
             </div>
 
-            {/* Content Card */}
-            <div className="bg-white rounded-[40px] border border-slate-200/50 shadow-sm overflow-hidden">
+            {/* Content Table Card */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
-                {/* Dictionary / Toolbar */}
-                <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row gap-6 justify-between items-center bg-slate-50/30">
-                    {/* Search */}
-                    <div className="relative w-full md:w-96 group">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
-                        <Input
+                {/* Toolbar de búsqueda */}
+                <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-4">
+                    <div className="relative flex-1 max-w-md">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                        <input
+                            type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar..."
-                            className="h-14 pl-12 bg-white border-slate-200 focus:border-blue-500 rounded-2xl shadow-sm font-bold text-slate-600"
+                            placeholder="Buscar consecutivo..."
+                            className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-[12px] text-slate-700 outline-none focus:border-blue-500 transition-colors"
                         />
                     </div>
-
-                    {/* Filter Icon could go here if needed, keeping it simple for now */}
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 cursor-pointer transition-colors">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                        </svg>
-                    </div>
+                    
+                    <span className="text-[11px] font-medium text-slate-400 shrink-0">
+                        {filteredData.length} registro{filteredData.length !== 1 ? 's' : ''}
+                    </span>
                 </div>
 
-                {/* Table */}
+                {/* Tabla de Consecutivos */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse text-[12px]">
                         <thead>
-                            <tr className="border-b border-slate-100">
-                                <th className="py-6 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nombre</th>
-                                <th className="py-6 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Consecutivo usado o no</th>
-                                <th className="py-6 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Quienes usan el consecutivo</th>
-                                <th className="py-6 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                            <tr className="border-b border-slate-200 bg-slate-50/70">
+                                <th className="py-2.5 px-4 font-bold text-slate-600">Nombre</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600 text-center">Estado</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600 text-center">Asignación</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600 text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="4" className="py-20 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-4">
-                                            <div className="w-12 h-12 border-4 border-lime-500 border-t-transparent rounded-full animate-spin"></div>
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Cargando...</p>
+                                    <td colSpan="4" className="py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                                            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <span className="text-[12px]">Cargando consecutivos...</span>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredData.length > 0 ? (
                                 filteredData.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="py-6 px-8">
-                                            <div className="font-bold text-slate-700">{item.nombre}</div>
+                                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                                        <td className="py-3 px-4 font-semibold text-slate-800">
+                                            {item.nombre}
                                         </td>
-                                        <td className="py-6 px-8 text-center">
-                                            <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-green-50 text-green-600">
+                                        <td className="py-3 px-4 text-center">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
                                                 Disponible
                                             </span>
                                         </td>
-                                        <td className="py-6 px-8 flex justify-center">
-                                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
-                                                <FiUsers size={18} />
+                                        <td className="py-3 px-4">
+                                            <div className="flex justify-center">
+                                                <div className="w-7 h-7 rounded bg-slate-100 text-slate-600 flex items-center justify-center" title="Usuarios asignados">
+                                                    <FiUsers size={14} />
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="py-6 px-8">
-                                            <div className="flex items-center justify-end gap-3 opacity-100 transition-opacity">
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center justify-end gap-1.5">
                                                 <button 
                                                     onClick={() => handleEdit(item)}
-                                                    className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-blue-200"
+                                                    title="Editar consecutivo"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border-0 bg-transparent"
                                                 >
-                                                    <FiEdit2 size={18} />
+                                                    <FiEdit2 size={14} />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDelete(item.id)}
-                                                    className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:shadow-red-200"
+                                                    title="Eliminar consecutivo"
+                                                    className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-0 bg-transparent"
                                                 >
-                                                    <FiTrash2 size={18} />
+                                                    <FiTrash2 size={14} />
                                                 </button>
                                             </div>
                                         </td>
@@ -191,26 +194,14 @@ export default function ConfigConsecutivos() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="py-20 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
-                                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                                                <FiHash size={40} className="text-slate-300" />
-                                            </div>
-                                            <p className="font-bold uppercase tracking-widest text-xs">No hay consecutivos registrados</p>
-                                        </div>
+                                    <td colSpan="4" className="py-12 text-center text-slate-400">
+                                        <FiHash size={32} className="mx-auto text-slate-300 mb-2" />
+                                        <p className="font-medium text-[12px]">No se encontraron consecutivos</p>
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
-                </div>
-
-                {/* Footer Pagination (optional/placeholder) */}
-                <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-400">Mostrando {filteredData.length} resultado{filteredData.length !== 1 ? 's' : ''}</span>
-                    <div className="flex gap-2">
-                        {/* Pagination buttons placeholder */}
-                    </div>
                 </div>
 
             </div>

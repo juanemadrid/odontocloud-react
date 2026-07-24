@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }) => {
     // --- EFFECT 1: Auth state change ---
     useEffect(() => {
         const s = getOfflineSession();
-        if (DEV_BYPASS_ENABLED && s && (s.email === "admin_test@odontocloud.com" || s.email === "diegomadrid_doc@odontocloud.com" || s.email === "mariarroyo@hotmail.com")) {
+        if (DEV_BYPASS_ENABLED && s && (s.email === "admin_test@odontocloud.com" || s.email === "diegomadrid_doc@odontocloud.com" || s.email === "mariarroyo@hotmail.com" || s.email === "clinica@gmail.com")) {
             setUser({ 
                 email: s.email, 
-                uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : s.email === "mariarroyo@hotmail.com" ? 'msn3SgNfgThmyBkbVN3dRtTWbAf1' : 'offline-mock-uid' 
+                uid: s.email === "diegomadrid_doc@odontocloud.com" ? 'diegomadrid-doc-uid' : s.email === "mariarroyo@hotmail.com" ? 'msn3SgNfgThmyBkbVN3dRtTWbAf1' : s.email === "clinica@gmail.com" ? 'clinica-gmail-uid' : 'offline-mock-uid' 
             });
             
             const baseProfile = {

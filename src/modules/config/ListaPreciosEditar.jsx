@@ -291,102 +291,108 @@ export default function ListaPreciosEditar({ listaId, onBack }) {
     };
 
     return (
-        <div className="bg-slate-50 min-h-full p-4 md:p-8 animate-fadeIn">
-            
-            {/* Header / Breadcrumbs */}
-            <div className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95">
-                        <FiArrowLeft size={20} />
+        <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+            {/* Top Toolbar */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={onBack}
+                        className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer border border-slate-200 bg-white"
+                        title="Volver"
+                    >
+                        <FiArrowLeft size={16} />
                     </button>
                     <div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            Configuración / Lista de precios / Edición
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Edición Lista de precios</h2>
-                            <button 
-                                onClick={handleExportExcel}
-                                className="bg-blue-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2"
-                            >
-                                <FiDownload size={14} /> Exportar
-                            </button>
-                        </div>
+                        <h1 className="text-[17px] font-bold text-slate-800">Edición Lista de Precios</h1>
+                        <p className="text-[12px] text-slate-500">Configuración de tarifario y precios por categoría</p>
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={handleExportExcel}
+                        className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-[12px] cursor-pointer"
+                    >
+                        <FiDownload size={15} /> <span>Exportar Excel</span>
+                    </button>
                 </div>
             </div>
 
             {/* Main Content Card */}
-            <div className="max-w-7xl mx-auto bg-white rounded-[40px] shadow-[0_25px_80px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 
-                {/* Global Controls */}
-                <div className="p-10 border-b border-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-                    <div className="flex items-center gap-4 w-full lg:w-auto">
-                        <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Nombre *</span>
+                {/* Global Controls Bar */}
+                <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-[12px] font-bold text-slate-600">Nombre *</span>
                         {isEditingName ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <input 
-                                    className="bg-slate-50 border border-blue-200 rounded-xl px-4 py-2 text-sm font-black text-slate-700 uppercase outline-none focus:ring-4 focus:ring-blue-500/10"
+                                    className="h-8 bg-white border border-blue-400 rounded-lg px-3 text-[13px] font-bold text-slate-800 outline-none"
                                     value={tempName}
                                     onChange={e => setTempName(e.target.value)}
                                     autoFocus
                                 />
-                                <button onClick={handleUpdateListName} className="w-9 h-9 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200 flex items-center justify-center"><FiCheck /></button>
-                                <button onClick={() => { setIsEditingName(false); setTempName(listData.nombre); }} className="w-9 h-9 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center"><FiX /></button>
+                                <button onClick={handleUpdateListName} className="w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center border-0 cursor-pointer"><FiCheck size={14} /></button>
+                                <button onClick={() => { setIsEditingName(false); setTempName(listData?.nombre || ""); }} className="w-7 h-7 bg-slate-200 text-slate-600 rounded-lg flex items-center justify-center border-0 cursor-pointer"><FiX size={14} /></button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="text-lg font-black text-slate-700 uppercase">{listData?.nombre}</span>
-                                <button onClick={() => setIsEditingName(true)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-100 transition-all"><FiEdit3 size={14} /></button>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[14px] font-bold text-slate-800">{listData?.nombre}</span>
+                                <button onClick={() => setIsEditingName(true)} className="w-6 h-6 rounded text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors border-0 cursor-pointer bg-transparent" title="Editar nombre"><FiEdit3 size={13} /></button>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4 w-full lg:w-auto">
-                        <button className="h-12 w-12 bg-blue-500 text-white rounded-[18px] flex items-center justify-center shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all"><FiPercent size={20} /></button>
-                        <button className="flex-1 lg:flex-none h-12 px-8 bg-[#8CC63F] text-white rounded-[20px] font-black text-[11px] uppercase tracking-widest shadow-xl shadow-[#8CC63F]/20 hover:bg-[#7bb335] transition-all flex items-center justify-center gap-3">
-                            <FiPlus size={18} /> Agregar categoría
+                    <div className="flex items-center gap-2">
+                        <button className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-[12px] font-bold flex items-center gap-1.5 cursor-pointer shadow-sm border-0">
+                            <FiPercent size={14} /> <span>Ajuste global %</span>
+                        </button>
+                        <button 
+                            onClick={() => handleOpenModal("GENERAL")}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-[12px] font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer border-0"
+                        >
+                            <FiPlus size={16} /> <span>Agregar categoría</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Categories List */}
-                <div className="p-6 md:p-10 space-y-4">
+                <div className="p-4 space-y-3">
                     {categories.map(cat => {
                         const isExpanded = expandedCats.has(cat);
                         const catItems = groupedData[cat];
                         
                         return (
-                            <div key={cat} className="rounded-lg border border-slate-200 overflow-hidden bg-white mb-2">
+                            <div key={cat} className="rounded-lg border border-slate-200 overflow-hidden bg-white">
                                 {/* Category Header */}
                                 <div 
-                                    className="p-3 flex justify-between items-center cursor-pointer border-b border-slate-100 bg-white hover:bg-slate-50 transition-colors"
+                                    className="px-4 py-2.5 flex justify-between items-center cursor-pointer border-b border-slate-100 bg-slate-50/70 hover:bg-slate-100/60 transition-colors"
                                     onClick={() => toggleCat(cat)}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-blue-500 w-5 flex items-center justify-center">
-                                            {isExpanded ? <FiChevronDown size={18} /> : <FiChevronRight size={18} />}
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-slate-500 w-5 flex items-center justify-center">
+                                            {isExpanded ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />}
                                         </div>
-                                        <div className="flex items-center gap-4 min-w-[300px]">
-                                            <span className="text-sm font-bold text-slate-700">Categoría</span>
-                                            <span className="text-sm font-normal text-slate-600">{cat}</span>
-                                        </div>
+                                        <span className="text-[13px] font-bold text-slate-700">Categoría:</span>
+                                        <span className="text-[13px] font-bold text-blue-600">{cat}</span>
                                     </div>
                                     
-                                    <div className="flex items-center justify-between flex-1 pl-4">
-                                        <span className="text-sm font-bold text-slate-700">Comentario</span>
+                                    <div className="flex items-center justify-between flex-1 pl-6">
+                                        <span className="text-[12px] text-slate-400 font-medium hidden md:inline">({catItems.length} ítems)</span>
+                                        
                                         {/* Category Actions */}
-                                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                        <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                                             <button 
                                                 onClick={() => handleOpenModal(cat)}
-                                                className="w-8 h-8 bg-[#8CC63F] text-white rounded flex items-center justify-center hover:bg-[#7bb335] transition-all"
+                                                className="w-7 h-7 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors"
                                                 title="Agregar producto"
                                             >
-                                                <FiPlus size={16} />
+                                                <FiPlus size={14} />
                                             </button>
-                                            <button className="w-8 h-8 bg-[#3ba2eb] text-white rounded flex items-center justify-center hover:bg-blue-600 transition-all" title="Ajuste porcentual"><FiPercent size={14} /></button>
-                                            <button className="w-8 h-8 bg-[#3ba2eb] text-white rounded flex items-center justify-center hover:bg-blue-600 transition-all" title="Editar categoría"><FiEdit3 size={14} /></button>
-                                            <button className="w-8 h-8 bg-[#f5597b] text-white rounded flex items-center justify-center hover:bg-rose-600 transition-all" title="Eliminar categoría"><FiTrash2 size={14} /></button>
+                                            <button className="w-7 h-7 rounded-md bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors" title="Ajuste porcentual"><FiPercent size={13} /></button>
+                                            <button className="w-7 h-7 rounded-md bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors" title="Editar categoría"><FiEdit3 size={13} /></button>
+                                            <button className="w-7 h-7 rounded-md bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors" title="Eliminar categoría"><FiTrash2 size={13} /></button>
                                         </div>
                                     </div>
                                 </div>
@@ -394,35 +400,35 @@ export default function ListaPreciosEditar({ listaId, onBack }) {
                                 {/* Expanded Content (Items Table) */}
                                 {isExpanded && (
                                     <div className="bg-white">
-                                        <table className="w-full text-left border-collapse">
+                                        <table className="w-full text-left border-collapse text-[12px]">
                                             <thead>
-                                                <tr className="bg-white">
-                                                    <th className="px-6 py-4 text-[13px] font-bold text-slate-700 w-32 border-none">Código</th>
-                                                    <th className="px-6 py-4 text-[13px] font-bold text-slate-700 w-auto border-none">Producto</th>
-                                                    <th className="px-6 py-4 text-[13px] font-bold text-slate-700 w-40 text-center border-none">Permite<br/>descuento</th>
-                                                    <th className="px-6 py-4 text-[13px] font-bold text-slate-700 w-40 border-none">Precio</th>
-                                                    <th className="px-6 py-4 text-[13px] font-bold text-slate-700 w-32 text-center border-none">Acciones</th>
+                                                <tr className="border-b border-slate-200 bg-slate-50/30">
+                                                    <th className="py-2.5 px-4 font-bold text-slate-600 w-32">Código</th>
+                                                    <th className="py-2.5 px-4 font-bold text-slate-600">Producto</th>
+                                                    <th className="py-2.5 px-4 font-bold text-slate-600 w-32 text-center">Permite desc.</th>
+                                                    <th className="py-2.5 px-4 font-bold text-slate-600 w-36">Precio</th>
+                                                    <th className="py-2.5 px-4 font-bold text-slate-600 w-28 text-right">Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {catItems.map(item => (
-                                                    <tr key={item.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-[13px] text-slate-600">{item.codigo || '-'}</span>
+                                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                                                        <td className="py-2.5 px-4 text-slate-600 font-mono">
+                                                            {item.codigo || '-'}
                                                         </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-[13px] text-slate-600">{item.nombre}</span>
+                                                        <td className="py-2.5 px-4 text-slate-800 font-semibold">
+                                                            {item.nombre}
                                                         </td>
-                                                        <td className="px-6 py-4 text-center">
-                                                            <span className="text-[13px] text-slate-600">{item.permite_descuento ? 'Sí' : 'No'}</span>
+                                                        <td className="py-2.5 px-4 text-center text-slate-600">
+                                                            {item.permite_descuento ? 'Sí' : 'No'}
                                                         </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-[13px] text-slate-600">${item.precio.toLocaleString('es-CO')}</span>
+                                                        <td className="py-2.5 px-4 font-bold text-slate-700">
+                                                            ${Number(item.precio || 0).toLocaleString('es-CO')}
                                                         </td>
-                                                        <td className="px-6 py-4 text-center">
-                                                            <div className="flex justify-center gap-1">
-                                                                <button onClick={() => handleOpenModal(cat, item)} className="w-8 h-8 flex items-center justify-center rounded bg-[#3ba2eb] text-white hover:bg-blue-600 transition-all" title="Editar"><FiEdit3 size={14} /></button>
-                                                                <button onClick={() => handleDeleteItem(item.id)} className="w-8 h-8 flex items-center justify-center rounded bg-[#f5597b] text-white hover:bg-rose-600 transition-all" title="Eliminar"><FiTrash2 size={14} /></button>
+                                                        <td className="py-2.5 px-4 text-right">
+                                                            <div className="flex justify-end gap-1.5">
+                                                                <button onClick={() => handleOpenModal(cat, item)} className="w-7 h-7 rounded-md bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors" title="Editar"><FiEdit3 size={13} /></button>
+                                                                <button onClick={() => handleDeleteItem(item.id)} className="w-7 h-7 rounded-md bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-sm border-0 cursor-pointer transition-colors" title="Eliminar"><FiTrash2 size={13} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -431,12 +437,12 @@ export default function ListaPreciosEditar({ listaId, onBack }) {
                                         </table>
 
                                         {/* Nested Add Link */}
-                                        <div className="p-4 flex justify-center border-t border-slate-50">
+                                        <div className="p-3 flex justify-center border-t border-slate-100">
                                             <button 
                                                 onClick={() => handleOpenModal(cat)}
-                                                className="text-[13px] text-blue-500 hover:text-blue-700 transition-colors"
+                                                className="text-[12px] text-blue-600 hover:text-blue-700 font-semibold transition-colors flex items-center gap-1 border-0 bg-transparent cursor-pointer"
                                             >
-                                                Agregar un producto a esta categoría
+                                                <FiPlus size={14} /> <span>Agregar producto a esta categoría</span>
                                             </button>
                                         </div>
                                     </div>

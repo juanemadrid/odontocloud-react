@@ -1,34 +1,34 @@
 import React, { useState, useEffect } from "react";
-import { FiHome, FiSave, FiClipboard, FiCheckCircle, FiInfo, FiArrowLeft } from "react-icons/fi";
+import { FiSave, FiClipboard, FiInfo } from "react-icons/fi";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
-// Premium Toggle Switch Component (iOS Style)
+// Compact iOS Style Toggle Switch Component
 const Toggle = ({ checked, onChange }) => (
     <div
         onClick={() => onChange(!checked)}
-        className={`w-11 h-6 rounded-full relative cursor-pointer transition-all duration-300 ${checked ? "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]" : "bg-slate-200"
+        className={`w-9 h-5 rounded-full relative cursor-pointer transition-colors duration-200 ${checked ? "bg-blue-600" : "bg-slate-200"
             }`}
     >
         <div
-            className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${checked ? "left-6" : "left-1"
+            className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm ${checked ? "translate-x-4" : "translate-x-[2px]"
                 }`}
         />
     </div>
 );
 
-// Configuration Definition
+// Configuration Sections Definition
 const SECTIONS = [
     {
-        title: "Configuración formulario paciente",
+        title: "Campos Principales del Paciente",
         fields: [
             { key: "paisNacimiento", label: "País de nacimiento", norma: true },
             { key: "ciudadNacimiento", label: "Ciudad de nacimiento", norma: true },
             { key: "numeroDentadura", label: "Número dentadura" },
-            { key: "sexo", label: "Sexo", norma: true },
-            { key: "rh", label: "RH" },
+            { key: "sexo", label: "Sexo / Género", norma: true },
+            { key: "rh", label: "Factor RH" },
             { key: "estadoCivil", label: "Estado civil", norma: true },
             { key: "fechaIngreso", label: "Fecha de ingreso", norma: true },
             { key: "fechaNacimiento", label: "Fecha de nacimiento", norma: true },
@@ -36,7 +36,7 @@ const SECTIONS = [
             { key: "ciudadDomicilio", label: "Ciudad de domicilio", norma: true },
             { key: "barrioDomicilio", label: "Barrio de domicilio", norma: true },
             { key: "lugarResidencia", label: "Lugar de residencia", norma: true },
-            { key: "estrato", label: "Estrato" },
+            { key: "estrato", label: "Estrato socioeconómico" },
             { key: "zonaResidencial", label: "Zona residencial" },
             { key: "esExtranjero", label: "Es extranjero" },
             { key: "permitePublicidad", label: "Permite recibir publicidad" },
@@ -45,76 +45,58 @@ const SECTIONS = [
         ]
     },
     {
-        title: "Datos de facturación",
+        title: "Datos de Facturación",
         fields: [
-            { key: "multiplesResponsables", label: "Múltiples Responsables" }
+            { key: "multiplesResponsables", label: "Múltiples Responsables de Factura" }
         ]
     },
     {
-        title: "Contacto",
+        title: "Información de Contacto",
         fields: [
-            { key: "celular", label: "Celular", norma: true },
+            { key: "celular", label: "Teléfono celular", norma: true },
             { key: "telefonoDomicilio", label: "Teléfono de domicilio", norma: true },
             { key: "telefonoOficina", label: "Teléfono de oficina" },
-            { key: "extension", label: "Extensión" },
+            { key: "extension", label: "Extensión telefónica" },
             { key: "correoElectronico", label: "Correo electrónico" },
-            { key: "ocupacion", label: "Ocupación", norma: true },
+            { key: "ocupacion", label: "Ocupación / Profesión", norma: true },
         ]
     },
     {
-        title: "Responsable",
+        title: "Datos del Responsable",
         fields: [
-            { key: "respNombre", label: "Nombre", norma: true },
+            { key: "respNombre", label: "Nombre completo", norma: true },
             { key: "respParentesco", label: "Parentesco", norma: true },
-            { key: "respCelular", label: "Celular", norma: true },
-            { key: "respTelefono", label: "Teléfono", norma: true },
+            { key: "respCelular", label: "Teléfono celular", norma: true },
+            { key: "respTelefono", label: "Teléfono fijo", norma: true },
             { key: "respCorreo", label: "Correo electrónico" }
         ]
     },
     {
-        title: "Acompañante",
+        title: "Datos del Acompañante",
         fields: [
-            { key: "acompNombre", label: "Nombre", norma: true },
-            { key: "acompTelefono", label: "Teléfono", norma: true }
+            { key: "acompNombre", label: "Nombre completo", norma: true },
+            { key: "acompTelefono", label: "Teléfono de contacto", norma: true }
         ]
     },
     {
-        title: "Contabilidad",
+        title: "Información de EPS y Aseguramiento",
         fields: [
-            { key: "cuentaContable", label: "Cuenta contable" }
-        ]
-    },
-    {
-        title: "Mercadeo",
-        fields: [
-            { key: "convenioBeneficio", label: "Convenio beneficio" },
-            { key: "convenioPago", label: "Convenio de pago" },
-            { key: "comoNosConocio", label: "Como nos conoció" },
-            { key: "campana", label: "Campaña" },
-            { key: "remitidoPor", label: "Remitido por" },
-            { key: "asesorComercial", label: "Asesor comercial" }
-        ]
-    },
-    {
-        title: "EPS",
-        fields: [
-            { key: "tipoVinculacion", label: "Tipo de vinculación", norma: true },
-            { key: "nombreEps", label: "Nombre de la EPS", norma: true },
-            { key: "polizaSalud", label: "Póliza de salud" },
-            { key: "soat", label: "SOAT" },
+            { key: "tipoVinculacion", label: "Tipo de vinculación a EPS", norma: true },
+            { key: "nombreEps", label: "Nombre de la entidad EPS", norma: true },
+            { key: "polizaSalud", label: "Póliza de salud privada" },
+            { key: "soat", label: "Aseguradora SOAT" },
             { key: "tipoPaciente", label: "Tipo de paciente" }
         ]
     },
     {
-        title: "Profesionales",
+        title: "Mercadeo y Remisión",
         fields: [
-            { key: "profesionales", label: "Profesionales" }
-        ]
-    },
-    {
-        title: "Notas",
-        fields: [
-            { key: "nota", label: "Nota" }
+            { key: "convenioBeneficio", label: "Convenio beneficio" },
+            { key: "convenioPago", label: "Convenio de pago" },
+            { key: "comoNosConocio", label: "Cómo nos conoció" },
+            { key: "campana", label: "Campaña publicitaria" },
+            { key: "remitidoPor", label: "Remitido por" },
+            { key: "asesorComercial", label: "Asesor comercial asignado" }
         ]
     }
 ];
@@ -148,7 +130,6 @@ export default function EmpresaFormularioPacientes() {
     }, [inquilino]);
 
     const handleChange = (key, type, val) => {
-        // Find if the field is norma in SECTIONS to determine default required
         let isNorma = false;
         for (const section of SECTIONS) {
             const f = section.fields.find(field => field.key === key);
@@ -175,136 +156,118 @@ export default function EmpresaFormularioPacientes() {
         setSaving(true);
         try {
             await setDoc(doc(db, "tenants", inquilino, "config", "formulario_pacientes"), config);
-            toast.success("Configuración guardada correctamente");
+            if (toast && toast.success) {
+                toast.success("Configuración guardada correctamente");
+            } else {
+                alert("Configuración guardada correctamente");
+            }
         } catch (e) {
             console.error(e);
-            toast.error("Error al guardar la configuración");
+            if (toast && toast.error) {
+                toast.error("Error al guardar la configuración");
+            } else {
+                alert("Error al guardar: " + e.message);
+            }
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <div className="p-4 w-full max-w-5xl mx-auto relative transition-all duration-300">
-            {/* Header: Institutional & Actions */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative mb-6">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
-
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200">
-                            <FiClipboard size={20} className="text-white" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h2 className="text-[18px] font-black text-slate-800 uppercase tracking-tighter">Configuración de Pacientes</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Gestión de visibilidad y requerimientos de campos</p>
-                        </div>
+        <div className="p-4 max-w-6xl mx-auto space-y-4">
+            {/* Header Toolbar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <FiClipboard size={18} />
                     </div>
-
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95 group/save disabled:opacity-50"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/save:animate-shimmer" />
-                            {saving ? (
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <FiSave className="text-lg" />
-                            )}
-                            {saving ? "Guardando..." : "Guardar"}
-                        </button>
+                    <div>
+                        <h1 className="text-[16px] font-bold text-slate-800 tracking-tight">Formulario de Pacientes</h1>
+                        <p className="text-[11px] text-slate-500 font-medium">Gestión de visibilidad y campos requeridos en la ficha clínica</p>
                     </div>
                 </div>
+
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0 disabled:opacity-50"
+                >
+                    {saving ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <FiSave size={15} />
+                    )}
+                    <span>{saving ? "Guardando..." : "Guardar Cambios"}</span>
+                </button>
             </div>
 
-            {/* Config Body */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_15px_40px_rgba(0,0,0,0.02)] p-0 relative overflow-hidden">
+            {/* Table Container */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 {loading ? (
-                    <div className="p-20 text-center">
-                        <div className="flex flex-col items-center gap-3 animate-pulse">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-blue-400">
-                                <div className="w-6 h-6 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
-                            </div>
-                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Cargando configuración...</p>
-                        </div>
+                    <div className="py-12 text-center text-slate-400 font-medium">
+                        <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                        Cargando configuración del formulario...
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-50">
-                        {/* Table Header Wrapper */}
-                        <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-8 py-4 border-b border-slate-100 grid grid-cols-12 items-center text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                    <div>
+                        {/* Table Header */}
+                        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 items-center text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                             <div className="col-span-6">Campo del Formulario</div>
                             <div className="col-span-3 text-center">¿Es Visible?</div>
                             <div className="col-span-3 text-center">¿Es Requerido?</div>
                         </div>
 
-                        {SECTIONS.map((section, idx) => (
-                            <div key={idx} className="group/section">
-                                <div className="bg-slate-50/30 px-8 py-3 flex items-center gap-3 border-b border-slate-100/50">
-                                    <div className="w-1 h-4 bg-slate-300 rounded-full" />
-                                    <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
-                                        {section.title}
-                                    </h3>
+                        <div className="divide-y divide-slate-100 text-[12px]">
+                            {SECTIONS.map((section, idx) => (
+                                <div key={idx}>
+                                    <div className="bg-slate-50/70 px-4 py-2 flex items-center gap-2 border-y border-slate-100">
+                                        <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                                        <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                                            {section.title}
+                                        </h3>
+                                    </div>
+
+                                    <div className="divide-y divide-slate-100">
+                                        {section.fields.map((field) => {
+                                            const fieldConfig = {
+                                                visible: config[field.key]?.visible ?? true,
+                                                required: config[field.key]?.required ?? !!field.norma
+                                            };
+                                            return (
+                                                <div key={field.key} className="px-4 py-2.5 grid grid-cols-12 items-center hover:bg-slate-50/80 transition-colors">
+                                                    <div className="col-span-6 flex items-center gap-2">
+                                                        <span className="font-semibold text-slate-800">
+                                                            {field.label}
+                                                        </span>
+                                                        {field.norma && (
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[9px] font-bold border border-rose-100">
+                                                                <FiInfo size={10} /> NORMA RIPS
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="col-span-3 flex justify-center">
+                                                        <Toggle
+                                                            checked={fieldConfig.visible}
+                                                            onChange={(val) => handleChange(field.key, "visible", val)}
+                                                        />
+                                                    </div>
+
+                                                    <div className="col-span-3 flex justify-center">
+                                                        <Toggle
+                                                            checked={fieldConfig.required}
+                                                            onChange={(val) => handleChange(field.key, "required", val)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-
-                                <div className="divide-y divide-slate-50/50">
-                                    {section.fields.map((field) => {
-                                        const fieldConfig = {
-                                            visible: config[field.key]?.visible ?? true,
-                                            required: config[field.key]?.required ?? !!field.norma
-                                        };
-                                        return (
-                                            <div key={field.key} className="px-8 py-4 grid grid-cols-12 items-center hover:bg-slate-50/50 transition-all group/row">
-                                                <div className="col-span-6 flex items-center gap-3">
-                                                    <span className="text-[14px] font-bold text-slate-700 group-hover/row:text-blue-600 transition-colors">
-                                                        {field.label}
-                                                    </span>
-                                                    {field.norma && (
-                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-50 text-red-500 rounded-lg border border-red-100">
-                                                            <FiInfo size={10} className="font-black" />
-                                                            <span className="text-[9px] font-black uppercase tracking-tighter">Norma</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="col-span-3 flex justify-center">
-                                                    <Toggle
-                                                        checked={fieldConfig.visible}
-                                                        onChange={(val) => handleChange(field.key, "visible", val)}
-                                                    />
-                                                </div>
-
-                                                <div className="col-span-3 flex justify-center">
-                                                    <Toggle
-                                                        checked={fieldConfig.required}
-                                                        onChange={(val) => handleChange(field.key, "required", val)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
-            </div>
-
-            {/* Sticky Save Footer Background Effect */}
-            <div className="fixed bottom-8 right-8 z-50">
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 transition-all active:scale-90 group/float relative overflow-hidden disabled:opacity-50"
-                >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/float:animate-shimmer" />
-                    {saving ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                        <FiSave size={24} />
-                    )}
-                </button>
             </div>
         </div>
     );

@@ -419,38 +419,36 @@ export default function Convenios() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handleViewDetails(convenio)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                              title="Gestionar descuentos"
+                              className="w-7 h-7 rounded-lg bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                              title="Gestionar Descuentos"
                             >
-                              <FiPercent size={15} />
+                              <FiPercent size={13} />
                             </button>
                             <button
                               onClick={() => handleEdit(convenio)}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                              title="Editar convenio"
+                              className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                              title="Editar Convenio"
                             >
-                              <FiEdit3 size={15} />
+                              <FiEdit3 size={13} />
                             </button>
                             <button
                               onClick={() => handleToggleActivo(convenio)}
-                              className={`p-2 rounded-xl transition-all ${
-                                convenio.activo 
-                                  ? "text-emerald-500 hover:text-rose-500 hover:bg-rose-50" 
-                                  : "text-slate-300 hover:text-emerald-600 hover:bg-emerald-50"
+                              className={`w-7 h-7 rounded-lg text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0 ${
+                                convenio.activo ? "bg-emerald-500 hover:bg-emerald-600" : "bg-amber-500 hover:bg-amber-600"
                               }`}
-                              title={convenio.activo ? "Inactivar convenio" : "Activar convenio"}
+                              title={convenio.activo ? "Inactivar Convenio" : "Activar Convenio"}
                             >
-                              {convenio.activo ? <FiToggleRight size={18} /> : <FiToggleLeft size={18} />}
+                              {convenio.activo ? <FiToggleRight size={13} /> : <FiToggleLeft size={13} />}
                             </button>
                             <button
                               onClick={() => handleDelete(convenio)}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                              title="Eliminar convenio"
+                              className="w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                              title="Eliminar Convenio"
                             >
-                              <FiTrash2 size={15} />
+                              <FiTrash2 size={13} />
                             </button>
                           </div>
                         </td>

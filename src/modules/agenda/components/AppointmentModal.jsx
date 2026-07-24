@@ -26,7 +26,7 @@ const baseSchema = z.object({
     precioItemId: z.string().optional(),
     fecha: z.string().min(1, "Fecha requerida"),
     hora: z.string().min(1, "Hora requerida"),
-    duracion: z.number().min(15).default(30),
+    duracion: z.number().min(5).default(30),
     comentario: z.string().optional(),
     status: z.string().optional(),
     valoracion: z.boolean().default(false),
@@ -879,17 +879,34 @@ export default function AppointmentModal({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Duración *</label>
-                                        <select {...register("duracion", { valueAsNumber: true })} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
-                                            {[10, 15, 20, 25, 30, 45, 60, 75, 90, 105, 120].map(m => (
-                                                <option key={m} value={m}>{m} MIN</option>
-                                            ))}
-                                        </select>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Cita *</label>
+                                        <input 
+                                            type="date" 
+                                            {...register("fecha")} 
+                                            disabled={!hasWritePermission} 
+                                            className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" 
+                                        />
                                     </div>
+
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
-                                        <input type="date" {...register("fecha")} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 uppercase outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all" />
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Hora *</label>
+                                        <input 
+                                            type="time" 
+                                            step="60" 
+                                            {...register("hora")} 
+                                            disabled={!hasWritePermission} 
+                                            className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 shadow-sm transition-all cursor-pointer" 
+                                        />
                                     </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Duración Estimada *</label>
+                                    <select {...register("duracion", { valueAsNumber: true })} disabled={!hasWritePermission} className="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-3 text-[11px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 uppercase cursor-pointer shadow-sm transition-all appearance-none">
+                                        {[5, 10, 15, 20, 25, 30, 45, 60, 75, 90, 105, 120].map(m => (
+                                            <option key={m} value={m}>{m} MINUTOS</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div className="space-y-1.5">

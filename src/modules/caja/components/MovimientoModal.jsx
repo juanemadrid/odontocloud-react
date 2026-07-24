@@ -440,40 +440,42 @@ export default function MovimientoModal({ caja, inquilino, userProfile, onClose,
 /* ─── Styles ─── */
 const OVERLAY = {
   position: "fixed", inset: 0,
-  background: "rgba(2,6,23,0.6)",
-  backdropFilter: "blur(8px)",
+  background: "rgba(15,23,42,0.5)",
+  backdropFilter: "blur(4px)",
   zIndex: 1100,
   display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 };
 const MODAL = {
-  background: "#fff", borderRadius: 20, width: "100%", maxWidth: 580,
-  boxShadow: "0 30px 80px rgba(0,0,0,0.3)",
-  animation: "movModalIn 0.25s cubic-bezier(.34,1.56,.64,1)",
+  background: "#fff", borderRadius: 12, width: "100%", maxWidth: 540,
+  border: "1px solid #e2e8f0",
+  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
 };
 const HDR = {
-  padding: "18px 22px", borderBottom: "1px solid #f1f5f9",
+  padding: "14px 20px", borderBottom: "1px solid #e2e8f0",
+  background: "#f8fafc",
   display: "flex", alignItems: "center", justifyContent: "space-between",
 };
 const CLOSE_BTN = {
-  width: 30, height: 30, borderRadius: 8, border: "1px solid #e2e8f0",
-  background: "#f8fafc", cursor: "pointer", fontSize: 13, color: "#64748b",
+  width: 28, height: 28, borderRadius: 8, border: "none",
+  background: "transparent", cursor: "pointer", fontSize: 14, color: "#94a3b8",
   display: "flex", alignItems: "center", justifyContent: "center",
 };
-const GRID2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 };
-const FW = { display: "flex", flexDirection: "column", gap: 5 };
-const LBL = { fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em" };
+const GRID2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 };
+const FW = { display: "flex", flexDirection: "column", gap: 4 };
+const LBL = { fontSize: 11, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em" };
 const INP = {
-  height: 38, borderRadius: 10, border: "1.5px solid #e2e8f0",
-  padding: "0 12px", fontSize: 13, color: "#0f172a", background: "#fff",
+  height: 36, borderRadius: 8, border: "1px solid #e2e8f0",
+  padding: "0 10px", fontSize: 12, color: "#0f172a", background: "#f8fafc",
   outline: "none", width: "100%", boxSizing: "border-box",
-  transition: "border-color 0.2s",
+  transition: "all 0.2s",
 };
 const ERR_BOX = {
   background: "#fff1f2", border: "1px solid #fecdd3",
-  borderRadius: 10, padding: "9px 14px", fontSize: 13,
-  color: "#be123c", marginBottom: 14,
+  borderRadius: 8, padding: "8px 12px", fontSize: 12,
+  color: "#be123c", marginBottom: 12, fontWeight: 600,
 };
 const BTN_CANCEL = {
-  height: 40, padding: "0 18px", borderRadius: 10, border: "1.5px solid #e2e8f0",
-  background: "#fff", color: "#475569", fontWeight: 700, fontSize: 13, cursor: "pointer",
+  height: 36, padding: "0 16px", borderRadius: 8, border: "1px solid #cbd5e1",
+  background: "#fff", color: "#334155", fontWeight: 600, fontSize: 12, cursor: "pointer",
 };
+

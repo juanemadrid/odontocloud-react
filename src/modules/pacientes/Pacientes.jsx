@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { updateDoc, doc } from "firebase/firestore";
@@ -12,99 +12,13 @@ import PatientForm from "./components/PatientForm";
 
 import { db } from "../../firebase/firebaseConfig";
 import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  where,
-} from "firebase/firestore";
-import { createOrUpdatePatient, deletePatient } from "../../services/patientService";
+  createOrUpdatePatient,
+  deletePatient,
+  searchPatients,
+  getPatientById
+} from "../../services/patientService";
 import { useAudit } from "../../hooks/useAudit";
 import ImportadorPacientes from "./components/ImportadorPacientes";
-
-/* ========================
-   Utilidades de UI / Datos
-   ======================== */
-
-const calcAge = (yyyyMmDd) => {
-  if (!yyyyMmDd) return "";
-  const [y, m, d] = yyyyMmDd.split("-").map((x) => parseInt(x, 10));
-  const birth = new Date(y, (m || 1) - 1, d || 1);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const mo = today.getMonth() - birth.getMonth();
-  if (mo < 0 || (mo === 0 && today.getDate() < birth.getDate())) age--;
-  return isNaN(age) ? "" : String(age);
-};
-
-/* ========================
-   Componente principal
-   ======================== */
-
-const INITIAL_FORM = {
-  // Identificación
-  tipoDocumento: "",
-  nroDocumento: "",
-  nroHistoria: "",
-  nombres: "",
-  apellidos: "",
-  nombreCompleto: "",
-  sexo: "",
-  estadoCivil: "",
-  paisNacimiento: "",
-  ciudadNacimiento: "",
-  fechaIngreso: "",
-  fechaNacimiento: "",
-  edad: "",
-  paisDomicilio: "",
-  ciudadDomicilio: "",
-  barrio: "",
-  lugarResidencia: "",
-  estrato: "",
-  zonaResidencial: "",
-  esExtranjero: false,
-  permitePublicidad: false,
-
-  // Contacto
-  celular: "",
-  telDomicilio: "",
-  telOficina: "",
-  extension: "",
-  email: "",
-  ocupacion: "",
-
-  // Facturación / Responsable
-  nombreResponsable: "",
-  parentesco: "",
-  celularResponsable: "",
-  telefonoResponsable: "",
-  emailResponsable: "",
-
-  // Acompañante
-  nombreAcompanante: "",
-  telefonoAcompanante: "",
-
-  // Mercadeo
-  convenioBeneficio: "",
-  comoConocio: "",
-  campania: "",
-  remitidoPor: "",
-  asesorComercial: "",
-
-  // EPS
-  tipoVinculacion: "",
-  nombreEps: "",
-  polizaSalud: "",
-
-  // Doctor
-  doctor: "",
-
-  // Notas
-  notas: "",
-
-  // Foto (Storage)
-  fotoUrl: "",
-};
 
 export default function Pacientes() {
   const { userProfile } = useAuth();
@@ -113,42 +27,90 @@ export default function Pacientes() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
-  // listado
-  const [loading, setLoading] = useState(true);
+  // listado & búsqueda (0 lecturas al cargar la página)
+  const [loading, setLoading] = useState(false);
   const [pacientes, setPacientes] = useState([]);
   const [term, setTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
   // modal control
   const [open, setOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
-  /* ======= cargar pacientes ======= */
+  /* ======= Búsqueda Debounced ======= */
   useEffect(() => {
-    const load = () => reloadData();
-    load();
-  }, [userProfile?.inquilino]);
+    const rawTerm = term.trim();
+    if (!rawTerm) {
+      setIsSearching(false);
+      setPacientes([]);
+      setLoading(false);
+      return;
+    }
 
-  // Handle URL ID pre-selection (supporting both query param '?id=' and pathname '/pacientes/:id/planes')
+    setIsSearching(true);
+    setLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchPatients(userProfile?.inquilino, rawTerm, 30);
+        setPacientes(results);
+      } catch (err) {
+        console.error("Error al realizar búsqueda de pacientes:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [term, userProfile?.inquilino]);
+
+  const reloadData = async () => {
+    if (term.trim()) {
+      setLoading(true);
+      try {
+        const results = await searchPatients(userProfile?.inquilino, term.trim(), 30);
+        setPacientes(results);
+      } catch (e) {
+        console.error("Error al recargar búsqueda de pacientes:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  /* ======= Pre-selección por URL ======= */
   useEffect(() => {
-    if (!loading && pacientes.length > 0) {
+    const checkTargetPatient = async () => {
       const pathParts = location.pathname.split("/pacientes/");
       const idFromPath = pathParts[1] ? pathParts[1].split("/")[0] : null;
       const targetId = idFromPath || searchParams.get("id");
 
       if (targetId) {
-        const found = pacientes.find(p => 
-          p.id.toLowerCase() === targetId.toLowerCase() || 
-          p.nroDocumento?.toLowerCase() === targetId.toLowerCase()
+        const found = pacientes.find(
+          (p) =>
+            p.id.toLowerCase() === targetId.toLowerCase() ||
+            p.nroDocumento?.toLowerCase() === targetId.toLowerCase()
         );
+
         if (found) {
           setSelectedPatient(found);
+        } else {
+          try {
+            const fetched = await getPatientById(targetId);
+            if (fetched) setSelectedPatient(fetched);
+          } catch (e) {
+            console.error("Error obteniendo paciente por ID:", e);
+          }
         }
       } else {
         setSelectedPatient(null);
       }
-    }
-  }, [loading, pacientes, searchParams, location.pathname]);
+    };
+
+    checkTargetPatient();
+  }, [searchParams, location.pathname, pacientes]);
 
   // Escuchar el evento de reset desde el sidebar
   useEffect(() => {
@@ -164,13 +126,11 @@ export default function Pacientes() {
     };
   }, [setSearchParams]);
 
-  // Handle action=new query parameter to automatically open the new patient form modal
+  // Handle action=new query parameter
   useEffect(() => {
     const action = searchParams.get("action");
     if (action === "new") {
       handleOpenNew();
-      
-      // Clean query parameter after a small delay to prevent overriding the modal open state
       const timer = setTimeout(() => {
         const currentParams = new URLSearchParams(window.location.search);
         if (currentParams.get("action") === "new") {
@@ -178,39 +138,13 @@ export default function Pacientes() {
           setSearchParams(currentParams, { replace: true });
         }
       }, 300);
-      
       return () => clearTimeout(timer);
     }
   }, [searchParams, setSearchParams]);
 
-  const reloadData = async () => {
-    setLoading(true);
-    try {
-      const qPac = userProfile?.inquilino
-        ? query(collection(db, "pacientes"), where("inquilino", "==", userProfile.inquilino))
-        : query(collection(db, "pacientes"));
-
-      const snapPac = await getDocs(qPac);
-      const data = snapPac.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      // Sort in memory to avoid missing index error
-      data.sort((a, b) => {
-        const dateA = a.creado?.seconds || 0;
-        const dateB = b.creado?.seconds || 0;
-        return dateB - dateA; // DESC
-      });
-
-      setPacientes(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ======= handle actions ======= */
+  /* ======= Acciones de Edición / Borrado ======= */
   const handleOpenNew = () => {
-    setEditData(null); // For new patient, pass null or an empty object
+    setEditData(null);
     setOpen(true);
   };
 
@@ -226,11 +160,10 @@ export default function Pacientes() {
       const saved = await createOrUpdatePatient(
         userProfile.inquilino,
         formData,
-        isNew, // isNew if no editData
+        isNew,
         fotoFile
       );
 
-      // Audit log
       await logAction(
         saved.id,
         isNew ? "CREATE_PATIENT" : "UPDATE_PATIENT",
@@ -253,7 +186,6 @@ export default function Pacientes() {
     try {
       await deletePatient(patient.id);
 
-      // Audit log
       await logAction(
         patient.id,
         "DELETE_PATIENT",
@@ -275,28 +207,13 @@ export default function Pacientes() {
     }
   };
 
-  /* ======= tabla / filtro ======= */
-  const filtered = useMemo(() => {
-    const t = term.trim().toLowerCase();
-    if (!t) return pacientes;
-    return pacientes.filter((p) => {
-      const blob = `${p.nombreCompleto || p.paciente || ""} ${p.nroDocumento || ""} ${p.celular || p.celularPaciente || ""
-        } ${p.email || ""}`.toLowerCase();
-      return blob.includes(t);
-    });
-  }, [pacientes, term]);
-
-  /* ======= UI ======= */
-  const [selectedPatient, setSelectedPatient] = useState(null);
-
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-slate-50/50">
+    <div className="relative w-full min-h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar flex flex-col bg-slate-50/50">
       {!selectedPatient ? (
         <PatientList
           pacientes={pacientes}
           loading={loading}
-          hasMore={false}
-          onLoadMore={() => { }}
+          isSearching={isSearching}
           onSelect={(patient) => {
             setSelectedPatient(patient);
             setSearchParams({ id: patient.id, tab: "datos" });

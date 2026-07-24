@@ -501,63 +501,59 @@ export default function EmpresaPlanes() {
     );
 
     return (
-        <div className="p-4 w-full max-w-6xl mx-auto relative transition-all duration-300">
+        <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
             {loading && (
                 <div className="absolute top-4 right-4 z-50">
                     <div className="w-4 h-4 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
                 </div>
             )}
 
-            {/* Main Header / Toolbar */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative mb-6">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
+            {/* Header & Bar Acciones */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                        <FiFileText size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-[17px] font-bold text-slate-800">Planes de Venta</h1>
+                        <p className="text-[12px] text-slate-500">Gestión de convenios y tarifas especiales</p>
+                    </div>
+                </div>
 
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200 group-hover:scale-110 transition-transform duration-500">
-                            <FiFileText className="text-white text-xl" />
-                        </div>
-                        <div>
-                            <h2 className="text-[20px] font-black text-slate-800 uppercase tracking-tighter">Planes de Venta</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Gestión de convenios y tarifas especiales</p>
-                        </div>
+                <div className="flex items-center gap-3">
+                    {/* Búsqueda */}
+                    <div className="relative flex-1 sm:flex-none">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar plan..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-48 h-9 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-[12px] text-slate-700 outline-none focus:border-blue-500 transition-colors"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* Search Input */}
-                        <div className="relative group flex-1 md:flex-none">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
-                            <input
-                                type="text"
-                                placeholder="Buscar..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full md:w-64 pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-[14px] font-extrabold text-slate-800 outline-none focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-sm"
-                            />
-                        </div>
-
-                        {/* New Plan Button */}
-                        <button
-                            onClick={openNew}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 group/btn overflow-hidden relative"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-                            <FiPlus className="text-lg" /> Nuevo
-                        </button>
-                    </div>
+                    {/* Nuevo Plan Button */}
+                    <button
+                        onClick={openNew}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[12px] font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer border-0 shrink-0"
+                    >
+                        <FiPlus size={16} />
+                        <span>Nuevo plan</span>
+                    </button>
                 </div>
             </div>
 
             {/* Table Area */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden relative">
-                <div className="p-0 overflow-x-auto">
-                    <table className="w-full border-collapse">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-[12px]">
                         <thead>
-                            <tr className="bg-slate-50/30">
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Nombre</th>
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Lista de Precios</th>
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Actualización</th>
-                                <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Operaciones</th>
+                            <tr className="border-b border-slate-200 bg-slate-50/70">
+                                <th className="py-2.5 px-4 font-bold text-slate-600">Nombre</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600">Lista de Precios</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600">Actualización</th>
+                                <th className="py-2.5 px-4 font-bold text-slate-600 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -642,25 +638,25 @@ export default function EmpresaPlanes() {
 
             {/* Quick Creation Modal */}
             {showNewModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-500">
-                    <div className="bg-white rounded-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden border border-white/40 ring-1 ring-black/5 animate-in zoom-in-95 duration-500">
-                        <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                                    <FiPlus className="text-white text-lg" />
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50/70 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <FiPlus size={16} />
                                 </div>
                                 <div>
-                                    <h3 className="text-[17px] font-black text-slate-800 uppercase tracking-widest">Nuevo Plan</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Creación de tarifario especial</p>
+                                    <h3 className="text-[15px] font-bold text-slate-800">Nuevo Plan</h3>
+                                    <p className="text-[11px] text-slate-500">Creación de tarifario especial</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Nombre Comercial</label>
+                        <div className="p-5 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-600">Nombre Comercial *</label>
                                 <input
-                                    className="w-full px-6 py-4 bg-slate-100/30 border border-slate-200 rounded-[20px] text-[16px] font-extrabold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm"
+                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-blue-500 transition-colors"
                                     value={newPlanName}
                                     onChange={e => setNewPlanName(e.target.value)}
                                     placeholder="Ej. Particular 2026"
@@ -668,35 +664,32 @@ export default function EmpresaPlanes() {
                                 />
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Lista de Precios Base</label>
-                                <div className="relative group">
-                                    <FiDollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all" />
-                                    <select
-                                        className="w-full pl-14 pr-6 py-4 bg-slate-100/30 border border-slate-200 rounded-[20px] text-[16px] font-extrabold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-inner-sm appearance-none"
-                                        value={newPlanListId}
-                                        onChange={e => setNewPlanListId(e.target.value)}
-                                    >
-                                        <option value="">Seleccione...</option>
-                                        {listas.map(l => (
-                                            <option key={l.id} value={l.id}>{l.nombre}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-600">Lista de Precios Base *</label>
+                                <select
+                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-blue-500 transition-colors"
+                                    value={newPlanListId}
+                                    onChange={e => setNewPlanListId(e.target.value)}
+                                >
+                                    <option value="">Seleccione...</option>
+                                    {listas.map(l => (
+                                        <option key={l.id} value={l.id}>{l.nombre}</option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div className="flex items-center gap-3 pt-4">
+                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                                 <button
                                     onClick={() => setShowNewModal(false)}
-                                    className="flex-1 py-4 rounded-[20px] text-[13px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+                                    className="px-4 py-2 rounded-lg text-[12px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200 bg-white cursor-pointer"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="flex-[1.5] py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[20px] text-[13px] font-black uppercase tracking-widest shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0"
                                 >
-                                    <FiPlus /> Crear Plan
+                                    <FiPlus size={15} /> Crear Plan
                                 </button>
                             </div>
                         </div>

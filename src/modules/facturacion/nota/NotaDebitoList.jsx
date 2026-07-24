@@ -464,95 +464,53 @@ export default function NotaDebitoList({ onNew }) {
                 </div>
             </div>
 
-            {/* Filter Toggle Cards & Inputs */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">
-                            Detalle de movimientos por tercero
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => setDetalleMovimientos(!detalleMovimientos)}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${
-                                detalleMovimientos ? "bg-[#8cc33f]" : "bg-slate-200"
-                            }`}
-                        >
-                            <div
-                                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-all duration-300 ${
-                                    detalleMovimientos ? "translate-x-6" : "translate-x-0"
-                                }`}
+            {/* Filter Bar — unified single card */}
+            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="space-y-1.5 lg:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Buscar paciente o nota...</label>
+                        <div className="relative">
+                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Nombre o consecutivo..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all"
                             />
-                        </button>
+                        </div>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">
-                            ¿Con saldo?
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => setConSaldo(!conSaldo)}
-                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${
-                                conSaldo ? "bg-[#8cc33f]" : "bg-slate-200"
-                            }`}
-                        >
-                            <div
-                                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-all duration-300 ${
-                                    conSaldo ? "translate-x-6" : "translate-x-0"
-                                }`}
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Inicio</label>
+                        <div className="relative">
+                            <FiCalendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input
+                                type="date"
+                                value={fechaInicio}
+                                onChange={(e) => setFechaInicio(e.target.value)}
+                                className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all"
                             />
-                        </button>
+                        </div>
                     </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col justify-center gap-4 lg:col-span-2">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Buscar...</label>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                    <FiSearch size={14} />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Nombre o consecutivo..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-10 pl-10 pr-4 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-full text-xs font-bold text-slate-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                                />
-                            </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Fin</label>
+                        <div className="relative">
+                            <FiCalendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input
+                                type="date"
+                                value={fechaFin}
+                                onChange={(e) => setFechaFin(e.target.value)}
+                                className="w-full h-11 pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                            />
                         </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Fecha Inicio</label>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                    <FiCalendar size={14} />
-                                </span>
-                                <input
-                                    type="date"
-                                    value={fechaInicio}
-                                    onChange={(e) => setFechaInicio(e.target.value)}
-                                    className="w-full h-10 pl-10 pr-4 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-full text-xs font-bold text-slate-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Fecha Fin</label>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                    <FiCalendar size={14} />
-                                </span>
-                                <input
-                                    type="date"
-                                    value={fechaFin}
-                                    onChange={(e) => setFechaFin(e.target.value)}
-                                    className="w-full h-10 pl-10 pr-4 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-full text-xs font-bold text-slate-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                                />
-                            </div>
-                        </div>
+                    </div>
+                    <div className="flex items-end">
+                        <button
+                            onClick={loadData}
+                            className="w-full h-11 flex items-center justify-center gap-2 bg-[#8cc33f] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] transition-all active:scale-95 shadow"
+                        >
+                            <FiSearch size={14} /> Buscar
+                        </button>
                     </div>
                 </div>
             </div>

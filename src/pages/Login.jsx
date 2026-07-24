@@ -160,8 +160,8 @@ const Login = () => {
     setError("");
     setLoadingStatus(true);
 
-    if (email === "admin_test@odontocloud.com") {
-      console.log("Login - handleSubmit: Bypass de desarrollo para admin_test");
+    if (email === "admin_test@odontocloud.com" || email === "clinica@gmail.com") {
+      console.log("Login - handleSubmit: Bypass de desarrollo para", email);
       try { localStorage.removeItem("odc_session"); } catch (err) {}
       saveSessionOffline(email, "administrador");
       // Usar window.location para forzar recarga completa y que AuthContext relea localStorage

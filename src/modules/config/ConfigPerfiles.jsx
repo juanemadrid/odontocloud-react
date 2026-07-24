@@ -204,117 +204,107 @@ export default function ConfigPerfiles() {
     }
 
     return (
-        <div className="p-4 w-full max-w-5xl mx-auto relative transition-all duration-300">
-            {/* Main Header / Toolbar */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative mb-6">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
+        <div className="p-4 max-w-6xl mx-auto space-y-4">
+            {/* Header / Search Toolbar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <FiShield size={18} />
+                    </div>
+                    <div>
+                        <h1 className="text-[16px] font-bold text-slate-800 tracking-tight">Perfiles y Permisos</h1>
+                        <p className="text-[11px] text-slate-500 font-medium">Gestión de accesos, roles y seguridad del sistema</p>
+                    </div>
+                </div>
 
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200 group-hover:scale-110 transition-transform duration-500">
-                            <FiShield className="text-white text-xl" />
-                        </div>
-                        <div>
-                            <h2 className="text-[20px] font-black text-slate-800 uppercase tracking-tighter">Perfiles</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Gestión de accesos y seguridad</p>
-                        </div>
+                <div className="flex items-center gap-2.5 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar perfil..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-colors"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* Search Input */}
-                        <div className="relative group flex-1 md:flex-none">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
-                            <input
-                                type="text"
-                                placeholder="Buscar perfil..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full md:w-64 pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-[14px] font-extrabold text-slate-800 outline-none focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-sm"
-                            />
-                        </div>
-
-                        {/* New Button */}
-                        <button
-                            onClick={() => setEditingId("new")}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 group/btn overflow-hidden relative"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-                            <FiPlus className="text-lg" /> Nuevo perfil
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setEditingId("new")}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0 shrink-0"
+                    >
+                        <FiPlus size={16} />
+                        <span>Nuevo Perfil</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Table Area */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden relative">
-                <div className="p-0 overflow-x-auto">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/30">
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Nombre del Perfil</th>
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Última Actualización</th>
-                                <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Operaciones</th>
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                            <th className="py-2.5 px-4">Nombre del Perfil</th>
+                            <th className="py-2.5 px-4">Última Actualización</th>
+                            <th className="py-2.5 px-4 text-right">Operaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[12px] text-slate-700">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
+                                    <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                                    Sincronizando perfiles...
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 animate-pulse">
-                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-blue-400">
-                                                <div className="w-6 h-6 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                        ) : filteredProfiles.length === 0 ? (
+                            <tr>
+                                <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
+                                    No se encontraron perfiles de usuario registrados
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredProfiles.map((p) => (
+                                <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                                    <td className="py-2.5 px-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                                🛡️
                                             </div>
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Sincronizando perfiles...</p>
+                                            <span className="font-bold text-slate-800 capitalize">{p.nombre}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4 text-[11px] text-slate-500 font-medium">
+                                        {p.updatedAt?.seconds ? new Date(p.updatedAt.seconds * 1000).toLocaleString() : "-"}
+                                    </td>
+                                    <td className="py-2.5 px-4 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <button
+                                                onClick={() => setEditingId(p.id)}
+                                                className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Editar Permisos"
+                                            >
+                                                <FiEdit2 size={13} />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!window.confirm(`¿Eliminar perfil "${p.nombre}"?`)) return;
+                                                    try {
+                                                        await deleteDoc(doc(db, "perfiles", p.id));
+                                                    } catch (e) { console.error(e); }
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Eliminar Perfil"
+                                            >
+                                                <FiTrash2 size={13} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredProfiles.length === 0 ? (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-20 text-center opacity-30 font-black uppercase tracking-widest text-slate-400">
-                                        Sin perfiles registrados
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredProfiles.map((p) => (
-                                    <tr key={p.id} className="group/row hover:bg-slate-50/50 transition-all duration-300">
-                                        <td className="px-8 py-4 border-b border-slate-50 transition-all group-hover/row:translate-x-1">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 group-hover/row:scale-110 transition-transform duration-500">
-                                                    <FiShield size={14} />
-                                                </div>
-                                                <span className="text-[15px] font-black text-slate-700 tracking-tight">{p.nombre}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4 border-b border-slate-50 font-bold text-slate-400 text-xs">
-                                            {p.updatedAt?.seconds ? new Date(p.updatedAt.seconds * 1000).toLocaleString() : "-"}
-                                        </td>
-                                        <td className="px-8 py-4 border-b border-slate-50 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-all duration-500 translate-x-4 group-hover/row:translate-x-0">
-                                                <button
-                                                    onClick={() => setEditingId(p.id)}
-                                                    className="p-2.5 rounded-xl text-blue-500 hover:bg-blue-500 hover:text-white hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-90"
-                                                >
-                                                    <FiEdit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        if (window.confirm("¿Eliminar perfil?")) {
-                                                            await deleteDoc(doc(db, "perfiles", p.id));
-                                                            loadProfiles();
-                                                        }
-                                                    }}
-                                                    className="p-2.5 rounded-xl text-red-500 hover:bg-red-500 hover:text-white hover:shadow-lg hover:shadow-red-200 transition-all active:scale-90"
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
         </div>
     );

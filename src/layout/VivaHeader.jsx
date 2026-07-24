@@ -98,77 +98,8 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
 
     return (
         <header className="fixed top-0 left-0 w-full z-[100] transition-all duration-300">
-            {/* 1. TOP BAR - ALWAYS VISIBLE */}
-            <div className={`viva-topbar w-full relative border-bb transition-all duration-300 h-9 overflow-hidden ${isTransparent ? 'bg-transparent border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-                <div className="viva-container viva-topbar-content flex justify-between items-center py-2 h-full">
-                    <div className="viva-topbar-left flex gap-6 md:gap-10">
-                        <a
-                            href={isPreview ? "#" : (config?.isMaster ? `tel:${(config?.contactPhone || "3001234567")}` : `https://wa.me/57${(config?.contactPhone || "3001234567").replace(/\D/g, '')}`)}
-                            onClick={(e) => isPreview && e.preventDefault()}
-                            className={`viva-contact-item flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:text-sky-500 transition-colors ${isTransparent ? '!text-white/80' : '!text-slate-500'}`}
-                        >
-                            <IconPhone /> <span className="hidden md:inline">{config?.isMaster ? "Soporte: " : "Citas: "}</span> <span>{config?.contactPhone || "3001234567"}</span>
-                        </a>
-                        <Link 
-                            to={isPreview ? "#" : (config?.isMaster ? "/servicios" : `${clinicBase}/sedes`)} 
-                            onClick={(e) => {
-                                if (isPreview) {
-                                    e.preventDefault();
-                                    const targetTab = config?.isMaster ? "services" : "identity";
-                                    localStorage.setItem("odc_cms_preview_active_tab", targetTab);
-                                    window.dispatchEvent(new Event("storage"));
-                                }
-                            }}
-                            className={`viva-contact-item flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:text-sky-500 transition-colors ${isTransparent ? '!text-white/80' : '!text-slate-500'}`}
-                        >
-                            <IconMap /> <span className="hidden md:inline">{config?.isMaster ? "Funcionalidades" : "Sedes"}</span>
-                        </Link>
-                    </div>
-
-                    <div className="viva-topbar-right flex items-center gap-4 md:gap-6">
-                        <div className="flex items-center gap-3">
-                            {!config?.isMaster ? (
-                                <>
-                                    <Link to={isPreview ? "#" : `${clinicBase}/portal`} onClick={(e) => isPreview && e.preventDefault()} className="text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-500">Portal Pacientes</Link>
-                                </>
-                            ) : null}
-
-                            {deferredPrompt && (
-                                <button
-                                    onClick={handleInstallClick}
-                                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full hover:scale-105 transition-all shadow-lg border border-white/20"
-                                >
-                                    <IconDownload /> App
-                                </button>
-                            )}
-                        </div>
-
-                        {user ? (
-                            <div className="flex items-center gap-3">
-                                <Link 
-                                    to={isPreview ? "#" : getDashboardPath()} 
-                                    onClick={(e) => {
-                                        if (isPreview) {
-                                            e.preventDefault();
-                                            alert("El acceso a tu panel de cuenta está inactivo en la vista previa del editor.");
-                                        }
-                                    }}
-                                    className={`text-[10px] font-bold uppercase tracking-widest ${isTransparent ? 'text-white' : 'text-slate-600'}`}
-                                >
-                                    {userProfile?.nombre?.split(' ')[0] || "Mi Cuenta"}
-                                </Link>
-                            </div>
-                        ) : (
-                            <Link to={isPreview ? "#" : "/login"} onClick={(e) => isPreview && e.preventDefault()} className={`text-[10px] font-bold uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity ${isTransparent ? 'text-white' : 'text-slate-600'}`}>
-                                Login
-                            </Link>
-                        )}
-                    </div>
-                </div>
-            </div>
-
             {/* 2. NAVBAR */}
-            <nav className={`${navClasses} h-20 md:h-24 flex items-center`}>
+            <nav className={`${navClasses} h-20 flex items-center`}>
                 <div className="w-full mx-auto px-4 md:px-8 flex justify-between items-center h-full max-w-[1600px]">
 
                     {/* LEFT: LOGO */}
@@ -180,14 +111,14 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                             onError={(e) => { e.target.style.display = 'none'; }}
                         />
                         <div className="flex flex-col justify-center">
-                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tighter leading-none font-sans">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-none font-sans">
                                 {config?.isMaster ? (
                                     <>
-                                        <span className={logoTextColor}>Odonto</span>
-                                        <span className="text-amber-500">Cloud</span>
+                                        <span className="text-slate-900">Odonto</span>
+                                        <span className="text-blue-600">Cloud</span>
                                     </>
                                 ) : (
-                                    <span className={logoTextColor}>{config?.appTitle || config?.name || "OdontoCloud"}</span>
+                                    <span className="text-slate-900">{config?.appTitle || config?.name || "OdontoCloud"}</span>
                                 )}
                             </h1>
                         </div>
@@ -196,12 +127,14 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                     {/* RIGHT: NAVIGATION + ACTIONS */}
                     <div className="hidden lg:flex items-center gap-8">
                         {/* MENU LINKS */}
-                        <div className="flex items-center gap-6">
+                        {/* MENU LINKS (EXACT MATCH TO REFERENCE IMAGE) */}
+                        <div className="flex items-center gap-7">
                             {(config?.isMaster ? [
-                                { name: 'Inicio', path: '/' },
-                                { name: 'Funcionalidades', path: '/servicios' },
-                                { name: 'Planes', path: '/planes' },
-                                { name: 'FAQ', path: '/faq' }
+                                { name: 'Inicio', path: '#inicio' },
+                                { name: 'Funcionalidades', path: '#funcionalidades' },
+                                { name: 'Beneficios', path: '#beneficios' },
+                                { name: 'Precios', path: '#precios' },
+                                { name: 'Recursos', path: '#recursos' }
                             ] : [
                                 { name: 'Inicio', path: clinicBase || '/' },
                                 { name: 'Sobre Nosotros', path: `${clinicBase}/nosotros` },
@@ -210,69 +143,49 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                                 { name: 'Portal', path: `${clinicBase}/portal` }
                             ]).map((item) => {
                                 if (item.isMasterOnly && !config?.isMaster) return null;
-                                const isActive = item.path === '/'
-                                    ? location.pathname === '/'
-                                    : location.pathname.startsWith(item.path);
-
                                 return (
-                                    <Link
+                                    <a
                                         key={item.name}
-                                        to={isPreview ? "#" : item.path}
+                                        href={item.path}
                                         onClick={(e) => {
-                                            if (isPreview) {
+                                            if (item.path.startsWith('#')) {
                                                 e.preventDefault();
-                                                const lowerName = item.name.toLowerCase();
-                                                let targetTab = "hero";
-                                                if (lowerName.includes("nosotros")) targetTab = "identity";
-                                                else if (lowerName.includes("servicio") || lowerName.includes("funcionalidad")) targetTab = "services";
-                                                else if (lowerName.includes("sede")) targetTab = "identity";
-                                                else if (lowerName.includes("planes") || lowerName.includes("faq")) targetTab = "hero";
-                                                
-                                                localStorage.setItem("odc_cms_preview_active_tab", targetTab);
-                                                window.dispatchEvent(new Event("storage"));
+                                                const el = document.querySelector(item.path);
+                                                if (el) el.scrollIntoView({ behavior: 'smooth' });
                                             }
                                         }}
-                                        className={`text-[13px] font-bold uppercase tracking-widest transition-all duration-300 relative group py-2
-                                                ${isActive ? '' : `${isTransparent ? 'text-white hover:text-cyan-300' : 'text-slate-600 hover:text-cyan-600'}`}
-                                            `}
-                                        style={isActive ? { color: isTransparent ? '#38bdf8' : '#0ea5e9' } : {}}
+                                        className="text-xs font-bold tracking-wide text-slate-700 hover:text-blue-600 transition-colors py-2 relative group"
                                     >
                                         {item.name}
-                                        <span className={`absolute bottom-0 left-0 h-[2px] rounded-full transition-all duration-300 bg-sky-400
-                                                ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}
-                                            `}
-                                        ></span>
-                                    </Link>
+                                        <span className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full rounded-full transition-all duration-300 bg-blue-600"></span>
+                                    </a>
                                 );
                             })}
                         </div>
 
-                        {/* SEPARATOR */}
-                        <div className={`h-8 w-[1px] ${isTransparent ? 'bg-white/20' : 'bg-slate-200'}`}></div>
+                        {/* RIGHT ACTIONS: INICIAR SESIÓN + SOLICITAR DEMO / MI PANEL */}
+                        <div className="flex items-center gap-4 border-l border-slate-200/80 pl-6">
+                            <Link 
+                                to={user ? getDashboardPath() : "/login"} 
+                                className="text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors"
+                            >
+                                {user ? "Mi Cuenta" : "Iniciar Sesión"}
+                            </Link>
 
-                        {/* MY PANEL BUTTON - PREMIUM STYLE */}
-                        <button
-                            onClick={() => {
-                                if (isPreview) {
-                                    alert("El acceso a tu panel de clínica está inactivo en la vista previa del editor.");
-                                    return;
-                                }
-                                navigate(getDashboardPath());
-                            }}
-                            className={`
-                                relative overflow-hidden px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide 
-                                transition-all duration-300 transform hover:scale-105 hover:shadow-xl group
-                                ${isTransparent
-                                    ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-                                    : 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 hover:bg-blue-700'
-                                }
-                            `}
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    if (isPreview) {
+                                        alert("Acceso a demo inactivo en la vista previa del editor.");
+                                        return;
+                                    }
+                                    navigate(user ? getDashboardPath() : '/login');
+                                }}
+                                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
+                            >
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                Mi Panel
-                            </span>
-                        </button>
+                                <span>{user ? "Mi Panel" : "Solicitar Demo"}</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* MOBILE TOGGLE */}

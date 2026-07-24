@@ -112,17 +112,20 @@ export const ReceiptPrintService = {
             const conceptStr = pago.concepto || "Abono a tratamiento";
             const observationsStr = pago.notas || `Abono del plan ${pago.planTitle || ''}`;
 
+            const documentTitle = pago.documentTitle 
+                || (pago.tipo === "egreso" ? "Egreso" : "Recibo de Caja");
+
             const html = `
                 <div style="border: 1px solid #e2e8f0; padding: 40px; border-radius: 24px; position: relative; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                     <!-- Top accent bar matching other templates -->
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background-color: #2563eb; border-top-left-radius: 24px; border-top-right-radius: 24px;"></div>
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background-color: ${pago.tipo === 'egreso' ? '#dc2626' : '#2563eb'}; border-top-left-radius: 24px; border-top-right-radius: 24px;"></div>
 
                     <!-- Unified Premium Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #2563eb; padding-bottom: 25px; margin-bottom: 30px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid ${pago.tipo === 'egreso' ? '#dc2626' : '#2563eb'}; padding-bottom: 25px; margin-bottom: 30px; margin-top: 15px;">
                         <div style="display: flex; gap: 25px; align-items: center;">
                             ${logoUrl 
                                 ? `<img src="${logoUrl}" style="max-height: 75px; max-width: 165px; object-fit: contain;" crossorigin="anonymous" />`
-                                : `<div style="width: 80px; height: 80px; background: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 900; text-transform: uppercase;">${clinicName.substring(0, 1) || "O"}</div>`
+                                : `<div style="width: 80px; height: 80px; background: ${pago.tipo === 'egreso' ? '#dc2626' : '#2563eb'}; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 900; text-transform: uppercase;">${clinicName.substring(0, 1) || "O"}</div>`
                             }
                             <div>
                                 <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: -1px;">${clinicName}</h1>
@@ -132,8 +135,8 @@ export const ReceiptPrintService = {
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="background: #eff6ff; padding: 12px 20px; border-radius: 16px; border: 2px solid #dbeafe; margin-bottom: 8px; display: inline-block;">
-                                <span style="font-size: 16px; font-weight: 900; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.5px;">Recibo de Caja</span>
+                            <div style="background: ${pago.tipo === 'egreso' ? '#fef2f2' : '#eff6ff'}; padding: 12px 20px; border-radius: 16px; border: 2px solid ${pago.tipo === 'egreso' ? '#fca5a5' : '#dbeafe'}; margin-bottom: 8px; display: inline-block;">
+                                <span style="font-size: 16px; font-weight: 900; color: ${pago.tipo === 'egreso' ? '#dc2626' : '#1d4ed8'}; text-transform: uppercase; letter-spacing: 0.5px;">${documentTitle}</span>
                             </div>
                             <p style="margin: 0; font-size: 11px; color: #94a3b8; font-weight: 900; text-transform: uppercase;">FECHA DE EMISIÓN: ${formattedDate}</p>
                             <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 900; color: #ef4444; font-family: monospace;">NRO: ${receiptNumber}</p>
@@ -155,7 +158,7 @@ export const ReceiptPrintService = {
                             <span style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">Detalles del Recibo</span>
                             <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 8px;">
                                 <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Medio de Pago:</strong> <span style="text-transform: uppercase;">${pago.medio}</span></p>
-                                <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Elaborado por:</strong> <span style="text-transform: uppercase;">${pago.registradoPor || pago.profesional || userProfile?.nombreCompleto || "Sistema"}</span></p>
+                                <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 600;"><strong style="color: #94a3b8; font-size: 9px; text-transform: uppercase; margin-right: 5px;">Elaborado por:</strong> <span style="text-transform: uppercase;">${(pago.registradoPor && !pago.registradoPor.includes('@')) ? pago.registradoPor : (userProfile?.nombreCompleto || userProfile?.nombre || (pago.registradoPor ? pago.registradoPor.split('@')[0] : "Sistema"))}</span></p>
                             </div>
                         </div>
                     </div>

@@ -11,7 +11,8 @@ import {
     orderBy,
     limit,
     startAfter,
-    serverTimestamp
+    serverTimestamp,
+    getCountFromServer
 } from "firebase/firestore";
 import {
     getStorage,
@@ -51,6 +52,21 @@ const makeSearchIndex = (f) =>
 
 // --- CRUD ---
 
+export const getPatientsCount = async (inquilino) => {
+    if (!inquilino) return 0;
+    try {
+        const q = query(
+            collection(db, "pacientes"),
+            where("inquilino", "==", inquilino)
+        );
+        const snap = await getCountFromServer(q);
+        return snap.data().count || 0;
+    } catch (e) {
+        console.warn("Error calculando el número total de pacientes:", e);
+        return 0;
+    }
+};
+
 export const getPatientsPage = async (inquilino, lastDoc = null, pageSize = 20) => {
     if (!inquilino) return { patients: [], lastDoc: null, hasMore: false };
 
@@ -76,93 +92,157 @@ export const getPatientsPage = async (inquilino, lastDoc = null, pageSize = 20) 
         const patients = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         return { patients, lastDoc: snap.docs[snap.docs.length - 1] || null, hasMore: snap.size === pageSize };
     } catch (e) {
-        console.warn("Firestore Query Error (likely missing index). Falling back to simple Fetch.", e);
+        console.warn("Firestore Query Error (orderBy actualizado). Usando fallback seguro sin índice compuesto.", e);
 
-        // Fallback: Fetch by inquilino only (no sort) and sort in memory
+        // Fallback: Consulta paginada básica por inquilino
         try {
-            const qFallback = query(
-                collection(db, "pacientes"),
-                where("inquilino", "==", inquilino),
-                limit(pageSize * 2)
-            );
+            let qFallback;
+            if (!lastDoc) {
+                qFallback = query(
+                    collection(db, "pacientes"),
+                    where("inquilino", "==", inquilino),
+                    limit(pageSize)
+                );
+            } else {
+                qFallback = query(
+                    collection(db, "pacientes"),
+                    where("inquilino", "==", inquilino),
+                    orderBy("__name__"),
+                    startAfter(lastDoc),
+                    limit(pageSize)
+                );
+            }
             const snap = await getDocs(qFallback);
             let patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // Client-side Sort
+            // Ordenamiento local sobre la página actual
             patients.sort((a, b) => {
-                const ta = a.actualizado?.seconds || a.creado?.seconds || 0;
-                const tb = b.actualizado?.seconds || b.creado?.seconds || 0;
+                const ta = a.actualizado?.seconds || a.creado?.seconds || a.createdAt?.seconds || 0;
+                const tb = b.actualizado?.seconds || b.creado?.seconds || b.createdAt?.seconds || 0;
                 return tb - ta;
             });
 
-            return { patients, lastDoc: null, hasMore: false };
+            return { patients, lastDoc: snap.docs[snap.docs.length - 1] || null, hasMore: snap.size === pageSize };
         } catch (e2) {
-            console.error("Critical Error fetching patients", e2);
-            throw e2;
+            console.error("Error en fallback de getPatientsPage:", e2);
+            return { patients: [], lastDoc: null, hasMore: false };
         }
     }
 };
 
-export const searchPatients = async (inquilino, searchTerm) => {
+export const searchPatients = async (inquilino, searchTerm, maxResults = 30) => {
     if (!inquilino) return [];
-    const term = normalize(searchTerm);
+    const rawTerm = (searchTerm || "").trim();
+    const term = normalize(rawTerm);
     if (!term) return [];
 
     try {
         const isNumeric = /^\d+$/.test(term);
-        let snap;
-        
-        // 1. Si es numérico, intentamos buscar directamente por número de documento exacto
+        const resultsMap = new Map();
+
+        // 1. Crear lote de consultas paralelas sobre campos indexados clave
+        const queries = [];
+
         if (isNumeric) {
-            const qDoc = query(
+            queries.push(
+                query(
+                    collection(db, "pacientes"),
+                    where("inquilino", "==", inquilino),
+                    where("nroDocumento", "==", rawTerm),
+                    limit(maxResults)
+                )
+            );
+            queries.push(
+                query(
+                    collection(db, "pacientes"),
+                    where("inquilino", "==", inquilino),
+                    where("celular", "==", rawTerm),
+                    limit(maxResults)
+                )
+            );
+        }
+
+        queries.push(
+            query(
                 collection(db, "pacientes"),
                 where("inquilino", "==", inquilino),
-                where("nroDocumento", "==", searchTerm.trim())
-            );
-            snap = await getDocs(qDoc);
-            if (!snap.empty) {
-                return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            }
-        }
-
-        // 2. Intentamos buscar por prefijo de nombre completo indexado en Firestore
-        const qName = query(
-            collection(db, "pacientes"),
-            where("inquilino", "==", inquilino),
-            where("nombreCompletoLower", ">=", term),
-            where("nombreCompletoLower", "<=", term + "\uf8ff"),
-            limit(20)
+                where("nombreCompletoLower", ">=", term),
+                where("nombreCompletoLower", "<=", term + "\uf8ff"),
+                limit(maxResults)
+            )
         );
-        snap = await getDocs(qName);
-        
-        if (!snap.empty) {
-            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
+        queries.push(
+            query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("nombresLower", ">=", term),
+                where("nombresLower", "<=", term + "\uf8ff"),
+                limit(maxResults)
+            )
+        );
+        queries.push(
+            query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("apellidosLower", ">=", term),
+                where("apellidosLower", "<=", term + "\uf8ff"),
+                limit(maxResults)
+            )
+        );
+        queries.push(
+            query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("documentoLower", ">=", term),
+                where("documentoLower", "<=", term + "\uf8ff"),
+                limit(maxResults)
+            )
+        );
+        queries.push(
+            query(
+                collection(db, "pacientes"),
+                where("inquilino", "==", inquilino),
+                where("emailLower", ">=", term),
+                where("emailLower", "<=", term + "\uf8ff"),
+                limit(maxResults)
+            )
+        );
 
-        // Forzar fallback si no se encontraron coincidencias exactas o de prefijo
-        throw new Error("No prefix match found");
-    } catch (err) {
-        console.log("searchPatients: usando búsqueda client-side (índice Firestore no configurado).");
-        try {
-            // 3. Fallback de cliente: descarga todos los pacientes del inquilino y filtra en memoria
+        const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+
+        snapshots.forEach(res => {
+            if (res.status === "fulfilled" && res.value && !res.value.empty) {
+                res.value.docs.forEach(docSnap => {
+                    if (!resultsMap.has(docSnap.id)) {
+                        resultsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+                    }
+                });
+            }
+        });
+
+        // 2. Fallback acotado a 50 registros por si hay pacientes antiguos sin campos *_Lower
+        if (resultsMap.size === 0) {
             const qFallback = query(
                 collection(db, "pacientes"),
-                where("inquilino", "==", inquilino)
+                where("inquilino", "==", inquilino),
+                limit(50)
             );
             const snap = await getDocs(qFallback);
-            const allPatients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            return allPatients.filter(p => {
-                const nameLower = p.nombreCompletoLower || normalize(p.nombreCompleto || p.paciente || "");
-                const docLower = p.documentoLower || normalize(p.nroDocumento || p.documento || "");
-                const cellLower = normalize(p.celular || p.celularPaciente || "");
-                
-                return nameLower.includes(term) || docLower.includes(term) || cellLower.includes(term);
-            }).slice(0, 20);
-        } catch (fallbackErr) {
-            console.error("Critical error in searchPatients fallback:", fallbackErr);
-            return [];
+            snap.docs.forEach(d => {
+                const p = { id: d.id, ...d.data() };
+                const blob = normalize(
+                    `${p.nombreCompleto || p.paciente || ""} ${p.nombres || ""} ${p.apellidos || ""} ${p.nroDocumento || p.documento || ""} ${p.celular || p.celularPaciente || ""} ${p.email || ""}`
+                );
+                if (blob.includes(term)) {
+                    resultsMap.set(p.id, p);
+                }
+            });
         }
+
+        return Array.from(resultsMap.values()).slice(0, maxResults);
+    } catch (err) {
+        console.error("Error en searchPatients:", err);
+        return [];
     }
 };
 

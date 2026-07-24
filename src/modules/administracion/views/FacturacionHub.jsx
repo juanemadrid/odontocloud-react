@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   FiFileText, FiPlusCircle, FiMinusCircle, FiDollarSign, 
-  FiRepeat, FiTruck, FiShoppingBag, FiLayers, FiCreditCard, FiArrowRight
+  FiRepeat, FiTruck, FiShoppingBag, FiLayers, FiCreditCard, FiArrowRight, FiChevronRight, FiPlus
 } from "react-icons/fi";
 import FinancialDashboard from "../../financiero/components/FinancialDashboard";
 import ReciboCajaList from "../../facturacion/recibo/ReciboCajaList";
@@ -13,19 +13,35 @@ import NotaCreditoForm from "../../facturacion/nota/NotaCreditoForm";
 import NotaDebitoList from "../../facturacion/nota/NotaDebitoList";
 import NotaDebitoForm from "../../facturacion/nota/NotaDebitoForm";
 import Liquidaciones from "../../facturacion/liquidacion/Liquidaciones";
+import TrasladosList from "../../facturacion/traslados/TrasladosList";
+import PagosList from "../../facturacion/pagos/PagosList";
+import OrdenesCompraList from "../../facturacion/ordenescompra/OrdenesCompraList";
+import FacturasCompraList from "../../facturacion/facturascompra/FacturasCompraList";
 
 const FACT_OPTIONS = [
-  { id: "recibo", label: "Recibo de caja", icon: <FiFileText />, color: "text-emerald-600", bg: "bg-emerald-50", desc: "Comprobantes de ingreso de dinero" },
-  { id: "saldo", label: "Saldo a favor", icon: <FiDollarSign />, color: "text-teal-600", bg: "bg-teal-50", desc: "Gestión y abonos de saldos a favor de pacientes" },
-  { id: "nc", label: "Nota crédito", icon: <FiMinusCircle />, color: "text-rose-600", bg: "bg-rose-50", desc: "Anulaciones y descuentos" },
-  { id: "nd", label: "Nota débito", icon: <FiPlusCircle />, color: "text-orange-600", bg: "bg-orange-50", desc: "Incrementos de deuda" },
-  { id: "liq", label: "Liquidaciones", icon: <FiLayers />, color: "text-purple-600", bg: "bg-purple-50", desc: "Cierre de tratamientos y presupuestos" },
-  { id: "tras", label: "Traslados", icon: <FiRepeat />, color: "text-slate-600", bg: "bg-slate-50", desc: "Movimiento entre cuentas" },
-  { id: "pagos", label: "Pagos", icon: <FiCreditCard />, color: "text-indigo-600", bg: "bg-indigo-50", desc: "Gestión de egresos y proveedores" },
-  { id: "oc", label: "Ordenes de compra", icon: <FiShoppingBag />, color: "text-cyan-600", bg: "bg-cyan-50", desc: "Solicitudes de insumos" },
-  { id: "fv", label: "Factura de venta", icon: <FiDollarSign />, color: "text-emerald-700", bg: "bg-emerald-100", desc: "Facturación principal de servicios" },
-  { id: "fc", label: "Facturas de compra", icon: <FiTruck />, color: "text-amber-600", bg: "bg-amber-50", desc: "Registro de facturas recibidas" },
+  { id: "recibo",  label: "Recibo de caja",      icon: <FiFileText />,    color: "text-emerald-600", bg: "bg-emerald-50",   desc: "Comprobantes de ingreso de dinero" },
+  { id: "saldo",   label: "Saldo a favor",        icon: <FiDollarSign />,  color: "text-teal-600",    bg: "bg-teal-50",      desc: "Gestión y abonos de saldos a favor" },
+  { id: "nc",      label: "Nota crédito",         icon: <FiMinusCircle />, color: "text-rose-600",    bg: "bg-rose-50",      desc: "Anulaciones y descuentos" },
+  { id: "nd",      label: "Nota débito",          icon: <FiPlusCircle />,  color: "text-orange-600",  bg: "bg-orange-50",    desc: "Incrementos de deuda" },
+  { id: "liq",     label: "Liquidaciones",        icon: <FiLayers />,      color: "text-purple-600",  bg: "bg-purple-50",    desc: "Cierre de tratamientos y presupuestos" },
+  { id: "tras",    label: "Traslados",            icon: <FiRepeat />,      color: "text-slate-600",   bg: "bg-slate-50",     desc: "Movimiento entre cuentas" },
+  { id: "pagos",   label: "Pagos",                icon: <FiCreditCard />,  color: "text-indigo-600",  bg: "bg-indigo-50",    desc: "Gestión de egresos y proveedores" },
+  { id: "oc",      label: "Ordenes de compra",    icon: <FiShoppingBag />, color: "text-cyan-600",    bg: "bg-cyan-50",      desc: "Solicitudes de insumos" },
+  { id: "fv",      label: "Factura de venta",     icon: <FiDollarSign />,  color: "text-emerald-700", bg: "bg-emerald-100",  desc: "Facturación principal de servicios" },
+  { id: "fc",      label: "Facturas de compra",   icon: <FiTruck />,       color: "text-amber-600",   bg: "bg-amber-50",     desc: "Registro de facturas recibidas" },
 ];
+
+// Sub-views that have a "+Nuevo" button
+const NEW_BUTTON_LABELS = {
+  recibo:  "Nuevo Recibo de Caja",
+  saldo:   "Nuevo Saldo a Favor",
+  nc:      "Nueva Nota Crédito",
+  nd:      "Nueva Nota Débito",
+  tras:    "Nuevo Traslado",
+  pagos:   "Nuevo Pago",
+  oc:      "Nueva Orden de Compra",
+  fc:      "Nueva Factura de Compra",
+};
 
 export default function FacturacionHub() {
   const [activeSubView, setActiveSubView] = useState(null);
@@ -36,164 +52,166 @@ export default function FacturacionHub() {
     let title = "";
 
     if (activeSubView === "fv") {
-        content = <FinancialDashboard />;
-        title = "Facturación de Venta";
+      content = <FinancialDashboard />;
+      title = "Facturación de Venta";
     } else if (activeSubView === "recibo") {
-        content = <ReciboCajaList onNew={() => setActiveSubView("recibo_form")} onBack={() => setActiveSubView(null)} />;
-        title = "Recibo de Caja";
+      content = <ReciboCajaList onNew={() => setActiveSubView("recibo_form")} />;
+      title = "Recibo de Caja";
     } else if (activeSubView === "recibo_form") {
-        content = <ReciboCajaForm onCancel={() => setActiveSubView("recibo")} onSuccess={() => setActiveSubView("recibo")} />;
-        title = "Nuevo Recibo de Caja";
+      content = <ReciboCajaForm onCancel={() => setActiveSubView("recibo")} onSuccess={() => setActiveSubView("recibo")} />;
+      title = "Nuevo Recibo de Caja";
     } else if (activeSubView === "saldo") {
-        content = <SaldoFavorList onNew={() => setActiveSubView("saldo_form")} onBack={() => setActiveSubView(null)} />;
-        title = "Saldo a Favor";
+      content = <SaldoFavorList onNew={() => setActiveSubView("saldo_form")} />;
+      title = "Saldo a Favor";
     } else if (activeSubView === "saldo_form") {
-        content = <SaldoFavorForm onCancel={() => setActiveSubView("saldo")} onSuccess={() => setActiveSubView("saldo")} />;
-        title = "Nuevo Saldo a Favor";
+      content = <SaldoFavorForm onCancel={() => setActiveSubView("saldo")} onSuccess={() => setActiveSubView("saldo")} />;
+      title = "Nuevo Saldo a Favor";
     } else if (activeSubView === "nc") {
-        content = <NotaCreditoList onNew={() => setActiveSubView("nc_form")} onBack={() => setActiveSubView(null)} />;
-        title = "Nota de Crédito";
+      content = <NotaCreditoList onNew={() => setActiveSubView("nc_form")} />;
+      title = "Nota de Crédito";
     } else if (activeSubView === "nc_form") {
-        content = <NotaCreditoForm onCancel={() => setActiveSubView("nc")} onSuccess={() => setActiveSubView("nc")} />;
-        title = "Nueva Nota de Crédito";
+      content = <NotaCreditoForm onCancel={() => setActiveSubView("nc")} onSuccess={() => setActiveSubView("nc")} />;
+      title = "Nueva Nota de Crédito";
     } else if (activeSubView === "nd") {
-        content = <NotaDebitoList onNew={() => setActiveSubView("nd_form")} onBack={() => setActiveSubView(null)} />;
-        title = "Nota de Débito";
+      content = <NotaDebitoList onNew={() => setActiveSubView("nd_form")} />;
+      title = "Nota de Débito";
     } else if (activeSubView === "nd_form") {
-        content = <NotaDebitoForm onCancel={() => setActiveSubView("nd")} onSuccess={() => setActiveSubView("nd")} />;
-        title = "Nueva Nota de Débito";
+      content = <NotaDebitoForm onCancel={() => setActiveSubView("nd")} onSuccess={() => setActiveSubView("nd")} />;
+      title = "Nueva Nota de Débito";
     } else if (activeSubView === "liq") {
-        content = <Liquidaciones onBack={() => setActiveSubView(null)} />;
-        title = "Liquidación de Comisiones";
+      content = <Liquidaciones onBack={() => setActiveSubView(null)} />;
+      title = "Liquidación de Comisiones";
+    } else if (activeSubView === "tras") {
+      content = <TrasladosList onNew={() => setActiveSubView("tras_form")} />;
+      title = "Traslados";
+    } else if (activeSubView === "pagos") {
+      content = <PagosList onNew={() => setActiveSubView("pagos_form")} />;
+      title = "Pagos a Proveedores";
+    } else if (activeSubView === "oc") {
+      content = <OrdenesCompraList onNew={() => setActiveSubView("oc_form")} />;
+      title = "Órdenes de Compra";
+    } else if (activeSubView === "fc") {
+      content = <FacturasCompraList onNew={() => setActiveSubView("fc_form")} />;
+      title = "Facturas de Compra";
+    }
+
+    // For form sub-views that are not yet built, show a coming-soon state
+    const formViews = ["tras_form", "pagos_form", "oc_form", "fc_form"];
+    if (!content && formViews.includes(activeSubView)) {
+      const parentKey = activeSubView.replace("_form", "");
+      const opt = FACT_OPTIONS.find(o => o.id === parentKey);
+      content = (
+        <div className="flex flex-col items-center justify-center h-80 gap-4">
+          <div className={`w-16 h-16 rounded-2xl ${opt?.bg} ${opt?.color} flex items-center justify-center text-2xl`}>
+            {opt?.icon}
+          </div>
+          <h3 className="text-base font-black text-slate-800 uppercase">Formulario en construcción</h3>
+          <p className="text-sm text-slate-400 font-medium text-center max-w-xs">
+            El formulario de registro de {opt?.label} estará disponible próximamente.
+          </p>
+          <button
+            onClick={() => setActiveSubView(parentKey)}
+            className="mt-2 h-10 px-6 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-700 transition-all"
+          >
+            Volver al listado
+          </button>
+        </div>
+      );
+      title = `Nuevo – ${opt?.label || ""}`;
     }
 
     if (content) {
-        return (
-            <div className="h-full flex flex-col animate-slideUp">
-                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-50">
-                    <div className="flex items-center gap-4">
-                        <button 
-                            onClick={() => {
-                                if (activeSubView === "recibo_form") setActiveSubView("recibo");
-                                else if (activeSubView === "saldo_form") setActiveSubView("saldo");
-                                else if (activeSubView === "nc_form") setActiveSubView("nc");
-                                else if (activeSubView === "nd_form") setActiveSubView("nd");
-                                else setActiveSubView(null);
-                            }}
-                            className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 shadow-sm hover:shadow-md active:scale-95 group"
-                            title="Volver"
-                        >
-                            <FiArrowRight className="rotate-180 group-hover:-translate-x-0.5 transition-transform" size={18} />
-                        </button>
-                        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] leading-none mb-1">Módulo de Facturación</span>
-                            <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight leading-none">{title}</h2>
-                        </div>
-                    </div>
+      // Determine the "parent" list key for back-navigation from form views
+      const parentOfForm = activeSubView.endsWith("_form")
+        ? activeSubView.replace("_form", "")
+        : null;
 
-                    {/* Header Action Buttons */}
-                    {activeSubView === "recibo" && (
-                        <button 
-                            onClick={() => setActiveSubView("recibo_form")}
-                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
-                        >
-                            + Recibo de caja
-                        </button>
-                    )}
-                    {activeSubView === "saldo" && (
-                        <button 
-                            onClick={() => setActiveSubView("saldo_form")}
-                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
-                        >
-                            + Saldo a favor
-                        </button>
-                    )}
-                    {activeSubView === "nc" && (
-                        <button 
-                            onClick={() => setActiveSubView("nc_form")}
-                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
-                        >
-                            + Nota de crédito
-                        </button>
-                    )}
-                    {activeSubView === "nd" && (
-                        <button 
-                            onClick={() => setActiveSubView("nd_form")}
-                            className="h-10 px-6 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95"
-                        >
-                            + Nota de débito
-                        </button>
-                    )}
-                </div>
-                <div key={activeSubView} className="flex-1 overflow-y-auto bg-slate-50/30">
-                    {content}
-                </div>
+      return (
+        <div className="h-full flex flex-col animate-slideUp">
+          {/* Sub-view Toolbar */}
+          <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-50">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  if (parentOfForm) setActiveSubView(parentOfForm);
+                  else setActiveSubView(null);
+                }}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-colors border border-slate-200 flex items-center gap-1.5 cursor-pointer"
+                title="Volver"
+              >
+                <FiArrowRight className="rotate-180" size={14} />
+                <span>Volver</span>
+              </button>
+              <div className="h-4 w-px bg-slate-200" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Módulo de Facturación</span>
+                <h2 className="text-[13px] font-bold text-slate-800 uppercase tracking-tight">{title}</h2>
+              </div>
             </div>
-        );
+
+            {/* Header Action Buttons – only for list views */}
+            {NEW_BUTTON_LABELS[activeSubView] && (
+              <button 
+                onClick={() => setActiveSubView(`${activeSubView}_form`)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0"
+              >
+                <FiPlus size={15} />
+                <span>{NEW_BUTTON_LABELS[activeSubView]}</span>
+              </button>
+            )}
+          </div>
+
+          <div key={activeSubView} className="flex-1 overflow-y-auto bg-slate-50/30">
+            {content}
+          </div>
+        </div>
+      );
     }
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      <div className="mb-10">
-        <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase mb-2">Centro de <span className="text-blue-600">Facturación</span></h2>
-        <p className="text-[13px] text-slate-400 font-medium">Selecciona el tipo de documento contable que deseas gestionar.</p>
+    <div className="space-y-3 animate-fadeIn">
+      {/* Header Toolbar */}
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <FiFileText size={16} />
+          </div>
+          <div>
+            <h2 className="text-[14px] font-bold text-slate-800 tracking-tight uppercase">Centro de Facturación</h2>
+            <p className="text-[11px] text-slate-500 font-medium">Seleccione el tipo de documento contable que desea gestionar</p>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+          {FACT_OPTIONS.length} Opciones
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grid Compacto Slender Pro */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
         {FACT_OPTIONS.map((opt) => (
-          <button
+          <div
             key={opt.id}
             onClick={() => setActiveSubView(opt.id)}
-            className="group relative bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200 transition-all duration-500 text-left overflow-hidden active:scale-95"
+            className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs hover:shadow-sm hover:border-blue-400 transition-all cursor-pointer flex items-center justify-between group gap-2"
           >
-            {/* Hover decoration */}
-            <div className={`absolute top-0 right-0 w-32 h-32 ${opt.bg} opacity-0 group-hover:opacity-40 rounded-full blur-3xl -mr-10 -mt-10 transition-all duration-700`} />
-
-            <div className="relative flex items-start gap-4">
-              <div className={`w-14 h-14 rounded-2xl ${opt.bg} ${opt.color} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-500 shadow-sm border border-black/5`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-8 h-8 rounded-lg ${opt.bg} ${opt.color} flex items-center justify-center text-sm font-bold shrink-0 transition-transform group-hover:scale-105`}>
                 {opt.icon}
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-tight mb-1 group-hover:text-blue-600 transition-colors">
+              <div className="min-w-0">
+                <h3 className="text-[12px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors uppercase truncate">
                   {opt.label}
                 </h3>
-                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                <span className="text-[10px] text-slate-400 font-medium truncate block">
                   {opt.desc}
-                </p>
+                </span>
               </div>
             </div>
-
-            <div className="mt-6 flex items-center justify-between">
-                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest group-hover:text-blue-400 transition-colors">Sincronizado</span>
-                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-sm">
-                    <FiArrowRight size={14} />
-                </div>
-            </div>
-          </button>
+            <FiChevronRight className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" size={15} />
+          </div>
         ))}
       </div>
-
-      {activeSubView && !["fv", "recibo", "recibo_form", "saldo", "saldo_form"].includes(activeSubView) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
-            <div className="bg-white p-10 rounded-[40px] shadow-2xl max-w-md w-full text-center border border-white/20">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
-                    {FACT_OPTIONS.find(o => o.id === activeSubView)?.icon}
-                </div>
-                <h3 className="text-xl font-black text-slate-800 uppercase mb-2">Próximamente</h3>
-                <p className="text-[13px] text-slate-400 font-medium mb-8">
-                    El registro de {FACT_OPTIONS.find(o => o.id === activeSubView)?.label} está en etapa de validación fiscal.
-                </p>
-                <button 
-                  onClick={() => setActiveSubView(null)}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
-                >
-                    Entendido
-                </button>
-            </div>
-        </div>
-      )}
     </div>
   );
 }

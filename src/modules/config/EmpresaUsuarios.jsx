@@ -441,174 +441,154 @@ export default function EmpresaUsuarios() {
     };
 
     return (
-        <div className="space-y-10 p-2 md:p-6">
-            {/* Toolbar: Search & Actions */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200 group-hover:rotate-12 transition-transform duration-500">
-                            <FiUser size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-[20px] font-black text-slate-800 uppercase tracking-tighter">Usuarios</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Gestión de talento humano</p>
-                        </div>
+        <div className="p-4 max-w-6xl mx-auto space-y-4">
+            {/* Toolbar / Search Header */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <FiUser size={18} />
                     </div>
+                    <div>
+                        <h1 className="text-[16px] font-bold text-slate-800 tracking-tight">Usuarios y Talento Humano</h1>
+                        <p className="text-[11px] text-slate-500 font-medium">Gestión de profesionales, perfiles y accesos a la clínica</p>
+                    </div>
+                </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        {/* Status Toggle */}
-                        <div className="flex items-center bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-                            <button
-                                onClick={() => setShowDisabled(false)}
-                                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${!showDisabled ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                Activos
-                            </button>
-                            <button
-                                onClick={() => setShowDisabled(true)}
-                                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${showDisabled ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                Deshabilitados
-                            </button>
-                        </div>
-
-                        {/* Search Input */}
-                        <div className="relative group/search">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-500 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por nombre o documento..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-12 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm w-80"
-                            />
-                        </div>
-
-                        {/* New User Button */}
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                    {/* Status Toggle */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <button
-                            onClick={() => handleOpenModal()}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 group/btn overflow-hidden relative"
+                            onClick={() => setShowDisabled(false)}
+                            className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer border-0 ${!showDisabled ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800 bg-transparent'}`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-                            <FiPlus className="text-lg" /> Nuevo miembro
+                            Activos
+                        </button>
+                        <button
+                            onClick={() => setShowDisabled(true)}
+                            className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer border-0 ${showDisabled ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800 bg-transparent'}`}
+                        >
+                            Deshabilitados
                         </button>
                     </div>
+
+                    {/* Search Input */}
+                    <div className="relative flex-1 md:w-56">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-colors"
+                        />
+                    </div>
+
+                    {/* New User Button */}
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0 shrink-0"
+                    >
+                        <FiPlus size={16} />
+                        <span>Nuevo Miembro</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Table Area */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden relative">
-                <div className="p-0 overflow-x-auto">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/30">
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Miembro / Contacto</th>
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Perfil / Rol</th>
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 italic">Estado Profesional</th>
-                                <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Operaciones</th>
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                            <th className="py-2.5 px-4">Miembro / Contacto</th>
+                            <th className="py-2.5 px-4">Perfil / Rol</th>
+                            <th className="py-2.5 px-4">Estado Profesional</th>
+                            <th className="py-2.5 px-4 text-right">Operaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[12px] text-slate-700">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={4} className="py-12 text-center text-slate-400 font-medium">
+                                    <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                                    Sincronizando equipo de trabajo...
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 animate-pulse">
-                                            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-                                                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        ) : filtered.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="py-12 text-center text-slate-400 font-medium">
+                                    No se encontraron usuarios registrados
+                                </td>
+                            </tr>
+                        ) : (
+                            filtered.map((u) => (
+                                <tr key={u.id} className={`hover:bg-slate-50/80 transition-colors ${u.activo === false ? 'opacity-60 bg-slate-50/40' : ''}`}>
+                                    <td className="py-2.5 px-4">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${u.activo === false ? 'bg-slate-200 text-slate-500' : 'bg-blue-50 text-blue-600'}`}>
+                                                {(() => {
+                                                    const name = getDisplayName(u);
+                                                    const parts = name.split(" ");
+                                                    if (parts.length >= 2) {
+                                                        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+                                                    }
+                                                    return name.charAt(0).toUpperCase();
+                                                })()}
                                             </div>
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Sincronizando equipo...</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4 opacity-30">
-                                            <FiUser size={48} className="text-slate-300" />
-                                            <p className="font-black uppercase tracking-widest text-slate-400">Sin miembros encontrados</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filtered.map((u) => (
-                                    <tr key={u.id} className={`group hover:bg-slate-50/80 transition-all duration-300 ${u.activo === false ? 'opacity-60 grayscale' : ''}`}>
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-[15px] shadow-sm transform group-hover:scale-110 transition-transform duration-500 ${u.activo === false ? 'bg-slate-200 text-slate-500' : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'}`}>
-                                                    {(() => {
-                                                        const name = getDisplayName(u);
-                                                        const parts = name.split(" ");
-                                                        if (parts.length >= 2) {
-                                                            return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-                                                        }
-                                                        return name.charAt(0).toUpperCase();
-                                                    })()}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[14px] font-extrabold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{getDisplayName(u)}</span>
-                                                    <span className="text-[11px] font-bold text-slate-400 lowercase tracking-tight">{u.email}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4">
                                             <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                    <span className="text-[12px] font-black text-slate-600 uppercase tracking-tighter">{u.profileName || u.rol || "Sin perfil"}</span>
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-3.5 opacity-60">
-                                                    {u.sucursales?.length || 0} sucursales asignadas
-                                                </span>
+                                                <span className="font-bold text-slate-800 uppercase">{getDisplayName(u)}</span>
+                                                <span className="text-[10px] text-slate-400">{u.email}</span>
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-4 text-[12px]">
-                                            {u.esDoctor ? (
-                                                <div className="inline-flex flex-col">
-                                                    <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg font-black uppercase tracking-tighter text-[10px] border border-emerald-500/10">
-                                                        <FiCheck size={10} /> Médico / Profesional
-                                                    </span>
-                                                    {u.especialidades?.length > 0 && (
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-1 opacity-60">
-                                                            {u.especialidades.length} especialidades
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="bg-slate-50 text-slate-400 px-3 py-1 rounded-lg font-black uppercase tracking-tighter text-[10px] border border-slate-100 italic">No asistencial</span>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center justify-end gap-2 transition-all duration-300">
-                                                <button
-                                                    onClick={() => handleDisable(u)}
-                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${u.activo === false ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
-                                                    title={u.activo === false ? "Habilitar" : "Deshabilitar"}
-                                                >
-                                                    <FiActivity size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleOpenModal(u)}
-                                                    className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all"
-                                                    title="Editar usuario"
-                                                >
-                                                    <FiEdit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(u)}
-                                                    className="w-9 h-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-all"
-                                                    title="Eliminar usuario permanentemente"
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-slate-700 uppercase">{u.profileName || u.rol || "Sin perfil"}</span>
+                                            <span className="text-[10px] text-slate-400">
+                                                {u.sucursales?.length || 0} sucursales asignadas
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4">
+                                        {u.esDoctor ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                <FiCheck size={10} /> Médico / Profesional
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+                                                No Asistencial
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="py-2.5 px-4 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <button
+                                                onClick={() => handleDisable(u)}
+                                                className={`w-7 h-7 rounded-lg text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0 ${u.activo === false ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-500 hover:bg-amber-600'}`}
+                                                title={u.activo === false ? "Habilitar Usuario" : "Deshabilitar Usuario"}
+                                            >
+                                                <FiActivity size={13} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleOpenModal(u)}
+                                                className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Editar Usuario"
+                                            >
+                                                <FiEdit2 size={13} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(u)}
+                                                className="w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Eliminar Usuario"
+                                            >
+                                                <FiTrash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
 
             {modalOpen && ReactDOM.createPortal(

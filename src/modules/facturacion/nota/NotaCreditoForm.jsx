@@ -219,67 +219,7 @@ export default function NotaCreditoForm({ onCancel, onSuccess }) {
     };
 
     return (
-        <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={onCancel}
-                        className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-rose-500 border border-transparent hover:border-slate-100 active:scale-95 group"
-                        title="Volver"
-                    >
-                        <FiArrowLeft className="group-hover:-translate-x-0.5 transition-transform" size={18} />
-                    </button>
-                    <div className="h-6 w-[1px] bg-slate-200" />
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
-                            <span>🏠</span>
-                            <span>-</span>
-                            <span>Administración</span>
-                            <span>-</span>
-                            <span>Nota crédito</span>
-                            <span>-</span>
-                            <span>Nueva nota crédito</span>
-                        </div>
-                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none mt-1">
-                            Nueva nota crédito
-                        </h2>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="h-10 px-8 flex items-center justify-center bg-[#8cc33f] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        Guardar
-                    </button>
-                </div>
-            </div>
-
-            {success && (
-                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-[24px] flex items-center gap-4 animate-in zoom-in">
-                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xl shadow-lg shadow-emerald-500/20">
-                        <FiCheckCircle />
-                    </div>
-                    <div>
-                        <h4 className="text-emerald-800 font-black uppercase text-sm">¡Nota de Crédito Guardada!</h4>
-                        <p className="text-emerald-600 text-xs font-medium uppercase tracking-wide">El documento y saldo a favor se han registrado con éxito.</p>
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="bg-rose-50 border border-rose-100 p-6 rounded-[24px] flex items-center gap-4 animate-in shake">
-                    <div className="w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center text-xl shadow-lg shadow-rose-500/20">
-                        <FiAlertCircle />
-                    </div>
-                    <div>
-                        <h4 className="text-rose-800 font-black uppercase text-sm">Error de Validación</h4>
-                        <p className="text-rose-600 text-xs font-medium uppercase tracking-wide">{error}</p>
-                    </div>
-                </div>
-            )}
+        <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500 pb-28">
 
             {/* Form Stack */}
             <div className="space-y-6">
@@ -572,6 +512,45 @@ export default function NotaCreditoForm({ onCancel, onSuccess }) {
                     </div>
                 </div>
             )}
+
+            {/* Sticky Save Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+                <div className="flex items-center gap-3">
+                    {error && (
+                        <span className="flex items-center gap-2 text-rose-600 text-xs font-bold">
+                            <FiAlertCircle size={14} />
+                            {error}
+                        </span>
+                    )}
+                    {success && (
+                        <span className="flex items-center gap-2 text-emerald-600 text-xs font-bold">
+                            <FiCheckCircle size={14} />
+                            ¡Nota de crédito guardada!
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="h-10 px-5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="h-10 px-8 flex items-center gap-2 justify-center bg-[#8cc33f] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#7db02b] shadow-lg shadow-[#8cc33f]/20 transition-all active:scale-95 disabled:opacity-60"
+                    >
+                        {saving ? (
+                            <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Guardando...</>
+                        ) : (
+                            <><FiSave size={14} /> Guardar nota</>
+                        )}
+                    </button>
+                </div>
+            </div>
         </div>
+
     );
 }

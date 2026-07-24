@@ -297,53 +297,47 @@ export default function TemperaturaHumedad() {
     });
 
   return (
-    <div className="bg-white rounded-[28px] border border-slate-200/60 shadow-md h-full flex overflow-hidden animate-fadeIn">
-      
-      {/* --- SUB-NAVIGATION SIDEBAR --- */}
-      <div className="w-64 bg-slate-50/50 border-r border-slate-100 flex flex-col p-6 shrink-0 justify-between">
-        <div className="space-y-6">
-          <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Temperatura & Humedad</span>
-            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Mediciones</h3>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fadeIn space-y-4 p-4">
+      {/* Top Horizontal Sub-Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <FiThermometer size={16} />
           </div>
-          
-          <nav className="flex flex-col gap-2">
-            {[
-              { id: "UBICACIONES", label: "Ubicaciones", icon: <FiMapPin /> },
-              { id: "REGISTRAR", label: "Registrar Medición", icon: <FiPlus /> },
-              { id: "ENLISTAR", label: "Enlistar Mediciones", icon: <FiList /> },
-              { id: "GRAFICAR", label: "Graficar Mediciones", icon: <FiTrendingUp /> }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveSubTab(tab.id);
-                  setLocationFormOpen(false);
-                }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-wider ${
-                  activeSubTab === tab.id
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                    : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800"
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
+          <div>
+            <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-tight">Temperatura y Humedad</h3>
+            <span className="text-[10px] text-slate-400 font-medium block">Monitoreo de cadena de frío</span>
+          </div>
         </div>
 
-        <div className="p-4 bg-blue-50/40 rounded-2xl border border-blue-100/50 flex items-center gap-3">
-          <FiActivity className="text-blue-500 animate-pulse text-lg shrink-0" />
-          <div className="text-[10px] leading-tight">
-            <div className="font-black text-blue-800 uppercase">Monitoreo</div>
-            <div className="font-bold text-blue-600">Registro de Cadena de Frío</div>
-          </div>
+        <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 flex-wrap">
+          {[
+            { id: "UBICACIONES", label: "Ubicaciones", icon: <FiMapPin size={13} /> },
+            { id: "REGISTRAR", label: "Registrar Medición", icon: <FiPlus size={13} /> },
+            { id: "ENLISTAR", label: "Enlistar Mediciones", icon: <FiList size={13} /> },
+            { id: "GRAFICAR", label: "Graficar Mediciones", icon: <FiTrendingUp size={13} /> }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveSubTab(tab.id);
+                setLocationFormOpen(false);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer border-0 ${
+                activeSubTab === tab.id
+                  ? "bg-white text-blue-600 shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 bg-transparent"
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col space-y-4">
         
         {/* --- VIEW: UBICACIONES --- */}
         {activeSubTab === "UBICACIONES" && (

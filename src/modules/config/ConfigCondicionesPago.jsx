@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import {
-    FiPlus, FiSearch, FiEdit2, FiTrash2, FiChevronLeft, FiSave, FiCreditCard, FiFileText, FiX, FiCheck, FiActivity, FiArrowLeft
+    FiPlus, FiSearch, FiEdit2, FiTrash2, FiSave, FiCreditCard, FiX, FiCheck
 } from "react-icons/fi";
 import {
     collection, doc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy
@@ -9,7 +8,6 @@ import {
 import { db } from "../../firebase/firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-import Input from "../../components/ui/Input";
 
 const COLLECTION_NAME = "condiciones_pago";
 
@@ -40,7 +38,7 @@ export default function ConfigCondicionesPago() {
             setItems(list);
         } catch (error) {
             console.error("Error fetching payment conditions:", error);
-            toast.error("Error al cargar condiciones de pago");
+            if (toast?.error) toast.error("Error al cargar condiciones de pago");
         } finally {
             setLoading(false);
         }
@@ -59,41 +57,42 @@ export default function ConfigCondicionesPago() {
         if (window.confirm(`¿Estás seguro de eliminar la condición "${item.nombre}"?`)) {
             try {
                 await deleteDoc(doc(db, "tenants", userProfile.inquilino, COLLECTION_NAME, item.id));
-                toast.success("Eliminado correctamente");
+                if (toast?.success) toast.success("Eliminado correctamente");
                 fetchItems();
             } catch (error) {
                 console.error("Error deleting:", error);
-                toast.error("Error al eliminar");
+                if (toast?.error) toast.error("Error al eliminar");
             }
         }
     };
 
     const handleSave = async (e) => {
         if (e) e.preventDefault();
-        if (!currentItem.nombre.trim()) {
-            return toast.warning("El nombre es obligatorio");
+        if (!currentItem?.nombre?.trim()) {
+            if (toast?.warning) toast.warning("El nombre es obligatorio");
+            return;
         }
         setSaving(true);
         try {
             const payload = {
                 nombre: currentItem.nombre.trim(),
-                admiteCredito: currentItem.admiteCredito,
+                admiteCredito: !!currentItem.admiteCredito,
                 updatedAt: serverTimestamp()
             };
 
             if (currentItem.id) {
                 await updateDoc(doc(db, "tenants", userProfile.inquilino, COLLECTION_NAME, currentItem.id), payload);
-                toast.success("Actualizado correctamente");
+                if (toast?.success) toast.success("Actualizado correctamente");
             } else {
                 payload.createdAt = serverTimestamp();
                 await addDoc(collection(db, "tenants", userProfile.inquilino, COLLECTION_NAME), payload);
-                toast.success("Creado correctamente");
+                if (toast?.success) toast.success("Creado correctamente");
             }
             setModalOpen(false);
             fetchItems();
         } catch (error) {
             console.error("Error saving:", error);
-            toast.error("Error al guardar");
+            if (toast?.error) toast.error("Error al guardar");
         } finally {
             setSaving(false);
         }
@@ -104,197 +103,182 @@ export default function ConfigCondicionesPago() {
     );
 
     return (
-        <div className="space-y-10 p-2 md:p-8">
-            {/* Toolbar Premium */}
-            <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] hover:shadow-[0_35px_80px_rgba(0,0,0,0.06)] transition-all duration-700 overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 shadow-[1px_0_10px_rgba(37,99,235,0.15)]"></div>
+        <div className="p-4 max-w-6xl mx-auto space-y-4">
+            {/* Header / Search Toolbar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <FiCreditCard size={18} />
+                    </div>
+                    <div>
+                        <h1 className="text-[16px] font-bold text-slate-800 tracking-tight">Condiciones de Pago</h1>
+                        <p className="text-[11px] text-slate-500 font-medium">Políticas de cobro, plazos y admisión de crédito para pacientes</p>
+                    </div>
+                </div>
 
-                <div className="bg-slate-50/50 backdrop-blur-sm px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200 group-hover:rotate-12 transition-transform duration-500">
-                            <FiFileText size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-[20px] font-black text-slate-800 uppercase tracking-tighter">Condiciones</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Políticas de cobro y crédito</p>
-                        </div>
+                <div className="flex items-center gap-2.5 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-64">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar política de pago..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-colors"
+                        />
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="relative group">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all font-black" />
-                            <input
-                                type="text"
-                                placeholder="Buscar políticas..."
-                                className="w-full md:w-64 pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-[14px] font-extrabold text-slate-800 outline-none focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-sm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
-                        <button
-                            onClick={() => handleOpenModal()}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[13px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 group/btn overflow-hidden relative"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-                            <FiPlus className="text-lg" /> Nueva política
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-0 shrink-0"
+                    >
+                        <FiPlus size={16} />
+                        <span>Nueva Política</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Table Area (High Density) */}
-            <div className="group/section bg-white rounded-[32px] border border-slate-200/50 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden relative transition-all duration-700">
-                <div className="p-0 overflow-x-auto">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/30">
-                                <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Nombre de la Condición</th>
-                                <th className="px-8 py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Admisión de Crédito</th>
-                                <th className="px-8 py-4 text-right text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Operaciones</th>
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                            <th className="py-2.5 px-4">Nombre de la Condición</th>
+                            <th className="py-2.5 px-4 text-center">Admisión de Crédito</th>
+                            <th className="py-2.5 px-4 text-right">Operaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[12px] text-slate-700">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
+                                    <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                                    Sincronizando políticas de pago...
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 animate-pulse">
-                                            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-                                                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        ) : filteredItems.length === 0 ? (
+                            <tr>
+                                <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
+                                    No se encontraron condiciones de pago registradas
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredItems.map((item) => (
+                                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                    <td className="py-2.5 px-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                                💳
                                             </div>
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Sincronizando políticas...</p>
+                                            <span className="font-bold text-slate-800">{item.nombre}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-4 text-center">
+                                        {item.admiteCredito ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                <FiCheck size={10} /> Admite Crédito
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+                                                Sólo Contado
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="py-2.5 px-4 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <button
+                                                onClick={() => handleOpenModal(item)}
+                                                className="w-7 h-7 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Editar Condición"
+                                            >
+                                                <FiEdit2 size={13} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item)}
+                                                className="w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer border-0"
+                                                title="Eliminar Condición"
+                                            >
+                                                <FiTrash2 size={13} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-20 text-center opacity-30 font-black uppercase tracking-widest text-slate-400">
-                                        Sin condiciones registradas
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredItems.map((item) => (
-                                    <tr key={item.id} className="group hover:bg-slate-50/80 transition-all duration-300">
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 font-black text-[14px]">
-                                                    {item.nombre.substring(0, 1).toUpperCase()}
-                                                </div>
-                                                <span className="text-[14px] font-extrabold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{item.nombre}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4 text-center">
-                                            {item.admiteCredito ? (
-                                                <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg font-black uppercase tracking-tighter text-[10px] border border-emerald-500/10">
-                                                    <FiCheck size={10} /> Admite Crédito
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-lg font-black uppercase tracking-tighter text-[10px] border border-slate-100 italic">Sólo Contado</span>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
-                                                <button
-                                                    onClick={() => handleOpenModal(item)}
-                                                    className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
-                                                    title="Editar"
-                                                >
-                                                    <FiEdit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(item)}
-                                                    className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                                                    title="Eliminar"
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Modal de Edición (Glassmorphism) */}
-            {modalOpen && currentItem && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-hidden">
-                    <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl flex flex-col animate-scale-in relative border border-white/20">
-                        {/* Header Modal */}
-                        <div className="bg-slate-50/50 backdrop-blur-md px-8 py-5 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setModalOpen(false)}
-                                    className="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-red-500 hover:border-red-200 hover:shadow-lg transition-all active:scale-90"
-                                >
-                                    <FiX size={20} />
-                                </button>
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-xl shadow-blue-200">
-                                    <FiFileText size={20} className="text-white" />
+            {/* Modal Form */}
+            {modalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50/70 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <FiCreditCard size={15} />
                                 </div>
-                                <div>
-                                    <h3 className="text-[18px] font-black text-slate-800 uppercase tracking-tighter">
-                                        {currentItem.id ? "Editar Política" : "Nueva Política"}
-                                    </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80">Configuración de cobranza</p>
-                                </div>
+                                <h3 className="text-[14px] font-bold text-slate-800">
+                                    {currentItem?.id ? "Editar Política de Pago" : "Nueva Política de Pago"}
+                                </h3>
                             </div>
-                        </div>
-
-                        {/* Contenido Modal */}
-                        <form onSubmit={handleSave} className="p-8 space-y-8">
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                                        <FiActivity size={16} />
-                                    </div>
-                                    <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Información General</h4>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre de la condición *</label>
-                                        <Input
-                                            value={currentItem.nombre}
-                                            onChange={(e) => setCurrentItem({ ...currentItem, nombre: e.target.value })}
-                                            placeholder="Ej: 30 Días, Contado, 50/50..."
-                                            required
-                                            className="bg-slate-50 border-slate-100 focus:bg-white focus:border-blue-500 rounded-2xl p-4 font-bold text-slate-700 transition-all shadow-inner-sm"
-                                        />
-                                    </div>
-
-                                    <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-6 flex items-center justify-between group/toggle">
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-[13px] font-black text-slate-700 uppercase tracking-tight group-hover/toggle:text-blue-600 transition-colors">¿Admite Crédito?</span>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Permite generar saldos pendientes en facturación</span>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={currentItem.admiteCredito}
-                                                onChange={(e) => setCurrentItem({ ...currentItem, admiteCredito: e.target.checked })}
-                                            />
-                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-
-                        {/* Footer Modal con botón de guardado flotante */}
-                        <div className="p-8 flex justify-end">
                             <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-[20px] text-[14px] font-black uppercase tracking-[0.2em] flex items-center gap-3 shadow-[0_15px_40px_rgba(37,99,235,0.4)] transition-all active:scale-95 group/float"
+                                onClick={() => setModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors border-0 cursor-pointer bg-transparent"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/float:animate-shimmer" />
-                                <FiSave size={20} /> {saving ? "PROCESANDO..." : "GUARDAR POLÍTICA"}
+                                <FiX size={16} />
                             </button>
                         </div>
+
+                        <form onSubmit={handleSave} className="p-5 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-600">Nombre de la Condición *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Ej. Contado 100%, Crédito 30 días, 50% Anticipo"
+                                    value={currentItem?.nombre || ""}
+                                    onChange={(e) => setCurrentItem({ ...currentItem, nombre: e.target.value })}
+                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-blue-500 transition-colors"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                                <input
+                                    type="checkbox"
+                                    id="admiteCredito"
+                                    checked={!!currentItem?.admiteCredito}
+                                    onChange={(e) => setCurrentItem({ ...currentItem, admiteCredito: e.target.checked })}
+                                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                                />
+                                <label htmlFor="admiteCredito" className="text-[12px] font-semibold text-slate-700 cursor-pointer">
+                                    Admite venta a crédito / pago diferido
+                                </label>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200 flex justify-end gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setModalOpen(false)}
+                                    className="px-4 py-1.5 rounded-lg text-slate-600 font-semibold hover:bg-slate-100 transition-colors text-[12px] border border-slate-200 bg-white cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer border-0"
+                                >
+                                    {saving ? (
+                                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <FiSave size={15} />
+                                    )}
+                                    <span>{saving ? "Guardando..." : "Guardar Política"}</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
