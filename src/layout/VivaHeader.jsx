@@ -132,9 +132,9 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                             {(config?.isMaster ? [
                                 { name: 'Inicio', path: '#inicio' },
                                 { name: 'Funcionalidades', path: '#funcionalidades' },
-                                { name: 'Beneficios', path: '#beneficios' },
-                                { name: 'Precios', path: '#precios' },
-                                { name: 'Recursos', path: '#recursos' }
+                                { name: 'Beneficios', path: '/servicios' },
+                                { name: 'Precios', path: '/planes' },
+                                { name: 'Recursos', path: '/faq' }
                             ] : [
                                 { name: 'Inicio', path: clinicBase || '/' },
                                 { name: 'Sobre Nosotros', path: `${clinicBase}/nosotros` },
@@ -143,15 +143,29 @@ export default function VivaHeader({ config, isPreview = false, overlay = false 
                                 { name: 'Portal', path: `${clinicBase}/portal` }
                             ]).map((item) => {
                                 if (item.isMasterOnly && !config?.isMaster) return null;
+                                const isAnchor = item.path.startsWith('#');
                                 return (
                                     <a
                                         key={item.name}
                                         href={item.path}
                                         onClick={(e) => {
-                                            if (item.path.startsWith('#')) {
-                                                e.preventDefault();
-                                                const el = document.querySelector(item.path);
-                                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                            e.preventDefault();
+                                            if (isAnchor) {
+                                                const scrollToEl = () => {
+                                                    const el = document.querySelector(item.path);
+                                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                };
+                                                // If not on home page, navigate first then scroll
+                                                const basePath = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
+                                                const isHome = location.pathname === '/' || location.pathname === basePath || location.pathname === basePath + '/';
+                                                if (!isHome) {
+                                                    navigate('/');
+                                                    setTimeout(scrollToEl, 500);
+                                                } else {
+                                                    scrollToEl();
+                                                }
+                                            } else {
+                                                navigate(item.path);
                                             }
                                         }}
                                         className="text-xs font-bold tracking-wide text-slate-700 hover:text-blue-600 transition-colors py-2 relative group"
