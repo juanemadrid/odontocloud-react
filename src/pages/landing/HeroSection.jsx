@@ -19,7 +19,8 @@ export default function HeroSection({ config = {}, onShowTrial }) {
         <section
             id="inicio"
             ref={containerRef}
-            className="relative w-full bg-white text-slate-900 overflow-hidden font-sans pt-28 sm:pt-32 pb-20 border-b border-slate-100"
+            className="relative w-full bg-white text-slate-900 overflow-hidden font-sans pb-20 border-b border-slate-100"
+            style={{ paddingTop: '130px' }}
         >
             {/* Background Oval/Ellipse Blob on Right Side */}
             <div
@@ -37,7 +38,7 @@ export default function HeroSection({ config = {}, onShowTrial }) {
             <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-[1400px]">
 
                 {/* 1. HERO TOP - 2 COLUMNS RESPONSIVE LAYOUT */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center mb-20 pt-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center mb-20">
                     
                     {/* LEFT COLUMN: HEADLINE, SUBTITLE, CTAS & BADGES */}
                     <div className="lg:col-span-5 text-left space-y-6">
